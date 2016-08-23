@@ -4,3 +4,4 @@
 /lib/
 /FourierTaylorInCpp.depend
 *.layout
+*.cbp
