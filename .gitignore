@@ -3,3 +3,4 @@
 /gsl/
 /lib/
 /FourierTaylorInCpp.depend
+*.layout
