@@ -1882,7 +1882,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ(int proj_grid_size,
     Ofsc ofs(OFS_ORDER);
     double yv[6], tv;
     double proj_dist_SEM, min_proj_dist_SEM = ePdef, y_man_norm_NCSEM = 0.0;
-    double yvproj_NCSEM[6], sproj[4], yv_SEM[6], yvproj_SEM[6], yv_VSEM[6], yvproj_VSEM[6];
+    double yvproj_NCSEM[6], sproj[5], yv_SEM[6], yvproj_SEM[6], yv_VSEM[6], yvproj_VSEM[6];
 
     //Optimal variables
     double sprojmin[5];
