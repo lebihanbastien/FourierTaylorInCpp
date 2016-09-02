@@ -904,7 +904,7 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
     //=====================================================================
     // 2. Define the default framework wrt the inputType
     //=====================================================================
-    int fwrk = 0;
+    int coordsys = 0;
     switch(inputType)
     {
     case VNCEM:
@@ -912,14 +912,14 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
     case PEM:
     case VEM:
     case INEM:
-        fwrk = F_EM;
+        coordsys = F_EM;
         break;
     case VNCSEM:
     case NCSEM:
     case PSEM:
     case VSEM:
     case INSEM:
-        fwrk = F_SEM;
+        coordsys = F_SEM;
         break;
     }
 
@@ -928,8 +928,8 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
     // 2. Check that the focus in SEML is
     // in accordance with the inputType.
     //=====================================================================
-    int fwrk0 = SEML.fwrk;
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
+    int fwrk0 = SEML.coordsys;
+    if(fwrk0 != coordsys) changeDCS(SEML, coordsys);
 
 
     //=====================================================================
@@ -937,7 +937,7 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
     //=====================================================================
 
     //-----------------------------------
-    // 3.1 Parameters in fwrk units
+    // 3.1 Parameters in coordsys units
     //-----------------------------------
     double n     = SEML.us.n;
     double ns    = SEML.us.ns;
@@ -948,7 +948,7 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
 
     //-----------------------------------
     // 3.2 Jacobi decomposition (r, R)
-    //     of the QBTBP in fwrk units
+    //     of the QBTBP in coordsys units
     //-----------------------------------
     //r
     double r1 = creal(evz(SEML.cs.zt, t, n, ni, ai));
@@ -987,7 +987,7 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
 
 
     //-----------------------------------
-    // 3.3. Coefficients of the QBCP in fwrk units
+    // 3.3. Coefficients of the QBCP in coordsys units
     //-----------------------------------
     double alpha[3];
     evaluateCoef(alpha, t, n, SEML.nf, SEML.cs.coeffs, 3);
@@ -2574,7 +2574,7 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
     //=====================================================================
     // 4. Reset the focus in SEML, if necessary
     //=====================================================================
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
+    if(fwrk0 != coordsys) changeDCS(SEML, fwrk0);
 
     //=====================================================================
     // 5. Free the temporary objects

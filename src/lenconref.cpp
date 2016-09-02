@@ -1,232 +1,11 @@
 #include "lenconref.h"
 
+
 //=======================================================================================================================================
 //
-//          DIFFCORR
+//          DIFFCORR BASED ON GOMEZ ET AL. 1998
 //
 //=======================================================================================================================================
-/**
- * \brief Differential correction scheme, with fixed time
- **/
-int differential_correction_level_I(double **ymd, double *tmd, double **ymdn, double *tmdn, double **yma,
-                                    int N, int man_grid_size,
-                                    int isPlotted, int isTimeFixed, gnuplot_ctrl *h1)
-{
-    //--------------------------------------------------------------------------
-    // Init
-    //--------------------------------------------------------------------------
-    //Cumulated norm of the error
-    double normC;
-    //Current state along the trajectory
-    double **ym  = dmatrix(0, 41, 0, man_grid_size);
-    //Current time along the trajectory
-    double *tm   = dvector(0, man_grid_size);
-    //Various temporary states and times
-    double yv[N], ye[N], te, yedot[6];
-    //Error vector
-    double bv[3];
-
-    //-------------------------------------------------------------------------------
-    //Gsl matrices and vectors
-    //-------------------------------------------------------------------------------
-    gsl_matrix *STM  = gsl_matrix_alloc(6,6);
-    gsl_vector *P    = gsl_vector_alloc(3);
-    gsl_matrix *Prod = gsl_matrix_calloc(3,3);
-    gsl_vector *P1   = gsl_vector_calloc(3);
-    gsl_vector *Pn;
-    gsl_matrix *DP;
-
-    if(isTimeFixed)
-    {
-        DP  = gsl_matrix_alloc(3,3);
-        Pn = gsl_vector_calloc(3);
-    }
-    else
-    {
-        DP  = gsl_matrix_alloc(3,4);
-        Pn = gsl_vector_calloc(4);
-    }
-
-    //For GSL inversion
-    gsl_permutation * p = gsl_permutation_alloc (3);
-    int s;
-
-
-
-    //--------------------------------------------------------------------------
-    // Vector that will contain all corrections to make at all patch points
-    //--------------------------------------------------------------------------
-    double **kv;
-    if(isTimeFixed) kv = dmatrix(0, 2, 0, man_grid_size-1);
-    else kv = dmatrix(0, 3, 0, man_grid_size-1);
-
-
-    //--------------------------------------------------------------------------
-    // Copy the departure state
-    //--------------------------------------------------------------------------
-    for(int k = 0; k <= man_grid_size; k++)
-    {
-        for(int i = 0; i < N; i++) ymdn[i][k] = ymd[i][k];
-        tmdn[k] = tmd[k];
-    }
-
-
-    //--------------------------------------------------------------------------
-    // Loop correction
-    //--------------------------------------------------------------------------
-    int iter = 0;
-    while(iter < 50)
-    {
-
-        //----------------------------------------------------------------------
-        // Norm check
-        //----------------------------------------------------------------------
-        normC = 0.0;
-
-        //----------------------------------------------------------------------
-        // Arrival state: yma(1, :) = ymd(1,:);
-        //----------------------------------------------------------------------
-        for(int i = 0; i < N; i++) yma[i][0] = ymd[i][0];
-
-        //----------------------------------------------------------------------
-        // Level one
-        //----------------------------------------------------------------------
-        for(int k = 0; k <= man_grid_size-1; k++) //TBC: the LAST point
-        {
-            //------------------------------------------------------------------
-            // Integration
-            //------------------------------------------------------------------
-            for(int i = 0; i < N; i++) yv[i] = ymdn[i][k];
-            ode78_qbcp(ym, tm, tmdn[k], tmdn[k+1], yv, 42, 1, F_VNCSEM, VNCSEM, VNCSEM);
-
-            //------------------------------------------------------------------
-            // Final position is at the end of ym
-            //------------------------------------------------------------------
-            for(int i = 0; i < N; i++) ye[i] = ym[i][1];
-            te = tm[1];
-
-            //------------------------------------------------------------------
-            // Arrival state (including STM)
-            //------------------------------------------------------------------
-            for(int i = 0; i < N; i++) yma[i][k+1] = ym[i][1];
-
-            //------------------------------------------------------------------
-            // Update the Jacobian
-            //------------------------------------------------------------------
-            // STM: STM = vectorToMatrix(ye, 6, 6, 6);
-            gslc_vectorToMatrix(STM, ye, 6, 6, 6);
-
-            // Derivatives at tf
-            qbfbp_vfn_novar_xv(te, ye, yedot, &SEML);
-
-            if(isTimeFixed)
-                //DP = STM(1:3,4:6);
-                for(int i = 0; i < 3; i++) for(int j = 0; j <3; j++) gsl_matrix_set(DP, i, j, gsl_matrix_get(STM, i, j+3));
-            else
-            {
-                //DP = [STM(1:3,4:6) yedot(1:3)];
-                for(int i = 0; i < 3; i++)
-                {
-                    for(int i = 0; i < 3; i++)
-                    {
-                        for(int j = 0; j <3; j++) gsl_matrix_set(DP, i, j, gsl_matrix_get(STM, i, j+3));
-                        gsl_matrix_set(DP, i, 3, yedot[i]);
-                    }
-                }
-            }
-
-            //------------------------------------------------------------------
-            // Update the error vector: P = [ye(0:2) - ymdn(k+1,0:2)']
-            //------------------------------------------------------------------
-            for(int i = 0; i < 3; i++)
-            {
-                gsl_vector_set(P, i, ye[i] - ymdn[i][k+1]);
-                bv[i] = ye[i] - ymdn[i][k+1];
-            }
-
-            //------------------------------------------------------------------
-            // Norm
-            //------------------------------------------------------------------
-            normC += ENorm(bv, 3);
-
-            //------------------------------------------------------------------
-            // Minimum norm solution
-            //------------------------------------------------------------------
-            if(isTimeFixed) //inverse a 3x3 system
-            {
-                //Inverse
-                gsl_linalg_LU_decomp (DP, p , &s);
-                //Pn = DP^{-1}*P
-                gsl_linalg_LU_solve(DP, p, P, Pn);
-                //Update kv
-                for(int i = 0; i < 3; i++) kv[i][k] = gsl_vector_get(Pn, i);
-            }
-            else //minimum norm solution on a 3x4 system
-            {
-                //Compute Prod = DP*DP^T
-                gsl_blas_dgemm (CblasNoTrans, CblasTrans, 1.0, DP , DP, 0.0, Prod);
-                //Inverse
-                gsl_linalg_LU_decomp (Prod, p , &s);
-                //P1 = Prod^{-1}*P
-                gsl_linalg_LU_solve(Prod, p, P, P1);
-                //Pn = DP^T*P1
-                gsl_blas_dgemv (CblasTrans, 1.0, DP, P1, 0.0, Pn);
-                //Update kv
-                for(int i = 0; i < 4; i++) kv[i][k] = gsl_vector_get(Pn, i);
-            }
-        }
-
-        //----------------------------------------------------------------------
-        // Check that all points are under a given threshold
-        //----------------------------------------------------------------------
-        cout << "normC = " << normC << endl;
-        if(normC < 1e-9) break;
-
-
-        //----------------------------------------------------------------------
-        // Update the free variables
-        //----------------------------------------------------------------------
-        for(int k = 0; k <= man_grid_size-1; k++)
-        {
-            //The state at position k
-            for(int i = 0; i < 3; i++) ymdn[i+3][k] -= kv[i][k];
-            //The final time, at position k+1
-            if(!isTimeFixed) tmdn[k+1] -= kv[3][k];
-        }
-
-        //----------------------------------------------------------------------
-        // Update number of iterations
-        //----------------------------------------------------------------------
-        iter++;
-
-        //----------------------------------------------------------------------
-        //Trajectory plot
-        //----------------------------------------------------------------------
-        if(isPlotted) gnuplot_plot_xyz(h1, ymdn[0], ymdn[1],  ymdn[2], man_grid_size+1, (char*)"", "lines", "1", "3", 5);
-    }
-
-
-    //--------------------------------------------------------------------------
-    // Free
-    //--------------------------------------------------------------------------
-    free_dmatrix(ym, 0, 41, 0, man_grid_size);
-    free_dvector(tm, 0, man_grid_size);
-    if(isTimeFixed) free_dmatrix(kv, 0, 2, 0, man_grid_size-1);
-    else free_dmatrix(kv, 0, 3, 0, man_grid_size-1);
-
-    gsl_matrix_free(STM);
-    gsl_matrix_free(Prod);
-    gsl_matrix_free(DP);
-
-    gsl_vector_free(P);
-    gsl_vector_free(P1);
-    gsl_vector_free(Pn);
-
-    gsl_permutation_free(p);
-
-    return GSL_SUCCESS;
-}
-
 /**
  * \brief Multiple shooting scheme with no boundary conditions.
  *        Based on a recursive scheme in Gomez et al., "Quasihalo orbits associated with libration points", 1998, JAS.
@@ -234,7 +13,7 @@ int differential_correction_level_I(double **ymd, double *tmd, double **ymdn, do
  **/
 int multiple_shooting_gomez(double **ymd, double *tmd, double **ymdn, double *tmdn, double **yma,
                             int N, int man_grid_size,
-                            int isPlotted, int isTimeFixed, gnuplot_ctrl *h1)
+                            int isPlotted, gnuplot_ctrl *h1)
 {
     //--------------------------------------------------------------------------
     // Init
@@ -510,7 +289,7 @@ int multiple_shooting_gomez(double **ymd, double *tmd, double **ymdn, double *tm
  **/
 int multiple_shooting_direct(double **ymd, double *tmd, double **ymdn, double *tmdn, double **yma,
                              int N, int man_grid_size, int coord_type,
-                             int isPlotted, int isTimeFixed, gnuplot_ctrl *h1)
+                             int isPlotted, gnuplot_ctrl *h1)
 {
     //--------------------------------------------------------------------------
     // Init
@@ -684,16 +463,283 @@ int multiple_shooting_direct(double **ymd, double *tmd, double **ymdn, double *t
 }
 
 /**
+ * \brief Multiple shooting scheme with no boundary conditions. The time vector is also variable.
+ *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
+ *        Note that, contrary to the Gomez et al. article, the times are free to vary, leading to additionnal free variables and constraints.
+ **/
+int multiple_shooting_direct_variable_time(double **ymd, double *tmd, double **ymdn, double *tmdn, double **yma,
+        int N, int man_grid_size, int coord_type,
+        int isPlotted, gnuplot_ctrl *h1)
+{
+    //--------------------------------------------------------------------------
+    // Init
+    //--------------------------------------------------------------------------
+    //Cumulated norm of the error
+    double normC;
+    //Current state along the trajectory
+    double **ym  = dmatrix(0, 41, 0, man_grid_size);
+    //Current time along the trajectory
+    double *tm   = dvector(0, man_grid_size);
+    //Various temporary states and times
+    double yv[N], ye[N], f[6];
+
+    //-------------------------------------------------------------------------------
+    //Get the default coordinates system from the coord_type
+    //-------------------------------------------------------------------------------
+    int dcs = default_coordinate_system(coord_type);
+    int coordsys = default_framework(coord_type);
+
+    //--------------------------------------------------------------------------
+    // Selection of the vector field
+    //--------------------------------------------------------------------------
+    int (*vf)(double, const double*, double*, void*) = qbfbp_vfn_novar; //by default, to avoid warning from gcc compiler
+    switch(dcs)
+    {
+    case F_SEM:
+    case F_EM:
+        vf = qbfbp_vf; //vector field with a state (X, PX)
+        break;
+    case F_NCSEM:
+    case F_NCEM:
+        vf = qbfbp_vfn_novar; //vector field with a state (x, px) (default)
+        break;
+    case F_VNCSEM:
+    case F_VNCEM:
+        vf = qbfbp_vfn_novar_xv; //vector field with a state (x, vx)
+        break;
+    }
+
+
+    //--------------------------------------------------------------------------
+    // Check that the focus in SEML is in accordance with the dcs.
+    //--------------------------------------------------------------------------
+    int fwrk0 = SEML.coordsys;
+    if(fwrk0 != coordsys) changeDCS(SEML, coordsys);
+
+    //-------------------------------------------------------------------------------
+    // GSL matrices and vectors
+    //-------------------------------------------------------------------------------
+    // Correction vector at patch points
+    gsl_vector *DQv = gsl_vector_calloc(7*(man_grid_size+1));
+    // Error vector at patch points
+    gsl_vector *Fv  = gsl_vector_calloc(6*(man_grid_size));
+    //Jacobian at patch points
+    gsl_matrix **Ji  = gslc_matrix_array_calloc(6, 6, man_grid_size);
+    gsl_matrix *DF   = gsl_matrix_calloc(6*man_grid_size, 7*(man_grid_size+1));
+    gsl_matrix *M    = gsl_matrix_calloc(6*(man_grid_size), 6*(man_grid_size));
+
+    //Identity matrix eye(6)
+    gsl_matrix *Id = gsl_matrix_calloc(6,6);
+    gsl_matrix_set_identity (Id);
+
+    //Intermediate variables
+    gsl_vector *K3  = gsl_vector_calloc(6*(man_grid_size));
+    gsl_vector *Kf  = gsl_vector_calloc(6);
+    gsl_vector *K4  = gsl_vector_calloc(6);
+
+    //--------------------------------------------------------------------------
+    // Copy the departure state in ymdn
+    //--------------------------------------------------------------------------
+    for(int k = 0; k <= man_grid_size; k++)
+    {
+        for(int i = 0; i < N; i++) ymdn[i][k] = ymd[i][k];
+        tmdn[k] = tmd[k];
+    }
+
+
+    //----------------------------------------------------------------------
+    // Arrival state: yma(1, :) = ymd(1,:);
+    //----------------------------------------------------------------------
+    for(int i = 0; i < N; i++) yma[i][0] = ymd[i][0];
+
+    //--------------------------------------------------------------------------
+    // Loop correction
+    //--------------------------------------------------------------------------
+    int iter = 0;
+    while(iter < 20)
+    {
+
+        //----------------------------------------------------------------------
+        //Trajectory plot
+        //----------------------------------------------------------------------
+        if(isPlotted) gnuplot_plot_xyz(h1, ymdn[0], ymdn[1],  ymdn[2], man_grid_size+1, (char*)"", "points", "1", "4", 4);
+
+        //----------------------------------------------------------------------
+        // Build the Jacobian and other useful matrices
+        //----------------------------------------------------------------------
+        for(int k = 0; k <= man_grid_size-1; k++)
+        {
+            //------------------------------------------------------------------
+            // Integration
+            //------------------------------------------------------------------
+            for(int i = 0; i < N; i++) yv[i] = ymdn[i][k];
+            ode78_qbcp(ym, tm, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
+
+            //------------------------------------------------------------------
+            // Final position is at the end of ym
+            //------------------------------------------------------------------
+            for(int i = 0; i < N; i++) ye[i] = ym[i][1];
+
+            //------------------------------------------------------------------
+            // Arrival state (including STM) = final position is at the end of ym
+            //------------------------------------------------------------------
+            for(int i = 0; i < N; i++) yma[i][k+1] = ym[i][1];
+
+            //------------------------------------------------------------------
+            // Update the Jacobian
+            //------------------------------------------------------------------
+            gslc_vectorToMatrix(Ji[k], ye, 6, 6, 6);
+
+            //------------------------------------------------------------------
+            // Update the error vector: F[k] = [ye[k] - ymdn[k+1]]
+            //------------------------------------------------------------------
+            for(int i = 0; i < 6; i++)
+            {
+                gsl_vector_set(Fv, 6*k+i, ye[i] - ymdn[i][k+1]);
+            }
+
+
+            //--------------------------
+            //dF[k]/dt[k] = - Ji[k]*f[Q[k], t[k])
+            //--------------------------
+            //Computing f[Q[k], t[k])
+            for(int i = 0; i < 6; i++) yv[i] = ymdn[i][k];
+            vf(tmdn[k], yv, f, &SEML);
+
+            //Kf = -f[Q[k], t[k])
+            for(int i = 0; i < 6; i++) gsl_vector_set(Kf, i, -f[i]);
+
+            //dF[k]/dt[k] = - Ji[k]*f[Q[k], t[k])
+            gsl_blas_dgemv(CblasNoTrans, 1.0, Ji[k], Kf, 0.0, K4);
+
+            //--------------------------
+            //dF[k]/dt[k+1] = +f[Q[k+1], t[k+1])
+            //--------------------------
+            //Computing f[Q[k+1], t[k+1])
+            vf(tmdn[k+1], ye, f, &SEML);
+
+
+            //------------------------------------------------------------------
+            // Update DF
+            //------------------------------------------------------------------
+            for(int i = 0; i < 6; i++)
+            {
+                for(int j = 0; j < 6; j++)
+                {
+                    //--------------------------
+                    //dF[k]/dQ[k]
+                    //--------------------------
+                    gsl_matrix_set(DF, i + 6*k, j + 7*k, gsl_matrix_get(Ji[k], i, j));
+
+                    //--------------------------
+                    //dF[k]/dQ[k+1]
+                    //--------------------------
+                    gsl_matrix_set(DF, i + 6*k, j + 7*(k+1), -gsl_matrix_get(Id, i, j));
+                }
+
+                //--------------------------
+                //dF[k]/dt[k] = - Ji[k]*f[Q[k], t[k])
+                //--------------------------
+                gsl_matrix_set(DF, i + 6*k, 7*(k+1)-1, gsl_vector_get(K4, i));
+
+                //--------------------------
+                //dF[k]/dt[k+1]
+                //--------------------------
+                gsl_matrix_set(DF, i + 6*k, 7*(k+2)-1, f[i]);
+            }
+        }
+
+        //------------------------------------------------------------------
+        // Norm
+        //------------------------------------------------------------------
+        normC  = gsl_blas_dnrm2(Fv);
+
+        //------------------------------------------------------------------
+        // Update M
+        //------------------------------------------------------------------
+        gsl_blas_dgemm (CblasNoTrans, CblasTrans, 1.0, DF , DF, 0.0, M);
+
+
+        //----------------------------------------------------------------------
+        // Check that all points are under a given threshold
+        //----------------------------------------------------------------------
+        cout << "multiple_shooting_direct. nerror = " << normC << endl;
+        if(normC < PREC_GSM)
+        {
+            break;
+        }
+
+        //----------------------------------------------------------------------
+        // Update correction vector
+        //----------------------------------------------------------------------
+        //Since M is definite-positive, a Cholesky decomposition can be used, instead of a LU decomposition.
+        gsl_linalg_cholesky_decomp (M);
+        gsl_linalg_cholesky_solve(M, Fv, K3);
+        gsl_blas_dgemv(CblasTrans, -1.0, DF, K3, 0.0, DQv);
+
+
+        //----------------------------------------------------------------------
+        // Update the free variables
+        //----------------------------------------------------------------------
+        for(int k = 0; k <= man_grid_size; k++)
+        {
+            for(int i = 0; i < 6; i++) ymdn[i][k] += gsl_vector_get(DQv, 7*k+i);
+            tmdn[k] += gsl_vector_get(DQv, 7*(k+1)-1);
+        }
+
+        //----------------------------------------------------------------------
+        // Update number of iterations
+        //----------------------------------------------------------------------
+        iter++;
+    }
+
+    //--------------------------------------------------------------------------
+    // Reset the focus in SEML, if necessary
+    //--------------------------------------------------------------------------
+    if(fwrk0 != coordsys) changeDCS(SEML, fwrk0);
+
+
+    //--------------------------------------------------------------------------
+    // Free
+    //--------------------------------------------------------------------------
+    free_dmatrix(ym, 0, 41, 0, man_grid_size);
+    free_dvector(tm, 0, man_grid_size);
+    gslc_matrix_array_free(Ji , man_grid_size);
+    gsl_vector_free(DQv);
+    gsl_vector_free(Fv);
+    gsl_vector_free(K3);
+    gsl_matrix_free(DF);
+    gsl_matrix_free(M);
+    gsl_matrix_free(Id);
+
+
+    return GSL_SUCCESS;
+}
+
+
+//=======================================================================================================================================
+//
+//          DIFFCORR CUSTOM: CMU to CM
+//
+//=======================================================================================================================================
+
+//===========================================================
+// FIXED TIMES
+//===========================================================
+/**
  * \brief Multiple shooting scheme with no boundary conditions.
  *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
+ *        - The initial conditions z0 vary in the center-unstable manifold of EML2.
+ *        - The final state zN is free to vary.
+ *        - The times t0,..., tN are fixed.
  **/
 int msd_CM_RCM(double **ymd, double *tmd, double **ymdn, double *tmdn, double **yma,
-                                int N, int man_grid_size, int coord_type,
-                                int isPlotted, int isTimeFixed, gnuplot_ctrl *h1,
-                                matrix<Ofsc>  &Mcoc_EM,
-                                matrix<Oftsc> &DCM_EM_TFC,
-                                gsl_matrix_complex *CCM_R_RCM,
-                                SingleOrbit &orbit)
+               int N, int man_grid_size, int coord_type,
+               int isPlotted, gnuplot_ctrl *h1,
+               matrix<Ofsc>  &Mcoc_EM,
+               matrix<Oftsc> &DCM_EM_TFC,
+               gsl_matrix_complex *CCM_R_RCM,
+               SingleOrbit &orbit)
 {
     //--------------------------------------------------------------------------
     // Init
@@ -729,18 +775,20 @@ int msd_CM_RCM(double **ymd, double *tmd, double **ymdn, double *tmdn, double **
     gsl_matrix_set_identity (Id);
 
     //Intermediate variables
-    gsl_vector *K3  = gsl_vector_calloc(6*(man_grid_size));
+    gsl_matrix *K1   = gsl_matrix_calloc(6,4);
+    gsl_matrix *K2   = gsl_matrix_calloc(6,4);
+    gsl_vector *K3   = gsl_vector_calloc(6*(man_grid_size));
+    gsl_matrix_complex *K1c   = gsl_matrix_complex_calloc(6,4);
+    gsl_matrix_complex *K2c   = gsl_matrix_complex_calloc(6,4);
+    gsl_matrix_complex *PC    = gsl_matrix_complex_calloc(6,6);
+
+    //Jacobian DWh in OFS format
+    matrix<Ofsc>  DWh_ofsc(6, 4);
+    //Jacobian DWh in matrix format
+    gsl_matrix_complex *RDWhc = gsl_matrix_complex_calloc(6,4);
 
     //Phi0
     gsl_matrix *Phi0 = gsl_matrix_calloc(6,4);
-
-    gsl_matrix *K1   = gsl_matrix_calloc(6,4);
-    gsl_matrix *K2   = gsl_matrix_calloc(6,4);
-    matrix<Ofsc>  DWh_ofsc(6, 4);
-    gsl_matrix_complex *RDWhc = gsl_matrix_complex_calloc(6,4);
-    gsl_matrix_complex *K1c   = gsl_matrix_complex_calloc(6,4);
-    gsl_matrix_complex *K2c   = gsl_matrix_complex_calloc(6,4);
-    gsl_matrix_complex *PC  = gsl_matrix_complex_calloc(6,6);
 
     //NCEM to coord_type (e.g. NCSEM_R_NCEM)
     gsl_matrix *COORD_R_NCEM = gsl_matrix_calloc(6,6);
@@ -914,7 +962,9 @@ int msd_CM_RCM(double **ymd, double *tmd, double **ymdn, double *tmdn, double **
         qbcp_coc(tmdn[0]/SEML.us_em.ns, yv, ye, NCEM, coord_type);
         for(int i = 0; i < 6; i++) ymdn[i][0] = ye[i];
 
+        //-------------------------------
         //The rest is classical cartesian coordinates at patch points
+        //-------------------------------
         for(int k = 1; k <= man_grid_size; k++)
         {
             for(int i = 0; i < 6; i++) ymdn[i][k] += gsl_vector_get(DQv, 6*k+i-2);
@@ -939,43 +989,45 @@ int msd_CM_RCM(double **ymd, double *tmd, double **ymdn, double *tmdn, double **
     free_dmatrix(ym, 0, 41, 0, man_grid_size);
     free_dvector(tm, 0, man_grid_size);
     gslc_matrix_array_free(Ji , man_grid_size);
+
     gsl_vector_free(DQv);
     gsl_vector_free(Fv);
     gsl_vector_free(K3);
+
     gsl_matrix_free(DF);
     gsl_matrix_free(M);
     gsl_matrix_free(Id);
+    gsl_matrix_free(K1);
+    gsl_matrix_free(K2);
+    gsl_matrix_free(Phi0);
+    gsl_matrix_free(COORD_R_NCEM);
 
+    gsl_matrix_complex_free(K1c);
+    gsl_matrix_complex_free(K2c);
+    gsl_matrix_complex_free(PC);
+    gsl_matrix_complex_free(RDWhc);
 
     return GSL_SUCCESS;
 }
 
+//===========================================================
+// FREE TIMES
+//===========================================================
 /**
  * \brief Multiple shooting scheme with no boundary conditions.
  *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
+ *        - The initial conditions z0 vary in the center-unstable manifold of EML2.
+ *        - The final state zN vary in the center-stable manifold of SEML2.
+ *        - The times t0,..., tN are free to vary.
  **/
-int msdvt_CM_RCM(
-    double **ymd,
-    double *tmd,
-    double **ymdn,
-    double *tmdn,
-    double **yma,
-    int N,
-    int man_grid_size,
-    int coord_type,
-    int isPlotted,
-    int isTimeFixed,
-    gnuplot_ctrl *h1,
-    matrix<Ofsc>  &Mcoc_EM,
-    matrix<Ofsc>  &Mcoc_SEM,
-    vector<Ofsc>  &Vcoc_SEM,
-    matrix<Oftsc> &DCM_EM_TFC,
-    matrix<Oftsc> &DCM_SEM_TFC,
-    vector<Oftsc> &CM_SEM_TFC,
-    gsl_matrix_complex *CCM_R_RCM,
-    SingleOrbit &orbit,
-    SingleOrbit &orbit_SEM,
-    int isDebug)
+int msdvt_CM_RCM(double **ymd, double *tmd, double **ymdn, double *tmdn, double **yma,
+                 int N,int man_grid_size, int coord_type,
+                 int isPlotted, gnuplot_ctrl *h1,
+                 matrix<Ofsc>  &Mcoc_EM, matrix<Ofsc>  &Mcoc_SEM, vector<Ofsc>  &Vcoc_SEM,
+                 matrix<Oftsc> &DCM_EM_TFC, matrix<Oftsc> &DCM_SEM_TFC,
+                 vector<Oftsc> &CM_SEM_TFC, gsl_matrix_complex *CCM_R_RCM,
+                 SingleOrbit &orbit, SingleOrbit &orbit_SEM,
+                 int isDebug)
 {
     //--------------------------------------------------------------------------
     // Init
@@ -994,7 +1046,7 @@ int msdvt_CM_RCM(
     //Get the default coordinates system from the coord_type
     //-------------------------------------------------------------------------------
     int dcs = default_coordinate_system(coord_type);
-    int fwrk = default_framework(coord_type);
+    int coordsys = default_framework(coord_type);
 
     //--------------------------------------------------------------------------
     // Selection of the vector field
@@ -1020,15 +1072,14 @@ int msdvt_CM_RCM(
     //--------------------------------------------------------------------------
     // Check that the focus in SEML is in accordance with the dcs.
     //--------------------------------------------------------------------------
-    int fwrk0 = SEML.fwrk;
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
+    int fwrk0 = SEML.coordsys;
+    if(fwrk0 != coordsys) changeDCS(SEML, coordsys);
 
     //-------------------------------------------------------------------------------
     // GSL matrices and vectors
     //-------------------------------------------------------------------------------
     // Correction vector at patch points
     gsl_vector *DQv = gsl_vector_calloc(7*(man_grid_size+1)-5);
-
     // Error vector at patch points
     gsl_vector *Fv  = gsl_vector_calloc(6*(man_grid_size));
     //Error isolated at final point
@@ -1050,17 +1101,22 @@ int msdvt_CM_RCM(
 
     //Phi0: Jacobian wrt to EM RCM variables
     gsl_matrix *Phi0 = gsl_matrix_calloc(6,4);
+
     //PhiN: Jacobian wrt to SEM RCM variables
     gsl_matrix *PhiN = gsl_matrix_calloc(6,4);
 
     //Intermediate variables
     gsl_matrix *K1   = gsl_matrix_calloc(6,4);
     gsl_matrix *K2   = gsl_matrix_calloc(6,4);
-    matrix<Ofsc> DWh_ofsc(6, 4);
-    gsl_matrix_complex *RDWhc = gsl_matrix_complex_calloc(6,4);
     gsl_matrix_complex *K1c   = gsl_matrix_complex_calloc(6,4);
     gsl_matrix_complex *K2c   = gsl_matrix_complex_calloc(6,4);
     gsl_matrix_complex *PC    = gsl_matrix_complex_calloc(6,6);
+
+    //Jacobian DWh in OFS format
+    matrix<Ofsc> DWh_ofsc(6, 4);
+    //Jacobian DWh in matrix format
+    gsl_matrix_complex *RDWhc = gsl_matrix_complex_calloc(6,4);
+
     //For time derivatives
     vector<Ofsc> zIn(6), zOut(6);
 
@@ -1547,43 +1603,53 @@ int msdvt_CM_RCM(
 
 
     //--------------------------------------------------------------------------
-    // Free (TO UPDATE!)
+    // Free
     //--------------------------------------------------------------------------
     free_dmatrix(ym, 0, 41, 0, man_grid_size);
     free_dvector(tm, 0, man_grid_size);
     gslc_matrix_array_free(Ji , man_grid_size);
+
     gsl_vector_free(DQv);
     gsl_vector_free(Fv);
     gsl_vector_free(K3);
+
     gsl_matrix_free(DF);
     gsl_matrix_free(M);
     gsl_matrix_free(Id);
+    gsl_matrix_free(K1);
+    gsl_matrix_free(K2);
+    gsl_matrix_free(Phi0);
+    gsl_matrix_free(COORD_R_NCEM);
+    gsl_matrix_free(COORD_R_NCSEM);
+
+    gsl_matrix_complex_free(K1c);
+    gsl_matrix_complex_free(K2c);
+    gsl_matrix_complex_free(PC);
+    gsl_matrix_complex_free(RDWhc);
 
 
     return GSL_SUCCESS;
 }
 
+
+//=======================================================================================================================================
+//
+//          DIFFCORR CUSTOM: CMU to CMS
+//
+//=======================================================================================================================================
 /**
  * \brief Multiple shooting scheme with no boundary conditions.
  *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
+ *        - The initial conditions z0 vary in the center-unstable manifold of EML2.
+ *        - The final state zN vary in the center-stable manifold of SEML2.
+ *        - The times t0,..., tN are fixed.
  **/
-int msdvt_CMS_RCM(
-    double **ymd,
-    double *tmd,
-    double **ymdn,
-    double *tmdn,
-    int number_of_variables,
-    int man_grid_size,
-    int coord_type,
-    matrix<Oftsc> &DCM_EM_TFC,
-    matrix<Oftsc> &DCM_SEM_TFC,
-    gsl_matrix_complex *CCM_R_RCM_EM,
-    gsl_matrix_complex *CCM_R_RCM_SEM,
-    SingleOrbit &orbit_EM,
-    SingleOrbit &orbit_SEM,
-    gnuplot_ctrl *h1,
-    int isPlotted,
-    int isDebug)
+int msdvt_CMS_RCM(double **ymd, double *tmd, double **ymdn, double *tmdn,
+                  int number_of_variables, int man_grid_size, int coord_type, double precision,
+                  matrix<Oftsc> &DCM_EM_TFC, matrix<Oftsc> &DCM_SEM_TFC,
+                  gsl_matrix_complex *CCM_R_RCM_EM, gsl_matrix_complex *CCM_R_RCM_SEM,
+                  SingleOrbit &orbit_EM, SingleOrbit &orbit_SEM,
+                  gnuplot_ctrl *h1, int isPlotted, int isDebug)
 {
     //--------------------------------------------------------------------------
     // Init
@@ -1602,7 +1668,7 @@ int msdvt_CMS_RCM(
     //Get the default coordinates system from the coord_type
     //-------------------------------------------------------------------------------
     int dcs = default_coordinate_system(coord_type);
-    int fwrk = default_framework(coord_type);
+    int coordsys = default_framework(coord_type);
 
     //--------------------------------------------------------------------------
     // Selection of the vector field
@@ -1628,31 +1694,33 @@ int msdvt_CMS_RCM(
     //--------------------------------------------------------------------------
     // Check that the focus in SEML is in accordance with the dcs.
     //--------------------------------------------------------------------------
-    int fwrk0 = SEML.fwrk;
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
+    int fwrk0 = SEML.coordsys;
+    if(fwrk0 != coordsys) changeDCS(SEML, coordsys);
 
     //-------------------------------------------------------------------------------
     // GSL matrices and vectors
     //-------------------------------------------------------------------------------
-    // Correction vector at patch points
-    gsl_vector *DQv = gsl_vector_calloc(7*(man_grid_size+1)-4);
+    int nfv = 7*(man_grid_size+1)-4;   //free variables
+    int ncs = 6*(man_grid_size);       //constraints
 
+    // Correction vector at patch points
+    gsl_vector *DQv = gsl_vector_calloc(nfv);
     // Error vector at patch points
-    gsl_vector *Fv  = gsl_vector_calloc(6*(man_grid_size));
+    gsl_vector *Fv  = gsl_vector_calloc(ncs);
     //Error isolated at final point
     gsl_vector *Fvn  = gsl_vector_calloc(6);
 
     //Jacobian at patch points
     gsl_matrix **Ji  = gslc_matrix_array_calloc(6, 6, man_grid_size);
-    gsl_matrix *DF   = gsl_matrix_calloc(6*man_grid_size, 7*(man_grid_size+1)-4);
-    gsl_matrix *M    = gsl_matrix_calloc(6*(man_grid_size), 6*(man_grid_size));
+    gsl_matrix *DF   = gsl_matrix_calloc(ncs, nfv);
+    gsl_matrix *M    = gsl_matrix_calloc(ncs, 6*(man_grid_size));
 
     //Identity matrix eye(6)
     gsl_matrix *Id = gsl_matrix_calloc(6,6);
     gsl_matrix_set_identity (Id);
 
     //Intermediate variables
-    gsl_vector *K3  = gsl_vector_calloc(6*(man_grid_size));
+    gsl_vector *K3  = gsl_vector_calloc(ncs);
     gsl_vector *Kf  = gsl_vector_calloc(6);
     gsl_vector *K4  = gsl_vector_calloc(6);
 
@@ -1664,19 +1732,21 @@ int msdvt_CMS_RCM(
     //Intermediate variables
     gsl_matrix *K1_EM   = gsl_matrix_calloc(6,4);
     gsl_matrix *K2_EM   = gsl_matrix_calloc(6,4);
-    matrix<Ofsc> DWh_ofsc_EM(6, 4);
-    gsl_matrix_complex *RDWhc_EM = gsl_matrix_complex_calloc(6,4);
     gsl_matrix_complex *K1c_EM   = gsl_matrix_complex_calloc(6,4);
     gsl_matrix_complex *K2c_EM   = gsl_matrix_complex_calloc(6,4);
 
-    gsl_matrix *K2_SEM    = gsl_matrix_calloc(6,5);
+    gsl_matrix *K2_SEM           = gsl_matrix_calloc(6,5);
+    gsl_matrix_complex *K1c_SEM  = gsl_matrix_complex_calloc(6,5);
+    gsl_matrix_complex *K2c_SEM  = gsl_matrix_complex_calloc(6,5);
+    gsl_matrix_complex *PC       = gsl_matrix_complex_calloc(6,6);
+
+    //Jacobian DWh in OFS format
+    matrix<Ofsc> DWh_ofsc_EM(6, 4);
     matrix<Ofsc> DWh_ofsc_SEM (6, 5);
+    //Jacobian DWh in matrix format
+    gsl_matrix_complex *RDWhc_EM = gsl_matrix_complex_calloc(6,4);
     gsl_matrix_complex *RDWhc_SEM  = gsl_matrix_complex_calloc(6,5);
-    gsl_matrix_complex *K1c_SEM    = gsl_matrix_complex_calloc(6,5);
-    gsl_matrix_complex *K2c_SEM    = gsl_matrix_complex_calloc(6,5);
 
-
-    gsl_matrix_complex *PC    = gsl_matrix_complex_calloc(6,6);
     //For time derivatives
     vector<Ofsc> zIn(6), zOut(6);
 
@@ -2000,6 +2070,7 @@ int msdvt_CMS_RCM(
             gslc_matrix_printf_approx(DF);
             cout << "---------------------------------------------------------------" << endl;
         }
+
         //------------------------------------------------------------------
         // Norm
         //------------------------------------------------------------------
@@ -2023,7 +2094,7 @@ int msdvt_CMS_RCM(
         // Check that all points are under a given threshold
         //----------------------------------------------------------------------
         cout << "multiple_shooting_direct. nerror = " << normC << endl;
-        if(normC < PREC_GSM)
+        if(normC < precision)
         {
             break;
         }
@@ -2035,7 +2106,7 @@ int msdvt_CMS_RCM(
         gsl_linalg_cholesky_decomp (M);
         gsl_linalg_cholesky_solve(M, Fv, K3);
 
-        //Same with LU decomposition:
+        //Same with LU decomposition (for backup):
         //        int s;
         //        gsl_permutation * p = gsl_permutation_alloc (6*(man_grid_size));
         //        gsl_linalg_LU_decomp (M, p, &s);
@@ -2097,7 +2168,7 @@ int msdvt_CMS_RCM(
 
 
         //-----------------------------------------------------
-        //Last 4 correction variables is orbit.si
+        //Last 5 correction variables is orbit.si
         //-----------------------------------------------------
         //Updating CM_SEM_RCM coordinates
         for(int i = 0; i < 5; i++) orbit_SEM.si[i] += gsl_vector_get(DQv, i + 7*man_grid_size-3);
@@ -2132,19 +2203,13 @@ int msdvt_CMS_RCM(
         //----------------------------------------------------------------------
         // Norm display
         //----------------------------------------------------------------------
-        cout << "nerror[end]*gamma  = " << gsl_blas_dnrm2(Fvn)*SEML.cs_sem.gamma << endl;
-        cout << "--------------------" << endl;
+        //cout << "nerror[end]*gamma  = " << gsl_blas_dnrm2(Fvn)*SEML.cs_sem.gamma << endl;
+        //cout << "--------------------" << endl;
         if(isDebug)
         {
             cout << "si_norm_EM = "   << si_norm_EM << endl;
             cout << "si_norm_SEM = "  << si_norm_SEM << endl;
         }
-
-
-        //----------------------------------------------------------------------
-        //Trajectory plot
-        //----------------------------------------------------------------------
-        if(isPlotted) gnuplot_plot_xyz(h1, ymdn[0], ymdn[1],  ymdn[2], man_grid_size+1, (char*)"", "points", "1", "4", 4);
 
         //----------------------------------------------------------------------
         // Update number of iterations
@@ -2160,23 +2225,47 @@ int msdvt_CMS_RCM(
     //------------------------------------------------------------------
     //Last plot
     //------------------------------------------------------------------
-    if(isPlotted) gnuplot_plot_xyz(h1, ymdn[0], ymdn[1],  ymdn[2], man_grid_size+1, (char*)"", "points", "2", "4", 4);
+    if(isPlotted) gnuplot_plot_xyz(h1, ymdn[0], ymdn[1],  ymdn[2], man_grid_size+1, (char*)"", "points", "2", "2", 4);
+    if(isPlotted) gnuplot_plot_xyz(h1, &ymdn[0][man_grid_size], &ymdn[1][man_grid_size],  &ymdn[2][man_grid_size], 1, (char*)"", "points", "2", "2", 0);
+    if(isPlotted) gnuplot_plot_xyz(h1, &ymdn[0][0], &ymdn[1][0],  &ymdn[2][0], 1, (char*)"", "points", "2", "2", 0);
 
 
 
     //--------------------------------------------------------------------------
-    // Free (TO UPDATE!)
+    // Free
     //--------------------------------------------------------------------------
     free_dmatrix(ym, 0, 41, 0, man_grid_size);
     free_dvector(tm, 0, man_grid_size);
     gslc_matrix_array_free(Ji , man_grid_size);
+
     gsl_vector_free(DQv);
     gsl_vector_free(Fv);
+    gsl_vector_free(Fvn);
     gsl_vector_free(K3);
+    gsl_vector_free(Kf);
+    gsl_vector_free(K4);
+
     gsl_matrix_free(DF);
     gsl_matrix_free(M);
     gsl_matrix_free(Id);
+    gsl_matrix_free(Phi0);
+    gsl_matrix_free(PhiN);
+    gsl_matrix_free(COORD_R_NCEM);
+    gsl_matrix_free(COORD_R_NCSEM);
 
+
+    gsl_matrix_complex_free(PC);
+    gsl_matrix_complex_free(RDWhc_EM);
+    gsl_matrix_complex_free(RDWhc_SEM);
+
+    gsl_matrix_free(K1_EM);
+    gsl_matrix_free(K2_EM);
+    gsl_matrix_complex_free(K1c_EM);
+    gsl_matrix_complex_free(K2c_EM);
+
+    gsl_matrix_free(K2_SEM);
+    gsl_matrix_complex_free(K1c_SEM);
+    gsl_matrix_complex_free(K2c_SEM);
 
     return GSL_SUCCESS;
 }
@@ -2184,27 +2273,17 @@ int msdvt_CMS_RCM(
 /**
  * \brief Multiple shooting scheme with no boundary conditions.
  *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
+ *        - The initial conditions z0 vary in the center-unstable manifold of EML2.
+ *        - The final state zN vary in the center-stable manifold of SEML2.
+ *        - The times t0,..., tN are free to vary.
+ *        - The null vector associated to the solution is computed.
  **/
-int msdvt_CMS_RCM_deps(
-    double **ymd,
-    double *tmd,
-    double **ymdn,
-    double *tmdn,
-    double *nullvector,
-    int number_of_variables,
-    int man_grid_size,
-    int coord_type,
-    double precision,
-    int isFirst,
-    matrix<Oftsc> &DCM_EM_TFC,
-    matrix<Oftsc> &DCM_SEM_TFC,
-    gsl_matrix_complex *CCM_R_RCM_EM,
-    gsl_matrix_complex *CCM_R_RCM_SEM,
-    SingleOrbit &orbit_EM,
-    SingleOrbit &orbit_SEM,
-    gnuplot_ctrl *h1,
-    int isPlotted,
-    int isDebug)
+int msdvt_CMS_RCM_deps(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
+                       int number_of_variables, int man_grid_size, int coord_type, double precision, int isFirst,
+                       matrix<Oftsc> &DCM_EM_TFC, matrix<Oftsc> &DCM_SEM_TFC,
+                       gsl_matrix_complex *CCM_R_RCM_EM, gsl_matrix_complex *CCM_R_RCM_SEM,
+                       SingleOrbit &orbit_EM, SingleOrbit &orbit_SEM,
+                       gnuplot_ctrl *h1, int isPlotted, int isDebug)
 {
     //--------------------------------------------------------------------------
     // Init
@@ -2223,7 +2302,7 @@ int msdvt_CMS_RCM_deps(
     //Get the default coordinates system from the coord_type
     //-------------------------------------------------------------------------------
     int dcs = default_coordinate_system(coord_type);
-    int fwrk = default_framework(coord_type);
+    int coordsys = default_framework(coord_type);
 
     //--------------------------------------------------------------------------
     // Selection of the vector field
@@ -2249,8 +2328,8 @@ int msdvt_CMS_RCM_deps(
     //--------------------------------------------------------------------------
     // Check that the focus in SEML is in accordance with the dcs.
     //--------------------------------------------------------------------------
-    int fwrk0 = SEML.fwrk;
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
+    int fwrk0 = SEML.coordsys;
+    if(fwrk0 != coordsys) changeDCS(SEML, coordsys);
 
     //-------------------------------------------------------------------------------
     // GSL matrices and vectors
@@ -2286,21 +2365,25 @@ int msdvt_CMS_RCM_deps(
     gsl_matrix *PhiN = gsl_matrix_calloc(6,5);
 
     //Intermediate variables
-    gsl_matrix *K1_EM   = gsl_matrix_calloc(6,4);
-    gsl_matrix *K2_EM   = gsl_matrix_calloc(6,4);
-    matrix<Ofsc> DWh_ofsc_EM(6, 4);
-    gsl_matrix_complex *RDWhc_EM = gsl_matrix_complex_calloc(6,4);
+    gsl_matrix *K1_EM            = gsl_matrix_calloc(6,4);
+    gsl_matrix *K2_EM            = gsl_matrix_calloc(6,4);
     gsl_matrix_complex *K1c_EM   = gsl_matrix_complex_calloc(6,4);
     gsl_matrix_complex *K2c_EM   = gsl_matrix_complex_calloc(6,4);
 
-    gsl_matrix *K2_SEM    = gsl_matrix_calloc(6,5);
-    matrix<Ofsc> DWh_ofsc_SEM (6, 5);
-    gsl_matrix_complex *RDWhc_SEM  = gsl_matrix_complex_calloc(6,5);
+    gsl_matrix *K2_SEM             = gsl_matrix_calloc(6,5);
     gsl_matrix_complex *K1c_SEM    = gsl_matrix_complex_calloc(6,5);
     gsl_matrix_complex *K2c_SEM    = gsl_matrix_complex_calloc(6,5);
 
+    //Jacobian DWh in OFS format
+    matrix<Ofsc> DWh_ofsc_EM(6, 4);
+    matrix<Ofsc> DWh_ofsc_SEM (6, 5);
+
+    //Jacobian DWh in matrix format
+    gsl_matrix_complex *RDWhc_EM = gsl_matrix_complex_calloc(6,4);
+    gsl_matrix_complex *RDWhc_SEM  = gsl_matrix_complex_calloc(6,5);
 
     gsl_matrix_complex *PC    = gsl_matrix_complex_calloc(6,6);
+
     //For time derivatives
     vector<Ofsc> zIn(6), zOut(6);
 
@@ -2788,8 +2871,6 @@ int msdvt_CMS_RCM_deps(
     gsl_matrix *Q     = gsl_matrix_calloc(nfv,nfv);
     gsl_matrix *R     = gsl_matrix_calloc(nfv,ncs);
     gsl_matrix *DFT   = gsl_matrix_calloc(nfv,ncs);
-
-
     //DPT = transpose(DP)
     gsl_matrix_transpose_memcpy(DFT, DF);
     //QR decomposition
@@ -2824,30 +2905,46 @@ int msdvt_CMS_RCM_deps(
 
 
 
-    //    gsl_vector *Knv  = gsl_vector_calloc(nfv);
-    //    gsl_vector *Knv2  = gsl_vector_calloc(ncs);
-    //
-    //    cout << "HERE" << endl;
-    //    for(int i = 0; i < nfv; i++) gsl_vector_set(Knv, i, nullvector[i]);
-    //
-    //    gsl_blas_dgemv (CblasNoTrans, 1.0, DF, Knv, 0.0, Knv2);
-    //
-    //    cout << "Knv2 = " << endl;
-    //    for(int i = 0; i < ncs; i++) cout << gsl_vector_get(Knv2, i) << endl;
-
-
     //--------------------------------------------------------------------------
-    // Free (TO UPDATE!)
+    // Free
     //--------------------------------------------------------------------------
     free_dmatrix(ym, 0, 41, 0, man_grid_size);
     free_dvector(tm, 0, man_grid_size);
     gslc_matrix_array_free(Ji , man_grid_size);
+
     gsl_vector_free(DQv);
     gsl_vector_free(Fv);
+    gsl_vector_free(Fvn);
     gsl_vector_free(K3);
+    gsl_vector_free(Kf);
+    gsl_vector_free(K4);
+
     gsl_matrix_free(DF);
     gsl_matrix_free(M);
     gsl_matrix_free(Id);
+    gsl_matrix_free(Phi0);
+    gsl_matrix_free(PhiN);
+    gsl_matrix_free(COORD_R_NCEM);
+    gsl_matrix_free(COORD_R_NCSEM);
+
+
+    gsl_matrix_complex_free(PC);
+    gsl_matrix_complex_free(RDWhc_EM);
+    gsl_matrix_complex_free(RDWhc_SEM);
+
+    gsl_matrix_free(K1_EM);
+    gsl_matrix_free(K2_EM);
+    gsl_matrix_complex_free(K1c_EM);
+    gsl_matrix_complex_free(K2c_EM);
+
+    gsl_matrix_free(K2_SEM);
+    gsl_matrix_complex_free(K1c_SEM);
+    gsl_matrix_complex_free(K2c_SEM);
+
+    gsl_vector_free(work);
+    gsl_matrix_free(Q);
+    gsl_matrix_free(R);
+    gsl_matrix_free(DFT);
 
 
     return GSL_SUCCESS;
@@ -2856,27 +2953,17 @@ int msdvt_CMS_RCM_deps(
 /**
  * \brief Multiple shooting scheme with no boundary conditions.
  *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
+ *        - The initial conditions z0 vary in the center-unstable manifold of EML2.
+ *        - The final state zN vary in the center-stable manifold of SEML2.
+ *        - The times t0,..., tN are fixed.
+ *        - The null vector associated to the solution is computed.
  **/
-int msdvt_CMS_RCM_deps_ATF(double **ymd,
-                           double *tmd,
-                           double **ymdn,
-                           double *tmdn,
-                           double *nullvector,
-                           int number_of_variables,
-                           int man_grid_size,
-                           int coord_type,
-                           double precision,
-                           int isFirst,
-                           matrix<Oftsc> &DCM_EM_TFC,
-                           matrix<Oftsc> &DCM_SEM_TFC,
-                           gsl_matrix_complex *CCM_R_RCM_EM,
-                           gsl_matrix_complex *CCM_R_RCM_SEM,
-                           SingleOrbit &orbit_EM,
-                           SingleOrbit &orbit_SEM,
-                           gnuplot_ctrl *h1,
-                           int isPlotted,
-                           int isUserDefined,
-                           int isDebug)
+int msdvt_CMS_RCM_deps_ATF(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
+                           int number_of_variables, int man_grid_size, int coord_type, double precision, int isFirst,
+                           matrix<Oftsc> &DCM_EM_TFC, matrix<Oftsc> &DCM_SEM_TFC,
+                           gsl_matrix_complex *CCM_R_RCM_EM, gsl_matrix_complex *CCM_R_RCM_SEM,
+                           SingleOrbit &orbit_EM, SingleOrbit &orbit_SEM,
+                           gnuplot_ctrl *h1, int isPlotted, int isUserDefined, int isDebug)
 {
     //--------------------------------------------------------------------------
     // Init
@@ -2894,13 +2981,13 @@ int msdvt_CMS_RCM_deps_ATF(double **ymd,
     //Get the default coordinates system from the coord_type
     //-------------------------------------------------------------------------------
     int dcs = default_coordinate_system(coord_type);
-    int fwrk = default_framework(coord_type);
+    int coordsys = default_framework(coord_type);
 
     //--------------------------------------------------------------------------
     // Check that the focus in SEML is in accordance with the dcs.
     //--------------------------------------------------------------------------
-    int fwrk0 = SEML.fwrk;
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
+    int fwrk0 = SEML.coordsys;
+    if(fwrk0 != coordsys) changeDCS(SEML, coordsys);
 
     //-------------------------------------------------------------------------------
     // GSL matrices and vectors
@@ -2934,18 +3021,22 @@ int msdvt_CMS_RCM_deps_ATF(double **ymd,
     gsl_matrix *PhiN = gsl_matrix_calloc(6,5);
 
     //Intermediate variables
-    gsl_matrix *K1_EM   = gsl_matrix_calloc(6,4);
-    gsl_matrix *K2_EM   = gsl_matrix_calloc(6,4);
-    matrix<Ofsc> DWh_ofsc_EM(6, 4);
-    gsl_matrix_complex *RDWhc_EM = gsl_matrix_complex_calloc(6,4);
+    gsl_matrix *K1_EM            = gsl_matrix_calloc(6,4);
+    gsl_matrix *K2_EM            = gsl_matrix_calloc(6,4);
     gsl_matrix_complex *K1c_EM   = gsl_matrix_complex_calloc(6,4);
     gsl_matrix_complex *K2c_EM   = gsl_matrix_complex_calloc(6,4);
 
-    gsl_matrix *K2_SEM    = gsl_matrix_calloc(6,5);
-    matrix<Ofsc> DWh_ofsc_SEM (6, 5);
-    gsl_matrix_complex *RDWhc_SEM  = gsl_matrix_complex_calloc(6,5);
+    gsl_matrix *K2_SEM             = gsl_matrix_calloc(6,5);
     gsl_matrix_complex *K1c_SEM    = gsl_matrix_complex_calloc(6,5);
     gsl_matrix_complex *K2c_SEM    = gsl_matrix_complex_calloc(6,5);
+
+    //Jacobian DWh in OFS format
+    matrix<Ofsc> DWh_ofsc_EM(6, 4);
+    matrix<Ofsc> DWh_ofsc_SEM (6, 5);
+
+    //Jacobian DWh in matrix format
+    gsl_matrix_complex *RDWhc_EM = gsl_matrix_complex_calloc(6,4);
+    gsl_matrix_complex *RDWhc_SEM  = gsl_matrix_complex_calloc(6,5);
 
 
     gsl_matrix_complex *PC    = gsl_matrix_complex_calloc(6,6);
@@ -3334,8 +3425,10 @@ int msdvt_CMS_RCM_deps_ATF(double **ymd,
                 cout << " to select a specific starting time" << endl;
                 cin >> dti;
                 ti = (int) dti;
-            }while(ti != 1 && ti != -1);
-        }else ti = 1;
+            }
+            while(ti != 1 && ti != -1);
+        }
+        else ti = 1;
 
         //Here, we want to make s_EM[1] "grow"
         sign = gsl_matrix_get(Q, 1, nfv-1) > 0? ti:-ti;
@@ -3368,17 +3461,43 @@ int msdvt_CMS_RCM_deps_ATF(double **ymd,
     for(int i = 0; i < nfv; i++) nullvector[i] = sign*gsl_matrix_get(Q, i, nfv-1);
 
     //--------------------------------------------------------------------------
-    // Free (TO UPDATE!)
+    // Free
     //--------------------------------------------------------------------------
     free_dmatrix(ym, 0, 41, 0, man_grid_size);
     free_dvector(tm, 0, man_grid_size);
     gslc_matrix_array_free(Ji , man_grid_size);
+
     gsl_vector_free(DQv);
     gsl_vector_free(Fv);
+    gsl_vector_free(Fvn);
     gsl_vector_free(K3);
+
     gsl_matrix_free(DF);
     gsl_matrix_free(M);
     gsl_matrix_free(Id);
+    gsl_matrix_free(Phi0);
+    gsl_matrix_free(PhiN);
+    gsl_matrix_free(COORD_R_NCEM);
+    gsl_matrix_free(COORD_R_NCSEM);
+
+
+    gsl_matrix_complex_free(PC);
+    gsl_matrix_complex_free(RDWhc_EM);
+    gsl_matrix_complex_free(RDWhc_SEM);
+
+    gsl_matrix_free(K1_EM);
+    gsl_matrix_free(K2_EM);
+    gsl_matrix_complex_free(K1c_EM);
+    gsl_matrix_complex_free(K2c_EM);
+
+    gsl_matrix_free(K2_SEM);
+    gsl_matrix_complex_free(K1c_SEM);
+    gsl_matrix_complex_free(K2c_SEM);
+
+    gsl_vector_free(work);
+    gsl_matrix_free(Q);
+    gsl_matrix_free(R);
+    gsl_matrix_free(DFT);
 
 
     return GSL_SUCCESS;
@@ -3386,29 +3505,19 @@ int msdvt_CMS_RCM_deps_ATF(double **ymd,
 
 
 /**
- * \brief Multiple shooting scheme with no boundary conditions.
+ * \brief Multiple shooting scheme with no boundary conditions. PLANAR CASE.
  *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
+ *        - The initial conditions z0 vary in the center-unstable manifold of EML2.
+ *        - The final state zN vary in the center-stable manifold of SEML2.
+ *        - The times t0,..., tN are free to vary.
+ *        - The null vector associated to the solution is computed.
  **/
-int msdvt_CMS_RCM_deps_planar(
-    double **ymd,
-    double *tmd,
-    double **ymdn,
-    double *tmdn,
-    double *nullvector,
-    int number_of_variables,
-    int man_grid_size,
-    int coord_type,
-    double precision,
-    int isFirst,
-    matrix<Oftsc> &DCM_EM_TFC,
-    matrix<Oftsc> &DCM_SEM_TFC,
-    gsl_matrix_complex *CCM_R_RCM_EM,
-    gsl_matrix_complex *CCM_R_RCM_SEM,
-    SingleOrbit &orbit_EM,
-    SingleOrbit &orbit_SEM,
-    gnuplot_ctrl *h1,
-    int isPlotted,
-    int isDebug)
+int msdvt_CMS_RCM_deps_planar(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
+                              int number_of_variables, int man_grid_size, int coord_type, double precision, int isFirst,
+                              matrix<Oftsc> &DCM_EM_TFC, matrix<Oftsc> &DCM_SEM_TFC,
+                              gsl_matrix_complex *CCM_R_RCM_EM, gsl_matrix_complex *CCM_R_RCM_SEM,
+                              SingleOrbit &orbit_EM, SingleOrbit &orbit_SEM,
+                              gnuplot_ctrl *h1, int isPlotted, int isDebug)
 {
     //--------------------------------------------------------------------------
     // Init
@@ -3427,7 +3536,7 @@ int msdvt_CMS_RCM_deps_planar(
     //Get the default coordinates system from the coord_type
     //-------------------------------------------------------------------------------
     int dcs = default_coordinate_system(coord_type);
-    int fwrk = default_framework(coord_type);
+    int coordsys = default_framework(coord_type);
 
     //--------------------------------------------------------------------------
     // Selection of the vector field
@@ -3453,8 +3562,8 @@ int msdvt_CMS_RCM_deps_planar(
     //--------------------------------------------------------------------------
     // Check that the focus in SEML is in accordance with the dcs.
     //--------------------------------------------------------------------------
-    int fwrk0 = SEML.fwrk;
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
+    int fwrk0 = SEML.coordsys;
+    if(fwrk0 != coordsys) changeDCS(SEML, coordsys);
 
     //-------------------------------------------------------------------------------
     // GSL matrices and vectors
@@ -3488,21 +3597,25 @@ int msdvt_CMS_RCM_deps_planar(
     gsl_matrix *PhiN = gsl_matrix_calloc(6,5);
 
     //Intermediate variables
-    gsl_matrix *K1_EM   = gsl_matrix_calloc(6,4);
-    gsl_matrix *K2_EM   = gsl_matrix_calloc(6,4);
-    matrix<Ofsc> DWh_ofsc_EM(6, 4);
-    gsl_matrix_complex *RDWhc_EM = gsl_matrix_complex_calloc(6,4);
+    gsl_matrix *K1_EM            = gsl_matrix_calloc(6,4);
+    gsl_matrix *K2_EM            = gsl_matrix_calloc(6,4);
     gsl_matrix_complex *K1c_EM   = gsl_matrix_complex_calloc(6,4);
     gsl_matrix_complex *K2c_EM   = gsl_matrix_complex_calloc(6,4);
 
-    gsl_matrix *K2_SEM    = gsl_matrix_calloc(6,5);
-    matrix<Ofsc> DWh_ofsc_SEM (6, 5);
-    gsl_matrix_complex *RDWhc_SEM  = gsl_matrix_complex_calloc(6,5);
+    gsl_matrix *K2_SEM             = gsl_matrix_calloc(6,5);
     gsl_matrix_complex *K1c_SEM    = gsl_matrix_complex_calloc(6,5);
     gsl_matrix_complex *K2c_SEM    = gsl_matrix_complex_calloc(6,5);
 
+    //Jacobian DWh in OFS format
+    matrix<Ofsc> DWh_ofsc_EM(6, 4);
+    matrix<Ofsc> DWh_ofsc_SEM (6, 5);
+
+    //Jacobian DWh in matrix format
+    gsl_matrix_complex *RDWhc_EM = gsl_matrix_complex_calloc(6,4);
+    gsl_matrix_complex *RDWhc_SEM  = gsl_matrix_complex_calloc(6,5);
 
     gsl_matrix_complex *PC    = gsl_matrix_complex_calloc(6,6);
+
     //For time derivatives
     vector<Ofsc> zIn(6), zOut(6);
 
@@ -3883,6 +3996,7 @@ int msdvt_CMS_RCM_deps_planar(
             gslc_matrix_printf_approx(DF);
             cout << "---------------------------------------------------------------" << endl;
         }
+
         //------------------------------------------------------------------
         // Norm
         //------------------------------------------------------------------
@@ -3979,7 +4093,7 @@ int msdvt_CMS_RCM_deps_planar(
 
 
         //-----------------------------------------------------
-        //Last 4 correction variables is orbit.si
+        //Last 3 correction variables is orbit.si
         //-----------------------------------------------------
         //Updating CM_SEM_RCM coordinates
         orbit_SEM.si[0] += gsl_vector_get(DQv, 5*man_grid_size-3);
@@ -4078,46 +4192,61 @@ int msdvt_CMS_RCM_deps_planar(
 
 
     //--------------------------------------------------------------------------
-    // Free (TO UPDATE!)
+    // Free
     //--------------------------------------------------------------------------
     free_dmatrix(ym, 0, 41, 0, man_grid_size);
     free_dvector(tm, 0, man_grid_size);
     gslc_matrix_array_free(Ji , man_grid_size);
+
     gsl_vector_free(DQv);
     gsl_vector_free(Fv);
     gsl_vector_free(K3);
+
     gsl_matrix_free(DF);
     gsl_matrix_free(M);
     gsl_matrix_free(Id);
+    gsl_matrix_free(Phi0);
+    gsl_matrix_free(PhiN);
+    gsl_matrix_free(COORD_R_NCEM);
+    gsl_matrix_free(COORD_R_NCSEM);
+
+
+    gsl_matrix_complex_free(PC);
+    gsl_matrix_complex_free(RDWhc_EM);
+    gsl_matrix_complex_free(RDWhc_SEM);
+
+    gsl_matrix_free(K1_EM);
+    gsl_matrix_free(K2_EM);
+    gsl_matrix_complex_free(K1c_EM);
+    gsl_matrix_complex_free(K2c_EM);
+
+    gsl_matrix_free(K2_SEM);
+    gsl_matrix_complex_free(K1c_SEM);
+    gsl_matrix_complex_free(K2c_SEM);
+
+    gsl_vector_free(work);
+    gsl_matrix_free(Q);
+    gsl_matrix_free(R);
+    gsl_matrix_free(DFT);
 
 
     return GSL_SUCCESS;
 }
 
 /**
- * \brief Multiple shooting scheme with no boundary conditions and fixed last time.
+ * \brief Multiple shooting scheme with no boundary conditions. PLANAR CASE.
  *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
+ *        - The initial conditions z0 vary in the center-unstable manifold of EML2.
+ *        - The final state zN vary in the center-stable manifold of SEML2.
+ *        - The times t0,..., tN are fixed.
+ *        - The null vector associated to the solution is computed.
  **/
-int msdvt_CMS_RCM_deps_planar_ATF(double **ymd,
-                                  double *tmd,
-                                  double **ymdn,
-                                  double *tmdn,
-                                  double *nullvector,
-                                  int number_of_variables,
-                                  int man_grid_size,
-                                  int coord_type,
-                                  double precision,
-                                  int isFirst,
-                                  matrix<Oftsc> &DCM_EM_TFC,
-                                  matrix<Oftsc> &DCM_SEM_TFC,
-                                  gsl_matrix_complex *CCM_R_RCM_EM,
-                                  gsl_matrix_complex *CCM_R_RCM_SEM,
-                                  SingleOrbit &orbit_EM,
-                                  SingleOrbit &orbit_SEM,
-                                  gnuplot_ctrl *h1,
-                                  int isPlotted,
-                                  int isUserDefined,
-                                  int isDebug)
+int msdvt_CMS_RCM_deps_planar_ATF(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
+                                  int number_of_variables, int man_grid_size, int coord_type, double precision, int isFirst,
+                                  matrix<Oftsc> &DCM_EM_TFC, matrix<Oftsc> &DCM_SEM_TFC,
+                                  gsl_matrix_complex *CCM_R_RCM_EM, gsl_matrix_complex *CCM_R_RCM_SEM,
+                                  SingleOrbit &orbit_EM, SingleOrbit &orbit_SEM,
+                                  gnuplot_ctrl *h1, int isPlotted, int isUserDefined, int isDebug)
 {
     //--------------------------------------------------------------------------
     // Init
@@ -4135,13 +4264,13 @@ int msdvt_CMS_RCM_deps_planar_ATF(double **ymd,
     //Get the default coordinates system from the coord_type
     //-------------------------------------------------------------------------------
     int dcs = default_coordinate_system(coord_type);
-    int fwrk = default_framework(coord_type);
+    int coordsys = default_framework(coord_type);
 
     //--------------------------------------------------------------------------
     // Check that the focus in SEML is in accordance with the dcs.
     //--------------------------------------------------------------------------
-    int fwrk0 = SEML.fwrk;
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
+    int fwrk0 = SEML.coordsys;
+    if(fwrk0 != coordsys) changeDCS(SEML, coordsys);
 
     //-------------------------------------------------------------------------------
     // GSL matrices and vectors
@@ -4173,21 +4302,25 @@ int msdvt_CMS_RCM_deps_planar_ATF(double **ymd,
     gsl_matrix *PhiN = gsl_matrix_calloc(6,5);
 
     //Intermediate variables
-    gsl_matrix *K1_EM   = gsl_matrix_calloc(6,4);
-    gsl_matrix *K2_EM   = gsl_matrix_calloc(6,4);
-    matrix<Ofsc> DWh_ofsc_EM(6, 4);
-    gsl_matrix_complex *RDWhc_EM = gsl_matrix_complex_calloc(6,4);
+    gsl_matrix *K1_EM            = gsl_matrix_calloc(6,4);
+    gsl_matrix *K2_EM            = gsl_matrix_calloc(6,4);
     gsl_matrix_complex *K1c_EM   = gsl_matrix_complex_calloc(6,4);
     gsl_matrix_complex *K2c_EM   = gsl_matrix_complex_calloc(6,4);
 
-    gsl_matrix *K2_SEM    = gsl_matrix_calloc(6,5);
-    matrix<Ofsc> DWh_ofsc_SEM (6, 5);
-    gsl_matrix_complex *RDWhc_SEM  = gsl_matrix_complex_calloc(6,5);
+    gsl_matrix *K2_SEM             = gsl_matrix_calloc(6,5);
     gsl_matrix_complex *K1c_SEM    = gsl_matrix_complex_calloc(6,5);
     gsl_matrix_complex *K2c_SEM    = gsl_matrix_complex_calloc(6,5);
 
+    //Jacobian DWh in OFS format
+    matrix<Ofsc> DWh_ofsc_EM(6, 4);
+    matrix<Ofsc> DWh_ofsc_SEM (6, 5);
+
+    //Jacobian DWh in matrix format
+    gsl_matrix_complex *RDWhc_EM = gsl_matrix_complex_calloc(6,4);
+    gsl_matrix_complex *RDWhc_SEM  = gsl_matrix_complex_calloc(6,5);
 
     gsl_matrix_complex *PC    = gsl_matrix_complex_calloc(6,6);
+
     //For time derivatives
     vector<Ofsc> zIn(6), zOut(6);
 
@@ -4632,11 +4765,12 @@ int msdvt_CMS_RCM_deps_planar_ATF(double **ymd,
                 cout << "Please choose a direction for the continuation procedure:" << endl;
                 cout << "+1: s1_CMU_EM is increasing" << endl;
                 cout << "-1: s1_CMU_EM is decreasing" << endl;
-                cout << " to select a specific starting time" << endl;
                 cin >> dti;
                 ti = (int) dti;
-            }while(ti != 1 && ti != -1);
-        }else ti = 1;
+            }
+            while(ti != 1 && ti != -1);
+        }
+        else ti = 1;
 
         //Here, we want to make s_EM[0] "grow"
         sign = gsl_matrix_get(Q, 0, nfv-1) > 0? ti:-ti;
@@ -4669,48 +4803,71 @@ int msdvt_CMS_RCM_deps_planar_ATF(double **ymd,
     orbit_EM.tf = tmdn[man_grid_size]/SEML.us_em.ns;
 
     //--------------------------------------------------------------------------
-    // Free (TO UPDATE!)
+    // Free
     //--------------------------------------------------------------------------
     free_dmatrix(ym, 0, 41, 0, man_grid_size);
     free_dvector(tm, 0, man_grid_size);
     gslc_matrix_array_free(Ji , man_grid_size);
+
     gsl_vector_free(DQv);
     gsl_vector_free(Fv);
     gsl_vector_free(K3);
+
     gsl_matrix_free(DF);
     gsl_matrix_free(M);
     gsl_matrix_free(Id);
+    gsl_matrix_free(Phi0);
+    gsl_matrix_free(PhiN);
+    gsl_matrix_free(COORD_R_NCEM);
+    gsl_matrix_free(COORD_R_NCSEM);
+
+
+    gsl_matrix_complex_free(PC);
+    gsl_matrix_complex_free(RDWhc_EM);
+    gsl_matrix_complex_free(RDWhc_SEM);
+
+    gsl_matrix_free(K1_EM);
+    gsl_matrix_free(K2_EM);
+    gsl_matrix_complex_free(K1c_EM);
+    gsl_matrix_complex_free(K2c_EM);
+
+    gsl_matrix_free(K2_SEM);
+    gsl_matrix_complex_free(K1c_SEM);
+    gsl_matrix_complex_free(K2c_SEM);
+
+    gsl_vector_free(work);
+    gsl_matrix_free(Q);
+    gsl_matrix_free(R);
+    gsl_matrix_free(DFT);
 
     if(iter >= iterMax) return GSL_FAILURE;
     else return GSL_SUCCESS;
 }
 
+
+//=======================================================================================================================================
+//
+//          DIFFCORR CUSTOM: CMU to CMS with PSEUDO-ARCLENGTH CONSTRAINT
+//
+//=======================================================================================================================================
 /**
- * \brief Multiple shooting scheme with no boundary conditions and fixed last time + pseuod-arclength constraint.
+ * \brief Multiple shooting scheme with no boundary conditions. PLANAR CASE.
  *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
+ *        - The initial conditions z0 vary in the center-unstable manifold of EML2.
+ *        - The final state zN vary in the center-stable manifold of SEML2.
+ *        - The times t0,..., tN are fixed.
+ *        - The null vector associated to the solution is computed.
+ *        - The pseudo-arclength constraint is added to the constraints. Therefore, the system is SQUARED.
+ *
+ *        Note: does not yield satisfactory results for the moment (02/09/2016).
  **/
-int msdvt_CMS_RCM_deps_planar_pac_ATF(
-    double **ymd,
-    double *tmd,
-    double **ymdn,
-    double *tmdn,
-    double *nullvector,
-    double *conv_free_var,
-    double ds,
-    int number_of_variables,
-    int man_grid_size,
-    int coord_type,
-    double precision,
-    int isFirst,
-    matrix<Oftsc> &DCM_EM_TFC,
-    matrix<Oftsc> &DCM_SEM_TFC,
-    gsl_matrix_complex *CCM_R_RCM_EM,
-    gsl_matrix_complex *CCM_R_RCM_SEM,
-    SingleOrbit &orbit_EM,
-    SingleOrbit &orbit_SEM,
-    gnuplot_ctrl *h1,
-    int isPlotted,
-    int isDebug)
+int msdvt_CMS_RCM_deps_planar_pac_ATF(double **ymd, double *tmd, double **ymdn, double *tmdn,
+                                      double *nullvector, double *conv_free_var, double ds,
+                                      int number_of_variables, int man_grid_size, int coord_type, double precision, int isFirst,
+                                      matrix<Oftsc> &DCM_EM_TFC, matrix<Oftsc> &DCM_SEM_TFC,
+                                      gsl_matrix_complex *CCM_R_RCM_EM, gsl_matrix_complex *CCM_R_RCM_SEM,
+                                      SingleOrbit &orbit_EM, SingleOrbit &orbit_SEM,
+                                      gnuplot_ctrl *h1, int isPlotted, int isDebug)
 {
     //--------------------------------------------------------------------------
     // Init
@@ -4728,13 +4885,13 @@ int msdvt_CMS_RCM_deps_planar_pac_ATF(
     //Get the default coordinates system from the coord_type
     //-------------------------------------------------------------------------------
     int dcs = default_coordinate_system(coord_type);
-    int fwrk = default_framework(coord_type);
+    int coordsys = default_framework(coord_type);
 
     //--------------------------------------------------------------------------
     // Check that the focus in SEML is in accordance with the dcs.
     //--------------------------------------------------------------------------
-    int fwrk0 = SEML.fwrk;
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
+    int fwrk0 = SEML.coordsys;
+    if(fwrk0 != coordsys) changeDCS(SEML, coordsys);
 
     //-------------------------------------------------------------------------------
     // GSL matrices and vectors
@@ -4769,18 +4926,22 @@ int msdvt_CMS_RCM_deps_planar_pac_ATF(
     gsl_matrix *PhiN = gsl_matrix_calloc(6,5);
 
     //Intermediate variables
-    gsl_matrix *K1_EM   = gsl_matrix_calloc(6,4);
-    gsl_matrix *K2_EM   = gsl_matrix_calloc(6,4);
-    matrix<Ofsc> DWh_ofsc_EM(6, 4);
-    gsl_matrix_complex *RDWhc_EM = gsl_matrix_complex_calloc(6,4);
+    gsl_matrix *K1_EM            = gsl_matrix_calloc(6,4);
+    gsl_matrix *K2_EM            = gsl_matrix_calloc(6,4);
     gsl_matrix_complex *K1c_EM   = gsl_matrix_complex_calloc(6,4);
     gsl_matrix_complex *K2c_EM   = gsl_matrix_complex_calloc(6,4);
 
-    gsl_matrix *K2_SEM    = gsl_matrix_calloc(6,5);
-    matrix<Ofsc> DWh_ofsc_SEM (6, 5);
-    gsl_matrix_complex *RDWhc_SEM  = gsl_matrix_complex_calloc(6,5);
+    gsl_matrix *K2_SEM             = gsl_matrix_calloc(6,5);
     gsl_matrix_complex *K1c_SEM    = gsl_matrix_complex_calloc(6,5);
     gsl_matrix_complex *K2c_SEM    = gsl_matrix_complex_calloc(6,5);
+
+    //Jacobian DWh in OFS format
+    matrix<Ofsc> DWh_ofsc_EM(6, 4);
+    matrix<Ofsc> DWh_ofsc_SEM (6, 5);
+
+    //Jacobian DWh in matrix format
+    gsl_matrix_complex *RDWhc_EM = gsl_matrix_complex_calloc(6,4);
+    gsl_matrix_complex *RDWhc_SEM  = gsl_matrix_complex_calloc(6,5);
 
 
     gsl_matrix_complex *PC    = gsl_matrix_complex_calloc(6,6);
@@ -5249,7 +5410,8 @@ int msdvt_CMS_RCM_deps_planar_pac_ATF(
             cout << " to select a specific starting time" << endl;
             cin >> dti;
             ti = (int) dti;
-        }while(ti != 1 && ti != -1);
+        }
+        while(ti != 1 && ti != -1);
 
         //Here, we want to make s_EM[0] "grow"
         sign = gsl_matrix_get(Q, 0, nfv-1) > 0? ti:-ti;
@@ -5278,17 +5440,42 @@ int msdvt_CMS_RCM_deps_planar_pac_ATF(
 
 
     //--------------------------------------------------------------------------
-    // Free (TO UPDATE!)
+    // Free
     //--------------------------------------------------------------------------
     free_dmatrix(ym, 0, 41, 0, man_grid_size);
     free_dvector(tm, 0, man_grid_size);
     gslc_matrix_array_free(Ji , man_grid_size);
+
     gsl_vector_free(DQv);
     gsl_vector_free(Fv);
     gsl_vector_free(K3);
+
     gsl_matrix_free(DF);
     gsl_matrix_free(M);
     gsl_matrix_free(Id);
+    gsl_matrix_free(Phi0);
+    gsl_matrix_free(PhiN);
+    gsl_matrix_free(COORD_R_NCEM);
+    gsl_matrix_free(COORD_R_NCSEM);
+
+
+    gsl_matrix_complex_free(PC);
+    gsl_matrix_complex_free(RDWhc_EM);
+    gsl_matrix_complex_free(RDWhc_SEM);
+
+    gsl_matrix_free(K1_EM);
+    gsl_matrix_free(K2_EM);
+    gsl_matrix_complex_free(K1c_EM);
+    gsl_matrix_complex_free(K2c_EM);
+
+    gsl_matrix_free(K2_SEM);
+    gsl_matrix_complex_free(K1c_SEM);
+    gsl_matrix_complex_free(K2c_SEM);
+
+    gsl_vector_free(work);
+    gsl_matrix_free(Q);
+    gsl_matrix_free(R);
+    gsl_matrix_free(DFT);
 
 
     return GSL_SUCCESS;
@@ -5296,31 +5483,23 @@ int msdvt_CMS_RCM_deps_planar_pac_ATF(
 
 
 /**
- * \brief Multiple shooting scheme with no boundary conditions + pseuod-arclength constraint
+ * \brief Multiple shooting scheme with no boundary conditions. PLANAR CASE.
  *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
+ *        - The initial conditions z0 vary in the center-unstable manifold of EML2.
+ *        - The final state zN vary in the center-stable manifold of SEML2.
+ *        - The times t0,..., tN are free to vary.
+ *        - The null vector associated to the solution is computed.
+ *        - The pseudo-arclength constraint is added to the constraints. Therefore, the system is SQUARED.
+ *
+ *        Note: does not yield satisfactory results for the moment (02/09/2016).
  **/
-int msdvt_CMS_RCM_deps_planar_pac(
-    double **ymd,
-    double *tmd,
-    double **ymdn,
-    double *tmdn,
-    double *nullvector,
-    double *conv_free_var,
-    double ds,
-    int number_of_variables,
-    int man_grid_size,
-    int coord_type,
-    double precision,
-    int isFirst,
-    matrix<Oftsc> &DCM_EM_TFC,
-    matrix<Oftsc> &DCM_SEM_TFC,
-    gsl_matrix_complex *CCM_R_RCM_EM,
-    gsl_matrix_complex *CCM_R_RCM_SEM,
-    SingleOrbit &orbit_EM,
-    SingleOrbit &orbit_SEM,
-    gnuplot_ctrl *h1,
-    int isPlotted,
-    int isDebug)
+int msdvt_CMS_RCM_deps_planar_pac(double **ymd, double *tmd, double **ymdn, double *tmdn,
+                                  double *nullvector, double *conv_free_var, double ds,
+                                  int number_of_variables, int man_grid_size, int coord_type, double precision, int isFirst,
+                                  matrix<Oftsc> &DCM_EM_TFC, matrix<Oftsc> &DCM_SEM_TFC,
+                                  gsl_matrix_complex *CCM_R_RCM_EM, gsl_matrix_complex *CCM_R_RCM_SEM,
+                                  SingleOrbit &orbit_EM, SingleOrbit &orbit_SEM,
+                                  gnuplot_ctrl *h1, int isPlotted, int isDebug)
 {
     //--------------------------------------------------------------------------
     // Init
@@ -5339,7 +5518,7 @@ int msdvt_CMS_RCM_deps_planar_pac(
     //Get the default coordinates system from the coord_type
     //-------------------------------------------------------------------------------
     int dcs = default_coordinate_system(coord_type);
-    int fwrk = default_framework(coord_type);
+    int coordsys = default_framework(coord_type);
 
     //--------------------------------------------------------------------------
     // Selection of the vector field
@@ -5365,8 +5544,8 @@ int msdvt_CMS_RCM_deps_planar_pac(
     //--------------------------------------------------------------------------
     // Check that the focus in SEML is in accordance with the dcs.
     //--------------------------------------------------------------------------
-    int fwrk0 = SEML.fwrk;
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
+    int fwrk0 = SEML.coordsys;
+    if(fwrk0 != coordsys) changeDCS(SEML, coordsys);
 
     //-------------------------------------------------------------------------------
     // GSL matrices and vectors
@@ -5403,21 +5582,25 @@ int msdvt_CMS_RCM_deps_planar_pac(
     gsl_matrix *PhiN = gsl_matrix_calloc(6,5);
 
     //Intermediate variables
-    gsl_matrix *K1_EM   = gsl_matrix_calloc(6,4);
-    gsl_matrix *K2_EM   = gsl_matrix_calloc(6,4);
-    matrix<Ofsc> DWh_ofsc_EM(6, 4);
-    gsl_matrix_complex *RDWhc_EM = gsl_matrix_complex_calloc(6,4);
+    gsl_matrix *K1_EM            = gsl_matrix_calloc(6,4);
+    gsl_matrix *K2_EM            = gsl_matrix_calloc(6,4);
     gsl_matrix_complex *K1c_EM   = gsl_matrix_complex_calloc(6,4);
     gsl_matrix_complex *K2c_EM   = gsl_matrix_complex_calloc(6,4);
 
-    gsl_matrix *K2_SEM    = gsl_matrix_calloc(6,5);
-    matrix<Ofsc> DWh_ofsc_SEM (6, 5);
-    gsl_matrix_complex *RDWhc_SEM  = gsl_matrix_complex_calloc(6,5);
+    gsl_matrix *K2_SEM             = gsl_matrix_calloc(6,5);
     gsl_matrix_complex *K1c_SEM    = gsl_matrix_complex_calloc(6,5);
     gsl_matrix_complex *K2c_SEM    = gsl_matrix_complex_calloc(6,5);
 
+    //Jacobian DWh in OFS format
+    matrix<Ofsc> DWh_ofsc_EM(6, 4);
+    matrix<Ofsc> DWh_ofsc_SEM (6, 5);
 
-    gsl_matrix_complex *PC    = gsl_matrix_complex_calloc(6,6);
+    //Jacobian DWh in matrix format
+    gsl_matrix_complex *RDWhc_EM = gsl_matrix_complex_calloc(6,4);
+    gsl_matrix_complex *RDWhc_SEM  = gsl_matrix_complex_calloc(6,5);
+
+    gsl_matrix_complex *PC         =  gsl_matrix_complex_calloc(6,6);
+
     //For time derivatives
     vector<Ofsc> zIn(6), zOut(6);
 
@@ -6124,29 +6307,59 @@ int msdvt_CMS_RCM_deps_planar_pac(
     //    nullvector[nfv - 1] = 0.0;
 
     //--------------------------------------------------------------------------
-    // Free (TO UPDATE!)
+    // Free
     //--------------------------------------------------------------------------
     free_dmatrix(ym, 0, 41, 0, man_grid_size);
     free_dvector(tm, 0, man_grid_size);
     gslc_matrix_array_free(Ji , man_grid_size);
+
     gsl_vector_free(DQv);
     gsl_vector_free(Fv);
     gsl_vector_free(K3);
+
     gsl_matrix_free(DF);
     gsl_matrix_free(M);
     gsl_matrix_free(Id);
+    gsl_matrix_free(Phi0);
+    gsl_matrix_free(PhiN);
+    gsl_matrix_free(COORD_R_NCEM);
+    gsl_matrix_free(COORD_R_NCSEM);
+
+
+    gsl_matrix_complex_free(PC);
+    gsl_matrix_complex_free(RDWhc_EM);
+    gsl_matrix_complex_free(RDWhc_SEM);
+
+    gsl_matrix_free(K1_EM);
+    gsl_matrix_free(K2_EM);
+    gsl_matrix_complex_free(K1c_EM);
+    gsl_matrix_complex_free(K2c_EM);
+
+    gsl_matrix_free(K2_SEM);
+    gsl_matrix_complex_free(K1c_SEM);
+    gsl_matrix_complex_free(K2c_SEM);
+
+    gsl_vector_free(work);
+    gsl_matrix_free(Q);
+    gsl_matrix_free(R);
+    gsl_matrix_free(DFT);
 
 
     return GSL_SUCCESS;
 }
 
+
+//=======================================================================================================================================
+//
+//          DIFFCORR BASED ON LEVEL II Differential Corrector (Howell & Barden)
+//
+//=======================================================================================================================================
 /**
- * \brief Multiple shooting scheme with no boundary conditions. The time vector is also variable.
- *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
+ * \brief Differential correction scheme, with fixed time
  **/
-int multiple_shooting_direct_variable_time(double **ymd, double *tmd, double **ymdn, double *tmdn, double **yma,
-        int N, int man_grid_size, int coord_type,
-        int isPlotted, int isTimeFixed, gnuplot_ctrl *h1)
+int differential_correction_level_I(double **ymd, double *tmd, double **ymdn, double *tmdn, double **yma,
+                                    int N, int man_grid_size,
+                                    int isPlotted, int isTimeFixed, gnuplot_ctrl *h1)
 {
     //--------------------------------------------------------------------------
     // Init
@@ -6158,64 +6371,47 @@ int multiple_shooting_direct_variable_time(double **ymd, double *tmd, double **y
     //Current time along the trajectory
     double *tm   = dvector(0, man_grid_size);
     //Various temporary states and times
-    double yv[N], ye[N], f[6];
+    double yv[N], ye[N], te, yedot[6];
+    //Error vector
+    double bv[3];
 
     //-------------------------------------------------------------------------------
-    //Get the default coordinates system from the coord_type
+    //Gsl matrices and vectors
     //-------------------------------------------------------------------------------
-    int dcs = default_coordinate_system(coord_type);
-    int fwrk = default_framework(coord_type);
+    gsl_matrix *STM  = gsl_matrix_alloc(6,6);
+    gsl_vector *P    = gsl_vector_alloc(3);
+    gsl_matrix *Prod = gsl_matrix_calloc(3,3);
+    gsl_vector *P1   = gsl_vector_calloc(3);
+    gsl_vector *Pn;
+    gsl_matrix *DP;
 
-    //--------------------------------------------------------------------------
-    // Selection of the vector field
-    //--------------------------------------------------------------------------
-    int (*vf)(double, const double*, double*, void*) = qbfbp_vfn_novar; //by default, to avoid warning from gcc compiler
-    switch(dcs)
+    if(isTimeFixed)
     {
-    case F_SEM:
-    case F_EM:
-        vf = qbfbp_vf; //vector field with a state (X, PX)
-        break;
-    case F_NCSEM:
-    case F_NCEM:
-        vf = qbfbp_vfn_novar; //vector field with a state (x, px) (default)
-        break;
-    case F_VNCSEM:
-    case F_VNCEM:
-        vf = qbfbp_vfn_novar_xv; //vector field with a state (x, vx)
-        break;
+        DP  = gsl_matrix_alloc(3,3);
+        Pn = gsl_vector_calloc(3);
+    }
+    else
+    {
+        DP  = gsl_matrix_alloc(3,4);
+        Pn = gsl_vector_calloc(4);
     }
 
+    //For GSL inversion
+    gsl_permutation * p = gsl_permutation_alloc (3);
+    int s;
+
+
 
     //--------------------------------------------------------------------------
-    // Check that the focus in SEML is in accordance with the dcs.
+    // Vector that will contain all corrections to make at all patch points
     //--------------------------------------------------------------------------
-    int fwrk0 = SEML.fwrk;
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
+    double **kv;
+    if(isTimeFixed) kv = dmatrix(0, 2, 0, man_grid_size-1);
+    else kv = dmatrix(0, 3, 0, man_grid_size-1);
 
-    //-------------------------------------------------------------------------------
-    // GSL matrices and vectors
-    //-------------------------------------------------------------------------------
-    // Correction vector at patch points
-    gsl_vector *DQv = gsl_vector_calloc(7*(man_grid_size+1));
-    // Error vector at patch points
-    gsl_vector *Fv  = gsl_vector_calloc(6*(man_grid_size));
-    //Jacobian at patch points
-    gsl_matrix **Ji  = gslc_matrix_array_calloc(6, 6, man_grid_size);
-    gsl_matrix *DF   = gsl_matrix_calloc(6*man_grid_size, 7*(man_grid_size+1));
-    gsl_matrix *M    = gsl_matrix_calloc(6*(man_grid_size), 6*(man_grid_size));
-
-    //Identity matrix eye(6)
-    gsl_matrix *Id = gsl_matrix_calloc(6,6);
-    gsl_matrix_set_identity (Id);
-
-    //Intermediate variables
-    gsl_vector *K3  = gsl_vector_calloc(6*(man_grid_size));
-    gsl_vector *Kf  = gsl_vector_calloc(6);
-    gsl_vector *K4  = gsl_vector_calloc(6);
 
     //--------------------------------------------------------------------------
-    // Copy the departure state in ymdn
+    // Copy the departure state
     //--------------------------------------------------------------------------
     for(int k = 0; k <= man_grid_size; k++)
     {
@@ -6224,156 +6420,139 @@ int multiple_shooting_direct_variable_time(double **ymd, double *tmd, double **y
     }
 
 
-    //----------------------------------------------------------------------
-    // Arrival state: yma(1, :) = ymd(1,:);
-    //----------------------------------------------------------------------
-    for(int i = 0; i < N; i++) yma[i][0] = ymd[i][0];
-
     //--------------------------------------------------------------------------
     // Loop correction
     //--------------------------------------------------------------------------
     int iter = 0;
-    while(iter < 20)
+    while(iter < 50)
     {
 
         //----------------------------------------------------------------------
-        //Trajectory plot
+        // Norm check
         //----------------------------------------------------------------------
-        if(isPlotted) gnuplot_plot_xyz(h1, ymdn[0], ymdn[1],  ymdn[2], man_grid_size+1, (char*)"", "points", "1", "4", 4);
+        normC = 0.0;
 
         //----------------------------------------------------------------------
-        // Build the Jacobian and other useful matrices
+        // Arrival state: yma(1, :) = ymd(1,:);
         //----------------------------------------------------------------------
-        for(int k = 0; k <= man_grid_size-1; k++)
+        for(int i = 0; i < N; i++) yma[i][0] = ymd[i][0];
+
+        //----------------------------------------------------------------------
+        // Level one
+        //----------------------------------------------------------------------
+        for(int k = 0; k <= man_grid_size-1; k++) //TBC: the LAST point
         {
             //------------------------------------------------------------------
             // Integration
             //------------------------------------------------------------------
             for(int i = 0; i < N; i++) yv[i] = ymdn[i][k];
-            ode78_qbcp(ym, tm, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
+            ode78_qbcp(ym, tm, tmdn[k], tmdn[k+1], yv, 42, 1, F_VNCSEM, VNCSEM, VNCSEM);
 
             //------------------------------------------------------------------
             // Final position is at the end of ym
             //------------------------------------------------------------------
             for(int i = 0; i < N; i++) ye[i] = ym[i][1];
+            te = tm[1];
 
             //------------------------------------------------------------------
-            // Arrival state (including STM) = final position is at the end of ym
+            // Arrival state (including STM)
             //------------------------------------------------------------------
             for(int i = 0; i < N; i++) yma[i][k+1] = ym[i][1];
 
             //------------------------------------------------------------------
             // Update the Jacobian
             //------------------------------------------------------------------
-            gslc_vectorToMatrix(Ji[k], ye, 6, 6, 6);
+            // STM: STM = vectorToMatrix(ye, 6, 6, 6);
+            gslc_vectorToMatrix(STM, ye, 6, 6, 6);
 
-            //------------------------------------------------------------------
-            // Update the error vector: F[k] = [ye[k] - ymdn[k+1]]
-            //------------------------------------------------------------------
-            for(int i = 0; i < 6; i++)
+            // Derivatives at tf
+            qbfbp_vfn_novar_xv(te, ye, yedot, &SEML);
+
+            if(isTimeFixed)
+                //DP = STM(1:3,4:6);
+                for(int i = 0; i < 3; i++) for(int j = 0; j <3; j++) gsl_matrix_set(DP, i, j, gsl_matrix_get(STM, i, j+3));
+            else
             {
-                gsl_vector_set(Fv, 6*k+i, ye[i] - ymdn[i][k+1]);
+                //DP = [STM(1:3,4:6) yedot(1:3)];
+                for(int i = 0; i < 3; i++)
+                {
+                    for(int i = 0; i < 3; i++)
+                    {
+                        for(int j = 0; j <3; j++) gsl_matrix_set(DP, i, j, gsl_matrix_get(STM, i, j+3));
+                        gsl_matrix_set(DP, i, 3, yedot[i]);
+                    }
+                }
             }
 
-
-            //--------------------------
-            //dF[k]/dt[k] = - Ji[k]*f[Q[k], t[k])
-            //--------------------------
-            //Computing f[Q[k], t[k])
-            for(int i = 0; i < 6; i++) yv[i] = ymdn[i][k];
-            vf(tmdn[k], yv, f, &SEML);
-
-            //Kf = -f[Q[k], t[k])
-            for(int i = 0; i < 6; i++) gsl_vector_set(Kf, i, -f[i]);
-
-            //dF[k]/dt[k] = - Ji[k]*f[Q[k], t[k])
-            gsl_blas_dgemv(CblasNoTrans, 1.0, Ji[k], Kf, 0.0, K4);
-
-            //--------------------------
-            //dF[k]/dt[k+1] = +f[Q[k+1], t[k+1])
-            //--------------------------
-            //Computing f[Q[k+1], t[k+1])
-            vf(tmdn[k+1], ye, f, &SEML);
-
-
             //------------------------------------------------------------------
-            // Update DF
+            // Update the error vector: P = [ye(0:2) - ymdn(k+1,0:2)']
             //------------------------------------------------------------------
-            for(int i = 0; i < 6; i++)
+            for(int i = 0; i < 3; i++)
             {
-                for(int j = 0; j < 6; j++)
-                {
-                    //--------------------------
-                    //dF[k]/dQ[k]
-                    //--------------------------
-                    gsl_matrix_set(DF, i + 6*k, j + 7*k, gsl_matrix_get(Ji[k], i, j));
+                gsl_vector_set(P, i, ye[i] - ymdn[i][k+1]);
+                bv[i] = ye[i] - ymdn[i][k+1];
+            }
 
-                    //--------------------------
-                    //dF[k]/dQ[k+1]
-                    //--------------------------
-                    gsl_matrix_set(DF, i + 6*k, j + 7*(k+1), -gsl_matrix_get(Id, i, j));
-                }
+            //------------------------------------------------------------------
+            // Norm
+            //------------------------------------------------------------------
+            normC += ENorm(bv, 3);
 
-                //--------------------------
-                //dF[k]/dt[k] = - Ji[k]*f[Q[k], t[k])
-                //--------------------------
-                gsl_matrix_set(DF, i + 6*k, 7*(k+1)-1, gsl_vector_get(K4, i));
-
-                //--------------------------
-                //dF[k]/dt[k+1]
-                //--------------------------
-                gsl_matrix_set(DF, i + 6*k, 7*(k+2)-1, f[i]);
+            //------------------------------------------------------------------
+            // Minimum norm solution
+            //------------------------------------------------------------------
+            if(isTimeFixed) //inverse a 3x3 system
+            {
+                //Inverse
+                gsl_linalg_LU_decomp (DP, p , &s);
+                //Pn = DP^{-1}*P
+                gsl_linalg_LU_solve(DP, p, P, Pn);
+                //Update kv
+                for(int i = 0; i < 3; i++) kv[i][k] = gsl_vector_get(Pn, i);
+            }
+            else //minimum norm solution on a 3x4 system
+            {
+                //Compute Prod = DP*DP^T
+                gsl_blas_dgemm (CblasNoTrans, CblasTrans, 1.0, DP , DP, 0.0, Prod);
+                //Inverse
+                gsl_linalg_LU_decomp (Prod, p , &s);
+                //P1 = Prod^{-1}*P
+                gsl_linalg_LU_solve(Prod, p, P, P1);
+                //Pn = DP^T*P1
+                gsl_blas_dgemv (CblasTrans, 1.0, DP, P1, 0.0, Pn);
+                //Update kv
+                for(int i = 0; i < 4; i++) kv[i][k] = gsl_vector_get(Pn, i);
             }
         }
-
-        //------------------------------------------------------------------
-        // Norm
-        //------------------------------------------------------------------
-        normC  = gsl_blas_dnrm2(Fv);
-
-        //------------------------------------------------------------------
-        // Update M
-        //------------------------------------------------------------------
-        gsl_blas_dgemm (CblasNoTrans, CblasTrans, 1.0, DF , DF, 0.0, M);
-
 
         //----------------------------------------------------------------------
         // Check that all points are under a given threshold
         //----------------------------------------------------------------------
-        cout << "multiple_shooting_direct. nerror = " << normC << endl;
-        if(normC < PREC_GSM)
-        {
-            break;
-        }
-
-        //----------------------------------------------------------------------
-        // Update correction vector
-        //----------------------------------------------------------------------
-        //Since M is definite-positive, a Cholesky decomposition can be used, instead of a LU decomposition.
-        gsl_linalg_cholesky_decomp (M);
-        gsl_linalg_cholesky_solve(M, Fv, K3);
-        gsl_blas_dgemv(CblasTrans, -1.0, DF, K3, 0.0, DQv);
+        cout << "normC = " << normC << endl;
+        if(normC < 1e-9) break;
 
 
         //----------------------------------------------------------------------
         // Update the free variables
         //----------------------------------------------------------------------
-        for(int k = 0; k <= man_grid_size; k++)
+        for(int k = 0; k <= man_grid_size-1; k++)
         {
-            for(int i = 0; i < 6; i++) ymdn[i][k] += gsl_vector_get(DQv, 7*k+i);
-            tmdn[k] += gsl_vector_get(DQv, 7*(k+1)-1);
+            //The state at position k
+            for(int i = 0; i < 3; i++) ymdn[i+3][k] -= kv[i][k];
+            //The final time, at position k+1
+            if(!isTimeFixed) tmdn[k+1] -= kv[3][k];
         }
 
         //----------------------------------------------------------------------
         // Update number of iterations
         //----------------------------------------------------------------------
         iter++;
-    }
 
-    //--------------------------------------------------------------------------
-    // Reset the focus in SEML, if necessary
-    //--------------------------------------------------------------------------
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
+        //----------------------------------------------------------------------
+        //Trajectory plot
+        //----------------------------------------------------------------------
+        if(isPlotted) gnuplot_plot_xyz(h1, ymdn[0], ymdn[1],  ymdn[2], man_grid_size+1, (char*)"", "lines", "1", "3", 5);
+    }
 
 
     //--------------------------------------------------------------------------
@@ -6381,14 +6560,18 @@ int multiple_shooting_direct_variable_time(double **ymd, double *tmd, double **y
     //--------------------------------------------------------------------------
     free_dmatrix(ym, 0, 41, 0, man_grid_size);
     free_dvector(tm, 0, man_grid_size);
-    gslc_matrix_array_free(Ji , man_grid_size);
-    gsl_vector_free(DQv);
-    gsl_vector_free(Fv);
-    gsl_vector_free(K3);
-    gsl_matrix_free(DF);
-    gsl_matrix_free(M);
-    gsl_matrix_free(Id);
+    if(isTimeFixed) free_dmatrix(kv, 0, 2, 0, man_grid_size-1);
+    else free_dmatrix(kv, 0, 3, 0, man_grid_size-1);
 
+    gsl_matrix_free(STM);
+    gsl_matrix_free(Prod);
+    gsl_matrix_free(DP);
+
+    gsl_vector_free(P);
+    gsl_vector_free(P1);
+    gsl_vector_free(Pn);
+
+    gsl_permutation_free(p);
 
     return GSL_SUCCESS;
 }

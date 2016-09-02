@@ -131,7 +131,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_PART(int ofts_order,
                                   vector<Ofsc>  &Vcoc_EM);
 
 
-void ref1_CMU_EM_to_CMS_SEM_MSD_RCM(SingleOrbit &orbit_EM,
+void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_3D(SingleOrbit &orbit_EM,
                                     SingleOrbit &orbit_SEM,
                                     matrix<Oftsc> &DCM_EM_TFC,
                                     matrix<Oftsc> &DCMS_SEM_TFC,
@@ -150,7 +150,7 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR_CONT(SingleOrbit &orbit_EM,
         int man_grid_size,
         gnuplot_ctrl *h2);
 /**
- *  \brief Same as ref1_CMU_EM_to_CMS_SEM_MSD_RCM, in the planar case.
+ *  \brief Same as ref1_CMU_EM_to_CMS_SEM_MSD_RCM_3D, in the planar case.
  **/
 void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR_CONT_AFT(SingleOrbit &orbit_EM,
         SingleOrbit &orbit_SEM,
@@ -165,7 +165,7 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR_CONT_AFT(SingleOrbit &orbit_EM,
         gnuplot_ctrl *h2);
 
 /**
- *  \brief Same as ref1_CMU_EM_to_CMS_SEM_MSD_RCM, in the planar case.
+ *  \brief Same as ref1_CMU_EM_to_CMS_SEM_MSD_RCM_3D, in the planar case.
  **/
 void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR_CONT_PAC_AFT(SingleOrbit &orbit_EM,
         SingleOrbit &orbit_SEM,
@@ -201,7 +201,7 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR(SingleOrbit &orbit_EM,
  *         The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CMS of SEML2. The time at each point
  *         except the first one is allowed to vary. A continuation procedure can be performed to get more than one refined solution.
  **/
-void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_CONT_AFT(SingleOrbit &orbit_EM,
+void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_3D_CONT_AFT(SingleOrbit &orbit_EM,
                                              SingleOrbit &orbit_SEM,
                                              matrix<Oftsc> &DCM_EM_TFC,
                                              matrix<Oftsc> &DCMS_SEM_TFC,

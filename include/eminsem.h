@@ -416,14 +416,6 @@ void NCtoSYSv_vec(double **yNC, double *tNC, double **ySYS, int N, QBCP_L *qbcp_
 void SYStoNC_vec(double **ySYS, double *tSYS, double **yNC, int N, QBCP_L *qbcp_l);
 
 //-----------------------------------------------------------------------------
-// COC: NC <--> SEM
-//-----------------------------------------------------------------------------
-/**
- *  \brief From NC to SEM, in SEM units.
- **/
-void NCtoSEM_vec(double **yNC, double *tNC, double **ySYS, int N, QBCP_L *qbcp_l);
-
-//-----------------------------------------------------------------------------
 // COC: NC <--> VNC
 //-----------------------------------------------------------------------------
 /**

@@ -60,7 +60,7 @@ void init_orbit(SingleOrbit &orbit,
     orbit.tf  = tf;                            //Final time after computation
     orbit.tproj  = tproj;                      //default time between each projection
     orbit.tprojmin  = 1e-4*qbcp_l->us.T;                    //minimum time between each projection
-    orbit.ePmax = (qbcp_l->fwrk == F_SEM)? 5e-4:1e-5; //maximum projection distance allowed
+    orbit.ePmax = (qbcp_l->coordsys == F_SEM)? 5e-4:1e-5; //maximum projection distance allowed
 
     //-----------
     //ODE integration
@@ -301,33 +301,33 @@ int ode78_qbcp(double **yv,
     //    Define also the default variable type that will be used throughout the computation
     //    which is the NC state associated to the dcs (ex: dcs = F_SEM ==> varType = NCSEM).
     //====================================================================================
-    int fwrk = 0;
+    int coordsys = 0;
     int varType = 0;
     switch(dcs)
     {
     case F_SEM:
         varType = PSEM;
-        fwrk = F_SEM;
+        coordsys = F_SEM;
         break;
     case F_NCSEM:
         varType = NCSEM;
-        fwrk = F_SEM;
+        coordsys = F_SEM;
         break;
     case F_VNCSEM:
         varType = VNCSEM;
-        fwrk = F_SEM;
+        coordsys = F_SEM;
         break;
     case F_EM:
         varType = PEM;
-        fwrk = F_EM;
+        coordsys = F_EM;
         break;
     case F_NCEM:
         varType = NCEM;
-        fwrk = F_EM;
+        coordsys = F_EM;
         break;
     case F_VNCEM:
         varType = VNCEM;
-        fwrk = F_EM;
+        coordsys = F_EM;
         break;
     }
 
@@ -335,8 +335,8 @@ int ode78_qbcp(double **yv,
     // 3. Check that the focus in SEML is
     // in accordance with the dcs.
     //====================================================================================
-    int fwrk0 = SEML.fwrk;
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
+    int fwrk0 = SEML.coordsys;
+    if(fwrk0 != coordsys) changeDCS(SEML, coordsys);
 
 
     //====================================================================================
@@ -528,7 +528,7 @@ int ode78_qbcp(double **yv,
     //====================================================================================
     // 9. Reset the focus in SEML, if necessary
     //====================================================================================
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
+    if(fwrk0 != coordsys) changeDCS(SEML, fwrk0);
 
 
     //====================================================================================
@@ -1152,12 +1152,12 @@ void semNCPoints(double t, double **semP)
     //SEML1 position
     for(int i = 0; i < 3; i++) temp1[i] = SEML.cs_sem.cr3bp.l1.position[i];
     temp1[0] *= -1.0;
-    SEMtoNC(t, temp1, temp2, &SEML);
+    qbcp_coc(t, temp1, temp2, PSEM, NCSEM);
     for(int i = 0; i < 3; i++) semP[5][i] = temp2[i];
 
     for(int i = 0; i < 3; i++) temp1[i] = SEML.cs_sem.cr3bp.l2.position[i];
     temp1[0] *= -1.0;
-    SEMtoNC(t, temp1, temp2, &SEML);
+    qbcp_coc(t, temp1, temp2, PSEM, NCSEM);
     for(int i = 0; i < 3; i++) semP[6][i] = temp2[i];
 
 

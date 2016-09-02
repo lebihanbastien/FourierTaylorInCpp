@@ -61,7 +61,7 @@ int qbfbp_vfn_novar(double t, const double y[], double f[], void *params_void)
     return 0;
 }
 
-//Update the normalized vector field of the state
+//Update the normalized vector field of the state. Note that alpha[14] (alpha15) is zero for the QBCP
 int vfn_state(const double y[], double f[], double alpha[],
               double ps[], double pe[], double pm[],
               double qps2, double qpe2, double qpm2,
@@ -270,7 +270,7 @@ int qbfbp_vf(double t, const double y[], double f[], void *params_void)
 }
 
 /**
- *  \brief Update the vector field of the state in system coordinates (non-normalized)
+ *  \brief Update the vector field of the state in system coordinates (non-normalized). Note that alpha[14] (alpha15) is zero for the QBCP
  **/
 int vf_state( const double y[], double f[], double alpha[],
               double ps[], double pe[], double pm[],
@@ -341,7 +341,7 @@ double Uij(const double y[], double pc[], double qpc2, double mc, double factor,
 // NC coordinates, (X, P)
 //----------------------------------------------------------------
 /**
- *  \brief Build the Variational Equation Matrix Q from the arrays b and alpha
+ *  \brief Build the Variational Equation Matrix Q from the arrays b and alpha. Note that alpha[14] (alpha15) is zero for the QBCP
  **/
 void set_vareq_matrix(gsl_matrix *Q, double b[], double alpha[])
 {
@@ -874,7 +874,7 @@ int qbfbp_fh(double t, const double y[], double f[], void *params_void)
 //
 //--------------------------------------------------------------------------------------------------------------------------------------------
 /**
- *  \brief Hamiltonian of the QBCP with SYS units and SYS coordinates
+ *  \brief Hamiltonian of the QBCP with SYS units and SYS coordinates. Note that alpha[14] (alpha15) is zero for the QBCP
  **/
 double qbfbp_H(double t, const double y[], void *params_void)
 {

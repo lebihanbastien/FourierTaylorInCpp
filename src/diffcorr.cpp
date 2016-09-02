@@ -1,7 +1,7 @@
 #include "diffcorr.h"
 
 /**
- * \brief Differential correction scheme
+ * \brief Differential correction scheme, using the minimum norm solution.
  **/
 int differential_correction_mns(double *ystart, double *ydest, double t0, double *t1, double eps_diff, gsl_odeiv2_driver *d, int N, int isPlotted)
 {

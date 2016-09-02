@@ -35,20 +35,20 @@ void qbcp_coc(double t, const double y0[], double yout[], int inputType, int out
     //---------------------------------------------------------------------
     // 2. Define the default framework wrt the inputType
     //---------------------------------------------------------------------
-    int fwrk = 0;
+    int coordsys = 0;
     switch(inputType)
     {
     case VNCEM:
     case NCEM:
     case PEM:
     case VEM:
-        fwrk = F_EM;
+        coordsys = F_EM;
         break;
     case VNCSEM:
     case NCSEM:
     case PSEM:
     case VSEM:
-        fwrk = F_SEM;
+        coordsys = F_SEM;
         break;
     }
 
@@ -57,8 +57,8 @@ void qbcp_coc(double t, const double y0[], double yout[], int inputType, int out
     // 2. Check that the focus in SEML is
     // in accordance with the inputType.
     //---------------------------------------------------------------------
-    int fwrk0 = SEML.fwrk;
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
+    int fwrk0 = SEML.coordsys;
+    if(fwrk0 != coordsys) changeDCS(SEML, coordsys);
 
 
     //---------------------------------------------------------------------
@@ -70,7 +70,7 @@ void qbcp_coc(double t, const double y0[], double yout[], int inputType, int out
     //---------------------------------------------------------------------
     // 4. Reset the focus in SEML, if necessary
     //---------------------------------------------------------------------
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
+    if(fwrk0 != coordsys) changeDCS(SEML, fwrk0);
 }
 
 /**
@@ -96,7 +96,7 @@ void qbcp_coc(double t, const double y0[], double yout[], double *tout, int inpu
     // 2. Define the default framework wrt the inputType
     //    Define the factor to apply to the time vector
     //---------------------------------------------------------------------
-    int fwrk = 0;
+    int coordsys = 0;
     double tfactor = 1.0;
     switch(inputType)
     {
@@ -105,7 +105,7 @@ void qbcp_coc(double t, const double y0[], double yout[], double *tout, int inpu
     case PEM:
     case VEM:
         //EM framework
-        fwrk = F_EM;
+        coordsys = F_EM;
         //Time factor
         switch(outputType)
         {
@@ -132,7 +132,7 @@ void qbcp_coc(double t, const double y0[], double yout[], double *tout, int inpu
     case PSEM:
     case VSEM:
         //SEM framework
-        fwrk = F_SEM;
+        coordsys = F_SEM;
         //Time factor
         switch(outputType)
         {
@@ -160,8 +160,8 @@ void qbcp_coc(double t, const double y0[], double yout[], double *tout, int inpu
     // 2. Check that the focus in SEML is
     // in accordance with the inputType.
     //---------------------------------------------------------------------
-    int fwrk0 = SEML.fwrk;
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
+    int fwrk0 = SEML.coordsys;
+    if(fwrk0 != coordsys) changeDCS(SEML, coordsys);
 
 
     //---------------------------------------------------------------------
@@ -174,7 +174,7 @@ void qbcp_coc(double t, const double y0[], double yout[], double *tout, int inpu
     //---------------------------------------------------------------------
     // 4. Reset the focus in SEML, if necessary
     //---------------------------------------------------------------------
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
+    if(fwrk0 != coordsys) changeDCS(SEML, fwrk0);
 }
 
 /**
@@ -200,7 +200,7 @@ void qbcp_coc_vec(double **y0, double *t0, double **yout, double *tout, int N, i
     // 2. Define the default framework wrt the inputType
     //    Define the factor to apply to the time vector
     //---------------------------------------------------------------------
-    int fwrk = 0;
+    int coordsys = 0;
     double tfactor = 1.0;
     switch(inputType)
     {
@@ -209,7 +209,7 @@ void qbcp_coc_vec(double **y0, double *t0, double **yout, double *tout, int N, i
     case PEM:
     case VEM:
         //EM framework
-        fwrk = F_EM;
+        coordsys = F_EM;
 
         //Time factor
         switch(outputType)
@@ -237,7 +237,7 @@ void qbcp_coc_vec(double **y0, double *t0, double **yout, double *tout, int N, i
     case PSEM:
     case VSEM:
         //SEM framework
-        fwrk = F_SEM;
+        coordsys = F_SEM;
 
         //Time factor
         switch(outputType)
@@ -266,8 +266,8 @@ void qbcp_coc_vec(double **y0, double *t0, double **yout, double *tout, int N, i
     // 2. Check that the focus in SEML is
     // in accordance with the inputType.
     //---------------------------------------------------------------------
-    int fwrk0 = SEML.fwrk;
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
+    int fwrk0 = SEML.coordsys;
+    if(fwrk0 != coordsys) changeDCS(SEML, coordsys);
 
 
     //---------------------------------------------------------------------
@@ -291,7 +291,7 @@ void qbcp_coc_vec(double **y0, double *t0, double **yout, double *tout, int N, i
     //---------------------------------------------------------------------
     // 4. Reset the focus in SEML, if necessary
     //---------------------------------------------------------------------
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
+    if(fwrk0 != coordsys) changeDCS(SEML, fwrk0);
 }
 
 /**
@@ -317,7 +317,7 @@ void qbcp_coc_vec(double **y0, double *t0, double **yout, int N, int inputType, 
     // 2. Define the default framework wrt the inputType
     //    Define the factor to apply to the time vector
     //---------------------------------------------------------------------
-    int fwrk = 0;
+    int coordsys = 0;
     switch(inputType)
     {
     case VNCEM:
@@ -325,7 +325,7 @@ void qbcp_coc_vec(double **y0, double *t0, double **yout, int N, int inputType, 
     case PEM:
     case VEM:
         //EM framework
-        fwrk = F_EM;
+        coordsys = F_EM;
         break;
 
     case VNCSEM:
@@ -333,7 +333,7 @@ void qbcp_coc_vec(double **y0, double *t0, double **yout, int N, int inputType, 
     case PSEM:
     case VSEM:
         //SEM framework
-        fwrk = F_SEM;
+        coordsys = F_SEM;
         break;
     }
 
@@ -342,8 +342,8 @@ void qbcp_coc_vec(double **y0, double *t0, double **yout, int N, int inputType, 
     // 2. Check that the focus in SEML is
     // in accordance with the inputType.
     //---------------------------------------------------------------------
-    int fwrk0 = SEML.fwrk;
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
+    int fwrk0 = SEML.coordsys;
+    if(fwrk0 != coordsys) changeDCS(SEML, coordsys);
 
 
     //---------------------------------------------------------------------
@@ -365,7 +365,7 @@ void qbcp_coc_vec(double **y0, double *t0, double **yout, int N, int inputType, 
     //---------------------------------------------------------------------
     // 4. Reset the focus in SEML, if necessary
     //---------------------------------------------------------------------
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
+    if(fwrk0 != coordsys) changeDCS(SEML, fwrk0);
 }
 
 /**
@@ -2273,7 +2273,6 @@ void EMmtoNCSEMm(double tEM, const double yEMm[], double yNCSEM[], QBCP_L *qbcp_
 //-----------------------------------------------------------------------------
 // COC: SEM <--> NCEM
 //-----------------------------------------------------------------------------
-
 /**
  * \brief From NC EM to SEM for vectors. Note that the time vector is left unchanged (still in EM units).
  **/
@@ -2481,7 +2480,6 @@ void NCSEMmtoEMv_vec(double **yNCSEM, double *tNCSEM, double **yEM, double *tEM,
 //-----------------------------------------------------------------------------
 // COC: NC <--> SYS
 //-----------------------------------------------------------------------------
-
 /**
  *  \brief From NC to SYS, in SYS units (either EM or SEM).
  **/
@@ -2500,8 +2498,11 @@ void NCtoSYS_vec(double **yNC, double *tNC, double **ySYS, int N, QBCP_L *qbcp_l
     }
 }
 
+//-----------------------------------------------------------------------------
+// COC: NC <--> SYS (NOT USED, HERE FOR BACKUP)
+//-----------------------------------------------------------------------------
 /**
- *  \brief From NC to SYSv, in SYS units (either EM or SEM).
+ *  \brief From NC to SYSv, in SYS units (either EM or SEM). NOT USED
  **/
 void NCtoSYSv_vec(double **yNC, double *tNC, double **ySYS, int N, QBCP_L *qbcp_l)
 {
@@ -2521,7 +2522,7 @@ void NCtoSYSv_vec(double **yNC, double *tNC, double **ySYS, int N, QBCP_L *qbcp_
 }
 
 /**
- *  \brief From SYS to NC, in SYS units (either EM or SEM).
+ *  \brief From SYS to NC, in SYS units (either EM or SEM). NOT USED.
  **/
 void SYStoNC_vec(double **ySYS, double *tSYS, double **yNC, int N, QBCP_L *qbcp_l)
 {
@@ -2538,32 +2539,12 @@ void SYStoNC_vec(double **ySYS, double *tSYS, double **yNC, int N, QBCP_L *qbcp_
     }
 }
 
-//-----------------------------------------------------------------------------
-// COC: NC <--> SEM
-//-----------------------------------------------------------------------------
-/**
- *  \brief From NC to SEM, in SEM units.
- **/
-void NCtoSEM_vec(double **yNC, double *tNC, double **ySYS, int N, QBCP_L *qbcp_l)
-{
-    double yNCd[6], ySYSd[6];
-    //Loop on all elements in yNCEM
-    for(int p = 0; p <= N; p++)
-    {
-        //Copy step p in yNCd
-        for(int k = 0; k <6; k++) yNCd[k] = yNC[k][p];
-        //NC EM to SEM
-        NCtoSEM(tNC[p], yNCd, ySYSd, qbcp_l);
-        //Copy result in ySEM
-        for(int k = 0; k <6; k++) ySYS[k][p] = ySYSd[k];
-    }
-}
 
 //-----------------------------------------------------------------------------
-// COC: NC <--> VNC
+// COC: NC <--> VNC (NOT USED, HERE FOR BACKUP)
 //-----------------------------------------------------------------------------
 /**
- *  \brief From NC to VNC, in NC units (either EM or SEM).
+ *  \brief From NC to VNC, in NC units (either EM or SEM). NOT USED
  **/
 void NCtoVNC_vec(double **yNC, double *tNC, double **yVNC, int N, QBCP_L *qbcp_l)
 {
@@ -2581,7 +2562,7 @@ void NCtoVNC_vec(double **yNC, double *tNC, double **yVNC, int N, QBCP_L *qbcp_l
 }
 
 /**
- *  \brief From VNC to NC, in NC units (either EM or SEM).
+ *  \brief From VNC to NC, in NC units (either EM or SEM). NOT USED
  **/
 void VNCtoNC_vec(double **yVNC, double *tNC, double **yNC, int N, QBCP_L *qbcp_l)
 {

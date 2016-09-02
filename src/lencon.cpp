@@ -437,7 +437,14 @@ int int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM,
                         ktMin[ksort]    = (int) kt;
                         distMin[ksort]  = min_proj_dist_SEM;
 
+                        cout << "s1min = " << projected_state_CMU_RCM[0][kt][ks1][ks3] << endl;
+                        cout << "s3min = " << projected_state_CMU_RCM[2][kt][ks1][ks3] << endl;
 
+                        cout << "s1_EM = " << init_state_CMU_RCM[0][kt][ks1][ks3] << endl;
+                        cout << "s3_EM = " << init_state_CMU_RCM[2][kt][ks1][ks3] << endl;
+
+                        cout << "projected state = " << projected_state_CMU_SEM[0][kt][ks1][ks3] << "  " << projected_state_CMU_SEM[1][kt][ks1][ks3] << endl;
+                        cout << "projected state = " << projected_state_CMU_SEM[0][kt][ks1][ks3] << "  " << projected_state_CMU_SEM[1][kt][ks1][ks3] << endl;
                         //----------------------------------------------------------
                         //Open datafile
                         //----------------------------------------------------------
@@ -514,8 +521,10 @@ int int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM,
 }
 
 /**
- *  \brief Same compute_grid_CMU_EM but using the Center-Stable Manifold about SEML2 as a target. Note that, for now, the coordinates along the stable direction is fixed
- *         to a small arbitrary value.
+ *  \brief Same int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM, but using the Center-Stable Manifold about SEML2 as a target.
+ *         Note that, for now, the coordinates along the stable direction is fixed to a small arbitrary value.
+ *         Since this routine does not yield substantially better results thant int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM, it is not currently used.
+ *
  **/
 int int_proj_CMU_EM_on_CMS_SEM(double tmax_on_manifold_EM,
                                int ofts_order,
@@ -869,7 +878,7 @@ int int_proj_CMU_EM_on_CMS_SEM(double tmax_on_manifold_EM,
 
 //=======================================================================================================================================
 //
-//         Refinement of solutions: CMU to CMS
+//         Refinement of solutions: CMU to CMS - general routines
 //
 //=======================================================================================================================================
 /**
@@ -895,7 +904,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_2(int man_grid_size,
     // 1. Get the default coordinates system from the coord_type
     //===============================================================================================
     int dcs  = default_coordinate_system(coord_type);
-    //int fwrk = default_framework(coord_type);
+    //int coordsys = default_framework(coord_type);
 
     //===============================================================================================
     // 2. Time on the orbits
@@ -1191,8 +1200,8 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_2(int man_grid_size,
         }
         else
         {
-           //ref1_CMU_EM_to_CMS_SEM_MSD_RCM(orbit_EM, orbit_SEM, DCM_EM_TFC, DCMS_SEM_TFC, dcs, coord_type, man_grid_size, h2);
-            ref1_CMU_EM_to_CMS_SEM_MSD_RCM_CONT_AFT(orbit_EM, orbit_SEM, DCM_EM_TFC, DCMS_SEM_TFC,
+           //ref1_CMU_EM_to_CMS_SEM_MSD_RCM_3D(orbit_EM, orbit_SEM, DCM_EM_TFC, DCMS_SEM_TFC, dcs, coord_type, man_grid_size, h2);
+            ref1_CMU_EM_to_CMS_SEM_MSD_RCM_3D_CONT_AFT(orbit_EM, orbit_SEM, DCM_EM_TFC, DCMS_SEM_TFC,
                                                     dcs, coord_type, man_grid_size, cont_steps_MAX,
                                                     isUserDefined, h2);
         }
@@ -1206,7 +1215,6 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_2(int man_grid_size,
 
     return 0;
 }
-
 
 
 /**
@@ -1230,7 +1238,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM(int man_grid_size,
     // 0. Get the default coordinates system from the coord_type
     //===============================================================================================
     int dcs  = default_coordinate_system(coord_type);
-    //int fwrk = default_framework(coord_type);
+    //int coordsys = default_framework(coord_type);
 
     //===============================================================================================
     // 1. Time on each orbit
@@ -1468,7 +1476,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM(int man_grid_size,
         }
         else
         {
-            ref1_CMU_EM_to_CMS_SEM_MSD_RCM(orbit_EM, orbit_SEM,
+            ref1_CMU_EM_to_CMS_SEM_MSD_RCM_3D(orbit_EM, orbit_SEM,
                                            DCM_EM_TFC, DCMS_SEM_TFC, dcs, coord_type, man_grid_size, h2);
         }
     }
@@ -1499,2208 +1507,19 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM(int man_grid_size,
     return 0;
 }
 
+//=======================================================================================================================================
+//
+//         Refinement of solutions: CMU to CMS - subroutines
+//
+//=======================================================================================================================================
+
+//====================================
+// Continuation
+//====================================
 /**
- *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the MANIFOLD trajectory (manifold leg).
- *         The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CMS of SEML2. The time at each point
- *         except the first one is allowed to vary. A continuation procedure can be performed to get more than one refined solution.
- **/
-int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_IN_PROGRESS(int man_grid_size,
-        int coord_type,
-        double st_EM[],
-        double st_SEM[],
-        double t0_EM,
-        double tf_EM,
-        vector<Oftsc> &CM_EM_NC,
-        vector<Oftsc> &CM_EM_TFC,
-        matrix<Oftsc> &DCM_EM_TFC,
-        matrix<Ofsc>  &Mcoc_EM,
-        matrix<Ofsc>  &Pcoc_EM,
-        matrix<Ofsc>  &MIcoc_EM,
-        matrix<Ofsc>  &PIcoc_EM,
-        vector<Ofsc>  &Vcoc_EM,
-        int isPlanar)
-{
-    //===============================================================================================
-    // 0. Get the default coordinates system from the coord_type
-    //===============================================================================================
-    int dcs  = default_coordinate_system(coord_type);
-
-    //===============================================================================================
-    // 1. Time on each orbit
-    //===============================================================================================
-    double tof_seml_SEM = 5*SEML.us_sem.T;   //TOF on SEML2 orbit
-
-    //===============================================================================================
-    // 3. Init the gnuplot
-    //===============================================================================================
-    //----------------------------------------------------------
-    //Gnuplot window
-    //----------------------------------------------------------
-    gnuplot_ctrl *h2;
-    h2 = gnuplot_init();
-
-    //----------------------------------------------------------
-    //Notable points in SEM system
-    //----------------------------------------------------------
-    double **semP_coord = dmatrix(0, 6, 0, 2);
-    switch(coord_type)
-    {
-    case PSEM:
-        semPoints(0.0, semP_coord);
-        semPlot(h2, semP_coord);
-        break;
-    case NCSEM:
-    case VNCSEM:
-        semNCPoints(0.0, semP_coord);
-        semPlot(h2, semP_coord);
-        break;
-
-    case PEM:
-        emPoints(0.0, semP_coord);
-        emPlot(h2, semP_coord);
-        break;
-    case NCEM:
-    case VNCEM:
-        emNCPoints(0.0, semP_coord);
-        emPlot(h2, semP_coord);
-        break;
-    }
-
-
-    //===============================================================================================
-    // 5. Structures to compute the final orbit about SEML2
-    //===============================================================================================
-    //--------------------------------------
-    // Center-manifold
-    //--------------------------------------
-    vector<Oftsc> CMS_SEM_NC;      //center manifold in NC coordinates
-    vector<Oftsc> CMS_SEM_TFC;     //center manifold in TFC coordinates
-    CMS_SEM_NC.reserve(6);
-    for(int i = 0; i <6; i++) CMS_SEM_NC.push_back(Oftsc(5, OFTS_ORDER, OFS_NV, OFS_ORDER));
-    CMS_SEM_TFC.reserve(6);
-    for(int i = 0; i <6; i++) CMS_SEM_TFC.push_back(Oftsc(5, OFTS_ORDER, OFS_NV, OFS_ORDER));
-    //Update CM
-    readVOFTS_bin(CMS_SEM_NC,  SEML_SEM.cs.F_PMS+"W/W",  OFS_ORDER);
-    readVOFTS_bin(CMS_SEM_TFC, SEML_SEM.cs.F_PMS+"W/Wh", OFS_ORDER);
-
-
-    //--------------------------------------
-    // COC objects
-    //--------------------------------------
-    matrix<Ofsc>  Mcoc_SEM(6,6);    //COC matrix
-    matrix<Ofsc>  Pcoc_SEM(6,6);    //COC matrix (Mcoc = Pcoc*Complex matrix)
-    matrix<Ofsc>  MIcoc_SEM(6,6);   //COC matrix = inv(Mcoc)
-    matrix<Ofsc>  PIcoc_SEM(6,6);   //COC matrix = inv(Pcoc)
-    vector<Ofsc>  Vcoc_SEM(6);      //COC vector
-    //Update COC
-    initCOC(Pcoc_SEM, Mcoc_SEM, PIcoc_SEM, MIcoc_SEM, Vcoc_SEM, SEML_SEM);
-
-    //--------------------------------------
-    //Jacobian of the center manifold
-    //--------------------------------------
-    matrix<Oftsc> DCMS_SEM_TFC(6, 5, 5, OFTS_ORDER, OFS_NV, OFS_ORDER);
-    readMOFTS_bin(DCMS_SEM_TFC, SEML_SEM.cs.F_PMS+"DWf/DWhc", OFS_ORDER);
-
-
-    //===============================================================================================
-    // 7. Loop. Only one solution for now!
-    //===============================================================================================
-
-    cout << "-------------------------------------------"  << endl;
-    cout << "  Refinement of EML2-SEML2 arc             "  << endl;
-    cout << "-------------------------------------------"  << endl;
-    //===============================================================================================
-    // @TODO: ADD AN ESTIMATE OF THE DISTANCE OF PROJECTION + by reproducing the PROJECTION METHOD
-    // THIS TIME ON THE CMS of SEML2! (set s5 of SEML2 to zero, or maybe a rough search...)
-    // In this way, only 3 inputs: s1, s3 and t0.
-    //===============================================================================================
-
-    char ch;
-    printf("Press ENTER to go on\n");
-    scanf("%c",&ch);
-
-    //===============================================================================================
-    // 6.1 Initialize local variables: EM
-    //===============================================================================================
-    //---------------------------------------------------------------------
-    //Initialize the initial conditions (both NC and RCM coordinates)
-    //---------------------------------------------------------------------
-
-    //---------------------------------------------------------------------
-    // Initialisation of the orbit structure
-    //---------------------------------------------------------------------
-    Ofsc orbit_ofs_EM(OFS_ORDER);
-    OdeStruct driver_EM;
-    SingleOrbit orbit_EM;
-    //Root-finding
-    const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
-    //Stepper
-    const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
-    //Init ode structure
-    init_ode_structure(&driver_EM, T, T_root, PREC_ABS, PREC_REL, PREC_ROOT, PREC_DIFF,
-                       6, PREC_HSTART, qbfbp_vfn_novar, NULL, &SEML_EM);
-    //Init routine
-    init_orbit(orbit_EM, &CM_EM_NC, &CM_EM_TFC,
-               &Mcoc_EM, &MIcoc_EM, &Vcoc_EM, &orbit_ofs_EM, OFTS_ORDER, OFS_ORDER,
-               5, 1, t0_EM, tf_EM, SEML.us_em.T/5, &driver_EM, &SEML_EM);
-
-    //===============================================================================================
-    // 6.2 Initialize local variables: SEM
-    //===============================================================================================
-    //---------------------------------------------------------------------
-    //Initialize the initial conditions (both NC and RCM coordinates)
-    //---------------------------------------------------------------------
-    //Initial time in SEM units
-    double t0_SEM = tf_EM*SEML.us_em.ns;
-
-    //---------------------------------------------------------------------
-    // Initialisation of the orbit structure
-    //---------------------------------------------------------------------
-    Ofsc orbit_ofs_SEM(OFS_ORDER);
-    OdeStruct driver_SEM;
-    SingleOrbit orbit_SEM;
-
-    //Init ode structure
-    init_ode_structure(&driver_SEM, T, T_root, PREC_ABS, PREC_REL, PREC_ROOT, PREC_DIFF,
-                       6, PREC_HSTART, qbfbp_vfn_novar, NULL, &SEML_SEM);
-    //Init routine
-    init_orbit(orbit_SEM, &CMS_SEM_NC, &CMS_SEM_TFC,
-               &Mcoc_SEM, &MIcoc_SEM, &Vcoc_SEM, &orbit_ofs_SEM, OFTS_ORDER, OFS_ORDER,
-               5, 1, t0_SEM, t0_SEM+tof_seml_SEM, SEML.us_sem.T, &driver_SEM, &SEML_SEM);
-
-
-    //===============================================================================================
-    // 6.2 Initialize local variables: MANIFOLD
-    //===============================================================================================
-    //---------------------------------------------------------------------
-    // Update the initial state in the orbit_EM, with the RCM coordinates
-    //---------------------------------------------------------------------
-    orbit_update_ic(orbit_EM, st_EM, t0_EM);
-
-    //---------------------------------------------------------------------
-    // Update the initial state in the orbit_SEM, with the RCM coordinates
-    //---------------------------------------------------------------------
-    orbit_update_ic(orbit_SEM, st_SEM, t0_SEM);
-
-
-    //===============================================================================================
-    // 6.2 Multiple shooting procedure
-    //===============================================================================================
-    if(isPlanar)
-    {
-        ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR(orbit_EM, orbit_SEM,
-                                              DCM_EM_TFC, DCMS_SEM_TFC, dcs, coord_type, man_grid_size, h2);
-    }
-    else
-    {
-        ref1_CMU_EM_to_CMS_SEM_MSD_RCM(orbit_EM, orbit_SEM,
-                                       DCM_EM_TFC, DCMS_SEM_TFC, dcs, coord_type, man_grid_size, h2);
-    }
-
-    //----------------------------------------------------------
-    //Gnuplot window
-    //----------------------------------------------------------
-    printf("Press ENTER to go close\n");
-    scanf("%c",&ch);
-    gnuplot_close(h2);
-
-    return 0;
-}
-
-/**
- *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the MANIFOLD trajectory (manifold leg).
- *         The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CMS of SEML2. The time at each point
- *         except the first one is allowed to vary. A continuation procedure can be performed to get more than one refined solution.
- **/
-int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ(int proj_grid_size,
-        int man_grid_size,
-        int coord_type,
-        double st_EM[],
-        double t0_EM,
-        double tmax_on_manifold_EM,
-        vector<Oftsc> &CM_EM_NC,
-        vector<Oftsc> &CM_EM_TFC,
-        matrix<Oftsc> &DCM_EM_TFC,
-        matrix<Ofsc>  &Mcoc_EM,
-        matrix<Ofsc>  &Pcoc_EM,
-        matrix<Ofsc>  &MIcoc_EM,
-        matrix<Ofsc>  &PIcoc_EM,
-        vector<Ofsc>  &Vcoc_EM,
-        double ynormMax,
-        double snormMax,
-        int isPlanar)
-{
-    //===============================================================================================
-    // 0. Get the default coordinates system from the coord_type
-    //===============================================================================================
-    int dcs  = default_coordinate_system(coord_type);
-
-    //===============================================================================================
-    // 1. Time on each orbit
-    //===============================================================================================
-    double tof_seml_SEM = 5*SEML.us_sem.T;   //TOF on SEML2 orbit
-
-    //===============================================================================================
-    // 3. Init the gnuplot
-    //===============================================================================================
-    //----------------------------------------------------------
-    //Gnuplot window
-    //----------------------------------------------------------
-    gnuplot_ctrl *h2;
-    h2 = gnuplot_init();
-
-    //----------------------------------------------------------
-    //Notable points in SEM system
-    //----------------------------------------------------------
-    double **semP_coord = dmatrix(0, 6, 0, 2);
-    switch(coord_type)
-    {
-    case PSEM:
-        semPoints(0.0, semP_coord);
-        semPlot(h2, semP_coord);
-        break;
-    case NCSEM:
-    case VNCSEM:
-        semNCPoints(0.0, semP_coord);
-        semPlot(h2, semP_coord);
-        break;
-
-    case PEM:
-        emPoints(0.0, semP_coord);
-        emPlot(h2, semP_coord);
-        break;
-    case NCEM:
-    case VNCEM:
-        emNCPoints(0.0, semP_coord);
-        emPlot(h2, semP_coord);
-        break;
-    }
-
-
-    //===============================================================================================
-    // 5. Structures to compute the final orbit about SEML2
-    //===============================================================================================
-    //--------------------------------------
-    // Center-manifold
-    //--------------------------------------
-    vector<Oftsc> CMS_SEM_NC;      //center manifold in NC coordinates
-    vector<Oftsc> CMS_SEM_TFC;     //center manifold in TFC coordinates
-    CMS_SEM_NC.reserve(6);
-    for(int i = 0; i <6; i++) CMS_SEM_NC.push_back(Oftsc(5, OFTS_ORDER, OFS_NV, OFS_ORDER));
-    CMS_SEM_TFC.reserve(6);
-    for(int i = 0; i <6; i++) CMS_SEM_TFC.push_back(Oftsc(5, OFTS_ORDER, OFS_NV, OFS_ORDER));
-    //Update CM
-    readVOFTS_bin(CMS_SEM_NC,  SEML_SEM.cs.F_PMS+"W/W",  OFS_ORDER);
-    readVOFTS_bin(CMS_SEM_TFC, SEML_SEM.cs.F_PMS+"W/Wh", OFS_ORDER);
-
-
-    //--------------------------------------
-    // COC objects
-    //--------------------------------------
-    matrix<Ofsc>  Mcoc_SEM(6,6);    //COC matrix
-    matrix<Ofsc>  Pcoc_SEM(6,6);    //COC matrix (Mcoc = Pcoc*Complex matrix)
-    matrix<Ofsc>  MIcoc_SEM(6,6);   //COC matrix = inv(Mcoc)
-    matrix<Ofsc>  PIcoc_SEM(6,6);   //COC matrix = inv(Pcoc)
-    vector<Ofsc>  Vcoc_SEM(6);      //COC vector
-    //Update COC
-    initCOC(Pcoc_SEM, Mcoc_SEM, PIcoc_SEM, MIcoc_SEM, Vcoc_SEM, SEML_SEM);
-
-    //--------------------------------------
-    //Jacobian of the center manifold
-    //--------------------------------------
-    matrix<Oftsc> DCMS_SEM_TFC(6, 5, 5, OFTS_ORDER, OFS_NV, OFS_ORDER);
-    readMOFTS_bin(DCMS_SEM_TFC, SEML_SEM.cs.F_PMS+"DWf/DWhc", OFS_ORDER);
-
-
-    //===============================================================================================
-    // 7. Loop. Only one solution for now!
-    //===============================================================================================
-
-    cout << "-------------------------------------------"  << endl;
-    cout << "  Refinement of EML2-SEML2 arc             "  << endl;
-    cout << "-------------------------------------------"  << endl;
-    cout << "Begin the search for the min distance of projection..." << endl;
-    char ch;
-    printf("Press ENTER to go on\n");
-    scanf("%c",&ch);
-
-    //===============================================================================================
-    // 6.1 Initialize local variables: EM
-    //===============================================================================================
-    //---------------------------------------------------------------------
-    //Initialize the initial conditions (both NC and RCM coordinates)
-    //---------------------------------------------------------------------
-
-    //---------------------------------------------------------------------
-    // Initialisation of the orbit structure
-    //---------------------------------------------------------------------
-    Ofsc orbit_ofs_EM(OFS_ORDER);
-    OdeStruct driver_EM;
-    SingleOrbit orbit_EM;
-    //Root-finding
-    const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
-    //Stepper
-    const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
-    //Init ode structure
-    init_ode_structure(&driver_EM, T, T_root, PREC_ABS, PREC_REL, PREC_ROOT, PREC_DIFF,
-                       6, PREC_HSTART, qbfbp_vfn_novar, NULL, &SEML_EM);
-    //Init routine
-    init_orbit(orbit_EM, &CM_EM_NC, &CM_EM_TFC,
-               &Mcoc_EM, &MIcoc_EM, &Vcoc_EM, &orbit_ofs_EM, OFTS_ORDER, OFS_ORDER,
-               5, 1, t0_EM, t0_EM+tmax_on_manifold_EM, SEML.us_em.T/5, &driver_EM, &SEML_EM);
-
-
-    //---------------------------------------------------------------------
-    // Update the initial state in the orbit_EM, with the RCM coordinates
-    //---------------------------------------------------------------------
-    orbit_update_ic(orbit_EM, st_EM, t0_EM);
-
-
-    //===============================================================================================
-    // 6.3 Estimate the distance of projection
-    //===============================================================================================
-    //---------------------------------------------------------------------
-    //Local variables to store the manifold leg
-    //---------------------------------------------------------------------
-    double **y_man_NCSEM = dmatrix(0, 5, 0, proj_grid_size);
-    double *t_man_SEM    = dvector(0, proj_grid_size);
-
-
-    //---------------------------------------------------------------------
-    //Integration on proj_grid_size+1 fixed grid
-    //---------------------------------------------------------------------
-    int status = ode78_qbcp(y_man_NCSEM, t_man_SEM, t0_EM, t0_EM+tmax_on_manifold_EM, orbit_EM.z0, 6, proj_grid_size, F_NCEM, NCEM, NCSEM);
-
-    //----------------------------------------------------------
-    // projection by default is arbitrarily big
-    //----------------------------------------------------------
-    double ePdef = 1e5;
-
-    //----------------------------------------------------------
-    // We need first to check that the integration went well
-    //----------------------------------------------------------
-    Ofsc ofs(OFS_ORDER);
-    double yv[6], tv;
-    double proj_dist_SEM, min_proj_dist_SEM = ePdef, y_man_norm_NCSEM = 0.0;
-    double yvproj_NCSEM[6], sproj[5], yv_SEM[6], yvproj_SEM[6], yv_VSEM[6], yvproj_VSEM[6];
-
-    //Optimal variables
-    double sprojmin[5];
-    double tmin = t0_EM+tmax_on_manifold_EM;
-
-    if(status != -1)
-    {
-        //----------------------------------------------------------
-        //Loop on trajectory
-        //----------------------------------------------------------
-        for(int kman = 0; kman <= proj_grid_size; kman++)
-        {
-            //Current state
-            for(int i = 0; i < 6; i++) yv[i] = y_man_NCSEM[i][kman];
-            tv = t_man_SEM[kman];
-
-            //Current distance from SEMLi in NCSEM units
-            y_man_norm_NCSEM = 0.0;
-            for(int i = 0; i < 2; i++) y_man_norm_NCSEM += yv[i]*yv[i];
-            y_man_norm_NCSEM = sqrt(y_man_norm_NCSEM);
-
-            //If the current state is close enough to SEMLi
-            if(y_man_norm_NCSEM < ynormMax)
-            {
-                // Projection on the center manifold
-                NCprojCCMtoCUS(yv, tv, SEML_SEM.us.n, sproj, CMS_SEM_TFC, 0.0, MIcoc_SEM, Vcoc_SEM);
-
-                //If the projection is close enough to SEMLi
-                if(sqrt(sproj[0]*sproj[0]+sproj[2]*sproj[2])< snormMax)
-                {
-                    //yvproj_NCSEM = W(sproj, tv)
-                    RCMtoNCbyTFC(sproj, tv, SEML_SEM.us.n, OFTS_ORDER, OFS_ORDER, 5, CMS_SEM_TFC, ofs, Mcoc_SEM, Vcoc_SEM, yvproj_NCSEM, 1);
-
-                    //Back to SEM coordinates
-                    NCtoSEM(tv, yv, yv_SEM, &SEML_SEM);
-                    NCtoSEM(tv, yvproj_NCSEM, yvproj_SEM, &SEML_SEM);
-
-                    //Back to SEM coordinates with velocity
-                    SEMmtoSEMv(tv, yv_SEM, yv_VSEM, &SEML_SEM);
-                    SEMmtoSEMv(tv, yvproj_SEM, yvproj_VSEM, &SEML_SEM);
-
-                    //Distance of projection in SEM coordinates
-                    proj_dist_SEM = 0.0;
-                    for(int i = 0; i < 6; i++) proj_dist_SEM += (yvproj_SEM[i] - yv_SEM[i])*(yvproj_SEM[i] - yv_SEM[i]);
-                    proj_dist_SEM = sqrt(proj_dist_SEM);
-                }
-                else proj_dist_SEM = ePdef;
-            }
-            else proj_dist_SEM = ePdef;
-
-            //Update distance min if necessary
-            if(proj_dist_SEM < min_proj_dist_SEM)
-            {
-                min_proj_dist_SEM = proj_dist_SEM;
-
-                //Update optimal variables
-                for(int i = 0; i < 5; i++) sprojmin[i] = sproj[i];
-                tmin  = tv;
-            }
-
-        }
-
-    }
-    else proj_dist_SEM = ePdef;
-
-
-    cout << "-------------------------------------------"  << endl;
-    cout << "End of the search for the min distance of projection..." << endl;
-    cout << "The minimum is : " << min_proj_dist_SEM << endl;
-    cout << "Obtained for sproj = " << endl;
-    vector_printf_prec(sproj, 5);
-    printf("Press ENTER to go on\n");
-    scanf("%c",&ch);
-
-    //---------------------------------------------------------------------
-    //Update the time in orbit_EM!!
-    //---------------------------------------------------------------------
-    orbit_EM.tf = tmin/SEML.us_em.ns;
-
-    //===============================================================================================
-    // 6.2 Initialize local variables: SEM
-    //===============================================================================================
-
-    //---------------------------------------------------------------------
-    // Initialisation of the orbit structure
-    //---------------------------------------------------------------------
-    Ofsc orbit_ofs_SEM(OFS_ORDER);
-    OdeStruct driver_SEM;
-    SingleOrbit orbit_SEM;
-
-    //Init ode structure
-    init_ode_structure(&driver_SEM, T, T_root, PREC_ABS, PREC_REL, PREC_ROOT, PREC_DIFF,
-                       6, PREC_HSTART, qbfbp_vfn_novar, NULL, &SEML_SEM);
-    //Init routine
-    init_orbit(orbit_SEM, &CMS_SEM_NC, &CMS_SEM_TFC,
-               &Mcoc_SEM, &MIcoc_SEM, &Vcoc_SEM, &orbit_ofs_SEM, OFTS_ORDER, OFS_ORDER,
-               5, 1, tmin, tmin+tof_seml_SEM, SEML.us_sem.T, &driver_SEM, &SEML_SEM);
-
-
-    //===============================================================================================
-    // @TODO: ADD AN ESTIMATE OF THE DISTANCE OF PROJECTION + by reproducing the PROJECTION METHOD
-    // THIS TIME ON THE CMS of SEML2! (set s5 of SEML2 to zero, or maybe a rough search...)
-    // In this way, only 3 inputs: s1, s3 and t0.
-    //===============================================================================================
-
-    //---------------------------------------------------------------------
-    // Update the initial state in the orbit_SEM, with the RCM coordinates
-    //---------------------------------------------------------------------
-    orbit_update_ic(orbit_SEM, sprojmin, tmin);
-
-
-    //===============================================================================================
-    // 6.2 Multiple shooting procedure
-    //===============================================================================================
-    if(isPlanar)
-    {
-        ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR(orbit_EM, orbit_SEM,
-                                              DCM_EM_TFC, DCMS_SEM_TFC, dcs, coord_type, man_grid_size, h2);
-    }
-    else
-    {
-        ref1_CMU_EM_to_CMS_SEM_MSD_RCM(orbit_EM, orbit_SEM,
-                                       DCM_EM_TFC, DCMS_SEM_TFC, dcs, coord_type, man_grid_size, h2);
-    }
-
-    //----------------------------------------------------------
-    //Gnuplot window
-    //----------------------------------------------------------
-    printf("Press ENTER to go close\n");
-    scanf("%c",&ch);
-    gnuplot_close(h2);
-
-    return 0;
-}
-
-/**
- *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the MANIFOLD trajectory (manifold leg).
- *         The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CMS of SEML2. The time at each point
- *         except the first one is allowed to vary. A continuation procedure can be performed to get more than one refined solution.
- **/
-int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ_OPT(int proj_grid_size,
-        int man_grid_size,
-        int coord_type,
-        double st_EM[],
-        double t0_EM,
-        double tmin_on_manifold_EM,
-        double tmax_on_manifold_EM,
-        double s3_MIN_CMU_RCM,
-        double s3_MAX_CMU_RCM,
-        int s3_grid_size,
-        vector<Oftsc> &CM_EM_NC,
-        vector<Oftsc> &CM_EM_TFC,
-        matrix<Oftsc> &DCM_EM_TFC,
-        matrix<Ofsc>  &Mcoc_EM,
-        matrix<Ofsc>  &Pcoc_EM,
-        matrix<Ofsc>  &MIcoc_EM,
-        matrix<Ofsc>  &PIcoc_EM,
-        vector<Ofsc>  &Vcoc_EM,
-        double ynormMax,
-        double snormMax,
-        int isPlanar,
-        int isPar)
-{
-    //===============================================================================================
-    // 0. Get the default coordinates system from the coord_type
-    //===============================================================================================
-    int dcs  = default_coordinate_system(coord_type);
-
-    //===============================================================================================
-    // 1. Time on each orbit
-    //===============================================================================================
-    double tof_seml_SEM = 5*SEML.us_sem.T;   //TOF on SEML2 orbit
-
-    //===============================================================================================
-    // 3. Init the gnuplot
-    //===============================================================================================
-    //----------------------------------------------------------
-    //Gnuplot window
-    //----------------------------------------------------------
-    gnuplot_ctrl *h2;
-    h2 = gnuplot_init();
-
-    //----------------------------------------------------------
-    //Notable points in SEM system
-    //----------------------------------------------------------
-    double **semP_coord = dmatrix(0, 6, 0, 2);
-    switch(coord_type)
-    {
-    case PSEM:
-        semPoints(0.0, semP_coord);
-        semPlot(h2, semP_coord);
-        break;
-    case NCSEM:
-    case VNCSEM:
-        semNCPoints(0.0, semP_coord);
-        semPlot(h2, semP_coord);
-        break;
-
-    case PEM:
-        emPoints(0.0, semP_coord);
-        emPlot(h2, semP_coord);
-        break;
-    case NCEM:
-    case VNCEM:
-        emNCPoints(0.0, semP_coord);
-        emPlot(h2, semP_coord);
-        break;
-    }
-
-
-    //===============================================================================================
-    // 5. Structures to compute the final orbit about SEML2
-    //===============================================================================================
-    //--------------------------------------
-    // Center-manifold
-    //--------------------------------------
-    vector<Oftsc> CMS_SEM_NC;      //center manifold in NC coordinates
-    vector<Oftsc> CMS_SEM_TFC;     //center manifold in TFC coordinates
-    CMS_SEM_NC.reserve(6);
-    for(int i = 0; i <6; i++) CMS_SEM_NC.push_back(Oftsc(5, OFTS_ORDER, OFS_NV, OFS_ORDER));
-    CMS_SEM_TFC.reserve(6);
-    for(int i = 0; i <6; i++) CMS_SEM_TFC.push_back(Oftsc(5, OFTS_ORDER, OFS_NV, OFS_ORDER));
-    //Update CM
-    readVOFTS_bin(CMS_SEM_NC,  SEML_SEM.cs.F_PMS+"W/W",  OFS_ORDER);
-    readVOFTS_bin(CMS_SEM_TFC, SEML_SEM.cs.F_PMS+"W/Wh", OFS_ORDER);
-
-
-    //--------------------------------------
-    // COC objects
-    //--------------------------------------
-    matrix<Ofsc>  Mcoc_SEM(6,6);    //COC matrix
-    matrix<Ofsc>  Pcoc_SEM(6,6);    //COC matrix (Mcoc = Pcoc*Complex matrix)
-    matrix<Ofsc>  MIcoc_SEM(6,6);   //COC matrix = inv(Mcoc)
-    matrix<Ofsc>  PIcoc_SEM(6,6);   //COC matrix = inv(Pcoc)
-    vector<Ofsc>  Vcoc_SEM(6);      //COC vector
-    //Update COC
-    initCOC(Pcoc_SEM, Mcoc_SEM, PIcoc_SEM, MIcoc_SEM, Vcoc_SEM, SEML_SEM);
-
-    //--------------------------------------
-    //Jacobian of the center manifold
-    //--------------------------------------
-    matrix<Oftsc> DCMS_SEM_TFC(6, 5, 5, OFTS_ORDER, OFS_NV, OFS_ORDER);
-    readMOFTS_bin(DCMS_SEM_TFC, SEML_SEM.cs.F_PMS+"DWf/DWhc", OFS_ORDER);
-
-
-    //===============================================================================================
-    // 7. Loop. Only one solution for now!
-    //===============================================================================================
-
-    cout << "-------------------------------------------"  << endl;
-    cout << "  Refinement of EML2-SEML2 arc             "  << endl;
-    cout << "-------------------------------------------"  << endl;
-    cout << "Begin the search for the min distance of projection..." << endl;
-    char ch;
-    printf("Press ENTER to go on\n");
-    scanf("%c",&ch);
-
-    //===============================================================================================
-    // 6.1 Initialize variables: EM
-    //===============================================================================================
-    //---------------------------------------------------------------------
-    //Initialize the initial conditions (both NC and RCM coordinates)
-    //---------------------------------------------------------------------
-
-    //---------------------------------------------------------------------
-    // Initialisation of the orbit structure
-    //---------------------------------------------------------------------
-    Ofsc orbit_ofs_EM(OFS_ORDER);
-    OdeStruct driver_EM;
-    SingleOrbit orbit_EM;
-    //Root-finding
-    const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
-    //Stepper
-    const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
-    //Init ode structure
-    init_ode_structure(&driver_EM, T, T_root, PREC_ABS, PREC_REL, PREC_ROOT, PREC_DIFF,
-                       6, PREC_HSTART, qbfbp_vfn_novar, NULL, &SEML_EM);
-    //Init routine
-    init_orbit(orbit_EM, &CM_EM_NC, &CM_EM_TFC,
-               &Mcoc_EM, &MIcoc_EM, &Vcoc_EM, &orbit_ofs_EM, OFTS_ORDER, OFS_ORDER,
-               5, 1, t0_EM, t0_EM+tmax_on_manifold_EM, SEML.us_em.T/5, &driver_EM, &SEML_EM);
-
-
-    //----------------------------------------------------------
-    // projection by default is arbitrarily big
-    //----------------------------------------------------------
-    double ePdef = 1e5;
-
-    //===============================================================================================
-    // 6.2 Initialize variables: Optimal variables
-    //===============================================================================================
-    double smin_proj_dist_SEM = ePdef;
-    double sprojsmin[5];
-    double tsmin = t0_EM+tmax_on_manifold_EM;
-    int ks3min = 0;
-
-    //------------------------------------------
-    //Building the working grids
-    //------------------------------------------
-    double *grid_s3_CMU_RCM = dvector(0,  s3_grid_size);
-    init_grid(grid_s3_CMU_RCM, s3_MIN_CMU_RCM, s3_MAX_CMU_RCM, s3_grid_size);
-
-    int s5_grid_size = 0;
-    double *grid_s5_CMU_RCM = dvector(0,  s5_grid_size);
-    init_grid(grid_s5_CMU_RCM, 0.0, +5e-2, s5_grid_size);
-
-    //===============================================================================================
-    // 6.3 Estimate the distance of projection
-    //===============================================================================================
-    int iter = 0;
-    COMPLETION = 0;
-    #pragma omp parallel for if(isPar)  shared(iter, sprojsmin, smin_proj_dist_SEM, tsmin)
-    for(int ks3 = 0; ks3 <= s3_grid_size; ks3++)
-    {
-        //---------------------------------------------------------------------
-        // Update the initial state in the orbit_EM, with the RCM coordinates
-        //---------------------------------------------------------------------
-        st_EM[2] = grid_s3_CMU_RCM[ks3];
-        st_EM[4] = PROJ_EPSILON;
-        orbit_update_ic(orbit_EM, st_EM, t0_EM);
-
-        //---------------------------------------------------------------------
-        //Local variables to store the manifold leg
-        //---------------------------------------------------------------------
-        double **y_man_NCSEM = dmatrix(0, 5, 0, proj_grid_size);
-        double *t_man_SEM    = dvector(0, proj_grid_size);
-
-
-        //---------------------------------------------------------------------
-        //Integration on proj_grid_size+1 fixed grid
-        //---------------------------------------------------------------------
-        int status = ode78_qbcp(y_man_NCSEM, t_man_SEM, t0_EM, t0_EM+tmax_on_manifold_EM, orbit_EM.z0, 6, proj_grid_size, F_NCEM, NCEM, NCSEM);
-
-        //----------------------------------------------------------
-        // We need first to check that the integration went well
-        //----------------------------------------------------------
-        Ofsc ofs(OFS_ORDER);
-        double yv[6], tv;
-        double proj_dist_SEM, proj_dist_SEM_s5, min_proj_dist_SEM = ePdef, y_man_norm_NCSEM = 0.0;
-        double yvproj_NCSEM[6], sproj[5], sproj_s5[5], yv_SEM[6], yvproj_SEM[6], yv_VSEM[6], yvproj_VSEM[6];
-
-
-        double sprojmin[5];
-        double tmin = t0_EM+tmax_on_manifold_EM;
-
-        if(status != -1)
-        {
-            //----------------------------------------------------------
-            //Loop on trajectory
-            //----------------------------------------------------------
-            for(int kman = 0; kman <= proj_grid_size; kman++)
-            {
-                //Current state
-                for(int i = 0; i < 6; i++) yv[i] = y_man_NCSEM[i][kman];
-                tv = t_man_SEM[kman];
-
-                //Current distance from SEMLi in NCSEM units
-                y_man_norm_NCSEM = 0.0;
-                for(int i = 0; i < 2; i++) y_man_norm_NCSEM += yv[i]*yv[i];
-                y_man_norm_NCSEM = sqrt(y_man_norm_NCSEM);
-
-                //If the current state is close enough to SEMLi
-                if(y_man_norm_NCSEM < ynormMax)
-                {
-                    // Projection on the center manifold
-                    NCprojCCMtoCUS(yv, tv, SEML_SEM.us.n, sproj, CMS_SEM_TFC, 0.0, MIcoc_SEM, Vcoc_SEM);
-
-                    //If the projection is close enough to SEMLi
-                    if(sqrt(sproj[0]*sproj[0]+sproj[2]*sproj[2])< snormMax)
-                    {
-                        proj_dist_SEM = ePdef;
-                        for(int ks5 = 0; ks5 <= s5_grid_size ; ks5++)
-                        {
-
-                            // Projection on the center manifold
-                            NCprojCCMtoCUS(yv, tv, SEML_SEM.us.n, sproj_s5, CMS_SEM_TFC, grid_s5_CMU_RCM[ks5], MIcoc_SEM, Vcoc_SEM);
-
-                            //yvproj_NCSEM = W(sproj, tv)
-                            RCMtoNCbyTFC(sproj_s5, tv, SEML_SEM.us.n, OFTS_ORDER, OFS_ORDER, 5, CMS_SEM_TFC, ofs, Mcoc_SEM, Vcoc_SEM, yvproj_NCSEM, 1);
-
-                            //Back to SEM coordinates
-                            NCtoSEM(tv, yv, yv_SEM, &SEML_SEM);
-                            NCtoSEM(tv, yvproj_NCSEM, yvproj_SEM, &SEML_SEM);
-
-                            //Back to SEM coordinates with velocity
-                            SEMmtoSEMv(tv, yv_SEM, yv_VSEM, &SEML_SEM);
-                            SEMmtoSEMv(tv, yvproj_SEM, yvproj_VSEM, &SEML_SEM);
-
-                            //Distance of projection in SEM coordinates
-                            proj_dist_SEM_s5 = 0.0;
-                            for(int i = 0; i < 6; i++) proj_dist_SEM_s5 += (yvproj_SEM[i] - yv_SEM[i])*(yvproj_SEM[i] - yv_SEM[i]);
-                            proj_dist_SEM_s5 = sqrt(proj_dist_SEM_s5);
-
-                            //Update distance min if necessary
-                            if(proj_dist_SEM_s5 < proj_dist_SEM)
-                            {
-                                proj_dist_SEM = proj_dist_SEM_s5;
-                                //Update optimal variables
-                                sproj[0] = sproj_s5[0];
-                                sproj[1] = sproj_s5[1];
-                                sproj[2] = sproj_s5[2];
-                                sproj[3] = sproj_s5[3];
-                                sproj[4] = sproj_s5[4];
-                            }
-                        }
-                    }
-                    else proj_dist_SEM = ePdef;
-                }
-                else proj_dist_SEM = ePdef;
-
-                //Update distance min if necessary
-                if(proj_dist_SEM < min_proj_dist_SEM)
-                {
-                    min_proj_dist_SEM = proj_dist_SEM;
-                    //Update optimal variables
-                    sprojmin[0] = sproj[0];
-                    sprojmin[1] = sproj[1];
-                    sprojmin[2] = sproj[2];
-                    sprojmin[3] = sproj[3];
-                    sprojmin[4] = sproj[4];
-                    tmin  = tv;
-                }
-
-            }
-
-        }
-        else proj_dist_SEM = ePdef;
-
-        //Save
-        #pragma omp critical
-        {
-
-            //Update distance min if necessary
-            if(min_proj_dist_SEM < smin_proj_dist_SEM)
-            {
-                smin_proj_dist_SEM = min_proj_dist_SEM;
-                //Update optimal variables
-                for(int i = 0; i < 5; i++) sprojsmin[i] = sprojmin[i];
-                tsmin  = tmin;
-                ks3min = ks3;
-            }
-
-
-        //Display
-        displayCompletion("ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ_OPT", (double) iter++/max(s3_grid_size+1,0)*100);
-        cout << "tmin = " << tmin << endl;
-        cout << "min_proj_dist_SEM = " << min_proj_dist_SEM << endl;
-
-         }
-
-        free_dmatrix(y_man_NCSEM, 0, 5, 0, proj_grid_size);
-        free_dvector(t_man_SEM, 0, proj_grid_size);
-
-    }
-
-
-    cout << "-------------------------------------------"  << endl;
-    cout << "End of the search for the min distance of projection..." << endl;
-    cout << "The minimum is : " << smin_proj_dist_SEM << endl;
-    cout << "Obtained for sproj = " << endl;
-    vector_printf_prec(sprojsmin, 5);
-    printf("Press ENTER to go on\n");
-    scanf("%c",&ch);
-
-    //---------------------------------------------------------------------
-    //Update the time in orbit_EM!!
-    //---------------------------------------------------------------------
-    orbit_EM.tf = tsmin/SEML.us_em.ns;
-
-    //---------------------------------------------------------------------
-    // Update the initial state in the orbit_EM, with the RCM coordinates
-    //---------------------------------------------------------------------
-    st_EM[2] = grid_s3_CMU_RCM[ks3min];
-    st_EM[4] = PROJ_EPSILON;
-    orbit_update_ic(orbit_EM, st_EM, t0_EM);
-
-    //===============================================================================================
-    // 6.2 Initialize local variables: SEM
-    //===============================================================================================
-
-    //---------------------------------------------------------------------
-    // Initialisation of the orbit structure
-    //---------------------------------------------------------------------
-    Ofsc orbit_ofs_SEM(OFS_ORDER);
-    OdeStruct driver_SEM;
-    SingleOrbit orbit_SEM;
-
-    //Init ode structure
-    init_ode_structure(&driver_SEM, T, T_root, PREC_ABS, PREC_REL, PREC_ROOT, PREC_DIFF,
-                       6, PREC_HSTART, qbfbp_vfn_novar, NULL, &SEML_SEM);
-    //Init routine
-    init_orbit(orbit_SEM, &CMS_SEM_NC, &CMS_SEM_TFC,
-               &Mcoc_SEM, &MIcoc_SEM, &Vcoc_SEM, &orbit_ofs_SEM, OFTS_ORDER, OFS_ORDER,
-               5, 1, tsmin, tsmin+tof_seml_SEM, SEML.us_sem.T, &driver_SEM, &SEML_SEM);
-
-
-    //===============================================================================================
-    // @TODO: ADD AN ESTIMATE OF THE DISTANCE OF PROJECTION + by reproducing the PROJECTION METHOD
-    // THIS TIME ON THE CMS of SEML2! (set s5 of SEML2 to zero, or maybe a rough search...)
-    // In this way, only 3 inputs: s1, s3 and t0.
-    //===============================================================================================
-
-    //---------------------------------------------------------------------
-    // Update the initial state in the orbit_SEM, with the RCM coordinates
-    //---------------------------------------------------------------------
-    orbit_update_ic(orbit_SEM, sprojsmin, tsmin);
-
-
-    //===============================================================================================
-    // 6.2 Multiple shooting procedure
-    //===============================================================================================
-    if(isPlanar)
-    {
-        ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR(orbit_EM, orbit_SEM,
-                                              DCM_EM_TFC, DCMS_SEM_TFC, dcs, coord_type, man_grid_size, h2);
-    }
-    else
-    {
-        ref1_CMU_EM_to_CMS_SEM_MSD_RCM(orbit_EM, orbit_SEM,
-                                       DCM_EM_TFC, DCMS_SEM_TFC, dcs, coord_type, man_grid_size, h2);
-    }
-
-    //----------------------------------------------------------
-    //Gnuplot window
-    //----------------------------------------------------------
-    printf("Press ENTER to go close\n");
-    scanf("%c",&ch);
-    gnuplot_close(h2);
-
-    return 0;
-}
-
-/**
- *  \brief Computes ONE trajectory from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the MANIFOLD trajectory (manifold leg).
- *         The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CMS of SEML2. The time at each point
- *         except the first one is allowed to vary. A continuation procedure can be performed to get more than one refined solution.
- **/
-void ref1_CMU_EM_to_CMS_SEM_MSD_RCM(SingleOrbit &orbit_EM,
-                                    SingleOrbit &orbit_SEM,
-                                    matrix<Oftsc> &DCM_EM_TFC,
-                                    matrix<Oftsc> &DCMS_SEM_TFC,
-                                    int dcs,
-                                    int coord_type,
-                                    int man_grid_size,
-                                    gnuplot_ctrl *h2)
-{
-    //===============================================================================================
-    // 1. Initialize local variables
-    //===============================================================================================
-    //---------------------------------------------------------------------
-    //Local variables to store the manifold leg
-    //---------------------------------------------------------------------
-    double **y_man_coord  = dmatrix(0, 5, 0, man_grid_size);
-    double *t_man_coord   = dvector(0, man_grid_size);
-
-    //---------------------------------------------------------------------
-    //Local variables for plotting
-    //---------------------------------------------------------------------
-    int mPlot = 1000;
-    double **y_man_NCEM        = dmatrix(0, 5, 0, mPlot);
-    double **y_man_NCSEM       = dmatrix(0, 5, 0, mPlot);
-    double *t_man_EM           = dvector(0, mPlot);
-    double *t_man_SEM          = dvector(0, mPlot);
-    double **y_man_coord_plot  = dmatrix(0, 5, 0, mPlot);
-    double *t_man_coord_plot   = dvector(0, mPlot);
-
-    //---------------------------------------------------------------------
-    //To store final data
-    //---------------------------------------------------------------------
-    int traj_grid_size    = man_grid_size;
-    double **y_traj       = dmatrix(0, 41, 0, traj_grid_size);
-    double  *t_traj       = dvector(0, traj_grid_size);
-
-    //---------------------------------------------------------------------
-    //Local variables to store the refined trajectory
-    //---------------------------------------------------------------------
-    double **y_traj_n   = dmatrix(0, 41, 0, traj_grid_size);
-    double *t_traj_n    = dvector(0, traj_grid_size);
-
-    //---------------------------------------------------------------------
-    // Initialize the COC matrices
-    //---------------------------------------------------------------------
-    //CCM_R_RCM_EM: RCM to CCM in R(4,4), about EML2
-    gsl_matrix_complex *CCM_R_RCM_EM  = gsl_matrix_complex_calloc(4, 4);
-    for(int i = 0; i < 4; i++) gsl_matrix_complex_set(CCM_R_RCM_EM, i, i, gslc_complex(1.0/sqrt(2), 0.0));
-    gsl_matrix_complex_set(CCM_R_RCM_EM, 0, 2, gslc_complex(0.0, -1.0/sqrt(2)));
-    gsl_matrix_complex_set(CCM_R_RCM_EM, 1, 3, gslc_complex(0.0, -1.0/sqrt(2)));
-    gsl_matrix_complex_set(CCM_R_RCM_EM, 2, 0, gslc_complex(0.0, -1.0/sqrt(2)));
-    gsl_matrix_complex_set(CCM_R_RCM_EM, 3, 1, gslc_complex(0.0, -1.0/sqrt(2)));
-
-    //CCM_R_RCM_SEM: RCM to CCM in R(5,5), about SEML2
-    gsl_matrix_complex *CCM_R_RCM_SEM  = gsl_matrix_complex_calloc(5, 5);
-    for(int i = 0; i < 4; i++) gsl_matrix_complex_set(CCM_R_RCM_SEM, i, i, gslc_complex(1.0/sqrt(2), 0.0));
-    gsl_matrix_complex_set(CCM_R_RCM_SEM, 4, 4, gslc_complex(1.0, 0.0));
-    gsl_matrix_complex_set(CCM_R_RCM_SEM, 0, 2, gslc_complex(0.0, -1.0/sqrt(2)));
-    gsl_matrix_complex_set(CCM_R_RCM_SEM, 1, 3, gslc_complex(0.0, -1.0/sqrt(2)));
-    gsl_matrix_complex_set(CCM_R_RCM_SEM, 2, 0, gslc_complex(0.0, -1.0/sqrt(2)));
-    gsl_matrix_complex_set(CCM_R_RCM_SEM, 3, 1, gslc_complex(0.0, -1.0/sqrt(2)));
-
-    //---------------------------------------------------------------------
-    // Time on each orbit
-    //---------------------------------------------------------------------
-    double tof_eml_EM   = 5*SEML.us.T;       //TOF on EML2 orbit
-    double tof_seml_SEM = 20*SEML.us_sem.T;   //TOF on SEML2 orbit
-
-
-    //===============================================================================================
-    // 2.  Compute the manifold leg
-    //===============================================================================================
-    //---------------------------------------------------------------------
-    // Integration
-    //---------------------------------------------------------------------
-    ode78_qbcp(y_man_coord, t_man_coord, orbit_EM.t0, orbit_EM.tf, orbit_EM.z0, 6, man_grid_size, dcs, NCEM, coord_type);
-
-    //---------------------------------------------------------------------
-    // Save All BUT the last point
-    //---------------------------------------------------------------------
-    for(int kman = 0; kman < man_grid_size; kman++)
-    {
-        for(int i = 0; i < 6; i++) y_traj[i][kman] = y_man_coord[i][kman];
-        t_traj[kman] = t_man_coord[kman];
-    }
-
-
-    //===============================================================================================
-    // 3. Compute the first point of the final SEML2 orbit and add it to the manifold leg
-    //===============================================================================================
-    //---------------------------------------------------------------------
-    // Save the last point at position man_grid_size
-    //---------------------------------------------------------------------
-    double yout[6], tout;
-    qbcp_coc(orbit_SEM.t0, orbit_SEM.z0, yout, &tout, NCSEM, coord_type);
-
-    for(int i = 0; i < 6; i++) y_traj[i][man_grid_size] = yout[i];
-    t_traj[man_grid_size] = tout;
-
-    //---------------------------------------------------------------------
-    //Plot
-    //---------------------------------------------------------------------
-    gnuplot_plot_xyz(h2, y_man_coord[0], y_man_coord[1],  y_man_coord[2], man_grid_size+1, (char*)"", "lines", "1", "1", 4);
-
-
-    //===============================================================================================
-    // 4.  Differential correction & final trajectory
-    //===============================================================================================
-    int isPlotted   = 1;
-    char ch;
-
-    cout << "-------------------------------------------"  << endl;
-    cout << "Differential correction & final trajectory "  << endl;
-    cout << "-------------------------------------------"  << endl;
-    printf("Press ENTER to go on\n");
-    scanf("%c",&ch);
-
-    int nfv = 7*(man_grid_size+1)-4;  //free variables
-    double *nullvector = dvector(0, nfv-1);
-
-
-    //======================================================================
-    //NO CONTINUATION
-    //======================================================================
-    //    msdvt_CMS_RCM(y_traj, t_traj, y_traj_n, t_traj_n, 42,
-    //                  traj_grid_size, coord_type,
-    //                  DCM_EM_TFC, DCMS_SEM_TFC,
-    //                  CCM_R_RCM_EM,
-    //                  CCM_R_RCM_SEM,
-    //                  orbit_EM, orbit_SEM,
-    //                  h2, isPlotted, false);
-
-    //======================================================================
-    //GNUPLOT
-    //======================================================================
-    gnuplot_ctrl *h3;
-    h3 = gnuplot_init();
-    gnuplot_cmd(h3,  "set title \"s3_EM vs s1_EM\" ");
-
-    gnuplot_ctrl *h4;
-    h4 = gnuplot_init();
-    gnuplot_cmd(h4,  "set title \"s3_SEM vs s1_SEM\" ");
-
-    gnuplot_ctrl *h5;
-    h5 = gnuplot_init();
-    gnuplot_cmd(h5,  "set title \"s4_SEM vs s2_SEM\" ");
-
-
-    //======================================================================
-    //Continuation : Update the variables with the null vector
-    //======================================================================
-    msdvt_CMS_RCM_deps(y_traj, t_traj, y_traj_n, t_traj_n, nullvector, 42,
-                       traj_grid_size, coord_type, 1e-8, true,
-                       DCM_EM_TFC, DCMS_SEM_TFC,
-                       CCM_R_RCM_EM,
-                       CCM_R_RCM_SEM,
-                       orbit_EM, orbit_SEM,
-                       h2, isPlotted, false);
-
-
-    cout << "-------------------------------------------"  << endl;
-    cout << "Continuation"  << endl;
-    cout << "-------------------------------------------"  << endl;
-    printf("Press ENTER to go on\n");
-    scanf("%c",&ch);
-
-
-    double ds = 1e-2;
-    double yv[42], ye[42];
-
-    for(int kn = 0; kn < 50; kn++)
-    {
-
-        //-----------------------------------------------------
-        //Updating CM_EM_RCM coordinates
-        //-----------------------------------------------------
-        for(int i = 0; i < 4; i++) orbit_EM.si[i] += ds*nullvector[i];
-        //Updating CM_EM_NCEM coordinates
-        orbit_update_ic(orbit_EM, orbit_EM.si, t_traj_n[0]/SEML.us_em.ns);
-        //To CM_EM_NCSEM coordinates
-        for(int i = 0; i < 42; i++) yv[i] = orbit_EM.z0[i];
-        qbcp_coc(t_traj_n[0]/SEML.us_em.ns, yv, ye, NCEM, coord_type);
-        for(int i = 0; i < 6; i++) y_traj_n[i][0] = ye[i];
-
-        //-----------------------------------------------------
-        //The middle (patch points) is classical cartesian coordinates at patch points
-        //-----------------------------------------------------
-        for(int k = 1; k < man_grid_size; k++)
-        {
-            for(int i = 0; i < 6; i++) y_traj_n[i][k] += ds*nullvector[i + 7*k-3];
-            t_traj_n[k] += ds*nullvector[7*(k+1)-4];
-        }
-        //Last time:
-        t_traj_n[man_grid_size] += ds*nullvector[ 7*man_grid_size+2];
-
-
-        //-----------------------------------------------------
-        //Last 4 correction variables is orbit.si
-        //-----------------------------------------------------
-        //Updating CM_SEM_RCM coordinates
-        for(int i = 0; i < 5; i++) orbit_SEM.si[i] += ds*nullvector[i + 7*man_grid_size-3];
-
-        //Updating CM_SEM_NCSEM coordinates
-        orbit_update_ic(orbit_SEM, orbit_SEM.si, t_traj_n[man_grid_size]);
-
-        //Updating CM_SEM_NCSEM coordinates (identity transformation is performed in qbcp_coc.
-        for(int i = 0; i < 6; i++) y_traj_n[i][man_grid_size] = orbit_SEM.z0[i];
-
-        msdvt_CMS_RCM_deps(y_traj_n, t_traj_n, y_traj_n, t_traj_n, nullvector, 42,
-                           traj_grid_size, coord_type, 1e-8, false,
-                           DCM_EM_TFC, DCMS_SEM_TFC,
-                           CCM_R_RCM_EM,
-                           CCM_R_RCM_SEM,
-                           orbit_EM, orbit_SEM,
-                           h2, isPlotted, false);
-
-        cout << "orbit_SEM.si = " << endl;
-        vector_printf_prec(orbit_SEM.si, 5);
-
-        gnuplot_plot_xy(h3, &orbit_EM.si[0],  &orbit_EM.si[2], 1, (char*)"", "points", "1", "2", 0);
-        gnuplot_plot_xy(h4, &orbit_SEM.si[0], &orbit_SEM.si[2], 1, (char*)"", "points", "1", "2", 0);
-        gnuplot_plot_xy(h5, &orbit_SEM.si[1], &orbit_SEM.si[3], 1, (char*)"", "points", "1", "2", 0);
-
-
-        cout << "t_traj_n[end] - t_traj_n[end--1] = " << t_traj_n[man_grid_size] - t_traj_n[man_grid_size-1] << endl;
-        //printf("Press ENTER to go on\n");
-        //scanf("%c",&ch);
-
-    }
-
-    //===============================================================================================
-    // 5. Compute the initial orbit
-    //===============================================================================================
-    cout << "-------------------------------------------"  << endl;
-    cout << "Compute the initial EML2 orbit             "  << endl;
-    cout << "-------------------------------------------"  << endl;
-    printf("Press ENTER to go on\n");
-    scanf("%c",&ch);
-
-    //---------------------------------------------------------------------
-    // Reset the unstable direction
-    //---------------------------------------------------------------------
-    orbit_EM.si[4] = 0.0;
-    orbit_EM.tf    = orbit_EM.t0-tof_eml_EM;
-
-    //---------------------------------------------------------------------
-    // Gnuplot (NCEM)
-    //---------------------------------------------------------------------
-    gnuplot_ctrl *h6;
-    h6 = gnuplot_init();
-    gnuplot_cmd(h6,  "set title \"EML2 orbit  in NCEM coordinates\" ");
-
-    cout << "orbit_EM.si = " << endl;
-    vector_printf_prec(orbit_EM.si, 5);
-
-    //---------------------------------------------------------------------
-    // Update the initial state in the orbit, with the RCM coordinates
-    //---------------------------------------------------------------------
-    orbit_update_ic(orbit_EM, orbit_EM.si, orbit_EM.t0);
-
-    cout << "orbit_EM.z0 = " << endl;
-    vector_printf_prec(orbit_EM.z0 , 6);
-
-    //---------------------------------------------------------------------
-    //Integration on mPlot+1 fixed grid
-    //---------------------------------------------------------------------
-    trajectory_integration_grid(orbit_EM, orbit_EM.t0, orbit_EM.t0-tof_eml_EM, y_man_NCEM, t_man_EM, mPlot, 1);
-
-    //---------------------------------------------------------------------
-    //To SEM coordinates
-    //---------------------------------------------------------------------
-    qbcp_coc_vec(y_man_NCEM, t_man_EM, y_man_coord_plot, t_man_coord_plot, mPlot, NCEM, coord_type);
-
-    //---------------------------------------------------------------------
-    //Plot
-    //---------------------------------------------------------------------
-    gnuplot_plot_xyz(h2, y_man_coord_plot[0], y_man_coord_plot[1],  y_man_coord_plot[2], mPlot+1, (char*)"", "lines", "1", "1", 2);
-    gnuplot_plot_xyz(h6, y_man_NCEM[0], y_man_NCEM[1],  y_man_NCEM[2], mPlot+1, (char*)"", "lines", "1", "1", 2);
-
-
-
-    //===============================================================================================
-    // 6. Compute the final SEML2 orbit, via integration in the reduced coordinates
-    //===============================================================================================
-    cout << "-------------------------------------------"  << endl;
-    cout << "Compute the initial SEML2 orbit            "  << endl;
-    cout << "-------------------------------------------"  << endl;
-    printf("Press ENTER to go on\n");
-    scanf("%c",&ch);
-
-    vector<Oftsc> Fh;
-    Fh.reserve(5);
-    for(int i = 0; i < 5; i++) Fh.push_back(Oftsc(5, OFTS_ORDER, OFS_NV, OFS_ORDER));
-    readVOFTS_bin(Fh, SEML_SEM.cs.F_PMS+"rvf/fh",  OFS_ORDER);
-
-    //---------------------------------------------------------------------
-    //For dot(s) = fh(s)
-    //---------------------------------------------------------------------
-    RVF rvf;
-    rvf.ofs_order = SEML.eff_nf_SEM;
-    Ofsc AUX(rvf.ofs_order);
-    rvf.fh         = &Fh;
-    rvf.ofs        = &AUX;
-    rvf.order      = OFTS_ORDER;
-    rvf.n          = orbit_SEM.n;
-    rvf.reduced_nv = 5;
-
-    gsl_odeiv2_system sys_fh;
-    sys_fh.function  = qbfbp_fh;
-    sys_fh.jacobian  = NULL;
-    sys_fh.dimension = 2*rvf.reduced_nv;
-    sys_fh.params    = &rvf;
-
-    const gsl_odeiv2_step_type *T_fh = gsl_odeiv2_step_rk8pd;
-    gsl_odeiv2_driver *d_fh = gsl_odeiv2_driver_alloc_y_new (&sys_fh, T_fh, 1e-12, 1e-10, 1e-10);
-
-
-    //---------------------------------------------------------------------
-    // Temp variables
-    //---------------------------------------------------------------------
-    double t0_SEM = t_traj_n[traj_grid_size];
-    double t1_SEM = t0_SEM+tof_seml_SEM;
-    double z[6];
-    double t2 = t0_SEM;
-    int k  = 0;
-    double  s1ccm8[2*rvf.reduced_nv]; //CCM8
-
-    //---------------------------------------------------------------------
-    // Initial state in CCM8 form
-    //---------------------------------------------------------------------
-    RCMtoCCM8(orbit_SEM.si, s1ccm8, 5);
-
-    //---------------------------------------------------------------------
-    // Loop
-    //---------------------------------------------------------------------
-    while(k <= mPlot && orbit_SEM.si[4] > 1e-5)
-    {
-        cout << "orbit_SEM.si[4] = " << orbit_SEM.si[4] << endl;
-
-        //To NC coordinates
-        RCMtoNCbyTFC(orbit_SEM.si, t2, orbit_SEM.n, orbit_SEM.order, orbit_SEM.ofs_order,
-                     orbit_SEM.reduced_nv, *orbit_SEM.Wh, *orbit_SEM.ofs, *orbit_SEM.PC, *orbit_SEM.V, z, true);
-
-        //Save
-        for(int i = 0; i < 6; i++) y_man_NCSEM[i][k] = z[i];
-        t_man_SEM[k] = t2;
-
-        //Plot
-        gnuplot_plot_xyz(h2, &z[0], &z[1],  &z[2], 1, (char*)"", "points", "1", "1", 6);
-
-        //Advance one step
-        gsl_odeiv2_evolve_apply (d_fh->e, d_fh->c, d_fh->s, d_fh->sys, &t2, t1_SEM, &d_fh->h, s1ccm8);
-        CCM8toRCM(s1ccm8, orbit_SEM.si, orbit_SEM.reduced_nv);
-
-        k++;
-    }
-
-    //---------------------------------------------------------------------
-    //To SEM coordinates
-    //---------------------------------------------------------------------
-    qbcp_coc_vec(y_man_NCSEM, t_man_SEM, y_man_coord_plot, t_man_coord_plot, max(k-1, 0), NCSEM, coord_type);
-
-    //---------------------------------------------------------------------
-    //Plot
-    //---------------------------------------------------------------------
-    gnuplot_plot_xyz(h2, y_man_coord_plot[0], y_man_coord_plot[1],  y_man_coord_plot[2], max(k, 1), (char*)"", "lines", "1", "1", 6);
-
-    //---------------------------------------------------------------------
-    //Old version using classic integrator
-    //---------------------------------------------------------------------
-    //orbit_update_ic(orbit_SEM, orbit_SEM.si, t0_SEM);
-    //trajectory_integration_grid(orbit_SEM, t0_SEM, t0_SEM+tof_seml_SEM, y_man_NCSEM, t_man_SEM, mPlot, 1);
-
-
-    //===============================================================================================
-    // 7. Final trajectory, on a grid
-    //===============================================================================================
-    cout << "-------------------------------------------"  << endl;
-    cout << "Final trajectory, on a grid                "  << endl;
-    cout << "-------------------------------------------"  << endl;
-    printf("Press ENTER to go on\n");
-    scanf("%c",&ch);
-
-    double **ymc   = dmatrix(0, 5, 0, mPlot);
-    double *tmc    = dvector(0, mPlot);
-
-    //Final trajectory on lines, segment by segment
-    for(int k = 0; k < traj_grid_size; k++)
-    {
-        //Integration segment by segment
-        for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
-        ode78_qbcp(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
-
-        //Plot on h2
-        if(k == 0) gnuplot_plot_xyz(h2, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"Final trajectory", "lines", "1", "2", 0);
-        else gnuplot_plot_xyz(h2, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"", "lines", "1", "2", 0);
-    }
-
-    //---------------------------------------------------------------------
-    // Final trajectory, whith single shooting integration
-    //---------------------------------------------------------------------
-    int kstart = 0; //starts at the CMU entry, and NOT at the EML2 orbit entry (kstart != 0)
-    for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][kstart];
-    ode78_qbcp(y_traj, t_traj, t_traj_n[kstart], t2, yv, 6, traj_grid_size, dcs, coord_type, coord_type);
-
-    //Plot on h2
-    //gnuplot_plot_xyz(h2, y_traj[0], y_traj[1],  y_traj[2], traj_grid_size+1, (char*)"Final trajectory (single shooting)", "lines", "1", "3", 8);
-
-    printf("Press ENTER to go on\n");
-    scanf("%c",&ch);
-
-
-    //===============================================================================================
-    // Free
-    //===============================================================================================
-    free_dmatrix(ymc, 0, 5, 0, mPlot);
-    free_dvector(tmc, 0, mPlot);
-
-    gnuplot_close(h3);
-    gnuplot_close(h4);
-    gnuplot_close(h5);
-    gnuplot_close(h6);
-
-    free_dmatrix(y_man_coord, 0, 5, 0, man_grid_size);
-    free_dvector(t_man_coord, 0, man_grid_size);
-
-    free_dmatrix(y_man_NCEM, 0, 5, 0, mPlot);
-    free_dmatrix(y_man_NCSEM, 0, 5, 0, mPlot);
-    free_dvector(t_man_EM, 0, mPlot);
-    free_dvector(t_man_SEM, 0, mPlot);
-    free_dmatrix(y_man_coord_plot, 0, 5, 0, mPlot);
-    free_dvector(t_man_coord_plot, 0, mPlot);
-
-    free_dmatrix(y_traj, 0, 41, 0, traj_grid_size);
-    free_dvector(t_traj, 0, traj_grid_size);
-
-    free_dmatrix(y_traj_n, 0, 41, 0, traj_grid_size);
-    free_dvector(t_traj_n, 0, traj_grid_size);
-
-    gsl_matrix_complex_free(CCM_R_RCM_EM);
-    gsl_matrix_complex_free(CCM_R_RCM_SEM);
-}
-
-/**
- *  \brief Computes ONE trajectory from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the MANIFOLD trajectory (manifold leg).
- *         The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CMS of SEML2. The time at each point
- *         except the first one is allowed to vary. A continuation procedure can be performed to get more than one refined solution.
- **/
-void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_CONT_AFT(SingleOrbit &orbit_EM,
-                                             SingleOrbit &orbit_SEM,
-                                             matrix<Oftsc> &DCM_EM_TFC,
-                                             matrix<Oftsc> &DCMS_SEM_TFC,
-                                             int dcs,
-                                             int coord_type,
-                                             int man_grid_size,
-                                             int cont_steps_MAX,
-                                             int isUserDefined,
-                                             gnuplot_ctrl *h2)
-{
-    //===============================================================================================
-    // 1. Initialize local variables
-    //===============================================================================================
-    //---------------------------------------------------------------------
-    //Local variables to store the manifold leg
-    //---------------------------------------------------------------------
-    double **y_man_coord  = dmatrix(0, 5, 0, man_grid_size);
-    double *t_man_coord   = dvector(0, man_grid_size);
-
-    //---------------------------------------------------------------------
-    //Local variables for plotting
-    //---------------------------------------------------------------------
-    int mPlot = 1000;
-    double **y_man_NCEM        = dmatrix(0, 5, 0, mPlot);
-    double **y_man_NCSEM       = dmatrix(0, 5, 0, mPlot);
-    double *t_man_EM           = dvector(0, mPlot);
-    double *t_man_SEM          = dvector(0, mPlot);
-    double **y_man_coord_plot  = dmatrix(0, 5, 0, mPlot);
-    double *t_man_coord_plot   = dvector(0, mPlot);
-
-    //---------------------------------------------------------------------
-    //To store final data
-    //---------------------------------------------------------------------
-    int traj_grid_size    = man_grid_size;
-    double **y_traj       = dmatrix(0, 41, 0, traj_grid_size);
-    double  *t_traj       = dvector(0, traj_grid_size);
-
-    //---------------------------------------------------------------------
-    //Local variables to store the refined trajectory
-    //---------------------------------------------------------------------
-    double **y_traj_n   = dmatrix(0, 41, 0, traj_grid_size);
-    double *t_traj_n    = dvector(0, traj_grid_size);
-
-    //---------------------------------------------------------------------
-    // Initialize the COC matrices
-    //---------------------------------------------------------------------
-    //CCM_R_RCM_EM: RCM to CCM in R(4,4), about EML2
-    gsl_matrix_complex *CCM_R_RCM_EM  = gsl_matrix_complex_calloc(4, 4);
-    for(int i = 0; i < 4; i++) gsl_matrix_complex_set(CCM_R_RCM_EM, i, i, gslc_complex(1.0/sqrt(2), 0.0));
-    gsl_matrix_complex_set(CCM_R_RCM_EM, 0, 2, gslc_complex(0.0, -1.0/sqrt(2)));
-    gsl_matrix_complex_set(CCM_R_RCM_EM, 1, 3, gslc_complex(0.0, -1.0/sqrt(2)));
-    gsl_matrix_complex_set(CCM_R_RCM_EM, 2, 0, gslc_complex(0.0, -1.0/sqrt(2)));
-    gsl_matrix_complex_set(CCM_R_RCM_EM, 3, 1, gslc_complex(0.0, -1.0/sqrt(2)));
-
-    //CCM_R_RCM_SEM: RCM to CCM in R(5,5), about SEML2
-    gsl_matrix_complex *CCM_R_RCM_SEM  = gsl_matrix_complex_calloc(5, 5);
-    for(int i = 0; i < 4; i++) gsl_matrix_complex_set(CCM_R_RCM_SEM, i, i, gslc_complex(1.0/sqrt(2), 0.0));
-    gsl_matrix_complex_set(CCM_R_RCM_SEM, 4, 4, gslc_complex(1.0, 0.0));
-    gsl_matrix_complex_set(CCM_R_RCM_SEM, 0, 2, gslc_complex(0.0, -1.0/sqrt(2)));
-    gsl_matrix_complex_set(CCM_R_RCM_SEM, 1, 3, gslc_complex(0.0, -1.0/sqrt(2)));
-    gsl_matrix_complex_set(CCM_R_RCM_SEM, 2, 0, gslc_complex(0.0, -1.0/sqrt(2)));
-    gsl_matrix_complex_set(CCM_R_RCM_SEM, 3, 1, gslc_complex(0.0, -1.0/sqrt(2)));
-
-    //---------------------------------------------------------------------
-    // Time on each orbit
-    //---------------------------------------------------------------------
-    double tof_eml_EM   = 5*SEML.us.T;       //TOF on EML2 orbit
-    double tof_seml_SEM = 30*SEML.us_sem.T;   //TOF on SEML2 orbit
-
-
-    //===============================================================================================
-    // 2.  Compute the manifold leg
-    //===============================================================================================
-    //---------------------------------------------------------------------
-    // Integration
-    //---------------------------------------------------------------------
-    ode78_qbcp(y_man_coord, t_man_coord, orbit_EM.t0, orbit_EM.tf, orbit_EM.z0, 6, man_grid_size, dcs, NCEM, coord_type);
-
-    //---------------------------------------------------------------------
-    // Save All BUT the last point
-    //---------------------------------------------------------------------
-    for(int kman = 0; kman < man_grid_size; kman++)
-    {
-        for(int i = 0; i < 6; i++) y_traj[i][kman] = y_man_coord[i][kman];
-        t_traj[kman] = t_man_coord[kman];
-    }
-
-
-    //===============================================================================================
-    // 3. Compute the first point of the final SEML2 orbit and add it to the manifold leg
-    //===============================================================================================
-    //---------------------------------------------------------------------
-    // Save the last point at position man_grid_size
-    //---------------------------------------------------------------------
-    double yout[6], tout;
-    qbcp_coc(orbit_SEM.t0, orbit_SEM.z0, yout, &tout, NCSEM, coord_type);
-
-    for(int i = 0; i < 6; i++) y_traj[i][man_grid_size] = yout[i];
-    t_traj[man_grid_size] = tout;
-
-    //---------------------------------------------------------------------
-    //Plot
-    //---------------------------------------------------------------------
-    gnuplot_plot_xyz(h2, y_man_coord[0], y_man_coord[1],  y_man_coord[2], man_grid_size+1, (char*)"", "lines", "1", "1", 4);
-
-
-    //===============================================================================================
-    // 4.  Differential correction & final trajectory
-    //===============================================================================================
-    int isPlotted   = 1;
-    char ch;
-
-    cout << "-------------------------------------------"  << endl;
-    cout << "Differential correction & final trajectory "  << endl;
-    cout << "-------------------------------------------"  << endl;
-    printf("Press ENTER to go on\n");
-    scanf("%c",&ch);
-
-    int nfv = 6*man_grid_size+3;  //free variables
-    double *nullvector = dvector(0, nfv-1);
-
-    //======================================================================
-    //GNUPLOT
-    //======================================================================
-    gnuplot_ctrl *h3;
-    h3 = gnuplot_init();
-    gnuplot_cmd(h3,  "set title \"s3_EM vs s1_EM\" ");
-
-    gnuplot_ctrl *h4;
-    h4 = gnuplot_init();
-    gnuplot_cmd(h4,  "set title \"s3_SEM vs s1_SEM\" ");
-
-    gnuplot_ctrl *h5;
-    h5 = gnuplot_init();
-    gnuplot_cmd(h5,  "set title \"s4_EM vs s2_EM\" ");
-
-    //We keep the number of points below 10% of the maximum gnuplot temp file.
-    int plotfreq = 1;//floor((double)cont_steps_MAX/floor(0.1*GP_MAX_TMP_FILES))+1;
-
-
-    //======================================================================
-    //Continuation, step one : Differential correction procedure with fixed times
-    //======================================================================
-    int status = 0;
-    double yv[42];
-    //Differential correction procedure
-    status = msdvt_CMS_RCM_deps_ATF(y_traj, t_traj, y_traj_n, t_traj_n, nullvector, 42,
-                                    traj_grid_size, coord_type, 5e-8, true,
-                                    DCM_EM_TFC, DCMS_SEM_TFC,
-                                    CCM_R_RCM_EM,
-                                    CCM_R_RCM_SEM,
-                                    orbit_EM, orbit_SEM,
-                                    h2, isPlotted, isUserDefined, false);
-
-    cout << "nullvector = " << endl;
-    vector_printf_prec(nullvector, nfv);
-
-
-    //======================================================================
-    // Go on if success
-    //======================================================================
-    if(status == GSL_SUCCESS)
-    {
-        cout << "-------------------------------------------"  << endl;
-        cout << "Continuation with fixed time               "  << endl;
-        cout << "-------------------------------------------"  << endl;
-        printf("Press ENTER to go on\n");
-        scanf("%c",&ch);
-
-        //======================================================================
-        // Continuation procedure
-        //======================================================================
-        double ye[42];
-        double ds = 1e-2;
-        //double dkn = 0.0;
-        int kn = 0;
-        do
-        {
-            //======================================================================
-            //Updating the free variables
-            //======================================================================
-            //Updating CM_EM_RCM coordinates
-            for(int i = 0; i < 4; i++) orbit_EM.si[i] += ds*nullvector[i];
-            //Updating CM_EM_NCEM coordinates
-            orbit_update_ic(orbit_EM, orbit_EM.si, t_traj_n[0]/SEML.us_em.ns);
-            //To CM_EM_NCSEM coordinates
-            for(int i = 0; i < 42; i++) yv[i] = orbit_EM.z0[i];
-            qbcp_coc(t_traj_n[0]/SEML.us_em.ns, yv, ye, NCEM, coord_type);
-            for(int i = 0; i < 6; i++) y_traj_n[i][0] = ye[i];
-
-            //The middle (patch points) is classical cartesian coordinates at patch points
-            for(int k = 1; k < man_grid_size; k++)
-            {
-                for(int i = 0; i < 6; i++) y_traj_n[i][k] += ds*nullvector[i + 6*k-2];
-            }
-
-            //Last 5 correction variables is orbit.si
-            //Updating CM_SEM_RCM coordinates
-            for(int i = 0; i < 5; i++) orbit_SEM.si[i] += ds*nullvector[i + 6*man_grid_size-2];
-
-            //Updating CM_SEM_NCSEM coordinates
-            orbit_update_ic(orbit_SEM, orbit_SEM.si, t_traj_n[man_grid_size]);
-
-            //Updating CM_SEM_NCSEM coordinates (identity transformation is performed in qbcp_coc.
-            for(int i = 0; i < 6; i++) y_traj_n[i][man_grid_size] = orbit_SEM.z0[i];
-
-
-            cout << "orbit_EM.si (1) = " << endl;
-            vector_printf_prec(orbit_EM.si, 5);
-
-            cout << "orbit_SEM.si (1) = " << endl;
-            vector_printf_prec(orbit_SEM.si, 5);
-
-            //======================================================================
-            //Diff corr
-            //======================================================================
-            isPlotted = (kn % plotfreq == 0) ? 1:0;
-            status = msdvt_CMS_RCM_deps_ATF(y_traj, t_traj, y_traj_n, t_traj_n, nullvector, 42,
-                               traj_grid_size, coord_type, 5e-8, false,
-                               DCM_EM_TFC, DCMS_SEM_TFC,
-                               CCM_R_RCM_EM,
-                               CCM_R_RCM_SEM,
-                               orbit_EM, orbit_SEM,
-                               h2, isPlotted, isUserDefined, false);
-
-            cout << "orbit_EM.si (2) = " << endl;
-            vector_printf_prec(orbit_EM.si, 5);
-
-            cout << "orbit_SEM.si (2) = " << endl;
-            vector_printf_prec(orbit_SEM.si, 5);
-
-            //======================================================================
-            //Save
-            //======================================================================
-
-            //======================================================================
-            //Display
-            //======================================================================
-            //dkn = (double) kn;
-            if(kn % plotfreq == 0)
-            {
-                gnuplot_plot_xy(h3, &orbit_EM.si[0],  &orbit_EM.si[2], 1, (char*)"", "points", "1", "2", 0);
-                gnuplot_plot_xy(h4, &orbit_SEM.si[0], &orbit_SEM.si[2], 1, (char*)"", "points", "1", "2", 0);
-                gnuplot_plot_xy(h5, &orbit_EM.si[1],  &orbit_EM.si[3], 1, (char*)"", "points", "1", "2", 0);
-            }
-
-
-            //======================================================================
-            //Advance one step
-            //======================================================================
-            kn++;
-            cout << "Step n°" << kn << " completed.               "  << endl;
-            cout << "---------------------------------------------"  << endl;
-            //printf("Press ENTER to go on\n");
-            //scanf("%c",&ch);
-
-        }while(kn < cont_steps_MAX && status == GSL_SUCCESS);
-
-        //===============================================================================================
-        // 5. Compute the initial orbit
-        //===============================================================================================
-        cout << "-------------------------------------------"  << endl;
-        cout << "Compute the initial EML2 orbit             "  << endl;
-        cout << "-------------------------------------------"  << endl;
-        printf("Press ENTER to go on\n");
-        scanf("%c",&ch);
-
-        //---------------------------------------------------------------------
-        // Reset the unstable direction
-        //---------------------------------------------------------------------
-        orbit_EM.si[4] = 0.0;
-        orbit_EM.tf    = orbit_EM.t0-tof_eml_EM;
-
-        //---------------------------------------------------------------------
-        // Gnuplot (NCEM)
-        //---------------------------------------------------------------------
-        gnuplot_ctrl *h6;
-        h6 = gnuplot_init();
-        gnuplot_cmd(h6,  "set title \"EML2 orbit  in NCEM coordinates\" ");
-
-        cout << "orbit_EM.si = " << endl;
-        vector_printf_prec(orbit_EM.si, 5);
-
-        //---------------------------------------------------------------------
-        // Update the initial state in the orbit, with the RCM coordinates
-        //---------------------------------------------------------------------
-        orbit_update_ic(orbit_EM, orbit_EM.si, orbit_EM.t0);
-
-        cout << "orbit_EM.z0 = " << endl;
-        vector_printf_prec(orbit_EM.z0 , 6);
-
-        //---------------------------------------------------------------------
-        //Integration on mPlot+1 fixed grid
-        //---------------------------------------------------------------------
-        trajectory_integration_grid(orbit_EM, orbit_EM.t0, orbit_EM.t0-tof_eml_EM, y_man_NCEM, t_man_EM, mPlot, 1);
-
-        //---------------------------------------------------------------------
-        //To SEM coordinates
-        //---------------------------------------------------------------------
-        qbcp_coc_vec(y_man_NCEM, t_man_EM, y_man_coord_plot, t_man_coord_plot, mPlot, NCEM, coord_type);
-
-        //---------------------------------------------------------------------
-        //Plot
-        //---------------------------------------------------------------------
-        gnuplot_plot_xyz(h2, y_man_coord_plot[0], y_man_coord_plot[1],  y_man_coord_plot[2], mPlot+1, (char*)"", "lines", "1", "1", 2);
-        gnuplot_plot_xyz(h6, y_man_NCEM[0], y_man_NCEM[1],  y_man_NCEM[2], mPlot+1, (char*)"", "lines", "1", "1", 2);
-
-
-
-        //===============================================================================================
-        // 6. Compute the final SEML2 orbit, via integration in the reduced coordinates
-        //===============================================================================================
-        cout << "-------------------------------------------"  << endl;
-        cout << "Compute the initial SEML2 orbit            "  << endl;
-        cout << "-------------------------------------------"  << endl;
-        printf("Press ENTER to go on\n");
-        scanf("%c",&ch);
-
-        vector<Oftsc> Fh;
-        Fh.reserve(5);
-        for(int i = 0; i < 5; i++) Fh.push_back(Oftsc(5, OFTS_ORDER, OFS_NV, OFS_ORDER));
-        readVOFTS_bin(Fh, SEML_SEM.cs.F_PMS+"rvf/fh",  OFS_ORDER);
-
-        //---------------------------------------------------------------------
-        //For dot(s) = fh(s)
-        //---------------------------------------------------------------------
-        RVF rvf;
-        rvf.ofs_order = SEML.eff_nf_SEM;
-        Ofsc AUX(rvf.ofs_order);
-        rvf.fh         = &Fh;
-        rvf.ofs        = &AUX;
-        rvf.order      = OFTS_ORDER;
-        rvf.n          = orbit_SEM.n;
-        rvf.reduced_nv = 5;
-
-        gsl_odeiv2_system sys_fh;
-        sys_fh.function  = qbfbp_fh;
-        sys_fh.jacobian  = NULL;
-        sys_fh.dimension = 2*rvf.reduced_nv;
-        sys_fh.params    = &rvf;
-
-        const gsl_odeiv2_step_type *T_fh = gsl_odeiv2_step_rk8pd;
-        gsl_odeiv2_driver *d_fh = gsl_odeiv2_driver_alloc_y_new (&sys_fh, T_fh, 1e-12, 1e-10, 1e-10);
-
-
-        //---------------------------------------------------------------------
-        // Temp variables
-        //---------------------------------------------------------------------
-        double t0_SEM = t_traj_n[traj_grid_size];
-        double t1_SEM = t0_SEM+tof_seml_SEM;
-        double z[6];
-        double t2 = t0_SEM;
-        int k  = 0;
-        double  s1ccm8[2*rvf.reduced_nv]; //CCM8
-
-        //---------------------------------------------------------------------
-        // Initial state in CCM8 form
-        //---------------------------------------------------------------------
-        RCMtoCCM8(orbit_SEM.si, s1ccm8, 5);
-
-        //---------------------------------------------------------------------
-        // Loop
-        //---------------------------------------------------------------------
-        while(k <= mPlot && orbit_SEM.si[4] > 1e-5)
-        {
-            cout << "orbit_SEM.si[4] = " << orbit_SEM.si[4] << endl;
-
-            //To NC coordinates
-            RCMtoNCbyTFC(orbit_SEM.si, t2, orbit_SEM.n, orbit_SEM.order, orbit_SEM.ofs_order,
-                         orbit_SEM.reduced_nv, *orbit_SEM.Wh, *orbit_SEM.ofs, *orbit_SEM.PC, *orbit_SEM.V, z, true);
-
-            //Save
-            for(int i = 0; i < 6; i++) y_man_NCSEM[i][k] = z[i];
-            t_man_SEM[k] = t2;
-
-            //Plot
-            gnuplot_plot_xyz(h2, &z[0], &z[1],  &z[2], 1, (char*)"", "points", "1", "1", 6);
-
-            //Advance one step
-            gsl_odeiv2_evolve_apply (d_fh->e, d_fh->c, d_fh->s, d_fh->sys, &t2, t1_SEM, &d_fh->h, s1ccm8);
-            CCM8toRCM(s1ccm8, orbit_SEM.si, orbit_SEM.reduced_nv);
-
-            k++;
-        }
-
-        //---------------------------------------------------------------------
-        //To SEM coordinates
-        //---------------------------------------------------------------------
-        qbcp_coc_vec(y_man_NCSEM, t_man_SEM, y_man_coord_plot, t_man_coord_plot, max(k-1, 0), NCSEM, coord_type);
-
-        //---------------------------------------------------------------------
-        //Plot
-        //---------------------------------------------------------------------
-        gnuplot_plot_xyz(h2, y_man_coord_plot[0], y_man_coord_plot[1],  y_man_coord_plot[2], max(k, 1), (char*)"", "lines", "1", "1", 6);
-
-        //---------------------------------------------------------------------
-        //Old version using classic integrator
-        //---------------------------------------------------------------------
-        //orbit_update_ic(orbit_SEM, orbit_SEM.si, t0_SEM);
-        //trajectory_integration_grid(orbit_SEM, t0_SEM, t0_SEM+tof_seml_SEM, y_man_NCSEM, t_man_SEM, mPlot, 1);
-
-
-        //===============================================================================================
-        // 7. Final trajectory, on a grid
-        //===============================================================================================
-        cout << "-------------------------------------------"  << endl;
-        cout << "Final trajectory, on a grid                "  << endl;
-        cout << "-------------------------------------------"  << endl;
-        printf("Press ENTER to go on\n");
-        scanf("%c",&ch);
-
-        double **ymc   = dmatrix(0, 5, 0, mPlot);
-        double *tmc    = dvector(0, mPlot);
-
-        //Final trajectory on lines, segment by segment
-        for(int k = 0; k < traj_grid_size; k++)
-        {
-            //Integration segment by segment
-            for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
-            ode78_qbcp(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
-
-            //Plot on h2
-            if(k == 0) gnuplot_plot_xyz(h2, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"Final trajectory", "lines", "1", "2", 0);
-            else gnuplot_plot_xyz(h2, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"", "lines", "1", "2", 0);
-        }
-
-        free_dmatrix(ymc, 0, 5, 0, mPlot);
-        free_dvector(tmc, 0, mPlot);
-        gnuplot_close(h6);
-
-
-    }
-    printf("Press ENTER to go on\n");
-    scanf("%c",&ch);
-
-
-    //===============================================================================================
-    // Free
-    //===============================================================================================
-    gnuplot_close(h3);
-    gnuplot_close(h4);
-    gnuplot_close(h5);
-
-
-    free_dmatrix(y_man_coord, 0, 5, 0, man_grid_size);
-    free_dvector(t_man_coord, 0, man_grid_size);
-
-    free_dmatrix(y_man_NCEM, 0, 5, 0, mPlot);
-    free_dmatrix(y_man_NCSEM, 0, 5, 0, mPlot);
-    free_dvector(t_man_EM, 0, mPlot);
-    free_dvector(t_man_SEM, 0, mPlot);
-    free_dmatrix(y_man_coord_plot, 0, 5, 0, mPlot);
-    free_dvector(t_man_coord_plot, 0, mPlot);
-
-    free_dmatrix(y_traj, 0, 41, 0, traj_grid_size);
-    free_dvector(t_traj, 0, traj_grid_size);
-
-    free_dmatrix(y_traj_n, 0, 41, 0, traj_grid_size);
-    free_dvector(t_traj_n, 0, traj_grid_size);
-
-    gsl_matrix_complex_free(CCM_R_RCM_EM);
-    gsl_matrix_complex_free(CCM_R_RCM_SEM);
-}
-
-
-
-/**
- *  \brief Same as ref1_CMU_EM_to_CMS_SEM_MSD_RCM, in the planar case.
- **/
-void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR(SingleOrbit &orbit_EM,
-        SingleOrbit &orbit_SEM,
-        matrix<Oftsc> &DCM_EM_TFC,
-        matrix<Oftsc> &DCMS_SEM_TFC,
-        int dcs,
-        int coord_type,
-        int man_grid_size,
-        gnuplot_ctrl *h2)
-{
-    //===============================================================================================
-    // 1. Initialize local variables
-    //===============================================================================================
-    //---------------------------------------------------------------------
-    //Local variables to store the manifold leg
-    //---------------------------------------------------------------------
-    double **y_man_coord  = dmatrix(0, 5, 0, man_grid_size);
-    double *t_man_coord   = dvector(0, man_grid_size);
-
-    //---------------------------------------------------------------------
-    //Local variables for plotting
-    //---------------------------------------------------------------------
-    int mPlot = 1000;
-    double **y_man_NCEM        = dmatrix(0, 5, 0, mPlot);
-    double **y_man_NCSEM       = dmatrix(0, 5, 0, mPlot);
-    double *t_man_EM           = dvector(0, mPlot);
-    double *t_man_SEM          = dvector(0, mPlot);
-    double **y_man_coord_plot  = dmatrix(0, 5, 0, mPlot);
-    double *t_man_coord_plot   = dvector(0, mPlot);
-
-    //---------------------------------------------------------------------
-    //To store final data
-    //---------------------------------------------------------------------
-    int traj_grid_size    = man_grid_size;
-    double **y_traj       = dmatrix(0, 41, 0, traj_grid_size);
-    double  *t_traj       = dvector(0, traj_grid_size);
-
-    //---------------------------------------------------------------------
-    //Local variables to store the refined trajectory
-    //---------------------------------------------------------------------
-    double **y_traj_n   = dmatrix(0, 41, 0, traj_grid_size);
-    double *t_traj_n    = dvector(0, traj_grid_size);
-
-    //---------------------------------------------------------------------
-    // Initialize the COC matrices
-    //---------------------------------------------------------------------
-    //CCM_R_RCM_EM: RCM to CCM in R(4,4), about EML2
-    gsl_matrix_complex *CCM_R_RCM_EM  = gsl_matrix_complex_calloc(4, 4);
-    for(int i = 0; i < 4; i++) gsl_matrix_complex_set(CCM_R_RCM_EM, i, i, gslc_complex(1.0/sqrt(2), 0.0));
-    gsl_matrix_complex_set(CCM_R_RCM_EM, 0, 2, gslc_complex(0.0, -1.0/sqrt(2)));
-    gsl_matrix_complex_set(CCM_R_RCM_EM, 1, 3, gslc_complex(0.0, -1.0/sqrt(2)));
-    gsl_matrix_complex_set(CCM_R_RCM_EM, 2, 0, gslc_complex(0.0, -1.0/sqrt(2)));
-    gsl_matrix_complex_set(CCM_R_RCM_EM, 3, 1, gslc_complex(0.0, -1.0/sqrt(2)));
-
-    //CCM_R_RCM_SEM: RCM to CCM in R(5,5), about SEML2
-    gsl_matrix_complex *CCM_R_RCM_SEM  = gsl_matrix_complex_calloc(5, 5);
-    for(int i = 0; i < 4; i++) gsl_matrix_complex_set(CCM_R_RCM_SEM, i, i, gslc_complex(1.0/sqrt(2), 0.0));
-    gsl_matrix_complex_set(CCM_R_RCM_SEM, 4, 4, gslc_complex(1.0, 0.0));
-    gsl_matrix_complex_set(CCM_R_RCM_SEM, 0, 2, gslc_complex(0.0, -1.0/sqrt(2)));
-    gsl_matrix_complex_set(CCM_R_RCM_SEM, 1, 3, gslc_complex(0.0, -1.0/sqrt(2)));
-    gsl_matrix_complex_set(CCM_R_RCM_SEM, 2, 0, gslc_complex(0.0, -1.0/sqrt(2)));
-    gsl_matrix_complex_set(CCM_R_RCM_SEM, 3, 1, gslc_complex(0.0, -1.0/sqrt(2)));
-
-    //---------------------------------------------------------------------
-    // Time on each orbit
-    //---------------------------------------------------------------------
-    double tof_eml_EM   = 5*SEML.us.T;       //TOF on EML2 orbit
-    double tof_seml_SEM = 20*SEML.us_sem.T;   //TOF on SEML2 orbit
-
-
-    //===============================================================================================
-    // 2.  Compute the manifold leg
-    //===============================================================================================
-    //---------------------------------------------------------------------
-    // Integration
-    //---------------------------------------------------------------------
-    ode78_qbcp(y_man_coord, t_man_coord, orbit_EM.t0, orbit_EM.tf, orbit_EM.z0, 6, man_grid_size, dcs, NCEM, coord_type);
-
-    //---------------------------------------------------------------------
-    // Save All BUT the last point
-    //---------------------------------------------------------------------
-    for(int kman = 0; kman < man_grid_size; kman++)
-    {
-        for(int i = 0; i < 6; i++) y_traj[i][kman] = y_man_coord[i][kman];
-        t_traj[kman] = t_man_coord[kman];
-    }
-
-
-    //===============================================================================================
-    // 3. Compute the first point of the final SEML2 orbit and add it to the manifold leg
-    //===============================================================================================
-    //---------------------------------------------------------------------
-    // Save the last point at position man_grid_size
-    //---------------------------------------------------------------------
-    double yout[6], tout;
-    qbcp_coc(orbit_SEM.t0, orbit_SEM.z0, yout, &tout, NCSEM, coord_type);
-
-    for(int i = 0; i < 6; i++) y_traj[i][man_grid_size] = yout[i];
-    t_traj[man_grid_size] = tout;
-
-    //---------------------------------------------------------------------
-    //Plot
-    //---------------------------------------------------------------------
-    gnuplot_plot_xyz(h2, y_man_coord[0], y_man_coord[1],  y_man_coord[2], man_grid_size+1, (char*)"", "lines", "1", "1", 4);
-
-
-    //===============================================================================================
-    // 4.  Differential correction & final trajectory
-    //===============================================================================================
-    int isPlotted   = 1;
-    char ch;
-
-    cout << "-------------------------------------------"  << endl;
-    cout << "Differential correction & final trajectory "  << endl;
-    cout << "-------------------------------------------"  << endl;
-    printf("Press ENTER to go on\n");
-    scanf("%c",&ch);
-
-    double yv[42];
-    int nfv = 7*(man_grid_size+1)-4;  //free variables
-    double *nullvector = dvector(0, nfv-1);
-
-    //======================================================================
-    //NO CONTINUATION: @TODO Update msdvt_CMS_RCM to meet msdvt_CMS_RCM_deps_planar
-    //standards in terms of inputs and plotting. msdvt_CMS_RCM_deps_planar is used for now
-    // BUT the computation of the null vector is NOT used...
-    //======================================================================
-    //    msdvt_CMS_RCM(y_traj, t_traj, y_traj_n, t_traj_n, 42,
-    //                  traj_grid_size, coord_type,
-    //                  DCM_EM_TFC, DCMS_SEM_TFC,
-    //                  CCM_R_RCM_EM,
-    //                  CCM_R_RCM_SEM,
-    //                  orbit_EM, orbit_SEM,
-    //                  h2, isPlotted, false);
-
-    //With fixed time
-    msdvt_CMS_RCM_deps_planar_ATF(y_traj, t_traj, y_traj_n, t_traj_n, nullvector, 42,
-                              traj_grid_size, coord_type, 5e-8, true,
-                              DCM_EM_TFC, DCMS_SEM_TFC,
-                              CCM_R_RCM_EM,
-                              CCM_R_RCM_SEM,
-                              orbit_EM, orbit_SEM,
-                              h2, isPlotted, true,  false);
-
-    // With unfixed time
-    //    msdvt_CMS_RCM_deps_planar(y_traj, t_traj, y_traj_n, t_traj_n, nullvector, 42,
-    //                                  traj_grid_size, coord_type, 5e-8, true,
-    //                                  DCM_EM_TFC, DCMS_SEM_TFC,
-    //                                  CCM_R_RCM_EM,
-    //                                  CCM_R_RCM_SEM,
-    //                                  orbit_EM, orbit_SEM,
-    //                                  h2, isPlotted, false);
-
-
-    //===============================================================================================
-    // 5. Compute the initial orbit
-    //===============================================================================================
-    cout << "-------------------------------------------"  << endl;
-    cout << "Compute the initial EML2 orbit             "  << endl;
-    cout << "-------------------------------------------"  << endl;
-    printf("Press ENTER to go on\n");
-    scanf("%c",&ch);
-
-    //---------------------------------------------------------------------
-    // Reset the unstable direction
-    //---------------------------------------------------------------------
-    orbit_EM.si[4] = 0.0;
-    orbit_EM.tf    = orbit_EM.t0-tof_eml_EM;
-
-    //---------------------------------------------------------------------
-    // Gnuplot (NCEM)
-    //---------------------------------------------------------------------
-    gnuplot_ctrl *h6;
-    h6 = gnuplot_init();
-    gnuplot_cmd(h6,  "set title \"EML2 orbit  in NCEM coordinates\" ");
-
-    cout << "orbit_EM.si = " << endl;
-    vector_printf_prec(orbit_EM.si, 5);
-
-    //---------------------------------------------------------------------
-    // Update the initial state in the orbit, with the RCM coordinates
-    //---------------------------------------------------------------------
-    orbit_update_ic(orbit_EM, orbit_EM.si, orbit_EM.t0);
-
-    cout << "orbit_EM.z0 = " << endl;
-    vector_printf_prec(orbit_EM.z0 , 6);
-
-    //---------------------------------------------------------------------
-    //Integration on mPlot+1 fixed grid
-    //---------------------------------------------------------------------
-    trajectory_integration_grid(orbit_EM, orbit_EM.t0, orbit_EM.t0-tof_eml_EM, y_man_NCEM, t_man_EM, mPlot, 1);
-
-    //---------------------------------------------------------------------
-    //To SEM coordinates
-    //---------------------------------------------------------------------
-    qbcp_coc_vec(y_man_NCEM, t_man_EM, y_man_coord_plot, t_man_coord_plot, mPlot, NCEM, coord_type);
-
-    //---------------------------------------------------------------------
-    //Plot
-    //---------------------------------------------------------------------
-    gnuplot_plot_xyz(h2, y_man_coord_plot[0], y_man_coord_plot[1],  y_man_coord_plot[2], mPlot+1, (char*)"", "lines", "1", "1", 2);
-    gnuplot_plot_xyz(h6, y_man_NCEM[0], y_man_NCEM[1],  y_man_NCEM[2], mPlot+1, (char*)"", "lines", "1", "1", 2);
-
-
-
-    //===============================================================================================
-    // 6. Compute the final SEML2 orbit, via integration in the reduced coordinates
-    //===============================================================================================
-    cout << "-------------------------------------------"  << endl;
-    cout << "Compute the initial SEML2 orbit            "  << endl;
-    cout << "-------------------------------------------"  << endl;
-    printf("Press ENTER to go on\n");
-    scanf("%c",&ch);
-
-    vector<Oftsc> Fh;
-    Fh.reserve(5);
-    for(int i = 0; i < 5; i++) Fh.push_back(Oftsc(5, OFTS_ORDER, OFS_NV, OFS_ORDER));
-    readVOFTS_bin(Fh, SEML_SEM.cs.F_PMS+"rvf/fh",  OFS_ORDER);
-
-    //---------------------------------------------------------------------
-    //For dot(s) = fh(s)
-    //---------------------------------------------------------------------
-    RVF rvf;
-    rvf.ofs_order = SEML.eff_nf_SEM;
-    Ofsc AUX(rvf.ofs_order);
-    rvf.fh         = &Fh;
-    rvf.ofs        = &AUX;
-    rvf.order      = OFTS_ORDER;
-    rvf.n          = orbit_SEM.n;
-    rvf.reduced_nv = 5;
-
-    gsl_odeiv2_system sys_fh;
-    sys_fh.function  = qbfbp_fh;
-    sys_fh.jacobian  = NULL;
-    sys_fh.dimension = 2*rvf.reduced_nv;
-    sys_fh.params    = &rvf;
-
-    const gsl_odeiv2_step_type *T_fh = gsl_odeiv2_step_rk8pd;
-    gsl_odeiv2_driver *d_fh = gsl_odeiv2_driver_alloc_y_new (&sys_fh, T_fh, 1e-12, 1e-10, 1e-10);
-
-
-    //---------------------------------------------------------------------
-    // Temp variables
-    //---------------------------------------------------------------------
-    double t0_SEM = t_traj_n[traj_grid_size];
-    double t1_SEM = t0_SEM+tof_seml_SEM;
-    double z[6];
-    double t2 = t0_SEM;
-    int k  = 0;
-    double  s1ccm8[2*rvf.reduced_nv]; //CCM8
-
-    //---------------------------------------------------------------------
-    // Initial state in CCM8 form
-    //---------------------------------------------------------------------
-    RCMtoCCM8(orbit_SEM.si, s1ccm8, 5);
-
-    //---------------------------------------------------------------------
-    // Loop
-    //---------------------------------------------------------------------
-    while(k <= mPlot && orbit_SEM.si[4] > 1e-5)
-    {
-        cout << "orbit_SEM.si[4] = " << orbit_SEM.si[4] << endl;
-
-        //To NC coordinates
-        RCMtoNCbyTFC(orbit_SEM.si, t2, orbit_SEM.n, orbit_SEM.order, orbit_SEM.ofs_order,
-                     orbit_SEM.reduced_nv, *orbit_SEM.Wh, *orbit_SEM.ofs, *orbit_SEM.PC, *orbit_SEM.V, z, true);
-
-        //Save
-        for(int i = 0; i < 6; i++) y_man_NCSEM[i][k] = z[i];
-        t_man_SEM[k] = t2;
-
-        //Plot
-        gnuplot_plot_xyz(h2, &z[0], &z[1],  &z[2], 1, (char*)"", "points", "1", "1", 6);
-
-        //Advance one step
-        gsl_odeiv2_evolve_apply (d_fh->e, d_fh->c, d_fh->s, d_fh->sys, &t2, t1_SEM, &d_fh->h, s1ccm8);
-        CCM8toRCM(s1ccm8, orbit_SEM.si, orbit_SEM.reduced_nv);
-
-        k++;
-    }
-
-    //---------------------------------------------------------------------
-    //To SEM coordinates
-    //---------------------------------------------------------------------
-    qbcp_coc_vec(y_man_NCSEM, t_man_SEM, y_man_coord_plot, t_man_coord_plot, max(k-1, 0), NCSEM, coord_type);
-
-    //---------------------------------------------------------------------
-    //Plot
-    //---------------------------------------------------------------------
-    gnuplot_plot_xyz(h2, y_man_coord_plot[0], y_man_coord_plot[1],  y_man_coord_plot[2], max(k, 1), (char*)"", "lines", "1", "1", 6);
-
-    //---------------------------------------------------------------------
-    //Old version using classic integrator
-    //---------------------------------------------------------------------
-    //orbit_update_ic(orbit_SEM, orbit_SEM.si, t0_SEM);
-    //trajectory_integration_grid(orbit_SEM, t0_SEM, t0_SEM+tof_seml_SEM, y_man_NCSEM, t_man_SEM, mPlot, 1);
-
-
-    //===============================================================================================
-    // 7. Final trajectory, on a grid
-    //===============================================================================================
-    cout << "-------------------------------------------"  << endl;
-    cout << "Final trajectory, on a grid                "  << endl;
-    cout << "-------------------------------------------"  << endl;
-    printf("Press ENTER to go on\n");
-    scanf("%c",&ch);
-
-    double **ymc   = dmatrix(0, 5, 0, mPlot);
-    double *tmc    = dvector(0, mPlot);
-
-    //Final trajectory on lines, segment by segment
-    for(int k = 0; k < traj_grid_size; k++)
-    {
-        //Integration segment by segment
-        for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
-        ode78_qbcp(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
-
-        //Plot on h2
-        if(k == 0) gnuplot_plot_xyz(h2, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"Final trajectory", "lines", "1", "2", 0);
-        else gnuplot_plot_xyz(h2, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"", "lines", "1", "2", 0);
-    }
-
-    //---------------------------------------------------------------------
-    // Final trajectory, whith single shooting integration
-    //---------------------------------------------------------------------
-    int kstart = 0; //starts at the CMU entry, and NOT at the EML2 orbit entry (kstart != 0)
-    for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][kstart];
-    ode78_qbcp(y_traj, t_traj, t_traj_n[kstart], t2, yv, 6, traj_grid_size, dcs, coord_type, coord_type);
-
-    //Plot on h2
-    //gnuplot_plot_xyz(h2, y_traj[0], y_traj[1],  y_traj[2], traj_grid_size+1, (char*)"Final trajectory (single shooting)", "lines", "1", "3", 8);
-
-    printf("Press ENTER to go on\n");
-    scanf("%c",&ch);
-
-    //===============================================================================================
-    // Free
-    //===============================================================================================
-    free_dmatrix(ymc, 0, 5, 0, mPlot);
-    free_dvector(tmc, 0, mPlot);
-    gnuplot_close(h6);
-
-    free_dmatrix(y_man_coord, 0, 5, 0, man_grid_size);
-    free_dvector(t_man_coord, 0, man_grid_size);
-
-    free_dmatrix(y_man_NCEM, 0, 5, 0, mPlot);
-    free_dmatrix(y_man_NCSEM, 0, 5, 0, mPlot);
-    free_dvector(t_man_EM, 0, mPlot);
-    free_dvector(t_man_SEM, 0, mPlot);
-    free_dmatrix(y_man_coord_plot, 0, 5, 0, mPlot);
-    free_dvector(t_man_coord_plot, 0, mPlot);
-
-    free_dmatrix(y_traj, 0, 41, 0, traj_grid_size);
-    free_dvector(t_traj, 0, traj_grid_size);
-
-    free_dmatrix(y_traj_n, 0, 41, 0, traj_grid_size);
-    free_dvector(t_traj_n, 0, traj_grid_size);
-
-    gsl_matrix_complex_free(CCM_R_RCM_EM);
-    gsl_matrix_complex_free(CCM_R_RCM_SEM);
-}
-
-/**
- *  \brief Continuation of a single of EML2-to-SEML2 connection. The patch and final times are free to vary. Hence, the continuation takes
+ *  \brief Continuation of a single of EML2-to-SEML2 connection, between orbit_EM and orbit_SEM.
+ *         The Jacobian of the parameterization of the manifolds are contained in  DCM_EM_TFC and DCMS_SEM_TFC.
+ *         The patch and final times are free to vary. Hence, the continuation takes
  *         place along a given connection, rather than an entire family. The continuation is forced to make the stable component at SEML2 decrease.
  **/
 void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR_CONT(SingleOrbit &orbit_EM,
@@ -4092,7 +1911,9 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR_CONT(SingleOrbit &orbit_EM,
 }
 
 /**
- *  \brief Same as ref1_CMU_EM_to_CMS_SEM_MSD_RCM, in the planar case.
+ *  \brief Continuation of a single of EML2-to-SEML2 connection, between orbit_EM and orbit_SEM.
+ *         The Jacobian of the parameterization of the manifolds are contained in  DCM_EM_TFC and DCMS_SEM_TFC.
+ *         The patch and final times are fixed. Hence, the continuation procedure is "forced" to go transversally to the original solution, producing a family of connections.
  **/
 void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR_CONT_AFT(SingleOrbit &orbit_EM,
         SingleOrbit &orbit_SEM,
@@ -4673,6 +2494,2006 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR_CONT_AFT(SingleOrbit &orbit_EM,
     gsl_matrix_complex_free(CCM_R_RCM_SEM);
 }
 
+/**
+ *  \brief Same as ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR_CONT_AFT, but in the 3D case.
+ **/
+void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_3D_CONT_AFT(SingleOrbit &orbit_EM,
+                                             SingleOrbit &orbit_SEM,
+                                             matrix<Oftsc> &DCM_EM_TFC,
+                                             matrix<Oftsc> &DCMS_SEM_TFC,
+                                             int dcs,
+                                             int coord_type,
+                                             int man_grid_size,
+                                             int cont_steps_MAX,
+                                             int isUserDefined,
+                                             gnuplot_ctrl *h2)
+{
+    //===============================================================================================
+    // 1. Initialize local variables
+    //===============================================================================================
+    //---------------------------------------------------------------------
+    //Local variables to store the manifold leg
+    //---------------------------------------------------------------------
+    double **y_man_coord  = dmatrix(0, 5, 0, man_grid_size);
+    double *t_man_coord   = dvector(0, man_grid_size);
+
+    //---------------------------------------------------------------------
+    //Local variables for plotting
+    //---------------------------------------------------------------------
+    int mPlot = 1000;
+    double **y_man_NCEM        = dmatrix(0, 5, 0, mPlot);
+    double **y_man_NCSEM       = dmatrix(0, 5, 0, mPlot);
+    double *t_man_EM           = dvector(0, mPlot);
+    double *t_man_SEM          = dvector(0, mPlot);
+    double **y_man_coord_plot  = dmatrix(0, 5, 0, mPlot);
+    double *t_man_coord_plot   = dvector(0, mPlot);
+
+    //---------------------------------------------------------------------
+    //To store final data
+    //---------------------------------------------------------------------
+    int traj_grid_size    = man_grid_size;
+    double **y_traj       = dmatrix(0, 41, 0, traj_grid_size);
+    double  *t_traj       = dvector(0, traj_grid_size);
+
+    //---------------------------------------------------------------------
+    //Local variables to store the refined trajectory
+    //---------------------------------------------------------------------
+    double **y_traj_n   = dmatrix(0, 41, 0, traj_grid_size);
+    double *t_traj_n    = dvector(0, traj_grid_size);
+
+    //---------------------------------------------------------------------
+    // Initialize the COC matrices
+    //---------------------------------------------------------------------
+    //CCM_R_RCM_EM: RCM to CCM in R(4,4), about EML2
+    gsl_matrix_complex *CCM_R_RCM_EM  = gsl_matrix_complex_calloc(4, 4);
+    for(int i = 0; i < 4; i++) gsl_matrix_complex_set(CCM_R_RCM_EM, i, i, gslc_complex(1.0/sqrt(2), 0.0));
+    gsl_matrix_complex_set(CCM_R_RCM_EM, 0, 2, gslc_complex(0.0, -1.0/sqrt(2)));
+    gsl_matrix_complex_set(CCM_R_RCM_EM, 1, 3, gslc_complex(0.0, -1.0/sqrt(2)));
+    gsl_matrix_complex_set(CCM_R_RCM_EM, 2, 0, gslc_complex(0.0, -1.0/sqrt(2)));
+    gsl_matrix_complex_set(CCM_R_RCM_EM, 3, 1, gslc_complex(0.0, -1.0/sqrt(2)));
+
+    //CCM_R_RCM_SEM: RCM to CCM in R(5,5), about SEML2
+    gsl_matrix_complex *CCM_R_RCM_SEM  = gsl_matrix_complex_calloc(5, 5);
+    for(int i = 0; i < 4; i++) gsl_matrix_complex_set(CCM_R_RCM_SEM, i, i, gslc_complex(1.0/sqrt(2), 0.0));
+    gsl_matrix_complex_set(CCM_R_RCM_SEM, 4, 4, gslc_complex(1.0, 0.0));
+    gsl_matrix_complex_set(CCM_R_RCM_SEM, 0, 2, gslc_complex(0.0, -1.0/sqrt(2)));
+    gsl_matrix_complex_set(CCM_R_RCM_SEM, 1, 3, gslc_complex(0.0, -1.0/sqrt(2)));
+    gsl_matrix_complex_set(CCM_R_RCM_SEM, 2, 0, gslc_complex(0.0, -1.0/sqrt(2)));
+    gsl_matrix_complex_set(CCM_R_RCM_SEM, 3, 1, gslc_complex(0.0, -1.0/sqrt(2)));
+
+    //---------------------------------------------------------------------
+    // Time on each orbit
+    //---------------------------------------------------------------------
+    double tof_eml_EM   = 5*SEML.us.T;       //TOF on EML2 orbit
+    double tof_seml_SEM = 30*SEML.us_sem.T;   //TOF on SEML2 orbit
+
+
+    //===============================================================================================
+    // 2.  Compute the manifold leg
+    //===============================================================================================
+    //---------------------------------------------------------------------
+    // Integration
+    //---------------------------------------------------------------------
+    ode78_qbcp(y_man_coord, t_man_coord, orbit_EM.t0, orbit_EM.tf, orbit_EM.z0, 6, man_grid_size, dcs, NCEM, coord_type);
+
+    //---------------------------------------------------------------------
+    // Save All BUT the last point
+    //---------------------------------------------------------------------
+    for(int kman = 0; kman < man_grid_size; kman++)
+    {
+        for(int i = 0; i < 6; i++) y_traj[i][kman] = y_man_coord[i][kman];
+        t_traj[kman] = t_man_coord[kman];
+    }
+
+
+    //===============================================================================================
+    // 3. Compute the first point of the final SEML2 orbit and add it to the manifold leg
+    //===============================================================================================
+    //---------------------------------------------------------------------
+    // Save the last point at position man_grid_size
+    //---------------------------------------------------------------------
+    double yout[6], tout;
+    qbcp_coc(orbit_SEM.t0, orbit_SEM.z0, yout, &tout, NCSEM, coord_type);
+
+    for(int i = 0; i < 6; i++) y_traj[i][man_grid_size] = yout[i];
+    t_traj[man_grid_size] = tout;
+
+    //---------------------------------------------------------------------
+    //Plot
+    //---------------------------------------------------------------------
+    gnuplot_plot_xyz(h2, y_man_coord[0], y_man_coord[1],  y_man_coord[2], man_grid_size+1, (char*)"", "lines", "1", "1", 4);
+
+
+    //===============================================================================================
+    // 4.  Differential correction & final trajectory
+    //===============================================================================================
+    int isPlotted   = 1;
+    char ch;
+
+    cout << "-------------------------------------------"  << endl;
+    cout << "Differential correction & final trajectory "  << endl;
+    cout << "-------------------------------------------"  << endl;
+    printf("Press ENTER to go on\n");
+    scanf("%c",&ch);
+
+    int nfv = 6*man_grid_size+3;  //free variables
+    double *nullvector = dvector(0, nfv-1);
+
+    //======================================================================
+    //GNUPLOT
+    //======================================================================
+    gnuplot_ctrl *h3;
+    h3 = gnuplot_init();
+    gnuplot_cmd(h3,  "set title \"s3_EM vs s1_EM\" ");
+
+    gnuplot_ctrl *h4;
+    h4 = gnuplot_init();
+    gnuplot_cmd(h4,  "set title \"s3_SEM vs s1_SEM\" ");
+
+    gnuplot_ctrl *h5;
+    h5 = gnuplot_init();
+    gnuplot_cmd(h5,  "set title \"s4_EM vs s2_EM\" ");
+
+    //We keep the number of points below 10% of the maximum gnuplot temp file.
+    int plotfreq = 1;//floor((double)cont_steps_MAX/floor(0.1*GP_MAX_TMP_FILES))+1;
+
+
+    //======================================================================
+    //Continuation, step one : Differential correction procedure with fixed times
+    //======================================================================
+    int status = 0;
+    double yv[42];
+    //Differential correction procedure
+    status = msdvt_CMS_RCM_deps_ATF(y_traj, t_traj, y_traj_n, t_traj_n, nullvector, 42,
+                                    traj_grid_size, coord_type, 5e-8, true,
+                                    DCM_EM_TFC, DCMS_SEM_TFC,
+                                    CCM_R_RCM_EM,
+                                    CCM_R_RCM_SEM,
+                                    orbit_EM, orbit_SEM,
+                                    h2, isPlotted, isUserDefined, false);
+
+    cout << "nullvector = " << endl;
+    vector_printf_prec(nullvector, nfv);
+
+
+    //======================================================================
+    // Go on if success
+    //======================================================================
+    if(status == GSL_SUCCESS)
+    {
+        cout << "-------------------------------------------"  << endl;
+        cout << "Continuation with fixed time               "  << endl;
+        cout << "-------------------------------------------"  << endl;
+        printf("Press ENTER to go on\n");
+        scanf("%c",&ch);
+
+        //======================================================================
+        // Continuation procedure
+        //======================================================================
+        double ye[42];
+        double ds = 1e-2;
+        //double dkn = 0.0;
+        int kn = 0;
+        do
+        {
+            //======================================================================
+            //Updating the free variables
+            //======================================================================
+            //Updating CM_EM_RCM coordinates
+            for(int i = 0; i < 4; i++) orbit_EM.si[i] += ds*nullvector[i];
+            //Updating CM_EM_NCEM coordinates
+            orbit_update_ic(orbit_EM, orbit_EM.si, t_traj_n[0]/SEML.us_em.ns);
+            //To CM_EM_NCSEM coordinates
+            for(int i = 0; i < 42; i++) yv[i] = orbit_EM.z0[i];
+            qbcp_coc(t_traj_n[0]/SEML.us_em.ns, yv, ye, NCEM, coord_type);
+            for(int i = 0; i < 6; i++) y_traj_n[i][0] = ye[i];
+
+            //The middle (patch points) is classical cartesian coordinates at patch points
+            for(int k = 1; k < man_grid_size; k++)
+            {
+                for(int i = 0; i < 6; i++) y_traj_n[i][k] += ds*nullvector[i + 6*k-2];
+            }
+
+            //Last 5 correction variables is orbit.si
+            //Updating CM_SEM_RCM coordinates
+            for(int i = 0; i < 5; i++) orbit_SEM.si[i] += ds*nullvector[i + 6*man_grid_size-2];
+
+            //Updating CM_SEM_NCSEM coordinates
+            orbit_update_ic(orbit_SEM, orbit_SEM.si, t_traj_n[man_grid_size]);
+
+            //Updating CM_SEM_NCSEM coordinates (identity transformation is performed in qbcp_coc.
+            for(int i = 0; i < 6; i++) y_traj_n[i][man_grid_size] = orbit_SEM.z0[i];
+
+
+            cout << "orbit_EM.si (1) = " << endl;
+            vector_printf_prec(orbit_EM.si, 5);
+
+            cout << "orbit_SEM.si (1) = " << endl;
+            vector_printf_prec(orbit_SEM.si, 5);
+
+            //======================================================================
+            //Diff corr
+            //======================================================================
+            isPlotted = (kn % plotfreq == 0) ? 1:0;
+            status = msdvt_CMS_RCM_deps_ATF(y_traj, t_traj, y_traj_n, t_traj_n, nullvector, 42,
+                               traj_grid_size, coord_type, 5e-8, false,
+                               DCM_EM_TFC, DCMS_SEM_TFC,
+                               CCM_R_RCM_EM,
+                               CCM_R_RCM_SEM,
+                               orbit_EM, orbit_SEM,
+                               h2, isPlotted, isUserDefined, false);
+
+            cout << "orbit_EM.si (2) = " << endl;
+            vector_printf_prec(orbit_EM.si, 5);
+
+            cout << "orbit_SEM.si (2) = " << endl;
+            vector_printf_prec(orbit_SEM.si, 5);
+
+            //======================================================================
+            //Save
+            //======================================================================
+
+            //======================================================================
+            //Display
+            //======================================================================
+            //dkn = (double) kn;
+            if(kn % plotfreq == 0)
+            {
+                gnuplot_plot_xy(h3, &orbit_EM.si[0],  &orbit_EM.si[2], 1, (char*)"", "points", "1", "2", 0);
+                gnuplot_plot_xy(h4, &orbit_SEM.si[0], &orbit_SEM.si[2], 1, (char*)"", "points", "1", "2", 0);
+                gnuplot_plot_xy(h5, &orbit_EM.si[1],  &orbit_EM.si[3], 1, (char*)"", "points", "1", "2", 0);
+            }
+
+
+            //======================================================================
+            //Advance one step
+            //======================================================================
+            kn++;
+            cout << "Step n°" << kn << " completed.               "  << endl;
+            cout << "---------------------------------------------"  << endl;
+            //printf("Press ENTER to go on\n");
+            //scanf("%c",&ch);
+
+        }while(kn < cont_steps_MAX && status == GSL_SUCCESS);
+
+        //===============================================================================================
+        // 5. Compute the initial orbit
+        //===============================================================================================
+        cout << "-------------------------------------------"  << endl;
+        cout << "Compute the initial EML2 orbit             "  << endl;
+        cout << "-------------------------------------------"  << endl;
+        printf("Press ENTER to go on\n");
+        scanf("%c",&ch);
+
+        //---------------------------------------------------------------------
+        // Reset the unstable direction
+        //---------------------------------------------------------------------
+        orbit_EM.si[4] = 0.0;
+        orbit_EM.tf    = orbit_EM.t0-tof_eml_EM;
+
+        //---------------------------------------------------------------------
+        // Gnuplot (NCEM)
+        //---------------------------------------------------------------------
+        gnuplot_ctrl *h6;
+        h6 = gnuplot_init();
+        gnuplot_cmd(h6,  "set title \"EML2 orbit  in NCEM coordinates\" ");
+
+        cout << "orbit_EM.si = " << endl;
+        vector_printf_prec(orbit_EM.si, 5);
+
+        //---------------------------------------------------------------------
+        // Update the initial state in the orbit, with the RCM coordinates
+        //---------------------------------------------------------------------
+        orbit_update_ic(orbit_EM, orbit_EM.si, orbit_EM.t0);
+
+        cout << "orbit_EM.z0 = " << endl;
+        vector_printf_prec(orbit_EM.z0 , 6);
+
+        //---------------------------------------------------------------------
+        //Integration on mPlot+1 fixed grid
+        //---------------------------------------------------------------------
+        trajectory_integration_grid(orbit_EM, orbit_EM.t0, orbit_EM.t0-tof_eml_EM, y_man_NCEM, t_man_EM, mPlot, 1);
+
+        //---------------------------------------------------------------------
+        //To SEM coordinates
+        //---------------------------------------------------------------------
+        qbcp_coc_vec(y_man_NCEM, t_man_EM, y_man_coord_plot, t_man_coord_plot, mPlot, NCEM, coord_type);
+
+        //---------------------------------------------------------------------
+        //Plot
+        //---------------------------------------------------------------------
+        gnuplot_plot_xyz(h2, y_man_coord_plot[0], y_man_coord_plot[1],  y_man_coord_plot[2], mPlot+1, (char*)"", "lines", "1", "1", 2);
+        gnuplot_plot_xyz(h6, y_man_NCEM[0], y_man_NCEM[1],  y_man_NCEM[2], mPlot+1, (char*)"", "lines", "1", "1", 2);
+
+
+
+        //===============================================================================================
+        // 6. Compute the final SEML2 orbit, via integration in the reduced coordinates
+        //===============================================================================================
+        cout << "-------------------------------------------"  << endl;
+        cout << "Compute the initial SEML2 orbit            "  << endl;
+        cout << "-------------------------------------------"  << endl;
+        printf("Press ENTER to go on\n");
+        scanf("%c",&ch);
+
+        vector<Oftsc> Fh;
+        Fh.reserve(5);
+        for(int i = 0; i < 5; i++) Fh.push_back(Oftsc(5, OFTS_ORDER, OFS_NV, OFS_ORDER));
+        readVOFTS_bin(Fh, SEML_SEM.cs.F_PMS+"rvf/fh",  OFS_ORDER);
+
+        //---------------------------------------------------------------------
+        //For dot(s) = fh(s)
+        //---------------------------------------------------------------------
+        RVF rvf;
+        rvf.ofs_order = SEML.eff_nf_SEM;
+        Ofsc AUX(rvf.ofs_order);
+        rvf.fh         = &Fh;
+        rvf.ofs        = &AUX;
+        rvf.order      = OFTS_ORDER;
+        rvf.n          = orbit_SEM.n;
+        rvf.reduced_nv = 5;
+
+        gsl_odeiv2_system sys_fh;
+        sys_fh.function  = qbfbp_fh;
+        sys_fh.jacobian  = NULL;
+        sys_fh.dimension = 2*rvf.reduced_nv;
+        sys_fh.params    = &rvf;
+
+        const gsl_odeiv2_step_type *T_fh = gsl_odeiv2_step_rk8pd;
+        gsl_odeiv2_driver *d_fh = gsl_odeiv2_driver_alloc_y_new (&sys_fh, T_fh, 1e-12, 1e-10, 1e-10);
+
+
+        //---------------------------------------------------------------------
+        // Temp variables
+        //---------------------------------------------------------------------
+        double t0_SEM = t_traj_n[traj_grid_size];
+        double t1_SEM = t0_SEM+tof_seml_SEM;
+        double z[6];
+        double t2 = t0_SEM;
+        int k  = 0;
+        double  s1ccm8[2*rvf.reduced_nv]; //CCM8
+
+        //---------------------------------------------------------------------
+        // Initial state in CCM8 form
+        //---------------------------------------------------------------------
+        RCMtoCCM8(orbit_SEM.si, s1ccm8, 5);
+
+        //---------------------------------------------------------------------
+        // Loop
+        //---------------------------------------------------------------------
+        while(k <= mPlot && orbit_SEM.si[4] > 1e-5)
+        {
+            cout << "orbit_SEM.si[4] = " << orbit_SEM.si[4] << endl;
+
+            //To NC coordinates
+            RCMtoNCbyTFC(orbit_SEM.si, t2, orbit_SEM.n, orbit_SEM.order, orbit_SEM.ofs_order,
+                         orbit_SEM.reduced_nv, *orbit_SEM.Wh, *orbit_SEM.ofs, *orbit_SEM.PC, *orbit_SEM.V, z, true);
+
+            //Save
+            for(int i = 0; i < 6; i++) y_man_NCSEM[i][k] = z[i];
+            t_man_SEM[k] = t2;
+
+            //Plot
+            gnuplot_plot_xyz(h2, &z[0], &z[1],  &z[2], 1, (char*)"", "points", "1", "1", 6);
+
+            //Advance one step
+            gsl_odeiv2_evolve_apply (d_fh->e, d_fh->c, d_fh->s, d_fh->sys, &t2, t1_SEM, &d_fh->h, s1ccm8);
+            CCM8toRCM(s1ccm8, orbit_SEM.si, orbit_SEM.reduced_nv);
+
+            k++;
+        }
+
+        //---------------------------------------------------------------------
+        //To SEM coordinates
+        //---------------------------------------------------------------------
+        qbcp_coc_vec(y_man_NCSEM, t_man_SEM, y_man_coord_plot, t_man_coord_plot, max(k-1, 0), NCSEM, coord_type);
+
+        //---------------------------------------------------------------------
+        //Plot
+        //---------------------------------------------------------------------
+        gnuplot_plot_xyz(h2, y_man_coord_plot[0], y_man_coord_plot[1],  y_man_coord_plot[2], max(k, 1), (char*)"", "lines", "1", "1", 6);
+
+        //---------------------------------------------------------------------
+        //Old version using classic integrator
+        //---------------------------------------------------------------------
+        //orbit_update_ic(orbit_SEM, orbit_SEM.si, t0_SEM);
+        //trajectory_integration_grid(orbit_SEM, t0_SEM, t0_SEM+tof_seml_SEM, y_man_NCSEM, t_man_SEM, mPlot, 1);
+
+
+        //===============================================================================================
+        // 7. Final trajectory, on a grid
+        //===============================================================================================
+        cout << "-------------------------------------------"  << endl;
+        cout << "Final trajectory, on a grid                "  << endl;
+        cout << "-------------------------------------------"  << endl;
+        printf("Press ENTER to go on\n");
+        scanf("%c",&ch);
+
+        double **ymc   = dmatrix(0, 5, 0, mPlot);
+        double *tmc    = dvector(0, mPlot);
+
+        //Final trajectory on lines, segment by segment
+        for(int k = 0; k < traj_grid_size; k++)
+        {
+            //Integration segment by segment
+            for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
+            ode78_qbcp(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+
+            //Plot on h2
+            if(k == 0) gnuplot_plot_xyz(h2, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"Final trajectory", "lines", "1", "2", 0);
+            else gnuplot_plot_xyz(h2, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"", "lines", "1", "2", 0);
+        }
+
+        free_dmatrix(ymc, 0, 5, 0, mPlot);
+        free_dvector(tmc, 0, mPlot);
+        gnuplot_close(h6);
+
+
+    }
+    printf("Press ENTER to go on\n");
+    scanf("%c",&ch);
+
+
+    //===============================================================================================
+    // Free
+    //===============================================================================================
+    gnuplot_close(h3);
+    gnuplot_close(h4);
+    gnuplot_close(h5);
+
+
+    free_dmatrix(y_man_coord, 0, 5, 0, man_grid_size);
+    free_dvector(t_man_coord, 0, man_grid_size);
+
+    free_dmatrix(y_man_NCEM, 0, 5, 0, mPlot);
+    free_dmatrix(y_man_NCSEM, 0, 5, 0, mPlot);
+    free_dvector(t_man_EM, 0, mPlot);
+    free_dvector(t_man_SEM, 0, mPlot);
+    free_dmatrix(y_man_coord_plot, 0, 5, 0, mPlot);
+    free_dvector(t_man_coord_plot, 0, mPlot);
+
+    free_dmatrix(y_traj, 0, 41, 0, traj_grid_size);
+    free_dvector(t_traj, 0, traj_grid_size);
+
+    free_dmatrix(y_traj_n, 0, 41, 0, traj_grid_size);
+    free_dvector(t_traj_n, 0, traj_grid_size);
+
+    gsl_matrix_complex_free(CCM_R_RCM_EM);
+    gsl_matrix_complex_free(CCM_R_RCM_SEM);
+}
+
+
+
+//====================================
+// Single solutions
+//====================================
+/**
+ *  \brief Same as ref1_CMU_EM_to_CMS_SEM_MSD_RCM_3D, in the planar case.
+ **/
+void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR(SingleOrbit &orbit_EM,
+        SingleOrbit &orbit_SEM,
+        matrix<Oftsc> &DCM_EM_TFC,
+        matrix<Oftsc> &DCMS_SEM_TFC,
+        int dcs,
+        int coord_type,
+        int man_grid_size,
+        gnuplot_ctrl *h2)
+{
+    //===============================================================================================
+    // 1. Initialize local variables
+    //===============================================================================================
+    //---------------------------------------------------------------------
+    //Local variables to store the manifold leg
+    //---------------------------------------------------------------------
+    double **y_man_coord  = dmatrix(0, 5, 0, man_grid_size);
+    double *t_man_coord   = dvector(0, man_grid_size);
+
+    //---------------------------------------------------------------------
+    //Local variables for plotting
+    //---------------------------------------------------------------------
+    int mPlot = 1000;
+    double **y_man_NCEM        = dmatrix(0, 5, 0, mPlot);
+    double **y_man_NCSEM       = dmatrix(0, 5, 0, mPlot);
+    double *t_man_EM           = dvector(0, mPlot);
+    double *t_man_SEM          = dvector(0, mPlot);
+    double **y_man_coord_plot  = dmatrix(0, 5, 0, mPlot);
+    double *t_man_coord_plot   = dvector(0, mPlot);
+
+    //---------------------------------------------------------------------
+    //To store final data
+    //---------------------------------------------------------------------
+    int traj_grid_size    = man_grid_size;
+    double **y_traj       = dmatrix(0, 41, 0, traj_grid_size);
+    double  *t_traj       = dvector(0, traj_grid_size);
+
+    //---------------------------------------------------------------------
+    //Local variables to store the refined trajectory
+    //---------------------------------------------------------------------
+    double **y_traj_n   = dmatrix(0, 41, 0, traj_grid_size);
+    double *t_traj_n    = dvector(0, traj_grid_size);
+
+    //---------------------------------------------------------------------
+    // Initialize the COC matrices
+    //---------------------------------------------------------------------
+    //CCM_R_RCM_EM: RCM to CCM in R(4,4), about EML2
+    gsl_matrix_complex *CCM_R_RCM_EM  = gsl_matrix_complex_calloc(4, 4);
+    for(int i = 0; i < 4; i++) gsl_matrix_complex_set(CCM_R_RCM_EM, i, i, gslc_complex(1.0/sqrt(2), 0.0));
+    gsl_matrix_complex_set(CCM_R_RCM_EM, 0, 2, gslc_complex(0.0, -1.0/sqrt(2)));
+    gsl_matrix_complex_set(CCM_R_RCM_EM, 1, 3, gslc_complex(0.0, -1.0/sqrt(2)));
+    gsl_matrix_complex_set(CCM_R_RCM_EM, 2, 0, gslc_complex(0.0, -1.0/sqrt(2)));
+    gsl_matrix_complex_set(CCM_R_RCM_EM, 3, 1, gslc_complex(0.0, -1.0/sqrt(2)));
+
+    //CCM_R_RCM_SEM: RCM to CCM in R(5,5), about SEML2
+    gsl_matrix_complex *CCM_R_RCM_SEM  = gsl_matrix_complex_calloc(5, 5);
+    for(int i = 0; i < 4; i++) gsl_matrix_complex_set(CCM_R_RCM_SEM, i, i, gslc_complex(1.0/sqrt(2), 0.0));
+    gsl_matrix_complex_set(CCM_R_RCM_SEM, 4, 4, gslc_complex(1.0, 0.0));
+    gsl_matrix_complex_set(CCM_R_RCM_SEM, 0, 2, gslc_complex(0.0, -1.0/sqrt(2)));
+    gsl_matrix_complex_set(CCM_R_RCM_SEM, 1, 3, gslc_complex(0.0, -1.0/sqrt(2)));
+    gsl_matrix_complex_set(CCM_R_RCM_SEM, 2, 0, gslc_complex(0.0, -1.0/sqrt(2)));
+    gsl_matrix_complex_set(CCM_R_RCM_SEM, 3, 1, gslc_complex(0.0, -1.0/sqrt(2)));
+
+    //---------------------------------------------------------------------
+    // Time on each orbit
+    //---------------------------------------------------------------------
+    double tof_eml_EM   = 5*SEML.us.T;       //TOF on EML2 orbit
+    double tof_seml_SEM = 20*SEML.us_sem.T;   //TOF on SEML2 orbit
+
+
+    //===============================================================================================
+    // 2.  Compute the manifold leg
+    //===============================================================================================
+    //---------------------------------------------------------------------
+    // Integration
+    //---------------------------------------------------------------------
+    ode78_qbcp(y_man_coord, t_man_coord, orbit_EM.t0, orbit_EM.tf, orbit_EM.z0, 6, man_grid_size, dcs, NCEM, coord_type);
+
+    //---------------------------------------------------------------------
+    // Save All BUT the last point
+    //---------------------------------------------------------------------
+    for(int kman = 0; kman < man_grid_size; kman++)
+    {
+        for(int i = 0; i < 6; i++) y_traj[i][kman] = y_man_coord[i][kman];
+        t_traj[kman] = t_man_coord[kman];
+    }
+
+
+    //===============================================================================================
+    // 3. Compute the first point of the final SEML2 orbit and add it to the manifold leg
+    //===============================================================================================
+    //---------------------------------------------------------------------
+    // Save the last point at position man_grid_size
+    //---------------------------------------------------------------------
+    double yout[6], tout;
+    qbcp_coc(orbit_SEM.t0, orbit_SEM.z0, yout, &tout, NCSEM, coord_type);
+
+    for(int i = 0; i < 6; i++) y_traj[i][man_grid_size] = yout[i];
+    t_traj[man_grid_size] = tout;
+
+    //---------------------------------------------------------------------
+    //Plot
+    //---------------------------------------------------------------------
+    gnuplot_plot_xyz(h2, y_man_coord[0], y_man_coord[1],  y_man_coord[2], man_grid_size+1, (char*)"", "lines", "1", "1", 4);
+
+
+    //===============================================================================================
+    // 4.  Differential correction & final trajectory
+    //===============================================================================================
+    int isPlotted   = 1;
+    char ch;
+
+    cout << "-------------------------------------------"  << endl;
+    cout << "Differential correction & final trajectory "  << endl;
+    cout << "-------------------------------------------"  << endl;
+    printf("Press ENTER to go on\n");
+    scanf("%c",&ch);
+
+    double yv[42];
+    int nfv = 7*(man_grid_size+1)-4;  //free variables
+    double *nullvector = dvector(0, nfv-1);
+
+    //======================================================================
+    //NO CONTINUATION: @TODO Update msdvt_CMS_RCM to meet msdvt_CMS_RCM_deps_planar
+    //standards in terms of inputs and plotting. msdvt_CMS_RCM_deps_planar is used for now
+    // BUT the computation of the null vector is NOT used...
+    //======================================================================
+    //    msdvt_CMS_RCM(y_traj, t_traj, y_traj_n, t_traj_n, 42,
+    //                  traj_grid_size, coord_type,
+    //                  DCM_EM_TFC, DCMS_SEM_TFC,
+    //                  CCM_R_RCM_EM,
+    //                  CCM_R_RCM_SEM,
+    //                  orbit_EM, orbit_SEM,
+    //                  h2, isPlotted, false);
+
+    //With fixed time
+    msdvt_CMS_RCM_deps_planar_ATF(y_traj, t_traj, y_traj_n, t_traj_n, nullvector, 42,
+                              traj_grid_size, coord_type, 5e-8, true,
+                              DCM_EM_TFC, DCMS_SEM_TFC,
+                              CCM_R_RCM_EM,
+                              CCM_R_RCM_SEM,
+                              orbit_EM, orbit_SEM,
+                              h2, isPlotted, true,  false);
+
+    // With unfixed time
+    //    msdvt_CMS_RCM_deps_planar(y_traj, t_traj, y_traj_n, t_traj_n, nullvector, 42,
+    //                                  traj_grid_size, coord_type, 5e-8, true,
+    //                                  DCM_EM_TFC, DCMS_SEM_TFC,
+    //                                  CCM_R_RCM_EM,
+    //                                  CCM_R_RCM_SEM,
+    //                                  orbit_EM, orbit_SEM,
+    //                                  h2, isPlotted, false);
+
+
+    //===============================================================================================
+    // 5. Compute the initial orbit
+    //===============================================================================================
+    cout << "-------------------------------------------"  << endl;
+    cout << "Compute the initial EML2 orbit             "  << endl;
+    cout << "-------------------------------------------"  << endl;
+    printf("Press ENTER to go on\n");
+    scanf("%c",&ch);
+
+    //---------------------------------------------------------------------
+    // Reset the unstable direction
+    //---------------------------------------------------------------------
+    orbit_EM.si[4] = 0.0;
+    orbit_EM.tf    = orbit_EM.t0-tof_eml_EM;
+
+    //---------------------------------------------------------------------
+    // Gnuplot (NCEM)
+    //---------------------------------------------------------------------
+    gnuplot_ctrl *h6;
+    h6 = gnuplot_init();
+    gnuplot_cmd(h6,  "set title \"EML2 orbit  in NCEM coordinates\" ");
+
+    cout << "orbit_EM.si = " << endl;
+    vector_printf_prec(orbit_EM.si, 5);
+
+    //---------------------------------------------------------------------
+    // Update the initial state in the orbit, with the RCM coordinates
+    //---------------------------------------------------------------------
+    orbit_update_ic(orbit_EM, orbit_EM.si, orbit_EM.t0);
+
+    cout << "orbit_EM.z0 = " << endl;
+    vector_printf_prec(orbit_EM.z0 , 6);
+
+    //---------------------------------------------------------------------
+    //Integration on mPlot+1 fixed grid
+    //---------------------------------------------------------------------
+    trajectory_integration_grid(orbit_EM, orbit_EM.t0, orbit_EM.t0-tof_eml_EM, y_man_NCEM, t_man_EM, mPlot, 1);
+
+    //---------------------------------------------------------------------
+    //To SEM coordinates
+    //---------------------------------------------------------------------
+    qbcp_coc_vec(y_man_NCEM, t_man_EM, y_man_coord_plot, t_man_coord_plot, mPlot, NCEM, coord_type);
+
+    //---------------------------------------------------------------------
+    //Plot
+    //---------------------------------------------------------------------
+    gnuplot_plot_xyz(h2, y_man_coord_plot[0], y_man_coord_plot[1],  y_man_coord_plot[2], mPlot+1, (char*)"", "lines", "1", "1", 2);
+    gnuplot_plot_xyz(h6, y_man_NCEM[0], y_man_NCEM[1],  y_man_NCEM[2], mPlot+1, (char*)"", "lines", "1", "1", 2);
+
+
+
+    //===============================================================================================
+    // 6. Compute the final SEML2 orbit, via integration in the reduced coordinates
+    //===============================================================================================
+    cout << "-------------------------------------------"  << endl;
+    cout << "Compute the initial SEML2 orbit            "  << endl;
+    cout << "-------------------------------------------"  << endl;
+    printf("Press ENTER to go on\n");
+    scanf("%c",&ch);
+
+    vector<Oftsc> Fh;
+    Fh.reserve(5);
+    for(int i = 0; i < 5; i++) Fh.push_back(Oftsc(5, OFTS_ORDER, OFS_NV, OFS_ORDER));
+    readVOFTS_bin(Fh, SEML_SEM.cs.F_PMS+"rvf/fh",  OFS_ORDER);
+
+    //---------------------------------------------------------------------
+    //For dot(s) = fh(s)
+    //---------------------------------------------------------------------
+    RVF rvf;
+    rvf.ofs_order = SEML.eff_nf_SEM;
+    Ofsc AUX(rvf.ofs_order);
+    rvf.fh         = &Fh;
+    rvf.ofs        = &AUX;
+    rvf.order      = OFTS_ORDER;
+    rvf.n          = orbit_SEM.n;
+    rvf.reduced_nv = 5;
+
+    gsl_odeiv2_system sys_fh;
+    sys_fh.function  = qbfbp_fh;
+    sys_fh.jacobian  = NULL;
+    sys_fh.dimension = 2*rvf.reduced_nv;
+    sys_fh.params    = &rvf;
+
+    const gsl_odeiv2_step_type *T_fh = gsl_odeiv2_step_rk8pd;
+    gsl_odeiv2_driver *d_fh = gsl_odeiv2_driver_alloc_y_new (&sys_fh, T_fh, 1e-12, 1e-10, 1e-10);
+
+
+    //---------------------------------------------------------------------
+    // Temp variables
+    //---------------------------------------------------------------------
+    double t0_SEM = t_traj_n[traj_grid_size];
+    double t1_SEM = t0_SEM+tof_seml_SEM;
+    double z[6];
+    double t2 = t0_SEM;
+    int k  = 0;
+    double  s1ccm8[2*rvf.reduced_nv]; //CCM8
+
+    //---------------------------------------------------------------------
+    // Initial state in CCM8 form
+    //---------------------------------------------------------------------
+    RCMtoCCM8(orbit_SEM.si, s1ccm8, 5);
+
+    //---------------------------------------------------------------------
+    // Loop
+    //---------------------------------------------------------------------
+    while(k <= mPlot && orbit_SEM.si[4] > 1e-5)
+    {
+        cout << "orbit_SEM.si[4] = " << orbit_SEM.si[4] << endl;
+
+        //To NC coordinates
+        RCMtoNCbyTFC(orbit_SEM.si, t2, orbit_SEM.n, orbit_SEM.order, orbit_SEM.ofs_order,
+                     orbit_SEM.reduced_nv, *orbit_SEM.Wh, *orbit_SEM.ofs, *orbit_SEM.PC, *orbit_SEM.V, z, true);
+
+        //Save
+        for(int i = 0; i < 6; i++) y_man_NCSEM[i][k] = z[i];
+        t_man_SEM[k] = t2;
+
+        //Plot
+        gnuplot_plot_xyz(h2, &z[0], &z[1],  &z[2], 1, (char*)"", "points", "1", "1", 6);
+
+        //Advance one step
+        gsl_odeiv2_evolve_apply (d_fh->e, d_fh->c, d_fh->s, d_fh->sys, &t2, t1_SEM, &d_fh->h, s1ccm8);
+        CCM8toRCM(s1ccm8, orbit_SEM.si, orbit_SEM.reduced_nv);
+
+        k++;
+    }
+
+    //---------------------------------------------------------------------
+    //To SEM coordinates
+    //---------------------------------------------------------------------
+    qbcp_coc_vec(y_man_NCSEM, t_man_SEM, y_man_coord_plot, t_man_coord_plot, max(k-1, 0), NCSEM, coord_type);
+
+    //---------------------------------------------------------------------
+    //Plot
+    //---------------------------------------------------------------------
+    gnuplot_plot_xyz(h2, y_man_coord_plot[0], y_man_coord_plot[1],  y_man_coord_plot[2], max(k, 1), (char*)"", "lines", "1", "1", 6);
+
+    //---------------------------------------------------------------------
+    //Old version using classic integrator
+    //---------------------------------------------------------------------
+    //orbit_update_ic(orbit_SEM, orbit_SEM.si, t0_SEM);
+    //trajectory_integration_grid(orbit_SEM, t0_SEM, t0_SEM+tof_seml_SEM, y_man_NCSEM, t_man_SEM, mPlot, 1);
+
+
+    //===============================================================================================
+    // 7. Final trajectory, on a grid
+    //===============================================================================================
+    cout << "-------------------------------------------"  << endl;
+    cout << "Final trajectory, on a grid                "  << endl;
+    cout << "-------------------------------------------"  << endl;
+    printf("Press ENTER to go on\n");
+    scanf("%c",&ch);
+
+    double **ymc   = dmatrix(0, 5, 0, mPlot);
+    double *tmc    = dvector(0, mPlot);
+
+    //Final trajectory on lines, segment by segment
+    for(int k = 0; k < traj_grid_size; k++)
+    {
+        //Integration segment by segment
+        for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
+        ode78_qbcp(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+
+        //Plot on h2
+        if(k == 0) gnuplot_plot_xyz(h2, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"Final trajectory", "lines", "1", "2", 0);
+        else gnuplot_plot_xyz(h2, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"", "lines", "1", "2", 0);
+    }
+
+    //---------------------------------------------------------------------
+    // Final trajectory, whith single shooting integration
+    //---------------------------------------------------------------------
+    int kstart = 0; //starts at the CMU entry, and NOT at the EML2 orbit entry (kstart != 0)
+    for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][kstart];
+    ode78_qbcp(y_traj, t_traj, t_traj_n[kstart], t2, yv, 6, traj_grid_size, dcs, coord_type, coord_type);
+
+    //Plot on h2
+    //gnuplot_plot_xyz(h2, y_traj[0], y_traj[1],  y_traj[2], traj_grid_size+1, (char*)"Final trajectory (single shooting)", "lines", "1", "3", 8);
+
+    printf("Press ENTER to go on\n");
+    scanf("%c",&ch);
+
+    //===============================================================================================
+    // Free
+    //===============================================================================================
+    free_dmatrix(ymc, 0, 5, 0, mPlot);
+    free_dvector(tmc, 0, mPlot);
+    gnuplot_close(h6);
+
+    free_dmatrix(y_man_coord, 0, 5, 0, man_grid_size);
+    free_dvector(t_man_coord, 0, man_grid_size);
+
+    free_dmatrix(y_man_NCEM, 0, 5, 0, mPlot);
+    free_dmatrix(y_man_NCSEM, 0, 5, 0, mPlot);
+    free_dvector(t_man_EM, 0, mPlot);
+    free_dvector(t_man_SEM, 0, mPlot);
+    free_dmatrix(y_man_coord_plot, 0, 5, 0, mPlot);
+    free_dvector(t_man_coord_plot, 0, mPlot);
+
+    free_dmatrix(y_traj, 0, 41, 0, traj_grid_size);
+    free_dvector(t_traj, 0, traj_grid_size);
+
+    free_dmatrix(y_traj_n, 0, 41, 0, traj_grid_size);
+    free_dvector(t_traj_n, 0, traj_grid_size);
+
+    gsl_matrix_complex_free(CCM_R_RCM_EM);
+    gsl_matrix_complex_free(CCM_R_RCM_SEM);
+}
+
+
+
+/**
+ *  \brief Computes ONE trajectory from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the MANIFOLD trajectory (manifold leg).
+ *         The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CMS of SEML2. The time at each point
+ *         except the first one is allowed to vary. A continuation procedure can be performed to get more than one refined solution.
+ **/
+void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_3D(SingleOrbit &orbit_EM,
+                                    SingleOrbit &orbit_SEM,
+                                    matrix<Oftsc> &DCM_EM_TFC,
+                                    matrix<Oftsc> &DCMS_SEM_TFC,
+                                    int dcs,
+                                    int coord_type,
+                                    int man_grid_size,
+                                    gnuplot_ctrl *h2)
+{
+    //===============================================================================================
+    // 1. Initialize local variables
+    //===============================================================================================
+    //---------------------------------------------------------------------
+    //Local variables to store the manifold leg
+    //---------------------------------------------------------------------
+    double **y_man_coord  = dmatrix(0, 5, 0, man_grid_size);
+    double *t_man_coord   = dvector(0, man_grid_size);
+
+    //---------------------------------------------------------------------
+    //Local variables for plotting
+    //---------------------------------------------------------------------
+    int mPlot = 1000;
+    double **y_man_NCEM        = dmatrix(0, 5, 0, mPlot);
+    double **y_man_NCSEM       = dmatrix(0, 5, 0, mPlot);
+    double *t_man_EM           = dvector(0, mPlot);
+    double *t_man_SEM          = dvector(0, mPlot);
+    double **y_man_coord_plot  = dmatrix(0, 5, 0, mPlot);
+    double *t_man_coord_plot   = dvector(0, mPlot);
+
+    //---------------------------------------------------------------------
+    //To store final data
+    //---------------------------------------------------------------------
+    int traj_grid_size    = man_grid_size;
+    double **y_traj       = dmatrix(0, 41, 0, traj_grid_size);
+    double  *t_traj       = dvector(0, traj_grid_size);
+
+    //---------------------------------------------------------------------
+    //Local variables to store the refined trajectory
+    //---------------------------------------------------------------------
+    double **y_traj_n   = dmatrix(0, 41, 0, traj_grid_size);
+    double *t_traj_n    = dvector(0, traj_grid_size);
+
+    //---------------------------------------------------------------------
+    // Initialize the COC matrices
+    //---------------------------------------------------------------------
+    //CCM_R_RCM_EM: RCM to CCM in R(4,4), about EML2
+    gsl_matrix_complex *CCM_R_RCM_EM  = gsl_matrix_complex_calloc(4, 4);
+    for(int i = 0; i < 4; i++) gsl_matrix_complex_set(CCM_R_RCM_EM, i, i, gslc_complex(1.0/sqrt(2), 0.0));
+    gsl_matrix_complex_set(CCM_R_RCM_EM, 0, 2, gslc_complex(0.0, -1.0/sqrt(2)));
+    gsl_matrix_complex_set(CCM_R_RCM_EM, 1, 3, gslc_complex(0.0, -1.0/sqrt(2)));
+    gsl_matrix_complex_set(CCM_R_RCM_EM, 2, 0, gslc_complex(0.0, -1.0/sqrt(2)));
+    gsl_matrix_complex_set(CCM_R_RCM_EM, 3, 1, gslc_complex(0.0, -1.0/sqrt(2)));
+
+    //CCM_R_RCM_SEM: RCM to CCM in R(5,5), about SEML2
+    gsl_matrix_complex *CCM_R_RCM_SEM  = gsl_matrix_complex_calloc(5, 5);
+    for(int i = 0; i < 4; i++) gsl_matrix_complex_set(CCM_R_RCM_SEM, i, i, gslc_complex(1.0/sqrt(2), 0.0));
+    gsl_matrix_complex_set(CCM_R_RCM_SEM, 4, 4, gslc_complex(1.0, 0.0));
+    gsl_matrix_complex_set(CCM_R_RCM_SEM, 0, 2, gslc_complex(0.0, -1.0/sqrt(2)));
+    gsl_matrix_complex_set(CCM_R_RCM_SEM, 1, 3, gslc_complex(0.0, -1.0/sqrt(2)));
+    gsl_matrix_complex_set(CCM_R_RCM_SEM, 2, 0, gslc_complex(0.0, -1.0/sqrt(2)));
+    gsl_matrix_complex_set(CCM_R_RCM_SEM, 3, 1, gslc_complex(0.0, -1.0/sqrt(2)));
+
+    //---------------------------------------------------------------------
+    // Time on each orbit
+    //---------------------------------------------------------------------
+    double tof_eml_EM   = 5*SEML.us.T;       //TOF on EML2 orbit
+    double tof_seml_SEM = 20*SEML.us_sem.T;   //TOF on SEML2 orbit
+
+
+    //===============================================================================================
+    // 2.  Compute the manifold leg
+    //===============================================================================================
+    //---------------------------------------------------------------------
+    // Integration
+    //---------------------------------------------------------------------
+    ode78_qbcp(y_man_coord, t_man_coord, orbit_EM.t0, orbit_EM.tf, orbit_EM.z0, 6, man_grid_size, dcs, NCEM, coord_type);
+
+    //---------------------------------------------------------------------
+    // Save All BUT the last point
+    //---------------------------------------------------------------------
+    for(int kman = 0; kman < man_grid_size; kman++)
+    {
+        for(int i = 0; i < 6; i++) y_traj[i][kman] = y_man_coord[i][kman];
+        t_traj[kman] = t_man_coord[kman];
+    }
+
+
+    //===============================================================================================
+    // 3. Compute the first point of the final SEML2 orbit and add it to the manifold leg
+    //===============================================================================================
+    //---------------------------------------------------------------------
+    // Save the last point at position man_grid_size
+    //---------------------------------------------------------------------
+    double yout[6], tout;
+    qbcp_coc(orbit_SEM.t0, orbit_SEM.z0, yout, &tout, NCSEM, coord_type);
+
+    for(int i = 0; i < 6; i++) y_traj[i][man_grid_size] = yout[i];
+    t_traj[man_grid_size] = tout;
+
+    //---------------------------------------------------------------------
+    //Plot
+    //---------------------------------------------------------------------
+    gnuplot_plot_xyz(h2, y_man_coord[0], y_man_coord[1],  y_man_coord[2], man_grid_size+1, (char*)"", "lines", "1", "1", 4);
+
+
+    //===============================================================================================
+    // 4.  Differential correction & final trajectory
+    //===============================================================================================
+    int isPlotted   = 1;
+    char ch;
+
+    cout << "-------------------------------------------"  << endl;
+    cout << "Differential correction & final trajectory "  << endl;
+    cout << "-------------------------------------------"  << endl;
+    printf("Press ENTER to go on\n");
+    scanf("%c",&ch);
+
+    int nfv = 7*(man_grid_size+1)-4;  //free variables
+    double *nullvector = dvector(0, nfv-1);
+
+
+    //======================================================================
+    //NO CONTINUATION
+    //======================================================================
+    //    msdvt_CMS_RCM(y_traj, t_traj, y_traj_n, t_traj_n, 42,
+    //                  traj_grid_size, coord_type,
+    //                  DCM_EM_TFC, DCMS_SEM_TFC,
+    //                  CCM_R_RCM_EM,
+    //                  CCM_R_RCM_SEM,
+    //                  orbit_EM, orbit_SEM,
+    //                  h2, isPlotted, false);
+
+    //======================================================================
+    //GNUPLOT
+    //======================================================================
+    gnuplot_ctrl *h3;
+    h3 = gnuplot_init();
+    gnuplot_cmd(h3,  "set title \"s3_EM vs s1_EM\" ");
+
+    gnuplot_ctrl *h4;
+    h4 = gnuplot_init();
+    gnuplot_cmd(h4,  "set title \"s3_SEM vs s1_SEM\" ");
+
+    gnuplot_ctrl *h5;
+    h5 = gnuplot_init();
+    gnuplot_cmd(h5,  "set title \"s4_SEM vs s2_SEM\" ");
+
+
+    //======================================================================
+    //Continuation : Update the variables with the null vector
+    //======================================================================
+    msdvt_CMS_RCM_deps(y_traj, t_traj, y_traj_n, t_traj_n, nullvector, 42,
+                       traj_grid_size, coord_type, 1e-8, true,
+                       DCM_EM_TFC, DCMS_SEM_TFC,
+                       CCM_R_RCM_EM,
+                       CCM_R_RCM_SEM,
+                       orbit_EM, orbit_SEM,
+                       h2, isPlotted, false);
+
+
+    cout << "-------------------------------------------"  << endl;
+    cout << "Continuation"  << endl;
+    cout << "-------------------------------------------"  << endl;
+    printf("Press ENTER to go on\n");
+    scanf("%c",&ch);
+
+
+    double ds = 1e-2;
+    double yv[42], ye[42];
+
+    for(int kn = 0; kn < 50; kn++)
+    {
+
+        //-----------------------------------------------------
+        //Updating CM_EM_RCM coordinates
+        //-----------------------------------------------------
+        for(int i = 0; i < 4; i++) orbit_EM.si[i] += ds*nullvector[i];
+        //Updating CM_EM_NCEM coordinates
+        orbit_update_ic(orbit_EM, orbit_EM.si, t_traj_n[0]/SEML.us_em.ns);
+        //To CM_EM_NCSEM coordinates
+        for(int i = 0; i < 42; i++) yv[i] = orbit_EM.z0[i];
+        qbcp_coc(t_traj_n[0]/SEML.us_em.ns, yv, ye, NCEM, coord_type);
+        for(int i = 0; i < 6; i++) y_traj_n[i][0] = ye[i];
+
+        //-----------------------------------------------------
+        //The middle (patch points) is classical cartesian coordinates at patch points
+        //-----------------------------------------------------
+        for(int k = 1; k < man_grid_size; k++)
+        {
+            for(int i = 0; i < 6; i++) y_traj_n[i][k] += ds*nullvector[i + 7*k-3];
+            t_traj_n[k] += ds*nullvector[7*(k+1)-4];
+        }
+        //Last time:
+        t_traj_n[man_grid_size] += ds*nullvector[ 7*man_grid_size+2];
+
+
+        //-----------------------------------------------------
+        //Last 4 correction variables is orbit.si
+        //-----------------------------------------------------
+        //Updating CM_SEM_RCM coordinates
+        for(int i = 0; i < 5; i++) orbit_SEM.si[i] += ds*nullvector[i + 7*man_grid_size-3];
+
+        //Updating CM_SEM_NCSEM coordinates
+        orbit_update_ic(orbit_SEM, orbit_SEM.si, t_traj_n[man_grid_size]);
+
+        //Updating CM_SEM_NCSEM coordinates (identity transformation is performed in qbcp_coc.
+        for(int i = 0; i < 6; i++) y_traj_n[i][man_grid_size] = orbit_SEM.z0[i];
+
+        msdvt_CMS_RCM_deps(y_traj_n, t_traj_n, y_traj_n, t_traj_n, nullvector, 42,
+                           traj_grid_size, coord_type, 1e-8, false,
+                           DCM_EM_TFC, DCMS_SEM_TFC,
+                           CCM_R_RCM_EM,
+                           CCM_R_RCM_SEM,
+                           orbit_EM, orbit_SEM,
+                           h2, isPlotted, false);
+
+        cout << "orbit_SEM.si = " << endl;
+        vector_printf_prec(orbit_SEM.si, 5);
+
+        gnuplot_plot_xy(h3, &orbit_EM.si[0],  &orbit_EM.si[2], 1, (char*)"", "points", "1", "2", 0);
+        gnuplot_plot_xy(h4, &orbit_SEM.si[0], &orbit_SEM.si[2], 1, (char*)"", "points", "1", "2", 0);
+        gnuplot_plot_xy(h5, &orbit_SEM.si[1], &orbit_SEM.si[3], 1, (char*)"", "points", "1", "2", 0);
+
+
+        cout << "t_traj_n[end] - t_traj_n[end--1] = " << t_traj_n[man_grid_size] - t_traj_n[man_grid_size-1] << endl;
+        //printf("Press ENTER to go on\n");
+        //scanf("%c",&ch);
+
+    }
+
+    //===============================================================================================
+    // 5. Compute the initial orbit
+    //===============================================================================================
+    cout << "-------------------------------------------"  << endl;
+    cout << "Compute the initial EML2 orbit             "  << endl;
+    cout << "-------------------------------------------"  << endl;
+    printf("Press ENTER to go on\n");
+    scanf("%c",&ch);
+
+    //---------------------------------------------------------------------
+    // Reset the unstable direction
+    //---------------------------------------------------------------------
+    orbit_EM.si[4] = 0.0;
+    orbit_EM.tf    = orbit_EM.t0-tof_eml_EM;
+
+    //---------------------------------------------------------------------
+    // Gnuplot (NCEM)
+    //---------------------------------------------------------------------
+    gnuplot_ctrl *h6;
+    h6 = gnuplot_init();
+    gnuplot_cmd(h6,  "set title \"EML2 orbit  in NCEM coordinates\" ");
+
+    cout << "orbit_EM.si = " << endl;
+    vector_printf_prec(orbit_EM.si, 5);
+
+    //---------------------------------------------------------------------
+    // Update the initial state in the orbit, with the RCM coordinates
+    //---------------------------------------------------------------------
+    orbit_update_ic(orbit_EM, orbit_EM.si, orbit_EM.t0);
+
+    cout << "orbit_EM.z0 = " << endl;
+    vector_printf_prec(orbit_EM.z0 , 6);
+
+    //---------------------------------------------------------------------
+    //Integration on mPlot+1 fixed grid
+    //---------------------------------------------------------------------
+    trajectory_integration_grid(orbit_EM, orbit_EM.t0, orbit_EM.t0-tof_eml_EM, y_man_NCEM, t_man_EM, mPlot, 1);
+
+    //---------------------------------------------------------------------
+    //To SEM coordinates
+    //---------------------------------------------------------------------
+    qbcp_coc_vec(y_man_NCEM, t_man_EM, y_man_coord_plot, t_man_coord_plot, mPlot, NCEM, coord_type);
+
+    //---------------------------------------------------------------------
+    //Plot
+    //---------------------------------------------------------------------
+    gnuplot_plot_xyz(h2, y_man_coord_plot[0], y_man_coord_plot[1],  y_man_coord_plot[2], mPlot+1, (char*)"", "lines", "1", "1", 2);
+    gnuplot_plot_xyz(h6, y_man_NCEM[0], y_man_NCEM[1],  y_man_NCEM[2], mPlot+1, (char*)"", "lines", "1", "1", 2);
+
+
+
+    //===============================================================================================
+    // 6. Compute the final SEML2 orbit, via integration in the reduced coordinates
+    //===============================================================================================
+    cout << "-------------------------------------------"  << endl;
+    cout << "Compute the initial SEML2 orbit            "  << endl;
+    cout << "-------------------------------------------"  << endl;
+    printf("Press ENTER to go on\n");
+    scanf("%c",&ch);
+
+    vector<Oftsc> Fh;
+    Fh.reserve(5);
+    for(int i = 0; i < 5; i++) Fh.push_back(Oftsc(5, OFTS_ORDER, OFS_NV, OFS_ORDER));
+    readVOFTS_bin(Fh, SEML_SEM.cs.F_PMS+"rvf/fh",  OFS_ORDER);
+
+    //---------------------------------------------------------------------
+    //For dot(s) = fh(s)
+    //---------------------------------------------------------------------
+    RVF rvf;
+    rvf.ofs_order = SEML.eff_nf_SEM;
+    Ofsc AUX(rvf.ofs_order);
+    rvf.fh         = &Fh;
+    rvf.ofs        = &AUX;
+    rvf.order      = OFTS_ORDER;
+    rvf.n          = orbit_SEM.n;
+    rvf.reduced_nv = 5;
+
+    gsl_odeiv2_system sys_fh;
+    sys_fh.function  = qbfbp_fh;
+    sys_fh.jacobian  = NULL;
+    sys_fh.dimension = 2*rvf.reduced_nv;
+    sys_fh.params    = &rvf;
+
+    const gsl_odeiv2_step_type *T_fh = gsl_odeiv2_step_rk8pd;
+    gsl_odeiv2_driver *d_fh = gsl_odeiv2_driver_alloc_y_new (&sys_fh, T_fh, 1e-12, 1e-10, 1e-10);
+
+
+    //---------------------------------------------------------------------
+    // Temp variables
+    //---------------------------------------------------------------------
+    double t0_SEM = t_traj_n[traj_grid_size];
+    double t1_SEM = t0_SEM+tof_seml_SEM;
+    double z[6];
+    double t2 = t0_SEM;
+    int k  = 0;
+    double  s1ccm8[2*rvf.reduced_nv]; //CCM8
+
+    //---------------------------------------------------------------------
+    // Initial state in CCM8 form
+    //---------------------------------------------------------------------
+    RCMtoCCM8(orbit_SEM.si, s1ccm8, 5);
+
+    //---------------------------------------------------------------------
+    // Loop
+    //---------------------------------------------------------------------
+    while(k <= mPlot && orbit_SEM.si[4] > 1e-5)
+    {
+        cout << "orbit_SEM.si[4] = " << orbit_SEM.si[4] << endl;
+
+        //To NC coordinates
+        RCMtoNCbyTFC(orbit_SEM.si, t2, orbit_SEM.n, orbit_SEM.order, orbit_SEM.ofs_order,
+                     orbit_SEM.reduced_nv, *orbit_SEM.Wh, *orbit_SEM.ofs, *orbit_SEM.PC, *orbit_SEM.V, z, true);
+
+        //Save
+        for(int i = 0; i < 6; i++) y_man_NCSEM[i][k] = z[i];
+        t_man_SEM[k] = t2;
+
+        //Plot
+        gnuplot_plot_xyz(h2, &z[0], &z[1],  &z[2], 1, (char*)"", "points", "1", "1", 6);
+
+        //Advance one step
+        gsl_odeiv2_evolve_apply (d_fh->e, d_fh->c, d_fh->s, d_fh->sys, &t2, t1_SEM, &d_fh->h, s1ccm8);
+        CCM8toRCM(s1ccm8, orbit_SEM.si, orbit_SEM.reduced_nv);
+
+        k++;
+    }
+
+    //---------------------------------------------------------------------
+    //To SEM coordinates
+    //---------------------------------------------------------------------
+    qbcp_coc_vec(y_man_NCSEM, t_man_SEM, y_man_coord_plot, t_man_coord_plot, max(k-1, 0), NCSEM, coord_type);
+
+    //---------------------------------------------------------------------
+    //Plot
+    //---------------------------------------------------------------------
+    gnuplot_plot_xyz(h2, y_man_coord_plot[0], y_man_coord_plot[1],  y_man_coord_plot[2], max(k, 1), (char*)"", "lines", "1", "1", 6);
+
+    //---------------------------------------------------------------------
+    //Old version using classic integrator
+    //---------------------------------------------------------------------
+    //orbit_update_ic(orbit_SEM, orbit_SEM.si, t0_SEM);
+    //trajectory_integration_grid(orbit_SEM, t0_SEM, t0_SEM+tof_seml_SEM, y_man_NCSEM, t_man_SEM, mPlot, 1);
+
+
+    //===============================================================================================
+    // 7. Final trajectory, on a grid
+    //===============================================================================================
+    cout << "-------------------------------------------"  << endl;
+    cout << "Final trajectory, on a grid                "  << endl;
+    cout << "-------------------------------------------"  << endl;
+    printf("Press ENTER to go on\n");
+    scanf("%c",&ch);
+
+    double **ymc   = dmatrix(0, 5, 0, mPlot);
+    double *tmc    = dvector(0, mPlot);
+
+    //Final trajectory on lines, segment by segment
+    for(int k = 0; k < traj_grid_size; k++)
+    {
+        //Integration segment by segment
+        for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
+        ode78_qbcp(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+
+        //Plot on h2
+        if(k == 0) gnuplot_plot_xyz(h2, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"Final trajectory", "lines", "1", "2", 0);
+        else gnuplot_plot_xyz(h2, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"", "lines", "1", "2", 0);
+    }
+
+    //---------------------------------------------------------------------
+    // Final trajectory, whith single shooting integration
+    //---------------------------------------------------------------------
+    int kstart = 0; //starts at the CMU entry, and NOT at the EML2 orbit entry (kstart != 0)
+    for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][kstart];
+    ode78_qbcp(y_traj, t_traj, t_traj_n[kstart], t2, yv, 6, traj_grid_size, dcs, coord_type, coord_type);
+
+    //Plot on h2
+    //gnuplot_plot_xyz(h2, y_traj[0], y_traj[1],  y_traj[2], traj_grid_size+1, (char*)"Final trajectory (single shooting)", "lines", "1", "3", 8);
+
+    printf("Press ENTER to go on\n");
+    scanf("%c",&ch);
+
+
+    //===============================================================================================
+    // Free
+    //===============================================================================================
+    free_dmatrix(ymc, 0, 5, 0, mPlot);
+    free_dvector(tmc, 0, mPlot);
+
+    gnuplot_close(h3);
+    gnuplot_close(h4);
+    gnuplot_close(h5);
+    gnuplot_close(h6);
+
+    free_dmatrix(y_man_coord, 0, 5, 0, man_grid_size);
+    free_dvector(t_man_coord, 0, man_grid_size);
+
+    free_dmatrix(y_man_NCEM, 0, 5, 0, mPlot);
+    free_dmatrix(y_man_NCSEM, 0, 5, 0, mPlot);
+    free_dvector(t_man_EM, 0, mPlot);
+    free_dvector(t_man_SEM, 0, mPlot);
+    free_dmatrix(y_man_coord_plot, 0, 5, 0, mPlot);
+    free_dvector(t_man_coord_plot, 0, mPlot);
+
+    free_dmatrix(y_traj, 0, 41, 0, traj_grid_size);
+    free_dvector(t_traj, 0, traj_grid_size);
+
+    free_dmatrix(y_traj_n, 0, 41, 0, traj_grid_size);
+    free_dvector(t_traj_n, 0, traj_grid_size);
+
+    gsl_matrix_complex_free(CCM_R_RCM_EM);
+    gsl_matrix_complex_free(CCM_R_RCM_SEM);
+}
+
+
+//=======================================================================================================================================
+//
+//         Refinement of solutions: with additionnal search on the initial parameters (time, or s3_EM...)
+//
+//=======================================================================================================================================
+/**
+ *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the MANIFOLD trajectory (manifold leg).
+ *         The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CMS of SEML2. The time at each point
+ *         except the first one is allowed to vary. A continuation procedure can be performed to get more than one refined solution.
+ **/
+int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ(int proj_grid_size,
+        int man_grid_size,
+        int coord_type,
+        double st_EM[],
+        double t0_EM,
+        double tmax_on_manifold_EM,
+        vector<Oftsc> &CM_EM_NC,
+        vector<Oftsc> &CM_EM_TFC,
+        matrix<Oftsc> &DCM_EM_TFC,
+        matrix<Ofsc>  &Mcoc_EM,
+        matrix<Ofsc>  &Pcoc_EM,
+        matrix<Ofsc>  &MIcoc_EM,
+        matrix<Ofsc>  &PIcoc_EM,
+        vector<Ofsc>  &Vcoc_EM,
+        double ynormMax,
+        double snormMax,
+        int isPlanar)
+{
+    //===============================================================================================
+    // 0. Get the default coordinates system from the coord_type
+    //===============================================================================================
+    int dcs  = default_coordinate_system(coord_type);
+
+    //===============================================================================================
+    // 1. Time on each orbit
+    //===============================================================================================
+    double tof_seml_SEM = 5*SEML.us_sem.T;   //TOF on SEML2 orbit
+
+    //===============================================================================================
+    // 3. Init the gnuplot
+    //===============================================================================================
+    //----------------------------------------------------------
+    //Gnuplot window
+    //----------------------------------------------------------
+    gnuplot_ctrl *h2;
+    h2 = gnuplot_init();
+
+    //----------------------------------------------------------
+    //Notable points in SEM system
+    //----------------------------------------------------------
+    double **semP_coord = dmatrix(0, 6, 0, 2);
+    switch(coord_type)
+    {
+    case PSEM:
+        semPoints(0.0, semP_coord);
+        semPlot(h2, semP_coord);
+        break;
+    case NCSEM:
+    case VNCSEM:
+        semNCPoints(0.0, semP_coord);
+        semPlot(h2, semP_coord);
+        break;
+
+    case PEM:
+        emPoints(0.0, semP_coord);
+        emPlot(h2, semP_coord);
+        break;
+    case NCEM:
+    case VNCEM:
+        emNCPoints(0.0, semP_coord);
+        emPlot(h2, semP_coord);
+        break;
+    }
+
+
+    //===============================================================================================
+    // 5. Structures to compute the final orbit about SEML2
+    //===============================================================================================
+    //--------------------------------------
+    // Center-manifold
+    //--------------------------------------
+    vector<Oftsc> CMS_SEM_NC;      //center manifold in NC coordinates
+    vector<Oftsc> CMS_SEM_TFC;     //center manifold in TFC coordinates
+    CMS_SEM_NC.reserve(6);
+    for(int i = 0; i <6; i++) CMS_SEM_NC.push_back(Oftsc(5, OFTS_ORDER, OFS_NV, OFS_ORDER));
+    CMS_SEM_TFC.reserve(6);
+    for(int i = 0; i <6; i++) CMS_SEM_TFC.push_back(Oftsc(5, OFTS_ORDER, OFS_NV, OFS_ORDER));
+    //Update CM
+    readVOFTS_bin(CMS_SEM_NC,  SEML_SEM.cs.F_PMS+"W/W",  OFS_ORDER);
+    readVOFTS_bin(CMS_SEM_TFC, SEML_SEM.cs.F_PMS+"W/Wh", OFS_ORDER);
+
+
+    //--------------------------------------
+    // COC objects
+    //--------------------------------------
+    matrix<Ofsc>  Mcoc_SEM(6,6);    //COC matrix
+    matrix<Ofsc>  Pcoc_SEM(6,6);    //COC matrix (Mcoc = Pcoc*Complex matrix)
+    matrix<Ofsc>  MIcoc_SEM(6,6);   //COC matrix = inv(Mcoc)
+    matrix<Ofsc>  PIcoc_SEM(6,6);   //COC matrix = inv(Pcoc)
+    vector<Ofsc>  Vcoc_SEM(6);      //COC vector
+    //Update COC
+    initCOC(Pcoc_SEM, Mcoc_SEM, PIcoc_SEM, MIcoc_SEM, Vcoc_SEM, SEML_SEM);
+
+    //--------------------------------------
+    //Jacobian of the center manifold
+    //--------------------------------------
+    matrix<Oftsc> DCMS_SEM_TFC(6, 5, 5, OFTS_ORDER, OFS_NV, OFS_ORDER);
+    readMOFTS_bin(DCMS_SEM_TFC, SEML_SEM.cs.F_PMS+"DWf/DWhc", OFS_ORDER);
+
+
+    //===============================================================================================
+    // 7. Loop. Only one solution for now!
+    //===============================================================================================
+
+    cout << "-------------------------------------------"  << endl;
+    cout << "  Refinement of EML2-SEML2 arc             "  << endl;
+    cout << "-------------------------------------------"  << endl;
+    cout << "Begin the search for the min distance of projection..." << endl;
+    char ch;
+    printf("Press ENTER to go on\n");
+    scanf("%c",&ch);
+
+    //===============================================================================================
+    // 6.1 Initialize local variables: EM
+    //===============================================================================================
+    //---------------------------------------------------------------------
+    //Initialize the initial conditions (both NC and RCM coordinates)
+    //---------------------------------------------------------------------
+
+    //---------------------------------------------------------------------
+    // Initialisation of the orbit structure
+    //---------------------------------------------------------------------
+    Ofsc orbit_ofs_EM(OFS_ORDER);
+    OdeStruct driver_EM;
+    SingleOrbit orbit_EM;
+    //Root-finding
+    const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
+    //Stepper
+    const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
+    //Init ode structure
+    init_ode_structure(&driver_EM, T, T_root, PREC_ABS, PREC_REL, PREC_ROOT, PREC_DIFF,
+                       6, PREC_HSTART, qbfbp_vfn_novar, NULL, &SEML_EM);
+    //Init routine
+    init_orbit(orbit_EM, &CM_EM_NC, &CM_EM_TFC,
+               &Mcoc_EM, &MIcoc_EM, &Vcoc_EM, &orbit_ofs_EM, OFTS_ORDER, OFS_ORDER,
+               5, 1, t0_EM, t0_EM+tmax_on_manifold_EM, SEML.us_em.T/5, &driver_EM, &SEML_EM);
+
+
+    //---------------------------------------------------------------------
+    // Update the initial state in the orbit_EM, with the RCM coordinates
+    //---------------------------------------------------------------------
+    orbit_update_ic(orbit_EM, st_EM, t0_EM);
+
+
+    //===============================================================================================
+    // 6.3 Estimate the distance of projection
+    //===============================================================================================
+    //---------------------------------------------------------------------
+    //Local variables to store the manifold leg
+    //---------------------------------------------------------------------
+    double **y_man_NCSEM = dmatrix(0, 5, 0, proj_grid_size);
+    double *t_man_SEM    = dvector(0, proj_grid_size);
+
+
+    //---------------------------------------------------------------------
+    //Integration on proj_grid_size+1 fixed grid
+    //---------------------------------------------------------------------
+    int status = ode78_qbcp(y_man_NCSEM, t_man_SEM, t0_EM, t0_EM+tmax_on_manifold_EM, orbit_EM.z0, 6, proj_grid_size, F_NCEM, NCEM, NCSEM);
+
+    //----------------------------------------------------------
+    // projection by default is arbitrarily big
+    //----------------------------------------------------------
+    double ePdef = 1e5;
+
+    //----------------------------------------------------------
+    // We need first to check that the integration went well
+    //----------------------------------------------------------
+    Ofsc ofs(OFS_ORDER);
+    double yv[6], tv;
+    double proj_dist_SEM, min_proj_dist_SEM = ePdef, y_man_norm_NCSEM = 0.0;
+    double yvproj_NCSEM[6], sproj[5], yv_SEM[6], yvproj_SEM[6], yv_VSEM[6], yvproj_VSEM[6];
+
+    //Optimal variables
+    double sprojmin[5];
+    double tmin = t0_EM+tmax_on_manifold_EM;
+
+    if(status != -1)
+    {
+        //----------------------------------------------------------
+        //Loop on trajectory
+        //----------------------------------------------------------
+        for(int kman = 0; kman <= proj_grid_size; kman++)
+        {
+            //Current state
+            for(int i = 0; i < 6; i++) yv[i] = y_man_NCSEM[i][kman];
+            tv = t_man_SEM[kman];
+
+            //Current distance from SEMLi in NCSEM units
+            y_man_norm_NCSEM = 0.0;
+            for(int i = 0; i < 2; i++) y_man_norm_NCSEM += yv[i]*yv[i];
+            y_man_norm_NCSEM = sqrt(y_man_norm_NCSEM);
+
+            //If the current state is close enough to SEMLi
+            if(y_man_norm_NCSEM < ynormMax)
+            {
+                // Projection on the center manifold
+                NCprojCCMtoCUS(yv, tv, SEML_SEM.us.n, sproj, CMS_SEM_TFC, 0.0, MIcoc_SEM, Vcoc_SEM);
+
+                //If the projection is close enough to SEMLi
+                if(sqrt(sproj[0]*sproj[0]+sproj[2]*sproj[2])< snormMax)
+                {
+                    //yvproj_NCSEM = W(sproj, tv)
+                    RCMtoNCbyTFC(sproj, tv, SEML_SEM.us.n, OFTS_ORDER, OFS_ORDER, 5, CMS_SEM_TFC, ofs, Mcoc_SEM, Vcoc_SEM, yvproj_NCSEM, 1);
+
+                    //Back to SEM coordinates
+                    NCtoSEM(tv, yv, yv_SEM, &SEML_SEM);
+                    NCtoSEM(tv, yvproj_NCSEM, yvproj_SEM, &SEML_SEM);
+
+                    //Back to SEM coordinates with velocity
+                    SEMmtoSEMv(tv, yv_SEM, yv_VSEM, &SEML_SEM);
+                    SEMmtoSEMv(tv, yvproj_SEM, yvproj_VSEM, &SEML_SEM);
+
+                    //Distance of projection in SEM coordinates
+                    proj_dist_SEM = 0.0;
+                    for(int i = 0; i < 6; i++) proj_dist_SEM += (yvproj_SEM[i] - yv_SEM[i])*(yvproj_SEM[i] - yv_SEM[i]);
+                    proj_dist_SEM = sqrt(proj_dist_SEM);
+                }
+                else proj_dist_SEM = ePdef;
+            }
+            else proj_dist_SEM = ePdef;
+
+            //Update distance min if necessary
+            if(proj_dist_SEM < min_proj_dist_SEM)
+            {
+                min_proj_dist_SEM = proj_dist_SEM;
+
+                //Update optimal variables
+                for(int i = 0; i < 5; i++) sprojmin[i] = sproj[i];
+                tmin  = tv;
+            }
+
+        }
+
+    }
+    else proj_dist_SEM = ePdef;
+
+
+    cout << "-------------------------------------------"  << endl;
+    cout << "End of the search for the min distance of projection..." << endl;
+    cout << "The minimum is : " << min_proj_dist_SEM << endl;
+    cout << "Obtained for sproj = " << endl;
+    vector_printf_prec(sproj, 5);
+    printf("Press ENTER to go on\n");
+    scanf("%c",&ch);
+
+    //---------------------------------------------------------------------
+    //Update the time in orbit_EM!!
+    //---------------------------------------------------------------------
+    orbit_EM.tf = tmin/SEML.us_em.ns;
+
+    //===============================================================================================
+    // 6.2 Initialize local variables: SEM
+    //===============================================================================================
+
+    //---------------------------------------------------------------------
+    // Initialisation of the orbit structure
+    //---------------------------------------------------------------------
+    Ofsc orbit_ofs_SEM(OFS_ORDER);
+    OdeStruct driver_SEM;
+    SingleOrbit orbit_SEM;
+
+    //Init ode structure
+    init_ode_structure(&driver_SEM, T, T_root, PREC_ABS, PREC_REL, PREC_ROOT, PREC_DIFF,
+                       6, PREC_HSTART, qbfbp_vfn_novar, NULL, &SEML_SEM);
+    //Init routine
+    init_orbit(orbit_SEM, &CMS_SEM_NC, &CMS_SEM_TFC,
+               &Mcoc_SEM, &MIcoc_SEM, &Vcoc_SEM, &orbit_ofs_SEM, OFTS_ORDER, OFS_ORDER,
+               5, 1, tmin, tmin+tof_seml_SEM, SEML.us_sem.T, &driver_SEM, &SEML_SEM);
+
+
+    //===============================================================================================
+    // @TODO: ADD AN ESTIMATE OF THE DISTANCE OF PROJECTION + by reproducing the PROJECTION METHOD
+    // THIS TIME ON THE CMS of SEML2! (set s5 of SEML2 to zero, or maybe a rough search...)
+    // In this way, only 3 inputs: s1, s3 and t0.
+    //===============================================================================================
+
+    //---------------------------------------------------------------------
+    // Update the initial state in the orbit_SEM, with the RCM coordinates
+    //---------------------------------------------------------------------
+    orbit_update_ic(orbit_SEM, sprojmin, tmin);
+
+
+    //===============================================================================================
+    // 6.2 Multiple shooting procedure
+    //===============================================================================================
+    if(isPlanar)
+    {
+        ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR(orbit_EM, orbit_SEM,
+                                              DCM_EM_TFC, DCMS_SEM_TFC, dcs, coord_type, man_grid_size, h2);
+    }
+    else
+    {
+        ref1_CMU_EM_to_CMS_SEM_MSD_RCM_3D(orbit_EM, orbit_SEM,
+                                       DCM_EM_TFC, DCMS_SEM_TFC, dcs, coord_type, man_grid_size, h2);
+    }
+
+    //----------------------------------------------------------
+    //Gnuplot window
+    //----------------------------------------------------------
+    printf("Press ENTER to go close\n");
+    scanf("%c",&ch);
+    gnuplot_close(h2);
+
+    return 0;
+}
+
+/**
+ *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the MANIFOLD trajectory (manifold leg).
+ *         The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CMS of SEML2. The time at each point
+ *         except the first one is allowed to vary. A continuation procedure can be performed to get more than one refined solution.
+ **/
+int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ_OPT(int proj_grid_size,
+        int man_grid_size,
+        int coord_type,
+        double st_EM[],
+        double t0_EM,
+        double tmin_on_manifold_EM,
+        double tmax_on_manifold_EM,
+        double s3_MIN_CMU_RCM,
+        double s3_MAX_CMU_RCM,
+        int s3_grid_size,
+        vector<Oftsc> &CM_EM_NC,
+        vector<Oftsc> &CM_EM_TFC,
+        matrix<Oftsc> &DCM_EM_TFC,
+        matrix<Ofsc>  &Mcoc_EM,
+        matrix<Ofsc>  &Pcoc_EM,
+        matrix<Ofsc>  &MIcoc_EM,
+        matrix<Ofsc>  &PIcoc_EM,
+        vector<Ofsc>  &Vcoc_EM,
+        double ynormMax,
+        double snormMax,
+        int isPlanar,
+        int isPar)
+{
+    //===============================================================================================
+    // 0. Get the default coordinates system from the coord_type
+    //===============================================================================================
+    int dcs  = default_coordinate_system(coord_type);
+
+    //===============================================================================================
+    // 1. Time on each orbit
+    //===============================================================================================
+    double tof_seml_SEM = 5*SEML.us_sem.T;   //TOF on SEML2 orbit
+
+    //===============================================================================================
+    // 3. Init the gnuplot
+    //===============================================================================================
+    //----------------------------------------------------------
+    //Gnuplot window
+    //----------------------------------------------------------
+    gnuplot_ctrl *h2;
+    h2 = gnuplot_init();
+
+    //----------------------------------------------------------
+    //Notable points in SEM system
+    //----------------------------------------------------------
+    double **semP_coord = dmatrix(0, 6, 0, 2);
+    switch(coord_type)
+    {
+    case PSEM:
+        semPoints(0.0, semP_coord);
+        semPlot(h2, semP_coord);
+        break;
+    case NCSEM:
+    case VNCSEM:
+        semNCPoints(0.0, semP_coord);
+        semPlot(h2, semP_coord);
+        break;
+
+    case PEM:
+        emPoints(0.0, semP_coord);
+        emPlot(h2, semP_coord);
+        break;
+    case NCEM:
+    case VNCEM:
+        emNCPoints(0.0, semP_coord);
+        emPlot(h2, semP_coord);
+        break;
+    }
+
+
+    //===============================================================================================
+    // 5. Structures to compute the final orbit about SEML2
+    //===============================================================================================
+    //--------------------------------------
+    // Center-manifold
+    //--------------------------------------
+    vector<Oftsc> CMS_SEM_NC;      //center manifold in NC coordinates
+    vector<Oftsc> CMS_SEM_TFC;     //center manifold in TFC coordinates
+    CMS_SEM_NC.reserve(6);
+    for(int i = 0; i <6; i++) CMS_SEM_NC.push_back(Oftsc(5, OFTS_ORDER, OFS_NV, OFS_ORDER));
+    CMS_SEM_TFC.reserve(6);
+    for(int i = 0; i <6; i++) CMS_SEM_TFC.push_back(Oftsc(5, OFTS_ORDER, OFS_NV, OFS_ORDER));
+    //Update CM
+    readVOFTS_bin(CMS_SEM_NC,  SEML_SEM.cs.F_PMS+"W/W",  OFS_ORDER);
+    readVOFTS_bin(CMS_SEM_TFC, SEML_SEM.cs.F_PMS+"W/Wh", OFS_ORDER);
+
+
+    //--------------------------------------
+    // COC objects
+    //--------------------------------------
+    matrix<Ofsc>  Mcoc_SEM(6,6);    //COC matrix
+    matrix<Ofsc>  Pcoc_SEM(6,6);    //COC matrix (Mcoc = Pcoc*Complex matrix)
+    matrix<Ofsc>  MIcoc_SEM(6,6);   //COC matrix = inv(Mcoc)
+    matrix<Ofsc>  PIcoc_SEM(6,6);   //COC matrix = inv(Pcoc)
+    vector<Ofsc>  Vcoc_SEM(6);      //COC vector
+    //Update COC
+    initCOC(Pcoc_SEM, Mcoc_SEM, PIcoc_SEM, MIcoc_SEM, Vcoc_SEM, SEML_SEM);
+
+    //--------------------------------------
+    //Jacobian of the center manifold
+    //--------------------------------------
+    matrix<Oftsc> DCMS_SEM_TFC(6, 5, 5, OFTS_ORDER, OFS_NV, OFS_ORDER);
+    readMOFTS_bin(DCMS_SEM_TFC, SEML_SEM.cs.F_PMS+"DWf/DWhc", OFS_ORDER);
+
+
+    //===============================================================================================
+    // 7. Loop. Only one solution for now!
+    //===============================================================================================
+
+    cout << "-------------------------------------------"  << endl;
+    cout << "  Refinement of EML2-SEML2 arc             "  << endl;
+    cout << "-------------------------------------------"  << endl;
+    cout << "Begin the search for the min distance of projection..." << endl;
+    char ch;
+    printf("Press ENTER to go on\n");
+    scanf("%c",&ch);
+
+    //===============================================================================================
+    // 6.1 Initialize variables: EM
+    //===============================================================================================
+    //---------------------------------------------------------------------
+    //Initialize the initial conditions (both NC and RCM coordinates)
+    //---------------------------------------------------------------------
+
+    //---------------------------------------------------------------------
+    // Initialisation of the orbit structure
+    //---------------------------------------------------------------------
+    Ofsc orbit_ofs_EM(OFS_ORDER);
+    OdeStruct driver_EM;
+    SingleOrbit orbit_EM;
+    //Root-finding
+    const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
+    //Stepper
+    const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
+    //Init ode structure
+    init_ode_structure(&driver_EM, T, T_root, PREC_ABS, PREC_REL, PREC_ROOT, PREC_DIFF,
+                       6, PREC_HSTART, qbfbp_vfn_novar, NULL, &SEML_EM);
+    //Init routine
+    init_orbit(orbit_EM, &CM_EM_NC, &CM_EM_TFC,
+               &Mcoc_EM, &MIcoc_EM, &Vcoc_EM, &orbit_ofs_EM, OFTS_ORDER, OFS_ORDER,
+               5, 1, t0_EM, t0_EM+tmax_on_manifold_EM, SEML.us_em.T/5, &driver_EM, &SEML_EM);
+
+
+    //----------------------------------------------------------
+    // projection by default is arbitrarily big
+    //----------------------------------------------------------
+    double ePdef = 1e5;
+
+    //===============================================================================================
+    // 6.2 Initialize variables: Optimal variables
+    //===============================================================================================
+    double smin_proj_dist_SEM = ePdef;
+    double sprojsmin[5];
+    double tsmin = t0_EM+tmax_on_manifold_EM;
+    int ks3min = 0;
+
+    //------------------------------------------
+    //Building the working grids
+    //------------------------------------------
+    double *grid_s3_CMU_RCM = dvector(0,  s3_grid_size);
+    init_grid(grid_s3_CMU_RCM, s3_MIN_CMU_RCM, s3_MAX_CMU_RCM, s3_grid_size);
+
+    int s5_grid_size = 0;
+    double *grid_s5_CMU_RCM = dvector(0,  s5_grid_size);
+    init_grid(grid_s5_CMU_RCM, 0.0, +5e-2, s5_grid_size);
+
+    //===============================================================================================
+    // 6.3 Estimate the distance of projection
+    //===============================================================================================
+    int iter = 0;
+    COMPLETION = 0;
+    #pragma omp parallel for if(isPar)  shared(iter, sprojsmin, smin_proj_dist_SEM, tsmin)
+    for(int ks3 = 0; ks3 <= s3_grid_size; ks3++)
+    {
+        //---------------------------------------------------------------------
+        // Update the initial state in the orbit_EM, with the RCM coordinates
+        //---------------------------------------------------------------------
+        st_EM[2] = grid_s3_CMU_RCM[ks3];
+        st_EM[4] = PROJ_EPSILON;
+        orbit_update_ic(orbit_EM, st_EM, t0_EM);
+
+        //---------------------------------------------------------------------
+        //Local variables to store the manifold leg
+        //---------------------------------------------------------------------
+        double **y_man_NCSEM = dmatrix(0, 5, 0, proj_grid_size);
+        double *t_man_SEM    = dvector(0, proj_grid_size);
+
+
+        //---------------------------------------------------------------------
+        //Integration on proj_grid_size+1 fixed grid
+        //---------------------------------------------------------------------
+        int status = ode78_qbcp(y_man_NCSEM, t_man_SEM, t0_EM, t0_EM+tmax_on_manifold_EM, orbit_EM.z0, 6, proj_grid_size, F_NCEM, NCEM, NCSEM);
+
+        //----------------------------------------------------------
+        // We need first to check that the integration went well
+        //----------------------------------------------------------
+        Ofsc ofs(OFS_ORDER);
+        double yv[6], tv;
+        double proj_dist_SEM, proj_dist_SEM_s5, min_proj_dist_SEM = ePdef, y_man_norm_NCSEM = 0.0;
+        double yvproj_NCSEM[6], sproj[5], sproj_s5[5], yv_SEM[6], yvproj_SEM[6], yv_VSEM[6], yvproj_VSEM[6];
+
+
+        double sprojmin[5];
+        double tmin = t0_EM+tmax_on_manifold_EM;
+
+        if(status != -1)
+        {
+            //----------------------------------------------------------
+            //Loop on trajectory
+            //----------------------------------------------------------
+            for(int kman = 0; kman <= proj_grid_size; kman++)
+            {
+                //Current state
+                for(int i = 0; i < 6; i++) yv[i] = y_man_NCSEM[i][kman];
+                tv = t_man_SEM[kman];
+
+                //Current distance from SEMLi in NCSEM units
+                y_man_norm_NCSEM = 0.0;
+                for(int i = 0; i < 2; i++) y_man_norm_NCSEM += yv[i]*yv[i];
+                y_man_norm_NCSEM = sqrt(y_man_norm_NCSEM);
+
+                //If the current state is close enough to SEMLi
+                if(y_man_norm_NCSEM < ynormMax)
+                {
+                    // Projection on the center manifold
+                    NCprojCCMtoCUS(yv, tv, SEML_SEM.us.n, sproj, CMS_SEM_TFC, 0.0, MIcoc_SEM, Vcoc_SEM);
+
+                    //If the projection is close enough to SEMLi
+                    if(sqrt(sproj[0]*sproj[0]+sproj[2]*sproj[2])< snormMax)
+                    {
+                        proj_dist_SEM = ePdef;
+                        for(int ks5 = 0; ks5 <= s5_grid_size ; ks5++)
+                        {
+
+                            // Projection on the center manifold
+                            NCprojCCMtoCUS(yv, tv, SEML_SEM.us.n, sproj_s5, CMS_SEM_TFC, grid_s5_CMU_RCM[ks5], MIcoc_SEM, Vcoc_SEM);
+
+                            //yvproj_NCSEM = W(sproj, tv)
+                            RCMtoNCbyTFC(sproj_s5, tv, SEML_SEM.us.n, OFTS_ORDER, OFS_ORDER, 5, CMS_SEM_TFC, ofs, Mcoc_SEM, Vcoc_SEM, yvproj_NCSEM, 1);
+
+                            //Back to SEM coordinates
+                            NCtoSEM(tv, yv, yv_SEM, &SEML_SEM);
+                            NCtoSEM(tv, yvproj_NCSEM, yvproj_SEM, &SEML_SEM);
+
+                            //Back to SEM coordinates with velocity
+                            SEMmtoSEMv(tv, yv_SEM, yv_VSEM, &SEML_SEM);
+                            SEMmtoSEMv(tv, yvproj_SEM, yvproj_VSEM, &SEML_SEM);
+
+                            //Distance of projection in SEM coordinates
+                            proj_dist_SEM_s5 = 0.0;
+                            for(int i = 0; i < 6; i++) proj_dist_SEM_s5 += (yvproj_SEM[i] - yv_SEM[i])*(yvproj_SEM[i] - yv_SEM[i]);
+                            proj_dist_SEM_s5 = sqrt(proj_dist_SEM_s5);
+
+                            //Update distance min if necessary
+                            if(proj_dist_SEM_s5 < proj_dist_SEM)
+                            {
+                                proj_dist_SEM = proj_dist_SEM_s5;
+                                //Update optimal variables
+                                sproj[0] = sproj_s5[0];
+                                sproj[1] = sproj_s5[1];
+                                sproj[2] = sproj_s5[2];
+                                sproj[3] = sproj_s5[3];
+                                sproj[4] = sproj_s5[4];
+                            }
+                        }
+                    }
+                    else proj_dist_SEM = ePdef;
+                }
+                else proj_dist_SEM = ePdef;
+
+                //Update distance min if necessary
+                if(proj_dist_SEM < min_proj_dist_SEM)
+                {
+                    min_proj_dist_SEM = proj_dist_SEM;
+                    //Update optimal variables
+                    sprojmin[0] = sproj[0];
+                    sprojmin[1] = sproj[1];
+                    sprojmin[2] = sproj[2];
+                    sprojmin[3] = sproj[3];
+                    sprojmin[4] = sproj[4];
+                    tmin  = tv;
+                }
+
+            }
+
+        }
+        else proj_dist_SEM = ePdef;
+
+        //Save
+        #pragma omp critical
+        {
+
+            //Update distance min if necessary
+            if(min_proj_dist_SEM < smin_proj_dist_SEM)
+            {
+                smin_proj_dist_SEM = min_proj_dist_SEM;
+                //Update optimal variables
+                for(int i = 0; i < 5; i++) sprojsmin[i] = sprojmin[i];
+                tsmin  = tmin;
+                ks3min = ks3;
+            }
+
+
+        //Display
+        displayCompletion("ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ_OPT", (double) iter++/max(s3_grid_size+1,0)*100);
+        cout << "tmin = " << tmin << endl;
+        cout << "min_proj_dist_SEM = " << min_proj_dist_SEM << endl;
+
+         }
+
+        free_dmatrix(y_man_NCSEM, 0, 5, 0, proj_grid_size);
+        free_dvector(t_man_SEM, 0, proj_grid_size);
+
+    }
+
+
+    cout << "-------------------------------------------"  << endl;
+    cout << "End of the search for the min distance of projection..." << endl;
+    cout << "The minimum is : " << smin_proj_dist_SEM << endl;
+    cout << "Obtained for sproj = " << endl;
+    vector_printf_prec(sprojsmin, 5);
+    printf("Press ENTER to go on\n");
+    scanf("%c",&ch);
+
+    //---------------------------------------------------------------------
+    //Update the time in orbit_EM!!
+    //---------------------------------------------------------------------
+    orbit_EM.tf = tsmin/SEML.us_em.ns;
+
+    //---------------------------------------------------------------------
+    // Update the initial state in the orbit_EM, with the RCM coordinates
+    //---------------------------------------------------------------------
+    st_EM[2] = grid_s3_CMU_RCM[ks3min];
+    st_EM[4] = PROJ_EPSILON;
+    orbit_update_ic(orbit_EM, st_EM, t0_EM);
+
+    //===============================================================================================
+    // 6.2 Initialize local variables: SEM
+    //===============================================================================================
+
+    //---------------------------------------------------------------------
+    // Initialisation of the orbit structure
+    //---------------------------------------------------------------------
+    Ofsc orbit_ofs_SEM(OFS_ORDER);
+    OdeStruct driver_SEM;
+    SingleOrbit orbit_SEM;
+
+    //Init ode structure
+    init_ode_structure(&driver_SEM, T, T_root, PREC_ABS, PREC_REL, PREC_ROOT, PREC_DIFF,
+                       6, PREC_HSTART, qbfbp_vfn_novar, NULL, &SEML_SEM);
+    //Init routine
+    init_orbit(orbit_SEM, &CMS_SEM_NC, &CMS_SEM_TFC,
+               &Mcoc_SEM, &MIcoc_SEM, &Vcoc_SEM, &orbit_ofs_SEM, OFTS_ORDER, OFS_ORDER,
+               5, 1, tsmin, tsmin+tof_seml_SEM, SEML.us_sem.T, &driver_SEM, &SEML_SEM);
+
+
+    //===============================================================================================
+    // @TODO: ADD AN ESTIMATE OF THE DISTANCE OF PROJECTION + by reproducing the PROJECTION METHOD
+    // THIS TIME ON THE CMS of SEML2! (set s5 of SEML2 to zero, or maybe a rough search...)
+    // In this way, only 3 inputs: s1, s3 and t0.
+    //===============================================================================================
+
+    //---------------------------------------------------------------------
+    // Update the initial state in the orbit_SEM, with the RCM coordinates
+    //---------------------------------------------------------------------
+    orbit_update_ic(orbit_SEM, sprojsmin, tsmin);
+
+
+    //===============================================================================================
+    // 6.2 Multiple shooting procedure
+    //===============================================================================================
+    if(isPlanar)
+    {
+        ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR(orbit_EM, orbit_SEM,
+                                              DCM_EM_TFC, DCMS_SEM_TFC, dcs, coord_type, man_grid_size, h2);
+    }
+    else
+    {
+        ref1_CMU_EM_to_CMS_SEM_MSD_RCM_3D(orbit_EM, orbit_SEM,
+                                       DCM_EM_TFC, DCMS_SEM_TFC, dcs, coord_type, man_grid_size, h2);
+    }
+
+    //----------------------------------------------------------
+    //Gnuplot window
+    //----------------------------------------------------------
+    printf("Press ENTER to go close\n");
+    scanf("%c",&ch);
+    gnuplot_close(h2);
+
+    return 0;
+}
 
 //=======================================================================================================================================
 //
@@ -4681,7 +4502,7 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR_CONT_AFT(SingleOrbit &orbit_EM,
 //=======================================================================================================================================
 
 /**
- *  \brief Same as ref1_CMU_EM_to_CMS_SEM_MSD_RCM, in the planar case.
+ *  \brief Same as ref1_CMU_EM_to_CMS_SEM_MSD_RCM_3D, in the planar case.
  **/
 void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR_CONT_PAC_AFT(SingleOrbit &orbit_EM,
         SingleOrbit &orbit_SEM,
@@ -5190,7 +5011,7 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR_CONT_PAC_AFT(SingleOrbit &orbit_EM,
 
 
 /**
- *  \brief Same as ref1_CMU_EM_to_CMS_SEM_MSD_RCM, in the planar case.
+ *  \brief Same as ref1_CMU_EM_to_CMS_SEM_MSD_RCM_3D, in the planar case.
  **/
 void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR_CONT_PAC(SingleOrbit &orbit_EM,
         SingleOrbit &orbit_SEM,
@@ -5710,7 +5531,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP(int ofts_order,
     //Get the default coordinates system from the coord_type
     //===============================================================================================
     int dcs  = default_coordinate_system(coord_type);
-    //int fwrk = default_framework(coord_type);
+    //int coordsys = default_framework(coord_type);
 
     //===============================================================================================
     // 0 . Define the time of flight on each orbit
@@ -6061,9 +5882,8 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP(int ofts_order,
         //===============================================================================================
         // 6.5 Differential correction & final trajectory
         //===============================================================================================
-        int isTimeFixed = 1;
         int isPlotted   = 0;
-        multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, yma, 42, traj_grid_size, coord_type, isPlotted, isTimeFixed, h2);
+        multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, yma, 42, traj_grid_size, coord_type, isPlotted, h2);
         //multiple_shooting_direct_variable_time(y_traj, t_traj, y_traj_n, t_traj_n, yma, 42, traj_grid_size, coord_type, isPlotted, isTimeFixed, h2);
 
 
@@ -6201,7 +6021,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_PART(int ofts_order,
     // -1. Get the default coordinates system from the coord_type
     //===============================================================================================
     int dcs  = default_coordinate_system(coord_type);
-    //int fwrk = default_framework(coord_type);
+    //int coordsys = default_framework(coord_type);
 
     //===============================================================================================
     // 0. Time on each orbit
@@ -6357,7 +6177,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_PART(int ofts_order,
     readVOFTS_bin(CM_SEM_NC,  SEML_SEM.cs.F_PMS+"W/W",  OFS_ORDER);
     readVOFTS_bin(CM_SEM_TFC, SEML_SEM.cs.F_PMS+"W/Wh", OFS_ORDER);
 
-
+    cout << "PMS = " << SEML_SEM.cs.F_PMS << endl;
     //--------------------------------------
     // COC objects
     //--------------------------------------
@@ -6519,6 +6339,17 @@ int ref_CMU_EM_to_CM_SEM_MSD_PART(int ofts_order,
         //---------------------------------------------------------------------
         orbit_update_ic(orbit_SEM, st_SEM, t0_SEM);
 
+        cout << "s1_EM = " << st[0] << endl;
+        cout << "s3_EM = " << st[2] << endl;
+
+        cout << "s1 = " << st_SEM[0] << endl;
+        cout << "s3 = " << st_SEM[2] << endl;
+        cout << "projected state = " << projected_state_CMU_SEM[0][kpos] << projected_state_CMU_SEM[1][kpos] << endl;
+
+        double ycc[6];
+        NCtoSEM(t0_SEM, orbit_SEM.z0, ycc, &SEML_SEM);
+        cout << "projected state = " << ycc[0] << ycc[1] << endl;
+
         //---------------------------------------------------------------------
         //Integration on man_grid_size+1 fixed grid
         //---------------------------------------------------------------------
@@ -6551,9 +6382,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_PART(int ofts_order,
         //===============================================================================================
         // 6.5 Differential correction & final trajectory
         //===============================================================================================
-        int isTimeFixed = 1;
         int isPlotted   = 1;
-
         cout << "-------------------------------------------"  << endl;
         cout << "Differential correction & final trajectory "  << endl;
         cout << "-------------------------------------------"  << endl;
@@ -6561,7 +6390,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_PART(int ofts_order,
         scanf("%c",&ch);
 
         msd_CM_RCM(y_traj, t_traj, y_traj_n, t_traj_n, yma, 42,
-                   traj_grid_size, coord_type, isPlotted, isTimeFixed, h2, Mcoc_EM,
+                   traj_grid_size, coord_type, isPlotted, h2, Mcoc_EM,
                    DCM_EM_TFC, CCM_R_RCM, orbit_EM);
 
 
@@ -6914,12 +6743,11 @@ int ref_CMU_EM_to_CM_SEM_MSD(int ofts_order,
         // After this point, the last point in ymd has been replaced
         // by the 6-dimensionnal target.
         //---------------------------------------------------------------------
-        int isTimeFixed = 1;
         int isPlotted   = 1;
         //differential_correction_level_I(ymd, tmd, ymdn, tmdn, yma, 42, man_grid_size, isPlotted, isTimeFixed, h2);
         tic();
         //multiple_shooting_gomez(ymd, tmd, ymdn, tmdn, yma, 42, man_grid_size, isPlotted, isTimeFixed, h2);
-        multiple_shooting_direct(ymd, tmd, ymdn, tmdn, yma, 42, man_grid_size, VNCSEM, isPlotted, isTimeFixed, h2);
+        multiple_shooting_direct(ymd, tmd, ymdn, tmdn, yma, 42, man_grid_size, VNCSEM, isPlotted, h2);
         //multiple_shooting_direct_variable_time(ymd, tmd, ymdn, tmdn, yma, 42, man_grid_size, VNCSEM, isPlotted, isTimeFixed, h2);
         cout << "End of diffcorr in " << toc();
 
@@ -7058,7 +6886,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_DEP(int ofts_order,
     // -1. Get the default coordinates system from the coord_type
     //===============================================================================================
     int dcs  = default_coordinate_system(coord_type);
-    //int fwrk = default_framework(coord_type);
+    //int coordsys = default_framework(coord_type);
 
     //===============================================================================================
     // 0. Time on each orbit
@@ -7389,7 +7217,6 @@ int ref_CMU_EM_to_CM_SEM_MSD_DEP(int ofts_order,
         //===============================================================================================
         // 6.5 Differential correction & final trajectory
         //===============================================================================================
-        int isTimeFixed = 1;
         int isPlotted   = 1;
         //multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, yma, 42, traj_grid_size, coord_type, isPlotted, isTimeFixed, h2);
 
@@ -7400,7 +7227,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_DEP(int ofts_order,
 
 
         msdvt_CM_RCM(y_traj, t_traj, y_traj_n, t_traj_n, yma, 42,
-                     traj_grid_size, coord_type, isPlotted, isTimeFixed, h2,
+                     traj_grid_size, coord_type, isPlotted, h2,
                      Mcoc_EM, Mcoc_SEM, Vcoc_SEM,
                      DCM_EM_TFC, DCM_SEM_TFC,
                      CM_SEM_TFC,
@@ -7634,8 +7461,219 @@ int ref_CMU_EM_to_CM_SEM_MSD_DEP(int ofts_order,
 }
 
 
+//=======================================================================================================================================
+//
+//         Old code, what for (blimey...)?
+//
+//=======================================================================================================================================
+
+/**
+ *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the MANIFOLD trajectory (manifold leg).
+ *         The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CMS of SEML2. The time at each point
+ *         except the first one is allowed to vary. A continuation procedure can be performed to get more than one refined solution.
+ **/
+int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_IN_PROGRESS(int man_grid_size,
+        int coord_type,
+        double st_EM[],
+        double st_SEM[],
+        double t0_EM,
+        double tf_EM,
+        vector<Oftsc> &CM_EM_NC,
+        vector<Oftsc> &CM_EM_TFC,
+        matrix<Oftsc> &DCM_EM_TFC,
+        matrix<Ofsc>  &Mcoc_EM,
+        matrix<Ofsc>  &Pcoc_EM,
+        matrix<Ofsc>  &MIcoc_EM,
+        matrix<Ofsc>  &PIcoc_EM,
+        vector<Ofsc>  &Vcoc_EM,
+        int isPlanar)
+{
+    //===============================================================================================
+    // 0. Get the default coordinates system from the coord_type
+    //===============================================================================================
+    int dcs  = default_coordinate_system(coord_type);
+
+    //===============================================================================================
+    // 1. Time on each orbit
+    //===============================================================================================
+    double tof_seml_SEM = 5*SEML.us_sem.T;   //TOF on SEML2 orbit
+
+    //===============================================================================================
+    // 3. Init the gnuplot
+    //===============================================================================================
+    //----------------------------------------------------------
+    //Gnuplot window
+    //----------------------------------------------------------
+    gnuplot_ctrl *h2;
+    h2 = gnuplot_init();
+
+    //----------------------------------------------------------
+    //Notable points in SEM system
+    //----------------------------------------------------------
+    double **semP_coord = dmatrix(0, 6, 0, 2);
+    switch(coord_type)
+    {
+    case PSEM:
+        semPoints(0.0, semP_coord);
+        semPlot(h2, semP_coord);
+        break;
+    case NCSEM:
+    case VNCSEM:
+        semNCPoints(0.0, semP_coord);
+        semPlot(h2, semP_coord);
+        break;
+
+    case PEM:
+        emPoints(0.0, semP_coord);
+        emPlot(h2, semP_coord);
+        break;
+    case NCEM:
+    case VNCEM:
+        emNCPoints(0.0, semP_coord);
+        emPlot(h2, semP_coord);
+        break;
+    }
 
 
+    //===============================================================================================
+    // 5. Structures to compute the final orbit about SEML2
+    //===============================================================================================
+    //--------------------------------------
+    // Center-manifold
+    //--------------------------------------
+    vector<Oftsc> CMS_SEM_NC;      //center manifold in NC coordinates
+    vector<Oftsc> CMS_SEM_TFC;     //center manifold in TFC coordinates
+    CMS_SEM_NC.reserve(6);
+    for(int i = 0; i <6; i++) CMS_SEM_NC.push_back(Oftsc(5, OFTS_ORDER, OFS_NV, OFS_ORDER));
+    CMS_SEM_TFC.reserve(6);
+    for(int i = 0; i <6; i++) CMS_SEM_TFC.push_back(Oftsc(5, OFTS_ORDER, OFS_NV, OFS_ORDER));
+    //Update CM
+    readVOFTS_bin(CMS_SEM_NC,  SEML_SEM.cs.F_PMS+"W/W",  OFS_ORDER);
+    readVOFTS_bin(CMS_SEM_TFC, SEML_SEM.cs.F_PMS+"W/Wh", OFS_ORDER);
+
+
+    //--------------------------------------
+    // COC objects
+    //--------------------------------------
+    matrix<Ofsc>  Mcoc_SEM(6,6);    //COC matrix
+    matrix<Ofsc>  Pcoc_SEM(6,6);    //COC matrix (Mcoc = Pcoc*Complex matrix)
+    matrix<Ofsc>  MIcoc_SEM(6,6);   //COC matrix = inv(Mcoc)
+    matrix<Ofsc>  PIcoc_SEM(6,6);   //COC matrix = inv(Pcoc)
+    vector<Ofsc>  Vcoc_SEM(6);      //COC vector
+    //Update COC
+    initCOC(Pcoc_SEM, Mcoc_SEM, PIcoc_SEM, MIcoc_SEM, Vcoc_SEM, SEML_SEM);
+
+    //--------------------------------------
+    //Jacobian of the center manifold
+    //--------------------------------------
+    matrix<Oftsc> DCMS_SEM_TFC(6, 5, 5, OFTS_ORDER, OFS_NV, OFS_ORDER);
+    readMOFTS_bin(DCMS_SEM_TFC, SEML_SEM.cs.F_PMS+"DWf/DWhc", OFS_ORDER);
+
+
+    //===============================================================================================
+    // 7. Loop. Only one solution for now!
+    //===============================================================================================
+
+    cout << "-------------------------------------------"  << endl;
+    cout << "  Refinement of EML2-SEML2 arc             "  << endl;
+    cout << "-------------------------------------------"  << endl;
+    //===============================================================================================
+    // @TODO: ADD AN ESTIMATE OF THE DISTANCE OF PROJECTION + by reproducing the PROJECTION METHOD
+    // THIS TIME ON THE CMS of SEML2! (set s5 of SEML2 to zero, or maybe a rough search...)
+    // In this way, only 3 inputs: s1, s3 and t0.
+    //===============================================================================================
+
+    char ch;
+    printf("Press ENTER to go on\n");
+    scanf("%c",&ch);
+
+    //===============================================================================================
+    // 6.1 Initialize local variables: EM
+    //===============================================================================================
+    //---------------------------------------------------------------------
+    //Initialize the initial conditions (both NC and RCM coordinates)
+    //---------------------------------------------------------------------
+
+    //---------------------------------------------------------------------
+    // Initialisation of the orbit structure
+    //---------------------------------------------------------------------
+    Ofsc orbit_ofs_EM(OFS_ORDER);
+    OdeStruct driver_EM;
+    SingleOrbit orbit_EM;
+    //Root-finding
+    const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
+    //Stepper
+    const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
+    //Init ode structure
+    init_ode_structure(&driver_EM, T, T_root, PREC_ABS, PREC_REL, PREC_ROOT, PREC_DIFF,
+                       6, PREC_HSTART, qbfbp_vfn_novar, NULL, &SEML_EM);
+    //Init routine
+    init_orbit(orbit_EM, &CM_EM_NC, &CM_EM_TFC,
+               &Mcoc_EM, &MIcoc_EM, &Vcoc_EM, &orbit_ofs_EM, OFTS_ORDER, OFS_ORDER,
+               5, 1, t0_EM, tf_EM, SEML.us_em.T/5, &driver_EM, &SEML_EM);
+
+    //===============================================================================================
+    // 6.2 Initialize local variables: SEM
+    //===============================================================================================
+    //---------------------------------------------------------------------
+    //Initialize the initial conditions (both NC and RCM coordinates)
+    //---------------------------------------------------------------------
+    //Initial time in SEM units
+    double t0_SEM = tf_EM*SEML.us_em.ns;
+
+    //---------------------------------------------------------------------
+    // Initialisation of the orbit structure
+    //---------------------------------------------------------------------
+    Ofsc orbit_ofs_SEM(OFS_ORDER);
+    OdeStruct driver_SEM;
+    SingleOrbit orbit_SEM;
+
+    //Init ode structure
+    init_ode_structure(&driver_SEM, T, T_root, PREC_ABS, PREC_REL, PREC_ROOT, PREC_DIFF,
+                       6, PREC_HSTART, qbfbp_vfn_novar, NULL, &SEML_SEM);
+    //Init routine
+    init_orbit(orbit_SEM, &CMS_SEM_NC, &CMS_SEM_TFC,
+               &Mcoc_SEM, &MIcoc_SEM, &Vcoc_SEM, &orbit_ofs_SEM, OFTS_ORDER, OFS_ORDER,
+               5, 1, t0_SEM, t0_SEM+tof_seml_SEM, SEML.us_sem.T, &driver_SEM, &SEML_SEM);
+
+
+    //===============================================================================================
+    // 6.2 Initialize local variables: MANIFOLD
+    //===============================================================================================
+    //---------------------------------------------------------------------
+    // Update the initial state in the orbit_EM, with the RCM coordinates
+    //---------------------------------------------------------------------
+    orbit_update_ic(orbit_EM, st_EM, t0_EM);
+
+    //---------------------------------------------------------------------
+    // Update the initial state in the orbit_SEM, with the RCM coordinates
+    //---------------------------------------------------------------------
+    orbit_update_ic(orbit_SEM, st_SEM, t0_SEM);
+
+
+    //===============================================================================================
+    // 6.2 Multiple shooting procedure
+    //===============================================================================================
+    if(isPlanar)
+    {
+        ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR(orbit_EM, orbit_SEM,
+                                              DCM_EM_TFC, DCMS_SEM_TFC, dcs, coord_type, man_grid_size, h2);
+    }
+    else
+    {
+        ref1_CMU_EM_to_CMS_SEM_MSD_RCM_3D(orbit_EM, orbit_SEM,
+                                       DCM_EM_TFC, DCMS_SEM_TFC, dcs, coord_type, man_grid_size, h2);
+    }
+
+    //----------------------------------------------------------
+    //Gnuplot window
+    //----------------------------------------------------------
+    printf("Press ENTER to go close\n");
+    scanf("%c",&ch);
+    gnuplot_close(h2);
+
+    return 0;
+}
 
 //=======================================================================================================================================
 //
@@ -7969,7 +8007,9 @@ int int_sorted_sol_CMU_EM_to_CM_SEM(int ofts_order,
         //---------------------------------------------------------------------
         //To SEM coordinates
         //---------------------------------------------------------------------
-        NCtoSYS_vec(y_man_NCSEM, t_man_SEM, y_man_SEM, man_grid_size, &SEML_SEM);
+        //NCtoSYS_vec(y_man_NCSEM, t_man_SEM, y_man_SEM, man_grid_size, &SEML_SEM); //old version
+        qbcp_coc_vec(y_man_NCSEM, t_man_SEM, y_man_SEM, man_grid_size, NCSEM, PSEM);
+
 
         //---------------------------------------------------------------------
         //Hamiltonian

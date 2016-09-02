@@ -543,7 +543,13 @@ void gnuplot_plot_xyz(
     }
     fclose(tmpfd) ;
 
-    gnuplot_plot_atmpfile_3d(handle,tmpfname,title, ls, lt, lw, lc);
+    //Check that z is different from zero
+    double zsum = 0.0;
+    for(i = 0; i< n; i++) zsum += z[i];
+
+    //Plot
+    if(zsum !=0) gnuplot_plot_atmpfile_3d(handle,tmpfname,title, ls, lt, lw, lc);
+    else gnuplot_plot_atmpfile(handle,tmpfname,title, ls, lt, lw, lc);
     return ;
 }
 

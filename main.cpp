@@ -17,12 +17,12 @@ extern "C" {
 }
 
 // TYPE OF COMPUTATIONS
-#define COMP_CM_EML2_TO_CM_SEML  0
-#define COMP_CM_EML2_TO_CMS_SEML 1
-#define COMP_SINGLE_ORBIT        2
-#define COMP_VF_TEST             3
-#define COMP_CM_EML2_TO_CMS_SEML_READ  4
-
+#define COMP_CM_EML2_TO_CM_SEML        0    //EML2 Center Manifold to SEML2 Center Manifold
+#define COMP_CM_EML2_TO_CMS_SEML       1    //EML2 Center Manifold to SEML2 Center-Stable Manifold
+#define COMP_SINGLE_ORBIT              2    //just some example of solutions
+#define COMP_CM_EML2_TO_CMS_SEML_READ  3    //Read
+#define COMP_VF_TEST                   4    //Test of the QBCP vector field. Should probably be put in OOFTDA
+#define COMP_CM_EML2_TO_CM_SEML_REFINE 5    //EML2 Center Manifold to SEML2 Center Manifold
 using namespace std;
 
 /************* NOTES ********************
@@ -47,7 +47,7 @@ int main()
     //=====================================================================
     // Type of computation
     //=====================================================================
-    int COMPTYPE = COMP_CM_EML2_TO_CMS_SEML;//COMP_CM_EML2_TO_CMS_SEML;//COMP_SINGLE_ORBIT;//
+    int COMPTYPE = COMP_CM_EML2_TO_CM_SEML_REFINE;//COMP_CM_EML2_TO_CMS_SEML;//COMP_CM_EML2_TO_CMS_SEML;//COMP_SINGLE_ORBIT;//
 
     //=====================================================================
     // cout settings
@@ -67,7 +67,7 @@ int main()
     //MODEL
     MODEL_TYPE = M_QBCP;
     //OFTS_ORDER
-    OFTS_ORDER = 16; //IF 16 is set, the results came from the server (OFTS_ORDER = 20...) NOT the best practice!
+    OFTS_ORDER = 15; //IF 16 is set, the results came from the server (OFTS_ORDER = 20...) NOT the best practice!
     //OFS_ORDER
     if(MODEL_TYPE == M_RTBP) OFS_ORDER  = 0;
     else OFS_ORDER  = 30;
@@ -76,15 +76,16 @@ int main()
     //=====================================================================
     // Configuration parameters
     //=====================================================================
-    int model = 0, dcs = 0, isNorm = 0, li_EM = 0, li_SEM = 0, pms_EM = 0, pms_SEM = 0, mType_EM = 0, mType_SEM = 0, reduced_nv = 0;
+    int model = 0, coordsys = 0, isNorm = 0, li_EM = 0, li_SEM = 0, pms_EM = 0, pms_SEM = 0, mType_EM = 0, mType_SEM = 0, reduced_nv = 0;
     switch(COMPTYPE)
     {
         //================================
         // Projection CMU EML2 to CM SEMLi
         //================================
     case COMP_CM_EML2_TO_CM_SEML:
+    case COMP_CM_EML2_TO_CM_SEML_REFINE:
         model     = MODEL_TYPE;
-        dcs       = F_EM;
+        coordsys  = F_EM;
         isNorm    = 1;
         li_EM     = 2;
         li_SEM    = 2;
@@ -100,7 +101,7 @@ int main()
     case COMP_CM_EML2_TO_CMS_SEML:
     case COMP_CM_EML2_TO_CMS_SEML_READ:
         model     = MODEL_TYPE;
-        dcs       = F_EM;
+        coordsys       = F_EM;
         isNorm    = 1;
         li_EM     = 2;
         li_SEM    = 2;
@@ -115,7 +116,7 @@ int main()
         //================================
     case COMP_SINGLE_ORBIT:
         model     = MODEL_TYPE;
-        dcs       = F_EM;
+        coordsys       = F_EM;
         isNorm    = 1;
         li_EM     = 2;
         li_SEM    = 2;
@@ -130,7 +131,7 @@ int main()
         //================================
     case COMP_VF_TEST:
         model     = MODEL_TYPE;
-        dcs       = F_EM;
+        coordsys       = F_EM;
         isNorm    = 1;
         li_EM     = 2;
         li_SEM    = 2;
@@ -145,7 +146,7 @@ int main()
     //Define the number of reduced variables
     //depending on the type of manifold
     //=====================================================================
-    if(dcs == F_EM)
+    if(coordsys == F_EM)
     {
         switch(mType_EM)
         {
@@ -190,7 +191,7 @@ int main()
     // Initialization of the environnement
     // Mandatory to perform any computation
     //=====================================================================
-    initialize_environment(li_EM, li_SEM, isNorm, model, dcs, pms_EM, pms_SEM, mType_EM, mType_SEM);
+    initialize_environment(li_EM, li_SEM, isNorm, model, coordsys, pms_EM, pms_SEM, mType_EM, mType_SEM);
 
     //--------------------------------------
     // Center-((Un)stable) manifolds
@@ -228,7 +229,7 @@ int main()
     // Initial conditions
     //=====================================================================
     double st0[reduced_nv];
-    switch(dcs)
+    switch(coordsys)
     {
     case F_EM:
 
@@ -273,13 +274,13 @@ int main()
     int    TSIZE = 0;
 
     //UNSTABLE MANIFOLD AT EML2
-    double GMIN_S1  = -35;
-    double GMAX_S1  = +35;
-    int    GSIZE_S1 = 100;
+    double GMIN_S1  = 20;
+    double GMAX_S1  = 20;
+    int    GSIZE_S1 = 0;
 
-    double GMIN_S3  = -35;
-    double GMAX_S3  = +35;
-    int    GSIZE_S3 = 100;
+    double GMIN_S3  = -17;
+    double GMAX_S3  = -10;
+    int    GSIZE_S3 = 1;
 
     //TRAJECTORTY REFINMENT
     int MSIZE = 500;    //number of points on each trajectory
@@ -337,9 +338,7 @@ int main()
         // Projection CMU EML2 to CM SEMLi
         //================================
     case COMP_CM_EML2_TO_CM_SEML:
-
         tic();
-
         //----------------------
         // Compute initial conditions in CMU EML2 on a given grid
         //----------------------
@@ -358,7 +357,7 @@ int main()
         //----------------------
         // Compute the best solutions from previous computation
         //----------------------
-        //int_sorted_sol_CMU_EM_to_CM_SEM(OFTS_ORDER, MSIZE, ISPAR, CM_NC, CM_TFC, Mcoc, Pcoc, MIcoc, PIcoc, Vcoc);
+        int_sorted_sol_CMU_EM_to_CM_SEM(OFTS_ORDER, MSIZE, ISPAR, CM_NC, CM_TFC, Mcoc, Pcoc, MIcoc, PIcoc, Vcoc);
         cout << "End of int_sorted_sol_CMU_EM_to_CM_SEM in " << toc() << endl;
         break;
 
@@ -366,26 +365,9 @@ int main()
         // Projection CMU EML2 to CMS SEMLi
         //================================
     case COMP_CM_EML2_TO_CMS_SEML:
-
-
-        //----------------------
-        // Multiple shooting on the manifold leg only
-        //ref_CMU_EM_to_CM_SEM_MSD(OFTS_ORDER, 10, 1, CM_NC, CM_TFC, Mcoc, Pcoc, MIcoc, PIcoc, Vcoc);
-
-        //----------------------
-        // Multiple shooting on the whole trajectory (base for JPL refinment)
-        //ref_CMU_EM_to_CM_SEM_MSD_COMP(OFTS_ORDER, 100, NCSEM, CM_NC, CM_TFC, Mcoc, Pcoc, MIcoc, PIcoc, Vcoc);
-
-        //----------------------
-        // Multiple shooting: CMU to CM (DEPRECATED)
-        //ref_CMU_EM_to_CM_SEM_MSD_DEP(OFTS_ORDER, 50, NCSEM, CM_NC, CM_TFC, DCM_TFC, Mcoc, Pcoc, MIcoc, PIcoc, Vcoc, false);
-
-        //----------------------
-        // Multiple shooting: CMU to free boundary (SEML2 orbit included)
-        //ref_CMU_EM_to_CM_SEM_MSD_PART(OFTS_ORDER, 60, NCSEM, CM_NC, CM_TFC, DCM_TFC, Mcoc, Pcoc, MIcoc, PIcoc, Vcoc);
-
         //----------------------
         // Multiple shooting: CMU to CMS, with variable times
+        //----------------------
         ref_CMU_EM_to_CMS_SEM_MSD_RCM_2(20, NCSEM, CM_NC, CM_TFC, DCM_TFC, Mcoc, Pcoc, MIcoc, PIcoc, Vcoc, ISPLANAR, ISSAVED, ISUSERDEFINED);
 
         //----------------------
@@ -404,6 +386,29 @@ int main()
         //ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ_OPT(MSIZE, 20, NCSEM, st_EM, 0.9*SEML.us.T, TM, TM, GMIN_S3, GMAX_S3,
         //                                                      GSIZE_S3, CM_NC, CM_TFC, DCM_TFC,
         //                                                      Mcoc, Pcoc, MIcoc, PIcoc, Vcoc, YNMAX, SNMAX, ISPLANAR, ISPAR);
+
+        break;
+
+        //================================
+        // Refinement of the projection CMU EML2 to CM SEMLi
+        //================================
+    case COMP_CM_EML2_TO_CM_SEML_REFINE:
+
+        //----------------------
+        // Multiple shooting on the whole trajectory (base for JPL refinment)
+        ref_CMU_EM_to_CM_SEM_MSD_COMP(OFTS_ORDER, 60, NCSEM, CM_NC, CM_TFC, Mcoc, Pcoc, MIcoc, PIcoc, Vcoc);
+
+        //----------------------
+        // Multiple shooting on the manifold leg only
+        //ref_CMU_EM_to_CM_SEM_MSD(OFTS_ORDER, 10, 1, CM_NC, CM_TFC, Mcoc, Pcoc, MIcoc, PIcoc, Vcoc);
+
+        //----------------------
+        // Multiple shooting: CMU to free boundary (SEML2 orbit included)
+        //ref_CMU_EM_to_CM_SEM_MSD_PART(OFTS_ORDER, 60, NCSEM, CM_NC, CM_TFC, DCM_TFC, Mcoc, Pcoc, MIcoc, PIcoc, Vcoc);
+
+        //----------------------
+        // Multiple shooting: CMU to CM (DEPRECATED)
+        //ref_CMU_EM_to_CM_SEM_MSD_DEP(OFTS_ORDER, 50, NCSEM, CM_NC, CM_TFC, DCM_TFC, Mcoc, Pcoc, MIcoc, PIcoc, Vcoc, false);
 
         break;
 
@@ -440,6 +445,14 @@ int main()
         // Just some examples of solutions
         //================================
     case COMP_SINGLE_ORBIT:
+        cout << "mu " << SEML_SEM.us_sem.mu_SEM << endl;
+        cout << "L "  << SEML_SEM.cs_sem.cr3bp.L << endl;
+        cout << "T " << SEML_SEM.cs_sem.cr3bp.T << endl;
+        cout << "rh " << SEML_SEM.cs_em.cr3bp.rh << endl;
+        cout << "mu " << SEML_SEM.cs_em.cr3bp.mu << endl;
+        cout << "g1"  << SEML_SEM.cs_em.cr3bp.l1.gamma_i << endl;
+        cout << "g2 " << SEML_SEM.cs_em.cr3bp.l2.gamma_i << endl;
+        cout << "g3 " << SEML_SEM.cs_em.cr3bp.l3.gamma_i << endl;
         gridOrbit(st0, +6.016997770510415e+00, -2.793897158902917e+01, 1e-2, CM_NC, CM_TFC, Mcoc, Pcoc, MIcoc, PIcoc, Vcoc);
         break;
         //================================

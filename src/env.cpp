@@ -29,10 +29,10 @@ int MODEL_TYPE;
 //-----------------------------------------------------------------------------------------------------------------------------
 //QBCP
 //-----------------------------------------------------------------------------------------------------------------------------
-QBCP SEM;              ///global variable that describes the Sun-Earth-Moon system
-QBCP_L SEML;           ///global variable that describes the Sun-Earth-Moon system around Li
-QBCP_L SEML_EM;           ///global variable that describes the Sun-Earth-Moon system around EMLi
-QBCP_L SEML_SEM;       ///global variable that describes the Sun-Earth-Moon system around SEMLi
+QBCP SEM;              //global structure that describes the Sun-Earth-Moon system
+QBCP_L SEML;           //global structure that describes the Sun-Earth-Moon system around Li
+QBCP_L SEML_EM;        //global structure that describes the Sun-Earth-Moon system around EMLi
+QBCP_L SEML_SEM;       //global structure that describes the Sun-Earth-Moon system around SEMLi
 
 /**
  *   \brief Initialization of the environnement (Sun, Earth, Moon, Li...).
@@ -42,102 +42,16 @@ QBCP_L SEML_SEM;       ///global variable that describes the Sun-Earth-Moon syst
  *    Note that, in order for the initialization to be complete - Sun-(Earth+Moon) motion given as Fourier series within SEML -
  *    the routine qbtbp(true) must have been run *once.
  **/
-void initialize_environment(int li_EM, int li_SEM, int isNormalized, int model, int fwrk, int pmStyle_EM, int pmStyle_SEM, int manType_EM, int manType_SEM)
+void initialize_environment(int li_EM, int li_SEM, int isNormalized, int model, int coordsys, int pmStyle_EM, int pmStyle_SEM, int manType_EM, int manType_SEM)
 {
     //Init the Sun-Earth-Moon problem
     init_QBCP(&SEM, SUN, EARTH, MOON, model);
     //Init the Sun-Earth-Moon problem focused on one libration point
-    init_QBCP_L(&SEML, &SEM, isNormalized, li_EM, li_SEM, false, model, fwrk, pmStyle_EM, pmStyle_SEM, manType_EM, manType_SEM);
+    init_QBCP_L(&SEML, &SEM, isNormalized, li_EM, li_SEM, false, model, coordsys, pmStyle_EM, pmStyle_SEM, manType_EM, manType_SEM);
     //Init the Sun-Earth-Moon problem focused on one EM libration point
     init_QBCP_L(&SEML_EM, &SEM, isNormalized, li_EM, li_SEM, false, model, F_EM, pmStyle_EM, pmStyle_SEM, manType_EM, manType_SEM);
     //Init the Sun-Earth-Moon problem focused on one SEM libration point
     init_QBCP_L(&SEML_SEM, &SEM, isNormalized, li_EM, li_SEM, false, model, F_SEM, pmStyle_EM, pmStyle_SEM, manType_EM, manType_SEM);
-}
-
-
-//---------------------------------------
-//Center manifold
-//---------------------------------------
-//vector<Oftsc>  CM;     ///center manifold in NC coordinates
-//vector<Oftsc> CMh;     ///center manifold in TFC coordinates
-
-/**
- *   \brief Initialization of the parameterization center manifold around LI, LI being given as an integer in the file parameters.h.
- *
- *    The parameterization is retrieved from text file given in the folder F_PM, F_PM being a global string array defined in parameters.h.
- *    Of course, these data files must have been previously computed through the use of the routine pm(int, int).
- *    Moreover, as always, the Fourier-Taylor algebra must have been initialized by the routine FTDA::init in the main program.
- *    The global variables initialized by this routine are:
- *    - vector<Oftsc>  CM, center manifold in NC coordinates
- *    - vector<Oftsc> CMh, center manifold in TFC coordinates
- *    - matrix<Oftsc> JCM, jacobian of CM
- *    - vector<Oftsc>  Fh, reduced vector field
- *
- **/
-void initCM(QBCP_L &qbcp)
-{
-    //Memory allocation
-    //CM     = vector<Oftsc>(NV);
-    //CMh    = vector<Oftsc>(NV);
-
-    //Read from bin files
-    updateCM(qbcp);
-}
-
-/**
- *   \brief Update of the parameterization center manifold around LI, LI being given as an integer in the file parameters.h.
- *
- *    The parameterization is retrieved from text file given in the folder F_PM, F_PM being a global string array defined in parameters.h.
- *    Of course, these data files must have been previously computed through the use of the routine pm(int, int).
- *    Moreover, as always, the Fourier-Taylor algebra must have been initialized by the routine FTDA::init in the main program.
- *    The global variables initialized by this routine are:
- *    - vector<Oftsc>  CM, center manifold in NC coordinates
- *    - vector<Oftsc> CMh, center manifold in TFC coordinates
- *    - matrix<Oftsc> JCM, jacobian of CM
- *    - vector<Oftsc>  Fh, reduced vector field
- *
- **/
-void updateCM(QBCP_L &qbcp)
-{
-    //Read from bin files
-    //readVOFTS_bin(CM,    qbcp.cs.F_PMS+"W/W",         OFS_ORDER);
-    //readVOFTS_bin(CMh,   qbcp.cs.F_PMS+"W/Wh",        OFS_ORDER);
-}
-
-
-//---------------------------------------
-//COC
-//---------------------------------------
-//matrix<Ofsc>  Mcoc;    ///COC matrix
-//matrix<Ofsc>  Pcoc;    ///COC matrix (Mcoc = Pcoc*Complex matrix)
-//matrix<Ofsc>  MIcoc;    ///COC matrix = inv(Mcoc)
-//matrix<Ofsc>  PIcoc;    ///COC matrix = inv(Pcoc)
-//vector<Ofsc>  Vcoc;    ///COC vector
-
-/**
- *  Main routine for the update of the COC
- **/
-void updateCOC(QBCP_L &qbcp)
-{
-    //Read from files
-    //initCOC(Pcoc, Mcoc, PIcoc, MIcoc, Vcoc, qbcp);
-}
-
-
-/**
- *  Main routine for the initialization of the COC
- **/
-void initCOC(QBCP_L &qbcp)
-{
-    //Memory allocation
-    //    Pcoc  = matrix<Ofsc>(NV,NV);
-    //    Mcoc  = matrix<Ofsc>(NV,NV);
-    //    PIcoc = matrix<Ofsc>(NV,NV);
-    //    MIcoc = matrix<Ofsc>(NV,NV);
-    //    Vcoc  = vector<Ofsc>(NV);
-
-    //Read from files
-    updateCOC(qbcp);
 }
 
 
@@ -323,24 +237,27 @@ void initCOC(matrix<Ofsc> &P,
 //            Init routines
 //-----------------------------------------------------------------------------------------------------------------------------
 /**
-* \brief Initialize a QBCP_L structure, i.e. a QBCP focused on two libration points: one the EM system and one of the SEM system.
-*        The libration point must be L1 or L2 both for the EM and SEM systems.
-* \param qbcp_l a pointer on the QBCP_L structure to init.
-* \param qbcp a pointer on the QBCP parent structure.
-* \param isNormalized: are the equations of motion normalized?
-* \param li_EM number of the libration point considered for the EM system
-* \param li_SEM number of the libration point considered for the SEM system
-* \param isNew an integer: equal to 1 if no solution has been previously computed with the routine qbtbp(), 0 otherwise
-* \param model: QBCP, BCP, CRTBP...
-* \param fwrk: default coordinate system for this structure: for example:
-*                      - if fwrk == F_EM,  the qbcp_l is focused on the li_EM  point of the EM  system.
-*                      - if fwrk == F_SEM, the qbcp_l is focused on the li_SEM point of the SEM system.
-*        The default focus can be change dynamically during computation.
-*
-*   Note that the QBCP structure is used only for the initialization of the coordinate systems. More precisely, it contains some parameters
-*   specific to each libration point (gamma), via its CR3BP structures.
-**/
-void init_QBCP_L(QBCP_L *qbcp_l, QBCP *qbcp, int isNormalized, int li_EM, int li_SEM, int isNew, int model, int fwrk, int pmType_EM, int pmType_SEM, int manType_EM, int manType_SEM)
+ * \brief Initialize a QBCP_L structure, i.e. a QBCP focused on two libration points: one the EM system and one of the SEM system.
+ *        The libration point must be L1 or L2 both for the EM and SEM systems.
+ * \param qbcp_l a pointer on the QBCP_L structure to init.
+ * \param qbcp a pointer on the QBCP parent structure.
+ * \param isNormalized: are the equations of motion normalized? Probably deprecated, should be always true. Kept for consistency with older code.
+ * \param li_EM number of the libration point considered for the EM system
+ * \param li_SEM number of the libration point considered for the SEM system
+ * \param isNew an integer: equal to 1 if no solution has been previously computed with the routine qbtbp(), 0 otherwise
+ * \param model: QBCP, BCP, CRTBP...
+ * \param coordsys: default coordinate system for this structure: for example:
+ *                      - if coordsys == F_EM,  the qbcp_l is focused on the li_EM  point of the EM  system.
+ *                      - if coordsys == F_SEM, the qbcp_l is focused on the li_SEM point of the SEM system.
+ *        The default focus can be change dynamically during computation, via the routines changeCOORDSYS and changeLICOORDSYS.
+ * \param pmType: type of parameterization of the manifolds (PMS_GRAPH, PMS_NORMFORM...). Note that the pmType influences the number of coefficients taken into account in the Fourier series! Indeed, for graph method, the reduced vector field is non autonomous, and full Fourier series are used. For normal form, the reduced vector field is quasi autonomous and we can safely reduce the order of the series to 5 (11 coefficients taken into account).
+ * \param manType_EM: type of manifold about li_EM (MAN_CENTER, MAN_CENTER_S...).
+ * \param manType_SEM: type of manifold about li_SEM (MAN_CENTER, MAN_CENTER_S...).
+ *
+ *   Note that the QBCP structure is used only for the initialization of the coordinate systems. More precisely, it contains some parameters
+ *   specific to each libration point (gamma), via its CR3BP structures (see init_QBCP, the routine that initializes the QBCP structures).
+ **/
+void init_QBCP_L(QBCP_L *qbcp_l, QBCP *qbcp, int isNormalized, int li_EM, int li_SEM, int isNew, int model, int coordsys, int pmType_EM, int pmType_SEM, int manType_EM, int manType_SEM)
 {
     //-------------------------------------------------------------------------------------------------
     //      Common to all models
@@ -452,7 +369,7 @@ void init_QBCP_L(QBCP_L *qbcp_l, QBCP *qbcp, int isNormalized, int li_EM, int li
 
     //-------------------------------------------------------------------------------------------------
     // DEFAULT SETTINGS
-    // The flag fwrk determine the default focus; either on the Earth-Moon or Sun-Earth+Moon framework
+    // The flag coordsys determine the default focus; either on the Earth-Moon or Sun-Earth+Moon framework
     //-------------------------------------------------------------------------------------------------
     //Coord. syst. for the EM point
     //--------------------
@@ -488,8 +405,8 @@ void init_QBCP_L(QBCP_L *qbcp_l, QBCP *qbcp, int isNormalized, int li_EM, int li
     //--------------------
     //Default Li, Unit & Coord. system
     //--------------------
-    qbcp_l->fwrk = fwrk;
-    switch(fwrk)
+    qbcp_l->coordsys = coordsys;
+    switch(coordsys)
     {
     case F_EM:
         qbcp_l->us = qbcp_l->us_em;
@@ -502,7 +419,7 @@ void init_QBCP_L(QBCP_L *qbcp_l, QBCP *qbcp, int isNormalized, int li_EM, int li
         qbcp_l->li = qbcp_l->li_SEM;
         break;
     default:
-        cout << "init_QBCP_L. Warning: unknown fwrk." << endl;
+        cout << "init_QBCP_L. Warning: unknown coordsys." << endl;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -535,7 +452,7 @@ void init_CR3BP(CR3BP *cr3bp, int n1, int n2)
     cr3bp->T  = (*cr3bp).m2.T;                                      //Time parameter = sidereal period of m2
     cr3bp->R1 = (*cr3bp).m1.Req;
     cr3bp->R2 = (*cr3bp).m2.Req;
-    cr3bp->rh = pow((*cr3bp).mu/3,1/3.0);                          //Hill's radius adim formula
+    cr3bp->rh = pow((*cr3bp).mu/3.0,1.0/3.0);                          //Hill's radius adim formula
     cr3bp->gprecision = PREC_DIFF;                                     //arbitrary
 
     //Li initialization
@@ -661,10 +578,10 @@ void init_USYS(USYS *usys, int label, int model)
     case M_RTBP:
     case M_ERTBP:
     {
-        //SEM mass ratio: it is REDEFINED here, contrary to the QBCP/BCP case !
-        usys->mu_SEM = (me_EM + mm_EM)/(ms_EM + me_EM + mm_EM);//3.0404233984441761e-06; //(me_EM + mm_EM)/(ms_EM + me_EM + mm_EM);
+        //SEM mass ratio
+        usys->mu_SEM = (me_EM + mm_EM)/(ms_EM + me_EM + mm_EM);
         //SE mass ratio
-        usys->mu_SE  = usys->mu_EM*usys->mu_SEM/(1.0 + usys->mu_EM);//me_EM/(ms_EM + me_EM);
+        usys->mu_SE  = usys->mu_EM*usys->mu_SEM/(1.0 + usys->mu_EM);
 
         switch(label)
         {
@@ -696,7 +613,7 @@ void init_USYS(USYS *usys, int label, int model)
             usys->T  = 2*M_PI/usys->n;
 
             usys->ms = 1.0-usys->mu_SEM;
-            usys->me = usys->mu_SEM;
+            usys->me = usys->mu_SEM; //the Earth contains both the Earth's and the Moon's masses.
             usys->mm = 0.0;//mm_EM/(1.0+ms_EM);
             break;
 
@@ -726,7 +643,7 @@ void init_USYS(USYS *usys, int label, int model)
  * \param csys pointer on the CSYS structure to initialize.
  * \param qbcp_l pointer on the QBCP_L structure that contains csys.
  * \param qbcp pointer on the QBCP structure that contains parameters specific to each libration points (namely, gamma)
- * \param fwrk indix of the coordinate system to use (F_EM, F_SEM).
+ * \param coordsys indix of the coordinate system to use (F_EM, F_SEM).
  * \param li number of the libration point to focus on (L1, L2).
  * \param coefNumber the number of vector field coefficients to initialize. It has been set in the QBCP_init function.
  * \param isNew boolean. if true, the qbtbp has not been computed via the qbtbp() routine, so the vector field coefficients cannot be initialized.
@@ -734,7 +651,7 @@ void init_USYS(USYS *usys, int label, int model)
  *   Note that the QBCP structure is used only for the initialization of the coordinate systems. More precisely, it contains some parameters
  *   specific to each libration point (gamma), via its CR3BP structures.
  **/
-void init_CSYS(CSYS *csys, QBCP_L *qbcp_l, QBCP *qbcp, int fwrk, int li, int coefNumber, int isNew, int pmType, int manType)
+void init_CSYS(CSYS *csys, QBCP_L *qbcp_l, QBCP *qbcp, int coordsys, int li, int coefNumber, int isNew, int pmType, int manType)
 {
     int nf = qbcp_l->nf;
     int model = qbcp_l->model;
@@ -753,18 +670,18 @@ void init_CSYS(CSYS *csys, QBCP_L *qbcp_l, QBCP *qbcp, int fwrk, int li, int coe
         datafolder = "../OOFTDA/data/";
     }
 
-    csys->F_GS     = init_F_FOLDER(datafolder+"PMFFT",  model, fwrk, li);     //Graph style (PM)
-    csys->F_NF     = init_F_FOLDER(datafolder+"NF",     model, fwrk, li);     //Normal form style(PM)
-    csys->F_MS     = init_F_FOLDER(datafolder+"MS",     model, fwrk, li);     //Mixed style (PM)
+    csys->F_GS     = init_F_FOLDER(datafolder+"PMFFT",  model, coordsys, li);     //Graph style (PM)
+    csys->F_NF     = init_F_FOLDER(datafolder+"NF",     model, coordsys, li);     //Normal form style(PM)
+    csys->F_MS     = init_F_FOLDER(datafolder+"MS",     model, coordsys, li);     //Mixed style (PM)
 
-    csys->F_CS     = init_F_FOLDER(datafolder+"CS",     model, fwrk, li);     //Center-stable (PM)
-    csys->F_CU     = init_F_FOLDER(datafolder+"CU",     model, fwrk, li);     //Center-unstable (PM)
-    csys->F_CUS    = init_F_FOLDER(datafolder+"CUS",    model, fwrk, li);     //Center-hyperbolic (PM)
+    csys->F_CS     = init_F_FOLDER(datafolder+"CS",     model, coordsys, li);     //Center-stable (PM)
+    csys->F_CU     = init_F_FOLDER(datafolder+"CU",     model, coordsys, li);     //Center-unstable (PM)
+    csys->F_CUS    = init_F_FOLDER(datafolder+"CUS",    model, coordsys, li);     //Center-hyperbolic (PM)
 
-    csys->F_COEF   = init_F_FOLDER(datafolder+"VF",     model, fwrk, li);     //For integration in a given coord. system
-    csys->F_COC    = init_F_FOLDER(datafolder+"COC",    model, fwrk, li);     //For the change of coordinates of the PM
-    csys->F_PLOT   = init_F_FOLDER("plot",        model, fwrk, li);           //For plot output (gnuplot)
-    csys->F_PRINT  = init_F_FOLDER("fprint",      model, fwrk, li);           //For print output (data used postprocessed in R)
+    csys->F_COEF   = init_F_FOLDER(datafolder+"VF",     model, coordsys, li);     //For integration in a given coord. system
+    csys->F_COC    = init_F_FOLDER(datafolder+"COC",    model, coordsys, li);     //For the change of coordinates of the PM
+    csys->F_PLOT   = init_F_FOLDER("plot",        model, coordsys, li);           //For plot output (gnuplot)
+    csys->F_PRINT  = init_F_FOLDER("fprint",      model, coordsys, li);           //For print output (data used postprocessed in R)
 
     csys->F_QBTBP  = datafolder+"qbtbp/";
 
@@ -809,7 +726,7 @@ void init_CSYS(CSYS *csys, QBCP_L *qbcp_l, QBCP *qbcp, int fwrk, int li, int coe
     //--------------------------------------
     // Unit system associated with csys
     //--------------------------------------
-    switch(fwrk)
+    switch(coordsys)
     {
     case F_EM:
         csys->us = qbcp_l->us_em;
@@ -828,7 +745,7 @@ void init_CSYS(CSYS *csys, QBCP_L *qbcp_l, QBCP *qbcp, int fwrk, int li, int coe
     // Gives the assosicate CR3BP and mu
     //------------------------------
     CR3BP cr3bp_root;
-    switch(fwrk)
+    switch(coordsys)
     {
     case F_EM:
         cr3bp_root  = qbcp->cr3bp1;
@@ -947,7 +864,7 @@ void init_CSYS(CSYS *csys, QBCP_L *qbcp_l, QBCP *qbcp, int fwrk, int li, int coe
             csys->coeffs[4] = 0.0;
             csys->coeffs[5] = 1.0;
 
-            switch(fwrk)
+            switch(coordsys)
             {
             case F_EM:
                 //Sun position
@@ -982,7 +899,7 @@ void init_CSYS(CSYS *csys, QBCP_L *qbcp_l, QBCP *qbcp, int fwrk, int li, int coe
             // Earth, Moon, and Sun €€TODO: a revoir!
             // Mettre dans un fichier txt...
             //----------------------------------------
-            switch(fwrk)
+            switch(coordsys)
             {
             case F_EM:
                 csys->Pe[0] = csys->mu;
@@ -1093,7 +1010,7 @@ void init_QBCP_I(QBCP_I *model,
                  int isNew,
                  int mod1,
                  int mod2,
-                 int frwk, int pmType1, int pmType2)
+                 int coordsys, int pmType1, int pmType2)
 {
     //Initialize the models
     QBCP qbp1, qbp2;
@@ -1101,8 +1018,8 @@ void init_QBCP_I(QBCP_I *model,
     init_QBCP(&qbp2, n1, n2, n3, mod2);
 
     //Initialize the models around the given li point
-    init_QBCP_L(model1, &qbp1, isNormalized, li_EM, li_SEM, isNew, mod1, frwk, pmType1, pmType2, MAN_CENTER, MAN_CENTER);
-    init_QBCP_L(model2, &qbp2, isNormalized, li_EM, li_SEM, isNew, mod2, frwk, pmType1, pmType2, MAN_CENTER, MAN_CENTER);
+    init_QBCP_L(model1, &qbp1, isNormalized, li_EM, li_SEM, isNew, mod1, coordsys, pmType1, pmType2, MAN_CENTER, MAN_CENTER);
+    init_QBCP_L(model2, &qbp2, isNormalized, li_EM, li_SEM, isNew, mod2, coordsys, pmType1, pmType2, MAN_CENTER, MAN_CENTER);
 
     //Store in model
     model->model1 = *model1;
@@ -1129,7 +1046,7 @@ void init_libp(LibrationPoint *libp, CR3BP cr3bp, int number)
     {
     case 1:
         //Gamma
-        gamma_i = cr3bp.rh - 1.0/3.0*pow(cr3bp.rh,2.0)- 1/9*pow(cr3bp.rh,3);                    //initial guess
+        gamma_i = cr3bp.rh - 1.0/3.0*pow(cr3bp.rh,2.0)- 1.0/9*pow(cr3bp.rh,3);                    //initial guess
         gamma_i = rtnewt(polynomialLi, gamma_i, LIBRATION_POINT_PRECISION, cr3bp.mu, number);   //newton-raphson method
         libp->gamma_i = gamma_i;
 
@@ -1143,7 +1060,7 @@ void init_libp(LibrationPoint *libp, CR3BP cr3bp, int number)
 
     case 2:
         //Gamma
-        gamma_i = cr3bp.rh + 1.0/3.0*pow(cr3bp.rh,2.0)- 1/9*pow(cr3bp.rh,3);
+        gamma_i = cr3bp.rh + 1.0/3.0*pow(cr3bp.rh,2.0)- 1.0/9*pow(cr3bp.rh,3);
         gamma_i = rtnewt(polynomialLi, gamma_i, LIBRATION_POINT_PRECISION, cr3bp.mu, number);
         libp->gamma_i = gamma_i;
 
@@ -1414,10 +1331,10 @@ void EMtoNC_prim(double Zc[3], double zc[3], double c1, double gamma)
 /**
  *  \brief Change the default coordinate system
  **/
-void changeDCS(QBCP_L &qbcp_l, int fwrk)
+void changeDCS(QBCP_L &qbcp_l, int coordsys)
 {
-    qbcp_l.fwrk = fwrk;
-    switch(fwrk)
+    qbcp_l.coordsys = coordsys;
+    switch(coordsys)
     {
     case F_EM:
         qbcp_l.us = qbcp_l.us_em;
@@ -1430,21 +1347,21 @@ void changeDCS(QBCP_L &qbcp_l, int fwrk)
         qbcp_l.li = qbcp_l.li_SEM;
         break;
     default:
-        cout << "changeDCS. Warning: unknown fwrk." << endl;
+        cout << "changeDCS. Warning: unknown coordsys." << endl;
     }
 }
 
 /**
  *  \brief Change the default coordinate system and the libration point for this coordinate system
  **/
-void changeLIDCS(QBCP_L &qbcp_l, int fwrk, int li)
+void changeLIDCS(QBCP_L &qbcp_l, int coordsys, int li)
 {
     //Default settings
-    qbcp_l.fwrk = fwrk;  //new default cs
+    qbcp_l.coordsys = coordsys;  //new default cs
     qbcp_l.li = li;      //new default libration point
 
-    //Change the coord. system approprietly: "fwrk" around "li"
-    switch(fwrk)
+    //Change the coord. system approprietly: "coordsys" around "li"
+    switch(coordsys)
     {
     case F_EM:
         switch(li)
@@ -1479,7 +1396,7 @@ void changeLIDCS(QBCP_L &qbcp_l, int fwrk, int li)
         qbcp_l.cs = qbcp_l.cs_sem;
         break;
     default:
-        cout << "changeLIDCS. Warning: unknown fwrk." << endl;
+        cout << "changeLIDCS. Warning: unknown coordsys." << endl;
     }
 }
 
@@ -1532,18 +1449,18 @@ string init_F_MODEL(int model)
 }
 
 /**
- *  \brief Return the string corresponding to the framework (coord. syst.) indix provided (e.g. "EM" if fwrk == F_EM).
+ *  \brief Return the string corresponding to the framework (coord. syst.) indix provided (e.g. "EM" if coordsys == F_EM).
  **/
-string init_F_FWRK(int fwrk)
+string init_F_COORDSYS(int coordsys)
 {
-    switch(fwrk)
+    switch(coordsys)
     {
     case F_EM:
         return  "EM";
     case F_SEM:
         return  "SEM";
     default:
-        cout << "init_F_FWRK. Warning: unknown model." << endl;
+        cout << "init_F_COORDSYS. Warning: unknown model." << endl;
     }
 
     return "EM"; //never here
@@ -1552,9 +1469,9 @@ string init_F_FWRK(int fwrk)
 /**
  *  \brief Return the folder name corresponding to the prefix/model/framework/libration point number combination provided (e.g. "prefix/QBCP/EM/L1").
  **/
-string init_F_FOLDER(string prefix, int model, int fwrk, int li)
+string init_F_FOLDER(string prefix, int model, int coordsys, int li)
 {
-    return prefix+"/"+init_F_MODEL(model)+"/"+init_F_FWRK(fwrk)+"/"+init_F_LI(li)+"/";
+    return prefix+"/"+init_F_MODEL(model)+"/"+init_F_COORDSYS(coordsys)+"/"+init_F_LI(li)+"/";
 }
 
 /**
@@ -1632,7 +1549,7 @@ double cn(QBCP_L& qbcp_l, int n)
 {
     double gamma = qbcp_l.cs.gamma;
     double mu;
-    switch(qbcp_l.fwrk)
+    switch(qbcp_l.coordsys)
     {
     case F_EM:
         mu   = qbcp_l.us.mu_EM;
@@ -1754,7 +1671,6 @@ void polynomialLi(double mu, int number, double y, double *f, double *df)
         break;
     }
 }
-
 
 /**
  *   \brief Number to string inner routine
