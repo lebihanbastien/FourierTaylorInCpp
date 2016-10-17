@@ -41,6 +41,8 @@ public:
     matrix<T>(const int size1_, const int size2_);
     //Only for Oftsc matrices
     matrix<T>(const int size1_, const int size2_, int reduced_nv, int ofts_order, int ofs_nv, int ofs_order);
+    //Only for Ofsc matrices
+    matrix<T>(const int size1_, const int size2_, int ofs_order);
 
     //--------------------------------------------
     //Copy
@@ -57,6 +59,8 @@ public:
     //--------------------------------------------
     //Setters
     //--------------------------------------------
+    void reserve(int i, int j);
+    void mpush_back(T const & value);
     void setCoef(T const & value, int i, int j);
     void addCoef(T const & value, int i, int j);
     template <typename U> void setCoef(U const & value, int i, int j);
@@ -65,9 +69,10 @@ public:
     //--------------------------------------------
     //Getters
     //--------------------------------------------
-    T getCoef(int i, int j) const;
-    T* getCA(int i, int j) const;
+    const T& getCoef(int i, int j) const;
     int getSize(int num) const;
+    T* getCA(int i, int j) const;
+
 
     //--------------------------------------------
     //Operators
@@ -85,7 +90,7 @@ public:
     void tfts_der(T const &a, int ni, int i, int j, int k);
 
 
-    T operator [](int i) const
+    T & operator [](int i) const
     {
         return coef[i];
     }
@@ -93,7 +98,7 @@ public:
     {
         return coef[i];
     }
-    T operator ()(int i, int j) const
+    T & operator ()(int i, int j) const
     {
         return coef[size2*i+j];
     }
@@ -108,7 +113,7 @@ public:
 //---------------------------------------------------------------------------
 //Functions used with T = Ofs<U>
 //---------------------------------------------------------------------------
-void smvprod_ofs(matrix<Ofsc> const& a, vector<Ofsc> const& vIn, vector<Ofsc>& vOut);
+void smvprod_ofs(const matrix<Ofsc>& a, vector<Ofsc> const& vIn, vector<Ofsc>& vOut);
 
 //---------------------------------------------------------------------------
 //Include the implementation .tpp

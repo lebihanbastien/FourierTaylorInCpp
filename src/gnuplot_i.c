@@ -132,6 +132,14 @@ gnuplot_ctrl * gnuplot_init(void)
     {
         handle->tmp_filename_tbl[i] = NULL;
     }
+
+    handle->xrange[0] = 0.0;
+    handle->xrange[1] = 0.0;
+    handle->yrange[0] = 0.0;
+    handle->yrange[1] = 0.0;
+    handle->zrange[0] = 0.0;
+    handle->zrange[1] = 0.0;
+
     return handle;
 }
 
@@ -469,6 +477,44 @@ void gnuplot_plot_x(
  */
 /*--------------------------------------------------------------------------*/
 
+void gnuplot_plotc_xy(
+    gnuplot_ctrl    * handle,
+    const double    * x,
+    const double    * y,
+    int               n,
+    char const      * title,
+    char const      * ls,
+    char const      * lt,
+    char const      * lw,
+    int               lc)
+{
+    int     i ;
+    FILE*   tmpfd ;
+    char const * tmpfname;
+
+    if (handle==NULL || x==NULL || y==NULL || (n<1)) return ;
+
+    /* Open temporary file for output   */
+    tmpfname = gnuplot_tmpfile(handle);
+    tmpfd = fopen(tmpfname, "w");
+
+    if (tmpfd == NULL)
+    {
+        fprintf(stderr,"cannot create temporary file: exiting plot") ;
+        return ;
+    }
+
+    /* Write data to this file  */
+    for (i=0 ; i<n; i++)
+    {
+        fprintf(tmpfd, "%.18e %.18e\n", x[i], y[i]) ;
+    }
+    fclose(tmpfd) ;
+
+    gnuplot_plot_atmpfile(handle,tmpfname,title, ls, lt, lw, lc);
+    return ;
+}
+
 void gnuplot_plot_xy(
     gnuplot_ctrl    *   handle,
     double          *   x,
@@ -543,13 +589,26 @@ void gnuplot_plot_xyz(
     }
     fclose(tmpfd) ;
 
-    //Check that z is different from zero
-    double zsum = 0.0;
-    for(i = 0; i< n; i++) zsum += z[i];
+    //------------------------------------------------------------------------------------
+    //Min and max of xyz
+    //------------------------------------------------------------------------------------
+    for (i=0 ; i<n; i++)
+    {
+        if(z[i] < handle->xrange[0]) handle->xrange[0] = x[i];
+        if(z[i] > handle->xrange[1]) handle->xrange[1] = x[i];
 
+        if(z[i] < handle->yrange[0]) handle->yrange[0] = y[i];
+        if(z[i] > handle->yrange[1]) handle->yrange[1] = y[i];
+
+        if(z[i] < handle->zrange[0]) handle->zrange[0] = z[i];
+        if(z[i] > handle->zrange[1]) handle->zrange[1] = z[i];
+    }
+
+    //------------------------------------------------------------------------------------
     //Plot
-    if(zsum !=0) gnuplot_plot_atmpfile_3d(handle,tmpfname,title, ls, lt, lw, lc);
-    else gnuplot_plot_atmpfile(handle,tmpfname,title, ls, lt, lw, lc);
+    //------------------------------------------------------------------------------------
+    gnuplot_plot_atmpfile_3d(handle,tmpfname,title, ls, lt, lw, lc);
+
     return ;
 }
 
@@ -620,14 +679,15 @@ void gnuplot_fplot_txyz(
     double          * y,
     double          * z,
     int               n,
-    char const      * tmpfname)
+    char const      * tmpfname,
+    char const      *mode)
 {
     int     i ;
     FILE*   tmpfd ;
     if (x==NULL || y==NULL || (n<1)) return ;
 
     /* Open file for output   */
-    tmpfd = fopen(tmpfname, "w");
+    tmpfd = fopen(tmpfname, mode);
 
     if (tmpfd == NULL)
     {
@@ -644,6 +704,38 @@ void gnuplot_fplot_txyz(
 
     return ;
 }
+
+
+void gnuplot_fplot_txyzv(
+    double          *  t,
+    double          ** Z,
+    int             n,
+    char const      * tmpfname,
+    char const      *mode)
+{
+    int     i ;
+    FILE*   tmpfd ;
+    if (Z==NULL || (n<1)) return ;
+
+    /* Open file for output   */
+    tmpfd = fopen(tmpfname, mode);
+
+    if (tmpfd == NULL)
+    {
+        fprintf(stderr,"cannot create file: exiting plot") ;
+        return ;
+    }
+
+    /* Write data to this file. The first point is NOT taken */
+    for (i=0 ; i<n; i++)
+    {
+        fprintf(tmpfd, "%.18e %.18e %.18e %.18e\n", t[i], Z[0][i], Z[1][i], Z[2][i]) ;
+    }
+    fclose(tmpfd) ;
+
+    return ;
+}
+
 
 
 void gnuplot_fplot_txp(
@@ -1113,10 +1205,30 @@ void gnuplot_plot_atmpfile_3d(gnuplot_ctrl * handle,
         break;
     }
 
-    //To avoid warning on zrange
-    //gnuplot_cmd(handle, "set zrange [-1:1]");
-    //gnuplot_cmd(handle, "set view 0,0");
+    //Ranges
+    char xrange[100], yrange[100], zrange[100];
+
+    if(handle->xrange[0] !=0 || handle->xrange[1] != 0) sprintf(xrange, "set xrange [%5.5f:%5.5f]; set autoscale x", handle->xrange[0], handle->xrange[1]);
+    else sprintf(xrange, "set xrange [%5.5f:%5.5f];", -1.0, 1.0);
+    gnuplot_cmd(handle, xrange);
+
+    if(handle->yrange[0] !=0 || handle->yrange[1] != 0) sprintf(yrange, "set yrange [%5.5f:%5.5f]; set autoscale y", handle->yrange[0], handle->yrange[1]);
+    else sprintf(yrange, "set yrange [%5.5f:%5.5f];", -1.0, 1.0);
+    gnuplot_cmd(handle, yrange);
+
+    if(handle->zrange[0] !=0 || handle->zrange[1] != 0) sprintf(zrange, "set zrange [%5.5f:%5.5f]; set autoscale z", handle->zrange[0], handle->zrange[1]);
+    else sprintf(zrange, "set zrange [%5.5f:%5.5f];", -1.0, 1.0);
+    gnuplot_cmd(handle, zrange);
+
+    //View
+    gnuplot_cmd(handle, "set view 0,0");
+
+    //Main command
     gnuplot_cmd(handle, "%s \"%s\" title \"%s\" with %s lt \"%s\" lw %s lc rgb \"%s\"", cmd, tmp_filename, title, ls, lt, lw, handle->pcolor);
+
+
+
+
     handle->nplots++ ;
     return ;
 }

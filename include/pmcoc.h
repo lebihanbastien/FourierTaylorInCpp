@@ -5,6 +5,7 @@
 #include "env.h"
 #include "matrix.h"
 #include "gslc.h"
+#include "eminsem.h"
 
 /**
  * \file pmcoc.h
@@ -64,7 +65,7 @@ void TFCtoTF(const cdouble s1[6], double si[6]);
 // Change of coordinates between the systems
 //---------------------------------------------------------------------------------------------------------------------------------------
 ///**
-// *  \brief COC: Normalized-Centered coordinates to system coordinates. Use in priority instead of NCtoEM or NCtoSEM.
+// *  \brief COC: Normalized-Centered coordinates to system coordinates. Use in priority instead of NCEMmtoEMm or NCSEMmtoSEMm.
 // **/
 //void NCtoSYS(double t, const double yNC[], double yEM[], void *params_void);
 
@@ -119,7 +120,6 @@ void RCMtoNCbyTFC(const double st0[],
                   const int ofs_order,
                   const int reduced_nv,
                   vector<Oftsc> &Wh,
-                  Ofsc &ofs,
                   matrix<Ofsc> &PC,
                   vector<Ofsc> &V,
                   double z1[],
@@ -146,7 +146,6 @@ void CCMtoNCbyTFC(cdouble s0[],
                   const int order,
                   const int ofs_order,
                   vector<Oftsc> &Wh,
-                  Ofsc &ofs,
                   matrix<Ofsc> &PC,
                   vector<Ofsc> &V,
                   double z1[],
@@ -177,9 +176,9 @@ void RCMtoTFC(const double st0[],
  *  \brief Apply the change of variables in zIN/zOut. (OFS version).
  *       The change of variables is of the form: zOut = PC * zIN + V
  **/
-void applyCOC(matrix<Ofsc> &PC,
-              vector<Ofsc> &V,
-              vector<Ofsc> &zIn,
+void applyCOC(const matrix<Ofsc> &PC,
+              const vector<Ofsc> &V,
+              const vector<Ofsc> &zIn,
               vector<Ofsc> &zOut);
 
 
@@ -204,7 +203,9 @@ void CCMtoTFC(cdouble s0[],
 /**
  *  \brief Projection of the current NC state on the central manifold, via CCM coordinates
  **/
-void NCprojCCM(const double z[], const double t, const double n, const int ofs_order, matrix<Ofsc> &CQ, vector<Ofsc> &V, double omega1, double omega3, cdouble sc[], int nv);
+void NCprojCCM(const double z[], const double t, const double n, const int ofs_order,
+               const matrix<Ofsc> &CQ, const vector<Ofsc> &V,
+               double omega1, double omega3, cdouble sc[], int nv);
 
 /**
  *  \brief Projection of the current TFC state on the central manifold, via CCM coordinates
@@ -298,22 +299,22 @@ void evaluateCoefDerivatives(double *alpha, double t, double omega, int order, d
 /**
  *  \brief Evaluate the sum \f$ \sum_{k = 0}^N coef(k) cos(k \omega t)  \f$.
  */
-double evaluateEven(double t, double omega, int order, double *coef, double *cR);
+double evaluateEven(int order, double *coef, double *cR);
 
 /**
  *  \brief Evaluate the sum \f$ \sum_{k = 0}^N - k \omega coef(k) sin(k \omega t)  \f$.
  */
-double evaluateEvenDerivative(double t, double omega,  int order, double *coef, double *sR);
+double evaluateEvenDerivative(double omega, int order, double *coef, double *sR);
 
 /**
  *  \brief Evaluate the sum \f$ \sum_{k = 0}^N coef(k) sin(k \omega t)  \f$.
  */
-double evaluateOdd(double t, double omega,  int order, double *coef, double *sR);
+double evaluateOdd(int order, double *coef, double *sR);
 
 /**
  *  \brief Evaluate the sum \f$ \sum_{k = 0}^N  k \omega coef(k) cos(k \omega t)  \f$.
  */
-double evaluateOddDerivative(double t, double omega,  int order, double *coef, double *cR);
+double evaluateOddDerivative(double omega, int order, double *coef, double *cR);
 
 //-----------------------------------------------------------------------------
 // Evaluate the QBTBP

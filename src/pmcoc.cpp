@@ -234,7 +234,6 @@ void RCMtoNCbyTFC(const double st0[],
                   const int ofs_order,
                   const int reduced_nv,
                   vector<Oftsc> &Wh,
-                  Ofsc &ofs,
                   matrix<Ofsc> &PC,
                   vector<Ofsc> &V,
                   double z1[],
@@ -283,7 +282,6 @@ void CCMtoNCbyTFC(cdouble s0[],
                   const int order,
                   const int ofs_order,
                   vector<Oftsc> &Wh,
-                  Ofsc &ofs,
                   matrix<Ofsc> &PC,
                   vector<Ofsc> &V,
                   double z1[],
@@ -297,8 +295,12 @@ void CCMtoNCbyTFC(cdouble s0[],
 
     //------------------------------------------
     // CCM to TFC
+    // If reduced_nv > 4, we cannot use the simplified
+    // version of the parameterization, since the expansions are all full expansions.
     //------------------------------------------
-    CCMtoTFC(s0, order, ofs_order, Wh, zIn, isGS);
+    if(Wh[0].getNV() > 4) CCMtoTFC(s0, order, ofs_order, Wh, zIn, 0);
+    else CCMtoTFC(s0, order, ofs_order, Wh, zIn, isGS);
+
 
     //------------------------------------------
     // TFC to NC
@@ -343,8 +345,11 @@ void RCMtoTFC(const double st0[],
 
     //------------------------------------------
     // 2. Update zIn
+    // If reduced_nv > 4, we cannot use the simplified
+    // version of the parameterization, since the expansions are all full expansions.
     //------------------------------------------
-    CCMtoTFC(s0, order, ofs_order, Wh, zIn, isGS);
+    if(reduced_nv > 4) CCMtoTFC(s0, order, ofs_order, Wh, zIn, 0);
+    else CCMtoTFC(s0, order, ofs_order, Wh, zIn, isGS);
 }
 
 
@@ -352,9 +357,9 @@ void RCMtoTFC(const double st0[],
  *  \brief Apply the change of variables in zIN/zOut. (OFS version).
  *       The change of variables is of the form: zOut = PC * zIN + V
  **/
-void applyCOC(matrix<Ofsc> &PC,
-              vector<Ofsc> &V,
-              vector<Ofsc> &zIn,
+void applyCOC(const matrix<Ofsc> &PC,
+              const vector<Ofsc> &V,
+              const vector<Ofsc> &zIn,
               vector<Ofsc> &zOut)
 {
     //zeroing the target
@@ -400,25 +405,25 @@ void CCMtoTFC(cdouble s0[],
         cdouble temp;
         // zIn[0]
         //---------------
-        temp = Wh[0].getCoef(1,0)->getCoef(0);
+        temp = Wh[0].getCA(1,0)->getCoef(0);
         zIn[0].setCoef(temp*s0[0],0);
         // zIn[1]
         //---------------
         Wh[1].evaluate(s0, zIn[1], order, ofs_order);
         // zIn[2]
         //---------------
-        temp = Wh[2].getCoef(1,1)->getCoef(0);
+        temp = Wh[2].getCA(1,1)->getCoef(0);
         zIn[2].setCoef(temp*s0[1],0);
         // zIn[3]
         //---------------
-        temp = Wh[3].getCoef(1,2)->getCoef(0);
+        temp = Wh[3].getCA(1,2)->getCoef(0);
         zIn[3].setCoef(temp*s0[2],0);
         // zIn[4]
         //---------------
         Wh[4].evaluate(s0, zIn[4], order, ofs_order);
         // zIn[5]
         //---------------
-        temp = Wh[5].getCoef(1,3)->getCoef(0);
+        temp = Wh[5].getCA(1,3)->getCoef(0);
         zIn[5].setCoef(temp*s0[3],0);
     }
     else
@@ -436,7 +441,9 @@ void CCMtoTFC(cdouble s0[],
 /**
  *  \brief Projection of the current NC state on the central manifold, via CCM coordinates
  **/
-void NCprojCCM(const double z[], const double t, const double n, const int ofs_order, matrix<Ofsc> &CQ, vector<Ofsc> &V, double omega1, double omega3, cdouble sc[], int nv)
+void NCprojCCM(const double z[], const double t, const double n, const int ofs_order,
+               const matrix<Ofsc> &CQ, const vector<Ofsc> &V,
+               double omega1, double omega3, cdouble sc[], int nv)
 {
     //-------------------
     //Wh: TFC coordinates
@@ -517,7 +524,8 @@ void RCMtoTFC_JAC(const double st0[],
     //------------------------------------------
     // 2. Update zIn
     //------------------------------------------
-    CCMtoTFC_JAC(s0, order, ofs_order, DWh, mIn, isGS);
+    if(reduced_nv > 4)  CCMtoTFC_JAC(s0, order, ofs_order, DWh, mIn, 0);
+    else CCMtoTFC_JAC(s0, order, ofs_order, DWh, mIn, isGS);
 }
 
 
@@ -543,14 +551,9 @@ void RCMtoTFC_JAC(const double st0[],
     cdouble s0[reduced_nv];
 
     //------------------------------------------
-    // 1. RCM to CCM
+    // 1. RCM to TFC
     //------------------------------------------
-    RCMtoCCM(st0, s0, reduced_nv);
-
-    //------------------------------------------
-    // 2. Update mIn
-    //------------------------------------------
-    CCMtoTFC_JAC(s0, order, ofs_order, DWh, mIn, isGS);
+    RCMtoTFC_JAC(st0, order, ofs_order, reduced_nv, DWh, mIn, isGS);
 
     //------------------------------------------
     // 3. Evaluate mIn in m2
@@ -574,11 +577,14 @@ void CCMtoTFC_JAC(cdouble s0[],
     //------------------------------------------
     // 1. Check the size
     //------------------------------------------
-    if(mIn.getSize(1) != DWh.getSize(1) || mIn.getSize(2) != DWh.getSize(2))
-    {
-        cout << "CCMtoTFC_JAC. Dimensions do not match. return." << endl;
-        return;
-    }
+    //    if(mIn.getSize(1) != DWh.getSize(1) || mIn.getSize(2) != DWh.getSize(2))
+    //    {
+    //        cout << "CCMtoTFC_JAC. Dimensions do not match:" << endl;
+    //        cout << "mIn.getSize(1) = " << mIn.getSize(1) << ", DWh.getSize(1) = " << DWh.getSize(1) << endl;
+    //        cout << "mIn.getSize(2) = " << mIn.getSize(2) << ", DWh.getSize(2) = " << DWh.getSize(2) << endl;
+    //        cout << "return." << endl;
+    //        return;
+    //    }
 
     //--------------------
     // 2. Zeroing
@@ -605,7 +611,7 @@ void CCMtoTFC_JAC(cdouble s0[],
         //--------------------
         // mIn[0][*] = [dWh[0]/ds[0] 0 0 ... 0]
         //---------------
-        temp = DWh.getCoef(0,0).getCoef(0,0)->getCoef(0);
+        temp = DWh.getCoef(0,0).getCA(0,0)->getCoef(0);
         mIn.getCA(0,0)->setCoef(temp,0);
 
 
@@ -619,12 +625,12 @@ void CCMtoTFC_JAC(cdouble s0[],
 
         // mIn[2][*] = [0 dWh[2]/ds[1] 0 ... 0]
         //---------------
-        temp = DWh.getCoef(2,1).getCoef(0,0)->getCoef(0);
+        temp = DWh.getCoef(2,1).getCA(0,0)->getCoef(0);
         mIn.getCA(2,1)->setCoef(temp,0);
 
         // mIn[3][*] = [0 0 dWh[3]/ds[2] 0 ... 0]
         //---------------
-        temp = DWh.getCoef(3,2).getCoef(0,0)->getCoef(0);
+        temp = DWh.getCoef(3,2).getCA(0,0)->getCoef(0);
         mIn.getCA(3,2)->setCoef(temp,0);
 
         // mIn[4][*] = full FT series
@@ -637,7 +643,7 @@ void CCMtoTFC_JAC(cdouble s0[],
 
         // mIn[5][*] = [0 0 0 dWh[5]/ds[4] ... 0]
         //---------------
-        temp = DWh.getCoef(5,3).getCoef(0,0)->getCoef(0);
+        temp = DWh.getCoef(5,3).getCA(0,0)->getCoef(0);
         mIn.getCA(5,3)->setCoef(temp,0);
 
     }
@@ -768,8 +774,8 @@ void evaluateCoef(double *alpha, double t, double omega, int order, double *para
     for(l = 0, header = params; l < number ; l++, header+=(order+1))
     {
         alpha[l] = 0.0;
-        if(l==1 || l== 4 || l==7 || l==9 || l==11 || l==13) alpha[l] = evaluateOdd(t, omega , order, header, sR);    //Odd funtions (alpha_2,5,8,10,12,14)
-        else  alpha[l] = evaluateEven(t, omega, order, header, cR);                                                  //Even functions
+        if(l==1 || l== 4 || l==7 || l==9 || l==11 || l==13) alpha[l] = evaluateOdd(order, header, sR);    //Odd funtions (alpha_2,5,8,10,12,14)
+        else  alpha[l] = evaluateEven(order, header, cR);                                                  //Even functions
     }
 }
 
@@ -797,9 +803,9 @@ void evaluateCoefDerivatives(double *alpha, double t, double omega, int order, d
         alpha[l] = 0.0;
         if(l==1 || l== 4 || l==7 || l==9 || l==11 || l==13)
         {
-            alpha[l] = evaluateOddDerivative(t, omega , order, header, cR); //Odd funtions (alpha_2,5,8,10,12,14)
+            alpha[l] = evaluateOddDerivative(omega, order, header, cR); //Odd funtions (alpha_2,5,8,10,12,14)
         }
-        else  alpha[l] = evaluateEvenDerivative(t, omega, order, header, sR);   //Even functions
+        else  alpha[l] = evaluateEvenDerivative(omega, order, header, sR);   //Even functions
     }
 }
 
@@ -811,7 +817,7 @@ void evaluateCoefDerivatives(double *alpha, double t, double omega, int order, d
 /**
  *  \brief Evaluate the sum \f$ \sum_{k = 0}^N coef(k) cos(k \omega t)  \f$.
  */
-double evaluateEven(double t, double omega, int order, double *coef, double *cR)
+double evaluateEven(int order, double *coef, double *cR)
 {
     double result = 0.0;
     for(int i= order; i>=1; i--) result += coef[i]*cR[i-1];//even type
@@ -822,7 +828,7 @@ double evaluateEven(double t, double omega, int order, double *coef, double *cR)
 /**
  *  \brief Evaluate the sum \f$ \sum_{k = 0}^N - k \omega coef(k) sin(k \omega t)  \f$.
  */
-double evaluateEvenDerivative(double t, double omega,  int order, double *coef, double *sR)
+double evaluateEvenDerivative(double omega, int order, double *coef, double *sR)
 {
     double result = 0.0;
     for(int i= order; i>=1; i--) result += -omega*i*coef[i]*sR[i-1];//even type
@@ -832,7 +838,7 @@ double evaluateEvenDerivative(double t, double omega,  int order, double *coef, 
 /**
  *  \brief Evaluate the sum \f$ \sum_{k = 0}^N coef(k) sin(k \omega t)  \f$.
  */
-double evaluateOdd(double t, double omega,  int order, double *coef, double *sR)
+double evaluateOdd(int order, double *coef, double *sR)
 {
     double result = 0.0;
     for(int i= order; i>=1; i--) result += coef[i]*sR[i-1]; //odd type
@@ -842,7 +848,7 @@ double evaluateOdd(double t, double omega,  int order, double *coef, double *sR)
 /**
  *  \brief Evaluate the sum \f$ \sum_{k = 0}^N  k \omega coef(k) cos(k \omega t)  \f$.
  */
-double evaluateOddDerivative(double t, double omega,  int order, double *coef, double *cR)
+double evaluateOddDerivative(double omega, int order, double *coef, double *cR)
 {
     double result = 0.0;
     for(int i= order; i>=1; i--) result += omega*i*coef[i]*cR[i-1];//odd type
@@ -895,41 +901,23 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
     //=====================================================================
     //Type of inputs
     if(inputType > INSEM)
-        perror("Unknown inputType");
+        perror("rot_mat_coc. Unknown inputType");
 
     //Type of outputs
     if(outputType > INSEM)
-        perror("Unknown outputType");
+        perror("rot_mat_coc. Unknown outputType");
 
     //=====================================================================
     // 2. Define the default framework wrt the inputType
     //=====================================================================
-    int coordsys = 0;
-    switch(inputType)
-    {
-    case VNCEM:
-    case NCEM:
-    case PEM:
-    case VEM:
-    case INEM:
-        coordsys = F_EM;
-        break;
-    case VNCSEM:
-    case NCSEM:
-    case PSEM:
-    case VSEM:
-    case INSEM:
-        coordsys = F_SEM;
-        break;
-    }
-
+    int fwrk = default_framework(inputType);
 
     //=====================================================================
     // 2. Check that the focus in SEML is
     // in accordance with the inputType.
     //=====================================================================
-    int fwrk0 = SEML.coordsys;
-    if(fwrk0 != coordsys) changeDCS(SEML, coordsys);
+    int fwrk0 = SEML.fwrk;
+    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
 
 
     //=====================================================================
@@ -2574,7 +2562,7 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
     //=====================================================================
     // 4. Reset the focus in SEML, if necessary
     //=====================================================================
-    if(fwrk0 != coordsys) changeDCS(SEML, fwrk0);
+    if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
 
     //=====================================================================
     // 5. Free the temporary objects

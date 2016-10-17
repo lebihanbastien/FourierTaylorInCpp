@@ -11,9 +11,9 @@ int OFTS_ORDER;
  * \version 1.0
  */
 
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 //Create
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 ///**
 // *  \brief Default constructor of the class Oftsc.
 // */
@@ -103,9 +103,10 @@ Oftsc::Oftsc(Oftsc const& b)
     }
 }
 
-//---------------------------------------------------------------------------
+
+//----------------------------------------------------------------------------------------
 //Delete
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  *  \brief Default destructor of the class Oftsc. WARNING: potential memory leak here, through the terms of type Oftsh.
  *
@@ -121,9 +122,9 @@ Oftsc::~Oftsc()
     delete[] coefs;
 }
 
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 //Getters
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  *  \brief  Gets the order of the serie.
  */
@@ -143,7 +144,7 @@ int Oftsc::getNV() const
 /**
  *  \brief  Gets the adress of the coefficient at order \c ord and position \c pos
  */
-Ofsc* Oftsc::getCoef(int const& ord, int const& pos) const
+Ofsc* Oftsc::getCA(int const& ord, int const& pos) const
 {
     if(ord > order || pos >= FTA::nmon(nv, ord))
     {
@@ -164,9 +165,9 @@ Oftsc* Oftsc::getAddress() const
 }
 
 
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 //Zeroing
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  *  \brief  Sets all coefficients to zero.
  */
@@ -178,19 +179,37 @@ void Oftsc::zero()
 }
 
 
-//Evaluate up to order m
-void Oftsc::evaluate(cdouble X[], Ofsc& z, int const& m, int const& ofs_order)
+/**
+ *  \brief  Evaluate the FT series up to order m, and update z.
+ **/
+void Oftsc::evaluate(cdouble const X[], Ofsc& z, int const& m, int const& ofs_order) const
+{
+    //Zeroing the result
+    z.zero();
+
+    //Evaluate and sum
+    this->sevaluate(X, z, m, ofs_order);
+}
+
+/**
+ *  \brief  Evaluate the FT series up to order m, and sum in z.
+ **/
+void Oftsc::sevaluate(cdouble const X[], Ofsc& z, int const& mt, int const& ofs_order) const
 {
     //Parameters
     int *kv = (int*) calloc(nv, sizeof(int));
     cdouble aux, bux;
 
-    //Zeroing the result
-    z.zero();
+    //Test on the ofts_order, to avoid overtaking of this order
+    int m     = min(mt, this->getOrder());
+
+    //Test on the ofs_order, to avoid overtaking of this order
+    int itest = min(ofs_order, 1);
 
     //For each order in [[k, 0]]
     for(int k = m; k >= 0 ; k--)
     {
+
         //kv = (k 0 0 0 ...)
         kv[0] = k;
         for(int i=1; i<nv; i++) kv[i] = 0;
@@ -198,8 +217,9 @@ void Oftsc::evaluate(cdouble X[], Ofsc& z, int const& m, int const& ofs_order)
         //Loop on all monomials of degree k
         for (int i=0; i< FTA::nmon(nv, k); i++)
         {
+
             //Evaluate one coefficient
-            if(!coefs[k][i].isnull(1))
+            if(!coefs[k][i].isnull(itest))
             {
                 //z += X[ii]^kv[ii]*coef(i)
                 bux = 1.0+0.0*I;
@@ -214,6 +234,7 @@ void Oftsc::evaluate(cdouble X[], Ofsc& z, int const& m, int const& ofs_order)
 
             //update the exponents
             if(i< FTA::nmon(nv, k)-1)  FTA::prxkt(kv, nv);
+
         }
 
     }
@@ -221,10 +242,12 @@ void Oftsc::evaluate(cdouble X[], Ofsc& z, int const& m, int const& ofs_order)
     free(kv);
 }
 
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 //Print
-//---------------------------------------------------------------------------
-
+//----------------------------------------------------------------------------------------
+/**
+ *  \brief  Friendly operator "<<".
+ **/
 std::ostream& operator << (std::ostream& stream, Oftsc const& ofts)
 {
     int k[ofts.nv];
@@ -249,6 +272,9 @@ std::ostream& operator << (std::ostream& stream, Oftsc const& ofts)
     return stream;
 }
 
+/**
+ *  \brief  Print the non null coefficients in this.
+ **/
 void Oftsc::printNonNullCoeffs()
 {
     int k[nv];
@@ -276,15 +302,16 @@ void Oftsc::printNonNullCoeffs()
 }
 
 
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 // Text format, read
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  * \brief Reads a given \c Ofsc  object within a \c Oftsc, in txt format.
  **/
-void readOFS_txt(Ofsc &xFFT, ifstream &readStream, int fftN)
+void readOFS_txt(Ofsc &xFFT, ifstream &readStream)
 {
     //Init
+    int fftN = xFFT.getOrder();
     double ct, cr, ci;
     //Reading
     for(int i = -fftN; i<=fftN; i++)
@@ -299,7 +326,7 @@ void readOFS_txt(Ofsc &xFFT, ifstream &readStream, int fftN)
 /**
  * \brief Reads a given \c Oftsc  object, in txt format.
  **/
-int readOFTS_txt(Oftsc &x, string filename, int fftN)
+int readOFTS_txt(Oftsc &x, string filename)
 {
     //Init
     ifstream readStream;
@@ -323,7 +350,7 @@ int readOFTS_txt(Oftsc &x, string filename, int fftN)
                 //Current kv
                 getline(readStream, ct);
                 //Reading the coefficient
-                readOFS_txt(*x.getCoef(k,p), readStream, fftN);
+                readOFS_txt(*x.getCA(k,p), readStream);
                 getline(readStream, ct);
                 getline(readStream, ct);
             }
@@ -336,21 +363,21 @@ int readOFTS_txt(Oftsc &x, string filename, int fftN)
 /**
  * \brief Reads a given vector W of type \c Oftsc  in a txt files of the form "filename+i.txt", with i = 0, length(W)-1.
  **/
-void readVOFTS_txt(vector<Oftsc> &W, string filename, int fftN)
+void readVOFTS_txt(vector<Oftsc> &W, string filename)
 {
     string ss1;
     //Loop on all coefficients
     for(unsigned int i = 0; i < W.size(); i++)
     {
         ss1 = static_cast<ostringstream*>( &(ostringstream() << i) )->str();
-        readOFTS_txt(W[i], (filename+"["+ss1+"].txt"), fftN);
+        readOFTS_txt(W[i], (filename+"["+ss1+"].txt"));
     }
 }
 
 
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 // Binary format, read
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  * \brief Reads a given \c Ofsc  object within a \c Oftsc, in bin format.
  **/
@@ -373,7 +400,7 @@ void readOFS_bin(Ofsc  &xFFT, fstream &myfile)
 /**
  * \brief Reads a given \c Oftsc  object, in bin format.
  **/
-int readOFTS_bin(Oftsc &W, string filename, int fftN)
+int readOFTS_bin(Oftsc &W, string filename)
 {
     //Init
     fstream myfile;
@@ -397,18 +424,19 @@ int readOFTS_bin(Oftsc &W, string filename, int fftN)
             for (int i=0; i< FTA::nmon(W.getNV(), nrc); i++)
             {
                 //Read each Ofsc coefficient
-                readOFS_bin(*W.getCoef(nrc,i), myfile);
+                readOFS_bin(*W.getCA(nrc,i), myfile);
             }
         }
+
         myfile.close();
         return 0;
     }
 }
 
 /**
- * \brief Reads a given \c Oftsc  object, in bin format at a given order
+ * \brief Reads a given \c Oftsc  object, in bin format, at order n
  **/
-int readOFTS_bin(Oftsc &W, string filename, int order, int fftN)
+int readOFTS_bin(Oftsc &W, string filename, int n)
 {
     //Init
     fstream myfile;
@@ -426,13 +454,13 @@ int readOFTS_bin(Oftsc &W, string filename, int order, int fftN)
     else
     {
         //Loop on order
-        for(int nrc=0; nrc<= order; nrc++)
+        for(int nrc=0; nrc<= n; nrc++)
         {
             //Current homogeneous polynomial
             for (int i=0; i< FTA::nmon(W.getNV(), nrc); i++)
             {
                 //Read each Ofsc coefficient
-                readOFS_bin(*W.getCoef(nrc,i), myfile);
+                readOFS_bin(*W.getCA(nrc,i), myfile);
             }
         }
         myfile.close();
@@ -443,7 +471,7 @@ int readOFTS_bin(Oftsc &W, string filename, int order, int fftN)
 /**
  * \brief Reads a given vector W of type \c Oftsc  in binary files of the form "filename+i.bin", with i = 0, length(W)-1.
  **/
-void readVOFTS_bin(vector<Oftsc >  &W, string filename, int fftN)
+void readVOFTS_bin(vector<Oftsc > &W, string filename)
 {
     string ss1;
     int status, global_status;
@@ -455,13 +483,13 @@ void readVOFTS_bin(vector<Oftsc >  &W, string filename, int fftN)
         ss1 = static_cast<ostringstream*>( &(ostringstream() << i) )->str();
 
         //Read binary format
-        status = readOFTS_bin(W[i], (filename+"["+ss1+"].bin"), fftN);
+        status = readOFTS_bin(W[i], (filename+"["+ss1+"].bin"));
 
         //Try txt format if failure
         if(status != 0)
         {
             cout << "readVOFTS_bin. Last reading went wrong. Trying to find data in txt format..." << endl;
-            status = readOFTS_txt(W[i], (filename+"["+ss1+"].txt"), fftN);
+            status = readOFTS_txt(W[i], (filename+"["+ss1+"].txt"));
             if(status != 0)
             {
                 cout << "readVOFTS_bin. Txt format also went wrong. Check data manually." << endl;
@@ -476,26 +504,158 @@ void readVOFTS_bin(vector<Oftsc >  &W, string filename, int fftN)
     }
 }
 
+
+//----------------------------------------------------------------------------------------
+// Binary format, write
+//----------------------------------------------------------------------------------------
 /**
- * \brief Reads a given vector W of type \c Oftsc  in binary files of the form "filename+i.bin", with i = 0, length(W)-1. At a given order
+ * \brief Writes a given \c Ofsc  object within a \c Ofts<Ofsc >, in bin format.
  **/
-void readVOFTS_bin(vector<Oftsc >  &W, string filename,  int order, int fftN)
+void  writeOFS_bin(Ofsc const &xFFT, fstream &myfile)
 {
-    string ss1;
-    int status;
+    //Init
+    int fftN = xFFT.getOrder();
+    double res;
 
-    //Loop on all coefficients
-    for(unsigned int i = 0; i < W.size(); i++)
+    //Writing
+    for(int i = -fftN; i<=fftN; i++)
     {
-        ss1 = static_cast<ostringstream*>( &(ostringstream() << i) )->str();
+        //Real part
+        res = creal(xFFT.getCoef(i));
+        myfile.write((char*) &res, sizeof(double));
 
-        //Read binary format
-        status = readOFTS_bin(W[i], (filename+"["+ss1+"].bin"), order, fftN);
+        //Imag part
+        res = cimag(xFFT.getCoef(i));
+        myfile.write((char*) &res, sizeof(double));
+    }
+}
 
-        //Try txt format if failure
-        if(status != 0)
+/**
+ * \brief Writes a given \c Ofts<Ofsc >  object, in bin format.
+ **/
+void  writeOFTS_bin(Oftsc const &W, string filename)
+{
+    fstream myfile;
+    myfile.open (filename.c_str(), ios::binary | ios::out);
+    //Loop on order
+    for(int nrc=0; nrc<= W.getOrder(); nrc++)
+    {
+        //Current homogeneous polynomial
+        for (int i=0; i< FTA::nmon(W.getNV(), nrc); i++)
         {
-            cout << "readVOFTS_bin. Last reading went wrong. Check data manually." << endl;
+            //Write each Ofs coefficient
+            writeOFS_bin(*W.getCA(nrc,i), myfile);
         }
     }
+    myfile.close();
+}
+
+//----------------------------------------------------------------------------------------
+// Binary format, copy in lesser dimension series
+//----------------------------------------------------------------------------------------
+/**
+ * \brief Reads some Oftsc  objects, in bin format,
+ *        and transform it into other Oftsc objects, of lesser dimensions.
+ *
+ *        Indeed, we know that, if the center-stable or center-unstable manifolds are
+ *        computed using the parameterization method, the series in the dimensions
+ *        0, and 3 of Wh (parameterization in TFC coordinates) are of the form:
+ *
+ *          Wh[0] = sum_(k=0)^n c_k s_5^k
+ *
+ *        I.e. they are FT series of only one variable, namely the variable s5,
+ *        last variable of the reduced variables (s1, s2, s3, s4, s5).
+ *
+ *        To limit the amount of memory needed to stored these series, we can use
+ *        one-dimensional FT series. This is done via the present routine.
+ *
+ *        This routine makes use of fromOFTStoOFTS_bin to read and store into the less dimensions objects.
+ *        Then, the results are stored in binary files.
+ **/
+void fromVOFTStoVOFTS_bin(Oftsc &W, Oftsc &W1, string filein, string fileout)
+{
+    //====================================================================================
+    //Init
+    //====================================================================================
+    string ss1;
+    int ind = 0;
+
+    //====================================================================================
+    //Loop on all coefficients
+    //====================================================================================
+    for(unsigned int i = 0; i < 6; i++)
+    {
+        if(i == 0 || i == 3) //only along certain dimensions
+        {
+            //ss1 = numToString(i)
+            ss1 = static_cast<ostringstream*>( &(ostringstream() << i) )->str();
+
+            //Read binary format
+            readOFTS_bin(W, (filein+"["+ss1+"].bin"));
+
+            //Store in 1-dim series
+            fromOFTStoOFTS_bin(W, W1, 4);
+
+            //ss1 = numToString(ind)
+            ss1 = static_cast<ostringstream*>( &(ostringstream() << ind) )->str();
+
+            //Store the result
+            writeOFTS_bin(W1, (fileout+"["+ss1+"].bin"));
+
+            //Advance ind
+            ind++;
+        }
+    }
+}
+
+/**
+ * \brief Reads a given \c Oftsc  object, in bin format, and transform it into another Oftsc object, of lesser dimensions
+ *        More precisely:
+ *        We suppose that W is a very sparse Fourier-Taylor series, with only non-null coefficients along the dimension dim.
+ *        Hence, it is possible to entirely store W into a simpler series W1, with only one dimension.
+ **/
+int fromOFTStoOFTS_bin(Oftsc &W, Oftsc &W1, int dim)
+{
+    //====================================================================================
+    //Init & check
+    //====================================================================================
+    int nv  = W.getNV();  ///number of variables
+    //Check that the desired dimension dim is consistent with nv
+    if(dim > nv-1)
+    {
+        cout << "fromOFTStoOFTS_bin. dim is greater than the number of dimensions." << endl;
+        return -1;
+    }
+
+    //====================================================================================
+    //Open the stream & check
+    //====================================================================================
+        //Parameters
+        int *kv = (int*) calloc(nv, sizeof(int)); //exponent
+
+        //================================================================================
+        //Loop on order
+        //================================================================================
+        for(int nrc=0; nrc<= W.getOrder(); nrc++)
+        {
+            //kv = (k 0 0 0 ...)
+            kv[0] = nrc;
+            for(int i=1; i<nv; i++) kv[i] = 0;
+
+
+            //============================================================================
+            //Loop on the monomials at order nrc
+            //============================================================================
+            for (int i=0; i< FTA::nmon(nv, nrc); i++)
+            {
+                //If the exponents are non null only on dim, we save the value in W1
+                W1.getCA(nrc, 0)->ccopy(*W.getCA(nrc,i));
+
+                //Update the exponents
+                if(i< FTA::nmon(nv, nrc)-1)  FTA::prxkt(kv, nv);
+            }
+
+    }
+
+    return 0;
 }

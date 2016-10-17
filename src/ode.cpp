@@ -1,12 +1,4 @@
-//Custom
 #include "ode.h"
-
-#include <iostream>
-using namespace std;
-
-//GSL
-#include <gsl/gsl_odeiv2.h>
-#include <gsl/gsl_errno.h>
 
 void update_ode_structure(OdeStruct *ode_s,
                           const gsl_odeiv2_step_type *T,
@@ -100,6 +92,18 @@ void init_ode_structure(OdeStruct *ode_s,
     }
 
 }
+
+void init_ode_structure(OdeStruct *ode_s,
+                        const gsl_odeiv2_step_type *T,
+                        const gsl_root_fsolver_type *T_root,
+                        size_t dim,
+                        int (* func) (double t, const double y[], double dydt[], void *params),
+                        void *params)
+{
+    init_ode_structure(ode_s, T, T_root, PREC_ABS, PREC_REL, PREC_ROOT, PREC_DIFF, dim, PREC_HSTART, func, NULL, params);
+}
+
+
 
 void reset_ode_structure(OdeStruct *ode_s)
 {

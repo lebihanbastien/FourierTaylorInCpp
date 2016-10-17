@@ -6,35 +6,33 @@
  * \version 1.0
  */
 
-
-
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 //Create
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  *  \brief Default creator for matrix class. Never use.
  **/
-template <typename T> matrix<T>::matrix()
+template <typename T> matrix<T>::matrix():coef()
 {
     size1 = 0;//NV;
     size2 = 0;//REDUCED_NV;
-    coef = *(new vector<T>());
 }
 
 /**
  *  \brief Default creator for matrix class, with size size1 x size2.
  **/
-template <typename T> matrix<T>::matrix(const int size1_, const int size2_)
+template <typename T> matrix<T>::matrix(const int size1_, const int size2_):coef(size1_*size2_)
 {
     size1 = size1_;
     size2 = size2_;
-    coef = *(new vector<T>(size1*size2));
 }
 
 /**
  *  \brief Default creator for matrix class, with size size1 x size2.
  **/
-template <typename T> matrix<T>::matrix(const int size1_, const int size2_, int reduced_nv, int ofts_order, int ofs_nv, int ofs_order)
+template <typename T> matrix<T>::matrix(const int size1_, const int size2_,
+                                        int reduced_nv, int ofts_order,
+                                        int ofs_nv, int ofs_order):coef()
 {
     size1 = size1_;
     size2 = size2_;
@@ -45,9 +43,25 @@ template <typename T> matrix<T>::matrix(const int size1_, const int size2_, int 
     }
 }
 
-//---------------------------------------------------------------------------
+
+/**
+ *  \brief Default creator for matrix class, with size size1 x size2.
+ **/
+template <typename T> matrix<T>::matrix(const int size1_, const int size2_,
+                                        int ofs_order):coef()
+{
+    size1 = size1_;
+    size2 = size2_;
+    coef.reserve(size1_*size2_);
+    for(int i = 0; i < size1_; i++)
+    {
+        for(int j = 0; j < size2_; j++) coef.push_back(T(ofs_order));
+    }
+}
+
+//----------------------------------------------------------------------------------------
 //Copy
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  *  \brief Create a matrix equal to the matrix b. Needs the routine:
  *          - ccopy
@@ -56,7 +70,7 @@ template <typename T> matrix<T>::matrix(matrix const& b)
 {
     size1 = b.size1;
     size2 = b.size2;
-    coef  = *(new vector<T>(size1*size2));
+    coef(size1*size2);
     for(int i = 0 ; i< size1*size2; i++) coef[i].ccopy(b.coef[i]);
 }
 
@@ -70,7 +84,7 @@ template <typename T> matrix<T>& matrix<T>::operator = (matrix<T> const& b)
     {
         size1 = b.size1;
         size2 = b.size2;
-        coef  = *(new vector<T>(size1*size2));
+        coef(size1*size2);
         for(int i = 0 ; i < size1*size2; i++) coef[i].ccopy(b.coef[i]);
     }
     return *this; //same object if returned
@@ -107,25 +121,25 @@ template <typename T> matrix<T>& matrix<T>::lcopy(matrix<T> const& b)
     return *this;
 }
 
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 //Delete
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  *  \brief Delete function, empty.
- *         Do we need to implement something here? Probably not, not pointer used.
+ *         Do we need to implement something here? Probably not, no pointer used.
  **/
 template <typename T> matrix<T>::~matrix<T>()
 {
 }
 
 
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 //Getters
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  *  \brief Gets the coefficient at the position (i,j)
  **/
-template <typename T> T matrix<T>::getCoef(int i, int j) const
+template <typename T> const T& matrix<T>::getCoef(int i, int j) const
 {
     if( i >= size1 || j >= size2)
     {
@@ -142,7 +156,10 @@ template <typename T> T* matrix<T>::getCA(int i, int j) const
 {
     if( i >= size1 || j >=size2)
     {
-        cout << "Error in matrix<T>::getCoef: indices are out of scope. First coefficient is returned." << endl;
+        cout << "Error in matrix<T>::getCoef: indices are out of scope:" << endl;
+        cout << "i = " << i << ", size1 = " << size1 << endl;
+        cout << "j = " << j << ", size2 = " << size2 << endl;
+        cout << "First coefficient is returned." << endl;
         return coef[0].getAddress();
     }
     else return coef[i*size2 + j].getAddress();
@@ -159,9 +176,34 @@ template <typename T> int matrix<T>::getSize(int num) const
 
 }
 
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 //Setters
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
+/**
+ *  \brief Reserve an size1_ x size2_ vector of coefficient in the matrix. This routine
+ *         makes the assumption that that 'this' was initially empty.
+ **/
+template <typename T>  void matrix<T>::reserve(int size1_, int size2_)
+{
+    if( size1 > 0 || size2 > 0)
+    {
+        cout << "Error in matrix<T>::reserve: implemented be used only on an empty object." << endl;
+        return;
+    }
+    size1 = size1_;
+    size2 = size2_;
+    coef.reserve(size1_*size2_);
+}
+
+/**
+ *  \brief Push back an element in the vector of coefficient
+ **/
+template <typename T>  void matrix<T>::mpush_back(T const & value)
+{
+    coef.push_back(value);
+}
+
+
 /**
  *  \brief Sets the coefficient T at the position (i,j). Requires ccopy.
  **/
@@ -194,13 +236,13 @@ template <typename T> void matrix<T>::zero()
     for(int i = 0 ; i < size1*size2; i++) coef[i].zero();
 }
 
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 //Functions used with T = Ofs<U>
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  *  \brief Matrix-vector product: vOut += a x vIn. Used with T = Ofsc. Requires sprod.
  **/
-inline void smvprod_ofs(matrix<Ofsc> const& a, vector<Ofsc> const& vIn, vector<Ofsc>& vOut)
+inline void smvprod_ofs(const matrix<Ofsc>& a, vector<Ofsc> const& vIn, vector<Ofsc>& vOut)
 {
     if((unsigned int)  a.getSize(2) != vIn.size() || (unsigned int) a.getSize(1) != vOut.size() )
     {
@@ -219,9 +261,9 @@ inline void smvprod_ofs(matrix<Ofsc> const& a, vector<Ofsc> const& vIn, vector<O
 }
 
 
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 //Evaluation in a gsl_matrix_complex object
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  *  \brief  Evaluation in a gsl_matrix_complex object, at angle theta
  */
@@ -255,14 +297,14 @@ inline void evaluate(double const& t, double const& n, matrix<Ofsc> const& a, gs
 }
 
 
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 // Read & Write
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  * \brief Reads a given matrix W of type \c Oftsc in a binary files of the form "filename+i+j.bin", with i = 0, size1(W)-1
  *        and j = 0, size2(W)-1.
  **/
-inline void readMOFTS_bin(matrix<Oftsc> &W, string filename, int fftN)
+inline void readMOFTS_bin(matrix<Oftsc> &W, string filename)
 {
     string ss1, ss2;
     //Loop on all coefficients
@@ -272,8 +314,7 @@ inline void readMOFTS_bin(matrix<Oftsc> &W, string filename, int fftN)
         {
             ss1 = static_cast<ostringstream*>( &(ostringstream() << i) )->str();
             ss2 = static_cast<ostringstream*>( &(ostringstream() << j) )->str();
-            readOFTS_bin(*W.getCA(i,j), (filename+"["+ss1+"]["+ss2+"].bin"), fftN);
+            readOFTS_bin(*W.getCA(i,j), (filename+"["+ss1+"]["+ss2+"].bin"));
         }
     }
 }
-

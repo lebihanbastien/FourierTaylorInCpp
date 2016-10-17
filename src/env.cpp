@@ -12,23 +12,121 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
+#include <vector>
 
 //GSL
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_linalg.h>
 
 //custom
-#include "env.h"
 #include "parameters.h"
 #include "Ofsc.h"
+#include "Oftsc.h"
+#include "env.h"
 
 int MODEL_TYPE;
 
 
 
-//-----------------------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
+// Initialize the invariant manifolds.
+//----------------------------------------------------------------------------------------
+/**
+ * \brief Initialize the invariant manifolds, as a form of FT fourier series.
+ *        The necessary data are retrieved from data folders  whose names are stored in
+ *        the CS structure.
+ *
+ *        IMPORTANT: to be consistent with old code, both the TFC and NC form are initialized.
+ *        However, the NC form is a priori NEVER used, since the numerical computation are
+ *        usually more precise evaluating the TFC form, then going back to the NC form via the equation:
+ *
+ *              IM_NC = P(theta)*IM_TFC + V(theta).
+ *
+ *        If ones would want to use the NC form, just uncomment the proper lines inside the code.
+ **/
+void initOFTS(vector<Oftsc>& IM_NC, vector<Oftsc>& IM_TFC,
+              int reduced_nv, int ofts_order, int ofs_order,
+              CSYS& csys)
+{
+    //====================================================================================
+    // In TFC form
+    //====================================================================================
+    IM_TFC.reserve(6);
+    //------------------------------------------------------------------------------------
+    //Initialize with respect to the manifold type and parameterization style
+    //------------------------------------------------------------------------------------
+    switch(csys.pmType)
+    {
+        //--------------------------------------------------------------------------------
+        //If we use the graph style, some simplification can be made
+        //--------------------------------------------------------------------------------
+    case -1://PMS_GRAPH:
+        switch(csys.manType)
+        {
+        case MAN_CENTER:
+            //----------------------------------------------------------------------------
+            //If it is a center manifold parameterized using the graph style,
+            //the following assertions are true:
+            //      - The dimension 0, 2, 3, and 5 are linear in the parameters (order 1)
+            //      - The dimension 1 and 4 are full fourier-taylor series
+            //----------------------------------------------------------------------------
+            IM_TFC.push_back(Oftsc(reduced_nv, 1         , OFS_NV, ofs_order)); //0
+            IM_TFC.push_back(Oftsc(reduced_nv, ofts_order, OFS_NV, ofs_order)); //1
+            IM_TFC.push_back(Oftsc(reduced_nv, 1         , OFS_NV, ofs_order)); //2
+            IM_TFC.push_back(Oftsc(reduced_nv, 1         , OFS_NV, ofs_order)); //3
+            IM_TFC.push_back(Oftsc(reduced_nv, ofts_order, OFS_NV, ofs_order)); //4
+            IM_TFC.push_back(Oftsc(reduced_nv, 1         , OFS_NV, ofs_order)); //5
+            break;
+        case MAN_CENTER_S:
+        case MAN_CENTER_U:
+            //----------------------------------------------------------------------------
+            //Full fourier-taylor series, for now
+            //----------------------------------------------------------------------------
+            for(int i = 0; i < 6; i++)
+                IM_TFC.push_back(Oftsc(reduced_nv, ofts_order, OFS_NV, ofs_order));
+            break;
+        case MAN_CENTER_US:
+            //----------------------------------------------------------------------------
+            //Full fourier-taylor series, for now
+            //----------------------------------------------------------------------------
+            for(int i = 0; i < 6; i++)
+                IM_TFC.push_back(Oftsc(reduced_nv, ofts_order, OFS_NV, ofs_order));
+            break;
+
+        }
+        break;
+
+    default:
+        //----------------------------------------------------------------------------
+        //Full fourier-taylor series, for now
+        //----------------------------------------------------------------------------
+        for(int i = 0; i < 6; i++)
+            IM_TFC.push_back(Oftsc(reduced_nv, ofts_order, OFS_NV, ofs_order));
+        break;
+
+        break;
+    }
+
+    //------------------------------------------------------------------------------------
+    //Read from file
+    //------------------------------------------------------------------------------------
+    readVOFTS_bin(IM_TFC, csys.F_PMS+"W/Wh");
+
+    //====================================================================================
+    // In NC form. Uncomment if necessary
+    //====================================================================================
+    //    //Reserve
+    //    IM_NC.reserve(6);
+    //    //Initialize the FULL Fourier-Taylor series
+    //    for(int i = 0; i < 6; i++) IM_NC.push_back(Oftsc(reduced_nv, ofts_order, OFS_NV, ofs_order));
+    //    //Read from file
+    //    readVOFTS_bin(IM_NC,  csys.F_PMS+"W/W");
+}
+
+
+//----------------------------------------------------------------------------------------
 //QBCP
-//-----------------------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 QBCP SEM;              //global structure that describes the Sun-Earth-Moon system
 QBCP_L SEML;           //global structure that describes the Sun-Earth-Moon system around Li
 QBCP_L SEML_EM;        //global structure that describes the Sun-Earth-Moon system around EMLi
@@ -45,7 +143,7 @@ QBCP_L SEML_SEM;       //global structure that describes the Sun-Earth-Moon syst
 void initialize_environment(int li_EM, int li_SEM, int isNormalized, int model, int coordsys, int pmStyle_EM, int pmStyle_SEM, int manType_EM, int manType_SEM)
 {
     //Init the Sun-Earth-Moon problem
-    init_QBCP(&SEM, SUN, EARTH, MOON, model);
+    init_QBCP(&SEM, SUN, EARTH, MOON);
     //Init the Sun-Earth-Moon problem focused on one libration point
     init_QBCP_L(&SEML, &SEM, isNormalized, li_EM, li_SEM, false, model, coordsys, pmStyle_EM, pmStyle_SEM, manType_EM, manType_SEM);
     //Init the Sun-Earth-Moon problem focused on one EM libration point
@@ -55,9 +153,9 @@ void initialize_environment(int li_EM, int li_SEM, int isNormalized, int model, 
 }
 
 
-//-----------------------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 //COC
-//-----------------------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  *  \brief Update a complex Fourier series given as the component (k,p) of a matrix matrix, from a given txt file.
  *  \param xFFT: the \c ofs<cdouble> to update
@@ -79,23 +177,23 @@ void readCOC(Ofsc& xFFT, string matrix, int k, int p)
 }
 
 /**
- *  \brief Lighter version of the init routine, with only P, PC and V retrieved.
+ *  \brief Lighter version of the init routine, with only P, PC, Q, QC, and V retrieved.
  **/
-void initCOC(matrix<Ofsc> &P,
-             matrix<Ofsc> &PC,
-             matrix<Ofsc> &Q,
-             matrix<Ofsc> &CQ,
-             vector<Ofsc> &V,
+void initCOC(matrix<Ofsc>& P,
+             matrix<Ofsc>& PC,
+             matrix<Ofsc>& Q,
+             matrix<Ofsc>& CQ,
+             vector<Ofsc>& V,
              QBCP_L& qbcp_l)
 {
-    //----------------------------
+    //------------------------------------------------------------------------------------
     //Retrieve folder
-    //----------------------------
+    //------------------------------------------------------------------------------------
     string F_COC = qbcp_l.cs.F_COC;
 
-    //----------------------------
+    //------------------------------------------------------------------------------------
     //Switch RTBP/QBCP/BCP
-    //----------------------------
+    //------------------------------------------------------------------------------------
     if(qbcp_l.model == M_QBCP || qbcp_l.model == M_BCP)
     {
         //Recovering the data: matrix P
@@ -159,7 +257,7 @@ void initCOC(matrix<Ofsc> &P,
         int s;
         gsl_matrix* Pc   = gsl_matrix_calloc (NV, NV);
         gsl_matrix* Qc   = gsl_matrix_calloc (NV, NV);
-        gsl_permutation * p6 = gsl_permutation_alloc (NV);
+        gsl_permutation* p6 = gsl_permutation_alloc (NV);
 
         //Init Pc
         for(int i =0; i < NV; i++) for(int j =0; j < NV; j++) gsl_matrix_set(Pc, i, j, creal(P.getCA(i,j)->getCoef(0)));
@@ -173,9 +271,9 @@ void initCOC(matrix<Ofsc> &P,
         for(int i =0; i < NV; i++) for(int j =0; j < NV; j++) Q.setCoef(gsl_matrix_get(Qc, i, j), i, j);
     }
 
-    //----------------------------
+    //------------------------------------------------------------------------------------
     // Building PC
-    //----------------------------
+    //------------------------------------------------------------------------------------
     Ofsc BUX(OFS_ORDER);
     //Keymap used to initialize PC and CQ
     vector<int> keyMap(4);
@@ -233,9 +331,169 @@ void initCOC(matrix<Ofsc> &P,
 }
 
 
-//-----------------------------------------------------------------------------------------------------------------------------
+/**
+ *  \brief Lighter version of the init routine, with only PC, QC, and V retrieved.
+ **/
+void initCOC(matrix<Ofsc>& PC,
+             matrix<Ofsc>& CQ,
+             vector<Ofsc>& V,
+             CSYS& csys)
+{
+    //------------------------------------------------------------------------------------
+    //Temp variables
+    //------------------------------------------------------------------------------------
+    matrix<Ofsc> P(6,6);
+    matrix<Ofsc> Q(6,6);
+
+    //------------------------------------------------------------------------------------
+    //Retrieve folder
+    //------------------------------------------------------------------------------------
+    string F_COC = csys.F_COC;
+
+    //------------------------------------------------------------------------------------
+    //Switch RTBP/QBCP/BCP
+    //------------------------------------------------------------------------------------
+    if(csys.model == M_QBCP || csys.model == M_BCP)
+    {
+        //Recovering the data: matrix P
+        for(int i = 0; i < NV ; i++) for(int j = 0; j < NV ; j++) readCOC(*P.getCA(i,j), F_COC+"P",  i+1, j+1);
+        //Recovering the data: matrix Q
+        for(int i = 0; i < NV ; i++) for(int j = 0; j < NV ; j++) readCOC(*Q.getCA(i,j), F_COC+"Q",  i+1, j+1);
+
+        //Recovering the data: vector V
+        //V = [G1_11 G1_12 0 G1_21 G1_22 0]^T
+        //Note:V[2] and V[5] are kept null
+        readCOC(V[0], F_COC+"G1_",  1, 1);
+        readCOC(V[1], F_COC+"G1_",  1, 2);
+        readCOC(V[3], F_COC+"G1_",  2, 1);
+        readCOC(V[4], F_COC+"G1_",  2, 2);
+    }
+    else //EM RTPB
+    {
+        //note that V is left untouched (set to zero by default)
+        //--------------------
+
+        //--------------------
+        //Init double variables
+        //--------------------
+        double eta1, eta2, la1, om1, om2, dl1, do1, s1, s2, c2;
+        c2 = csys.c2;
+        eta1 = (c2 - 2.0 - sqrt(9*c2*c2 - 8*c2))/2.0;
+        eta2 = (c2 - 2.0 + sqrt(9*c2*c2 - 8*c2))/2.0;
+        om1 = sqrt(-eta1);
+        la1 = sqrt(+eta2);
+        om2 = sqrt(c2);
+        dl1 = 2*la1*( (4.0+3*c2)*la1*la1 + 4 + 5*c2 - 6*c2*c2);
+        do1 =   om1*( (4.0+3*c2)*om1*om1 - 4 - 5*c2 + 6*c2*c2);
+        s1  = sqrt(dl1);
+        s2  = sqrt(do1);
+
+        //--------------------
+        //Init P
+        //--------------------
+        P.setCoef(+2*la1/s1,                          0, 1);
+        P.setCoef(+(la1*la1  - 2*c2 - 1)/s1,          1, 1);
+        P.setCoef(+(la1*la1  + 2*c2 + 1)/s1,          3, 1);
+        P.setCoef(+(la1*la1*la1 + (1 - 2*c2)*la1)/s1, 4, 1);
+
+        P.setCoef(-(om1*om1 + 2*c2 + 1)/s2,           1, 0);
+        P.setCoef(-(om1*om1 - 2*c2 - 1)/s2,           3, 0);
+
+        P.setCoef(-2*la1/s1,                          0, 4);
+        P.setCoef(+(la1*la1  - 2*c2 - 1)/s1,          1, 4);
+        P.setCoef(+(la1*la1  + 2*c2 + 1)/s1,          3, 4);
+        P.setCoef(-(la1*la1*la1 + (1 - 2*c2)*la1)/s1, 4, 4);
+
+        P.setCoef(+2*om1/s2,                          0, 3);
+        P.setCoef(-(om1*om1*om1 - (1 - 2*c2)*om1)/s2, 4, 3);
+
+        P.setCoef(+1.0/sqrt(om2),                     2, 2);
+        P.setCoef(+sqrt(om2),                         5, 5);
+
+        //--------------------
+        //Q = inv(P) (gsl lib)
+        //--------------------
+        int s;
+        gsl_matrix* Pc   = gsl_matrix_calloc (NV, NV);
+        gsl_matrix* Qc   = gsl_matrix_calloc (NV, NV);
+        gsl_permutation* p6 = gsl_permutation_alloc (NV);
+
+        //Init Pc
+        for(int i =0; i < NV; i++) for(int j =0; j < NV; j++) gsl_matrix_set(Pc, i, j, creal(P.getCA(i,j)->getCoef(0)));
+        //Use of GSL library
+        gsl_linalg_LU_decomp (Pc, p6, &s);
+        gsl_linalg_LU_invert (Pc, p6, Qc);
+
+        //--------------------
+        // Init Q
+        //--------------------
+        for(int i =0; i < NV; i++) for(int j =0; j < NV; j++) Q.setCoef(gsl_matrix_get(Qc, i, j), i, j);
+    }
+
+    //------------------------------------------------------------------------------------
+    // Building PC
+    //------------------------------------------------------------------------------------
+    Ofsc BUX(OFS_ORDER);
+    //Keymap used to initialize PC and CQ
+    vector<int> keyMap(4);
+    keyMap[0] = 0;
+    keyMap[1] = 1;
+    keyMap[2] = 3;
+    keyMap[3] = 4;
+    keyMap[4] = 2;
+    keyMap[5] = 5;
+
+
+    int ii;
+    //Init PC by rows
+    for(int i = 0; i <= 3; i++)
+    {
+        ii = keyMap[i];
+        BUX.ofs_fsum(P(ii,0),   1.0/sqrt(2)+0.0*I, P(ii,3), I*1.0/sqrt(2));
+        PC.setCoef(BUX, ii, 0);
+        BUX.ofs_fsum(P(ii,0), I*1.0/sqrt(2), P(ii,3),   1.0/sqrt(2)+0.0*I);
+        PC.setCoef(BUX, ii, 3);
+        PC.setCoef(P(ii,1), ii, 1);
+        PC.setCoef(P(ii,4), ii, 4);
+    }
+
+    for(int i = 4; i <= 5; i++)
+    {
+        ii = keyMap[i];
+        BUX.ofs_fsum(P(ii,2),   1.0/sqrt(2)+0.0*I, P(ii,5), I*1.0/sqrt(2));
+        PC.setCoef(BUX, ii, 2);
+        BUX.ofs_fsum(P(ii,2), I*1.0/sqrt(2), P(ii,5),   1.0/sqrt(2)+0.0*I);
+        PC.setCoef(BUX, ii, 5);
+    }
+
+    //Init CQ by columns
+    for(int i = 0; i <= 3; i++)
+    {
+        ii = keyMap[i];
+        BUX.ofs_fsum(Q(0,ii),    1.0/sqrt(2)+0.0*I, Q(3,ii), -1.0/sqrt(2)*I);
+        CQ.setCoef(BUX, 0, ii);
+        BUX.ofs_fsum(Q(0,ii), -1.0/sqrt(2)*I, Q(3,ii),    1.0/sqrt(2)+0.0*I);
+        CQ.setCoef(BUX, 3, ii);
+        CQ.setCoef(Q(1,ii), 1, ii);
+        CQ.setCoef(Q(4,ii), 4, ii);
+    }
+
+    for(int i = 4; i <= 5; i++)
+    {
+        ii = keyMap[i];
+        BUX.ofs_fsum(Q(2,ii),    1.0/sqrt(2)+0.0*I, Q(5,ii), -1.0/sqrt(2)*I);
+        CQ.setCoef(BUX, 2, ii);
+        BUX.ofs_fsum(Q(2,ii), -1.0/sqrt(2)*I, Q(5,ii),    1.0/sqrt(2)+0.0*I);
+        CQ.setCoef(BUX, 5, ii);
+    }
+
+}
+
+
+
+//----------------------------------------------------------------------------------------
 //            Init routines
-//-----------------------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  * \brief Initialize a QBCP_L structure, i.e. a QBCP focused on two libration points: one the EM system and one of the SEM system.
  *        The libration point must be L1 or L2 both for the EM and SEM systems.
@@ -257,13 +515,13 @@ void initCOC(matrix<Ofsc> &P,
  *   Note that the QBCP structure is used only for the initialization of the coordinate systems. More precisely, it contains some parameters
  *   specific to each libration point (gamma), via its CR3BP structures (see init_QBCP, the routine that initializes the QBCP structures).
  **/
-void init_QBCP_L(QBCP_L *qbcp_l, QBCP *qbcp, int isNormalized, int li_EM, int li_SEM, int isNew, int model, int coordsys, int pmType_EM, int pmType_SEM, int manType_EM, int manType_SEM)
+void init_QBCP_L(QBCP_L* qbcp_l, QBCP* qbcp, int isNormalized, int li_EM, int li_SEM, int isNew, int model, int fwrk, int pmType_EM, int pmType_SEM, int manType_EM, int manType_SEM)
 {
-    //-------------------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //      Common to all models
     //      These settings may be needed to initialize the CSYS and USYS structures
     //      For this reason, they are initialized in priority
-    //-------------------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //-----------------
     // - Hard-coded value of the order of the Fourier series. Equals zero for RTBP
     // - Note that for the bicircular models, the order of the Fourier series is still equals to OFS_ORDER
@@ -342,15 +600,15 @@ void init_QBCP_L(QBCP_L *qbcp_l, QBCP *qbcp, int isNormalized, int li_EM, int li
         cout << "init_QBCP_L. Warning: unknown pmType." << endl;
     }
 
-    //-------------------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Unit systems
-    //-------------------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     init_USYS(&qbcp_l->us_em,  USYS_EM,  model);
     init_USYS(&qbcp_l->us_sem, USYS_SEM, model);
 
-    //-------------------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Coordinate systems
-    //-------------------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     qbcp_l->numberOfCoefs = 15;
 
     //--------------------
@@ -367,10 +625,42 @@ void init_QBCP_L(QBCP_L *qbcp_l, QBCP *qbcp, int isNormalized, int li_EM, int li
     init_CSYS(&qbcp_l->cs_sem_l3, qbcp_l, qbcp,  F_SEM, 3, qbcp_l->numberOfCoefs, isNew, pmType_SEM, manType_SEM); //L3
 
 
-    //-------------------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
+    //For ephemerides conversion we use the mean motion of the Earth-Moon system n_em, in rad/s
+    //Two solutions:
+    // - The one from the JPL data sheet, which is: 2*M_PI/SEML.cs_em.cr3bp.T
+    // - The one from Gomez et al. 2002, which is: 0.22997154619514 in rad/day (*86400 to get it in rad/s)
+    // See void comp_num_const() for a numerical comparison of the three values.
+    //------------------------------------------------------------------------------------
+    qbcp_l->n_em = 2*M_PI/qbcp_l->cs_em_l1.cr3bp.T;
+
+    //------------------------------------------------------------------------------------
+    //For ephemerides conversion we use the mean motion of the Sun-Bem system n_sem, in rad/s
+    //Three solutions:
+    // - The one from the JPL data sheet, which is: 2*M_PI/SEML.cs_sem.cr3bp.T
+    // - The one from the QBCP values, which is: SEML.us_em.ns*n_em
+    // - The one from Gomez et al. 2002, which is: 0.01720209883844 in rad/day (/86400 to get it in rad/s)
+    // However, one can see that the QBCP value contains a constants from the JPL data sheet, so...
+    // See void comp_num_const() for a numerical comparison of the three values.
+    //
+    // For now, in order to be a bit consistent with the QBCP, we define n_sem wrt to n_em.
+    //------------------------------------------------------------------------------------
+    qbcp_l->n_sem = qbcp_l->us_em.ns*qbcp_l->n_em;
+
+
+    //------------------------------------------------------------------------------------
+    // Solar system (all planets + Moon + Sun + Pluto)
+    //------------------------------------------------------------------------------------
+    init_SS(&qbcp_l->ss, qbcp_l, F_VSEM);
+    init_SS(&qbcp_l->ss_sem, qbcp_l, F_VSEM);
+    init_SS(&qbcp_l->ss_em,  qbcp_l, F_VEM);
+
+
+    //------------------------------------------------------------------------------------
     // DEFAULT SETTINGS
-    // The flag coordsys determine the default focus; either on the Earth-Moon or Sun-Earth+Moon framework
-    //-------------------------------------------------------------------------------------------------
+    // The flag coordsys determine the default focus;
+    // either on the Earth-Moon or Sun-Earth+Moon framework
+    //------------------------------------------------------------------------------------
     //Coord. syst. for the EM point
     //--------------------
     switch(li_EM)
@@ -405,34 +695,44 @@ void init_QBCP_L(QBCP_L *qbcp_l, QBCP *qbcp, int isNormalized, int li_EM, int li
     //--------------------
     //Default Li, Unit & Coord. system
     //--------------------
-    qbcp_l->coordsys = coordsys;
-    switch(coordsys)
+    qbcp_l->fwrk = fwrk;
+    switch(fwrk)
     {
     case F_EM:
         qbcp_l->us = qbcp_l->us_em;
         qbcp_l->cs = qbcp_l->cs_em;
         qbcp_l->li = qbcp_l->li_EM;
+        qbcp_l->ss = qbcp_l->ss_em;
         break;
     case F_SEM:
         qbcp_l->us = qbcp_l->us_sem;
         qbcp_l->cs = qbcp_l->cs_sem;
         qbcp_l->li = qbcp_l->li_SEM;
+        qbcp_l->ss = qbcp_l->ss_sem;
         break;
     default:
-        cout << "init_QBCP_L. Warning: unknown coordsys." << endl;
+        cout << "init_QBCP_L. Warning: unknown fwrk." << endl;
     }
 
-    //-------------------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // 6*6 matrix B used for Floquet transformation
     // Do we need it here?
-    //-------------------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     qbcp_l->B  = (double*) calloc(36, sizeof(double));
 
-    //-------------------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // When epsilon = 1.0, the Moon is "on". When epsilon = 0.0, the Moon is "off"
-    //-------------------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Moon "on" by default. Deprecated value for now.
     qbcp_l->epsilon = 1.0;
+
+    //------------------------------------------------------------------------------------
+    // Display
+    //------------------------------------------------------------------------------------
+    //    cout << "solarsys->a_em   = " << qbcp_l->ss_em.a  << endl;
+    //    cout << "solarsys->a_sem  = " << qbcp_l->ss_sem.a  << endl;
+    //    cout << "qbcp->a_em       = " << qbcp_l->cs_em.cr3bp.m2.a << endl;
+    //    cout << "qbcp->a_sem      = " << qbcp_l->cs_sem.cr3bp.m2.a << endl;
 }
 
 /**
@@ -441,7 +741,7 @@ void init_QBCP_L(QBCP_L *qbcp_l, QBCP *qbcp, int isNormalized, int li_EM, int li
  * \param n1 name of the first primary
  * \param n2 name of the second primary
  **/
-void init_CR3BP(CR3BP *cr3bp, int n1, int n2)
+void init_CR3BP(CR3BP* cr3bp, int n1, int n2)
 {
     //Body initialization
     init_body(&(*cr3bp).m1, n1);
@@ -452,8 +752,8 @@ void init_CR3BP(CR3BP *cr3bp, int n1, int n2)
     cr3bp->T  = (*cr3bp).m2.T;                                      //Time parameter = sidereal period of m2
     cr3bp->R1 = (*cr3bp).m1.Req;
     cr3bp->R2 = (*cr3bp).m2.Req;
-    cr3bp->rh = pow((*cr3bp).mu/3.0,1.0/3.0);                          //Hill's radius adim formula
-    cr3bp->gprecision = PREC_DIFF;                                     //arbitrary
+    cr3bp->rh = pow((*cr3bp).mu/3.0,1.0/3.0);                       //Hill's radius adim formula
+    cr3bp->gprecision = 1e-12;                                      //arbitrary
 
     //Li initialization
     init_libp(&cr3bp->l1, *cr3bp, 1);
@@ -479,7 +779,7 @@ void init_CR3BP(CR3BP *cr3bp, int n1, int n2)
  *
  * NEEDS TO BE MODIFIED TO GET RID OF THE HARD CODED VALUES?
  **/
-void init_USYS(USYS *usys, int label, int model)
+void init_USYS(USYS* usys, int label, int model)
 {
     //--------------------------
     // These values are used as reference values for all other constants
@@ -651,11 +951,12 @@ void init_USYS(USYS *usys, int label, int model)
  *   Note that the QBCP structure is used only for the initialization of the coordinate systems. More precisely, it contains some parameters
  *   specific to each libration point (gamma), via its CR3BP structures.
  **/
-void init_CSYS(CSYS *csys, QBCP_L *qbcp_l, QBCP *qbcp, int coordsys, int li, int coefNumber, int isNew, int pmType, int manType)
+void init_CSYS(CSYS* csys, QBCP_L* qbcp_l, QBCP* qbcp, int fwrk, int li, int coefNumber, int isNew, int pmType, int manType)
 {
-    int nf = qbcp_l->nf;
-    int model = qbcp_l->model;
-
+    int nf      = qbcp_l->nf;
+    int model   = qbcp_l->model;
+    csys->model = model;
+    csys->fwrk  = fwrk;
 
     //--------------------------------------
     //Complete folders
@@ -670,18 +971,18 @@ void init_CSYS(CSYS *csys, QBCP_L *qbcp_l, QBCP *qbcp, int coordsys, int li, int
         datafolder = "../OOFTDA/data/";
     }
 
-    csys->F_GS     = init_F_FOLDER(datafolder+"PMFFT",  model, coordsys, li);     //Graph style (PM)
-    csys->F_NF     = init_F_FOLDER(datafolder+"NF",     model, coordsys, li);     //Normal form style(PM)
-    csys->F_MS     = init_F_FOLDER(datafolder+"MS",     model, coordsys, li);     //Mixed style (PM)
+    csys->F_GS     = init_F_FOLDER(datafolder+"PMFFT",  model, fwrk, li);     //Graph style (PM)
+    csys->F_NF     = init_F_FOLDER(datafolder+"NF",     model, fwrk, li);     //Normal form style(PM)
+    csys->F_MS     = init_F_FOLDER(datafolder+"MS",     model, fwrk, li);     //Mixed style (PM)
 
-    csys->F_CS     = init_F_FOLDER(datafolder+"CS",     model, coordsys, li);     //Center-stable (PM)
-    csys->F_CU     = init_F_FOLDER(datafolder+"CU",     model, coordsys, li);     //Center-unstable (PM)
-    csys->F_CUS    = init_F_FOLDER(datafolder+"CUS",    model, coordsys, li);     //Center-hyperbolic (PM)
+    csys->F_CS     = init_F_FOLDER(datafolder+"CS",     model, fwrk, li);     //Center-stable (PM)
+    csys->F_CU     = init_F_FOLDER(datafolder+"CU",     model, fwrk, li);     //Center-unstable (PM)
+    csys->F_CUS    = init_F_FOLDER(datafolder+"CUS",    model, fwrk, li);     //Center-hyperbolic (PM)
 
-    csys->F_COEF   = init_F_FOLDER(datafolder+"VF",     model, coordsys, li);     //For integration in a given coord. system
-    csys->F_COC    = init_F_FOLDER(datafolder+"COC",    model, coordsys, li);     //For the change of coordinates of the PM
-    csys->F_PLOT   = init_F_FOLDER("plot",        model, coordsys, li);           //For plot output (gnuplot)
-    csys->F_PRINT  = init_F_FOLDER("fprint",      model, coordsys, li);           //For print output (data used postprocessed in R)
+    csys->F_COEF   = init_F_FOLDER(datafolder+"VF",     model, fwrk, li);     //For integration in a given coord. system
+    csys->F_COC    = init_F_FOLDER(datafolder+"COC",    model, fwrk, li);     //For the change of coordinates of the PM
+    csys->F_PLOT   = init_F_FOLDER("plot",        model, fwrk, li);           //For plot output (gnuplot)
+    csys->F_PRINT  = init_F_FOLDER("fprint",      model, fwrk, li);           //For print output (data used postprocessed in R)
 
     csys->F_QBTBP  = datafolder+"qbtbp/";
 
@@ -689,12 +990,12 @@ void init_CSYS(CSYS *csys, QBCP_L *qbcp_l, QBCP *qbcp, int coordsys, int li, int
     //Parameterization folders
     //--------------------------------------
     csys->manType = manType;
+    csys->pmType  = pmType;
     switch(manType)
     {
         //If the Center Manifold is selected,
         //we can choose between the styles
     case MAN_CENTER:
-
         switch(pmType)
         {
         case PMS_GRAPH:
@@ -706,7 +1007,6 @@ void init_CSYS(CSYS *csys, QBCP_L *qbcp_l, QBCP *qbcp, int coordsys, int li, int
         case PMS_MIXED:
             csys->F_PMS = csys->F_MS;
             break;
-
         }
         break;
         //Else, the style is fixed
@@ -726,7 +1026,7 @@ void init_CSYS(CSYS *csys, QBCP_L *qbcp_l, QBCP *qbcp, int coordsys, int li, int
     //--------------------------------------
     // Unit system associated with csys
     //--------------------------------------
-    switch(coordsys)
+    switch(fwrk)
     {
     case F_EM:
         csys->us = qbcp_l->us_em;
@@ -745,7 +1045,7 @@ void init_CSYS(CSYS *csys, QBCP_L *qbcp_l, QBCP *qbcp, int coordsys, int li, int
     // Gives the assosicate CR3BP and mu
     //------------------------------
     CR3BP cr3bp_root;
-    switch(coordsys)
+    switch(fwrk)
     {
     case F_EM:
         cr3bp_root  = qbcp->cr3bp1;
@@ -864,7 +1164,7 @@ void init_CSYS(CSYS *csys, QBCP_L *qbcp_l, QBCP *qbcp, int coordsys, int li, int
             csys->coeffs[4] = 0.0;
             csys->coeffs[5] = 1.0;
 
-            switch(coordsys)
+            switch(fwrk)
             {
             case F_EM:
                 //Sun position
@@ -899,7 +1199,7 @@ void init_CSYS(CSYS *csys, QBCP_L *qbcp_l, QBCP *qbcp, int coordsys, int li, int
             // Earth, Moon, and Sun €€TODO: a revoir!
             // Mettre dans un fichier txt...
             //----------------------------------------
-            switch(coordsys)
+            switch(fwrk)
             {
             case F_EM:
                 csys->Pe[0] = csys->mu;
@@ -987,7 +1287,7 @@ void init_CSYS(CSYS *csys, QBCP_L *qbcp_l, QBCP *qbcp, int coordsys, int li, int
 *
 * NEEDS TO BE MODIFIED TO GET RID OF THE HARD CODED VALUES
 **/
-void init_QBCP(QBCP *qbcp, int BIG, int MEDIUM, int SMALL, int model)
+void init_QBCP(QBCP* qbcp, int BIG, int MEDIUM, int SMALL)
 {
     //E.g. Earth-Moon init
     init_CR3BP(&qbcp->cr3bp1, MEDIUM, SMALL);
@@ -1002,9 +1302,9 @@ void init_QBCP(QBCP *qbcp, int BIG, int MEDIUM, int SMALL, int model)
 /**
  *  \brief Initializes two QBCP_L with two different models for continuation process.
  **/
-void init_QBCP_I(QBCP_I *model,
-                 QBCP_L *model1,
-                 QBCP_L *model2,
+void init_QBCP_I(QBCP_I* model,
+                 QBCP_L* model1,
+                 QBCP_L* model2,
                  int n1, int n2, int n3,
                  int isNormalized, int li_EM, int li_SEM,
                  int isNew,
@@ -1014,8 +1314,8 @@ void init_QBCP_I(QBCP_I *model,
 {
     //Initialize the models
     QBCP qbp1, qbp2;
-    init_QBCP(&qbp1, n1, n2, n3, mod1);
-    init_QBCP(&qbp2, n1, n2, n3, mod2);
+    init_QBCP(&qbp1, n1, n2, n3);
+    init_QBCP(&qbp2, n1, n2, n3);
 
     //Initialize the models around the given li point
     init_QBCP_L(model1, &qbp1, isNormalized, li_EM, li_SEM, isNew, mod1, coordsys, pmType1, pmType2, MAN_CENTER, MAN_CENTER);
@@ -1034,7 +1334,7 @@ void init_QBCP_I(QBCP_I *model,
  * \param cr3bp a CR3BP structure that contains useful coefficients.
  * \param number the indix of the libration point to init.
  **/
-void init_libp(LibrationPoint *libp, CR3BP cr3bp, int number)
+void init_libp(LibrationPoint* libp, CR3BP cr3bp, int number)
 {
 
     double gamma_i;
@@ -1117,8 +1417,10 @@ void init_libp(LibrationPoint *libp, CR3BP cr3bp, int number)
 * \brief Initialize one celestial body
 * \param body a pointer on the Body structure to init.
 * \param name the name of the body in integer format (consistent with HORIZON numerotation)
+*
+*  Note: the GM values have been modified to be consistent with DE430 - DE432.
 **/
-void init_body(Body *body, int name)
+void init_body(Body* body, int name)
 {
 
     double days = 86400; //days to seconds
@@ -1127,27 +1429,29 @@ void init_body(Body *body, int name)
     {
 
     case MERCURY:
+    case MERCURY_BARYCENTER:
 
         //Physical parameters
-        body->Req = 2439.7;        //[km]
-        body->Rm = 2439.7;         //[km]
-        body->M = 0.330104e24;     //[kg]
-        body->GM = 22032;          //[km^3.s^-2]
+        body->Req = 2439.7;         //[km]
+        body->Rm  = 2439.7;         //[km]
+        body->M   = 0.330104e24;    //[kg]
+        body->GM  = 22031.78;       //[km^3.s^-2]
 
         //Orbital parameters
-        body->a = 57.91e6;         //[kg]
+        body->a = 57.91e6;          //[kg]
         body->T = 87.9691*days;     //[s]
 
         strcpy(body->name, "Mercury");
         break;
 
     case VENUS:
+    case VENUS_BARYCENTER:
 
         //Physical parameters
         body->Req = 6051.8;        //[km]
-        body->Rm = 6501.8;         //[km]
-        body->M = 4.86732e24;      //[kg]
-        body->GM = 324858.63;      //[km^3.s^-2]
+        body->Rm  = 6501.8;        //[km]
+        body->M   = 4.86732e24;    //[kg]
+        body->GM  = 324858.592;    //[km^3.s^-2]
 
         //Orbital parameters
         body->a = 108.21e6;        //[km]
@@ -1158,16 +1462,15 @@ void init_body(Body *body, int name)
 
 
     case EARTH:
-
         //Physical parameters
         body->Req = 6378.14;        //[km]
-        body->Rm  = 6371.00;         //[km]
-        body->M   = 5.97219e24;       //[kg]
-        body->GM  = 398600.440;      //[km^3.s^-2]
+        body->Rm  = 6371.00;        //[km]
+        body->M   = 5.97219e24;     //[kg]
+        body->GM  = 398600.435436;  //[km^3.s^-2]
 
         //Orbital parameters
-        body->a = 149.60e6;          //[km]
-        body->T = 365.25636*days;     //[s]
+        body->a = 149.60e6;         //[km]
+        body->T = 365.25636*days;   //[s]
 
         strcpy(body->name, "Earth");
         break;
@@ -1175,25 +1478,39 @@ void init_body(Body *body, int name)
     case MOON:
 
         //Physical parameters
-        body->Req = 1737.5;       //[km]
-        body->Rm = 1737.5;        //[km]
-        body->M =  0.07345814120628661e24;    //[kg] TO BE CONSISTENT WITH HARD CODED VALUE OF mu(Earth-Moon)
-        body->GM = 4902.801;      //[km^3.s^-2]
+        body->Req = 1737.5;                   //[km]
+        body->Rm  = 1737.5;                   //[km]
+        body->M   = 0.07345814120628661e24;   //[kg] TO BE CONSISTENT WITH HARD CODED VALUE OF mu(Earth-Moon)
+        body->GM  = 4902.800066;              //[km^3.s^-2]
 
+        //-------------------------------------------
         //Orbital parameters
-        body->a = 384400;           //[km]
-        body->T = 27.321582*days;    //[s]
+        //-------------------------------------------
 
+        //-------------------------------------------
+        // Mean semi-major axis
+        //Original value = 384400
+        //Value from Gomez et al. 2002 (average over DE406) = 384601.25606767
+        //-------------------------------------------
+        body->a = 384601.25606767; //[km]
+
+        //-------------------------------------------
+        // Period
+        //Original value = 27.321582*days
+        //Value from Gomez et al. 2002 (average over DE406) = 2pi/0.22997154619514*days
+        //-------------------------------------------
+        body->T = 2*M_PI/0.22997154619514*days;    //[s]
         strcpy(body->name, "Moon");
         break;
 
     case MARS:
+    case MARS_BARYCENTER:
 
         //Physical parameters
         body->Req = 3396.19;       //[km]
-        body->Rm = 3389.50;        //[km]
-        body->M = 0.641693e24;     //[kg]
-        body->GM = 42828.3;        //[km^3.s^-2]
+        body->Rm  = 3389.50;       //[km]
+        body->M   = 0.641693e24;   //[kg]
+        body->GM  = 42828.375214;  //[km^3.s^-2]
 
         //Orbital parameters
         body->a = 227.92e6;       //[kg]
@@ -1204,12 +1521,13 @@ void init_body(Body *body, int name)
 
 
     case JUPITER:
+    case JUPITER_BARYCENTER:
 
         //Physical parameters
-        body->Req =  71492;      //[km]
-        body->Rm = 69911;        //[km]
-        body->M = 1898.13e24;     //[kg]
-        body->GM = 126686511;       //[km^3.s^-2]
+        body->Req = 71492;      //[km]
+        body->Rm  = 69911;      //[km]
+        body->M   = 1898.13e24; //[kg]
+        body->GM  = 126712764.8;//[km^3.s^-2]
 
         //Orbital parameters
         body->a = 778.57e6;       //[kg]
@@ -1219,12 +1537,13 @@ void init_body(Body *body, int name)
         break;
 
     case SATURN:
+    case SATURN_BARYCENTER:
 
         //Physical parameters
-        body->Req =  60268;    //[km]
-        body->Rm = 58232;       //[km]
-        body->M = 568.319e24;     //[kg]
-        body->GM = 37931207.8;      //[km^3.s^-2]
+        body->Req = 60268;      //[km]
+        body->Rm  = 58232;      //[km]
+        body->M   = 568.319e24; //[kg]
+        body->GM  = 37940585.2; //[km^3.s^-2]
 
         //Orbital parameters
         body->a = 1433.53e6;       //[kg]
@@ -1234,46 +1553,49 @@ void init_body(Body *body, int name)
         break;
 
     case URANUS:
+    case URANUS_BARYCENTER:
 
         //Physical parameters
         body->Req = 25559;      //[km]
-        body->Rm = 25362;        //[km]
-        body->M =  86.8103e24;    //[kg]
-        body->GM =  5793966;      //[km^3.s^-2]
+        body->Rm  = 25362;      //[km]
+        body->M   = 86.8103e24; //[kg]
+        body->GM  = 5794548.6;  //[km^3.s^-2]
 
         //Orbital parameters
-        body->a =  2872.46e6;      //[kg]
-        body->T =  30685.4*days;   //[s]
+        body->a =  2872.46e6;     //[kg]
+        body->T =  30685.4*days;  //[s]
 
         strcpy(body->name, "Uranus");
         break;
 
     case NEPTUNE:
+    case NEPTUNE_BARYCENTER:
 
         //Physical parameters
-        body->Req = 24764;      //[km]
-        body->Rm = 24622;        //[km]
-        body->M = 102.410e24;     //[kg]
-        body->GM =  6835107;      //[km^3.s^-2]
+        body->Req = 24764;         //[km]
+        body->Rm  = 24622;         //[km]
+        body->M   = 102.410e24;    //[kg]
+        body->GM  = 6836527.10058; //[km^3.s^-2]
 
         //Orbital parameters
-        body->a =  4495.06e6;      //[kg]
+        body->a =  4495.06e6;     //[kg]
         body->T =  60189*days;    //[s]
 
         strcpy(body->name, "Neptune");
         break;
 
     case PLUTO:
+    case PLUTO_BARYCENTER:
 
         //Physical parameters
         body->Req =  1195;     //[km]
-        body->Rm =  1195;       //[km]
-        body->M = .01309e24;     //[kg]
-        body->GM =  872.4;      //[km^3.s^-2]
+        body->Rm  =  1195;     //[km]
+        body->M   = .01309e24; //[kg]
+        body->GM  =  975.501176;  //[km^3.s^-2]
 
         //Orbital parameters
-        body->a =  5906.38e6;      //[kg]
-        body->T =  90465*days;    //[s]
+        body->a =  5906.38e6;  //[kg]
+        body->T =  90465*days; //[s]
 
         strcpy(body->name, "Pluto");
         break;
@@ -1283,9 +1605,9 @@ void init_body(Body *body, int name)
 
         //Physical parameters
         body->Req = 696342;                //[km]
-        body->Rm =  696342;                //[km]
-        body->M  = 1988500e24;             //[kg]
-        body->GM = 1.3271244004193938e11;  //[km^3.s^-2]
+        body->Rm  = 696342;                //[km]
+        body->M   = 1988500e24;            //[kg]
+        body->GM  = 132712440041.939400;   //[km^3.s^-2]
 
         //Orbital parameters
         body->a = 0;    //[kg]
@@ -1298,23 +1620,128 @@ void init_body(Body *body, int name)
         //Equivalent mass of the Earth+Moon system based at the center of mass
         //additionnal physical properties are those of the Earth for consistency)
         //Physical parameters
-        body->Req = 6378.14;        //[km]
-        body->Rm = 6371.00;         //[km]
-        body->M = 6.04590064229622e+24; //[kg]  TO BE CONSISTENT WITH HARD CODED VALUE OF mu(Sun-(Earth+Moon))
-        body->GM = 398600.440+4902.801;      //[km^3.s^-2]
+        body->Req = 6378.14;                    //[km]
+        body->Rm  = 6371.00;                    //[km]
+        body->M   = 6.04590064229622e+24;       //[kg]  TO BE CONSISTENT WITH HARD CODED VALUE OF mu(Sun-(Earth+Moon))
+        body->GM  = 398600.435436+4902.800066;  //[km^3.s^-2]
 
+        //-------------------------------------------
         //Orbital parameters
-        body->a = 149.60e6;          //[km]
-        body->T = 365.25636*days;     //[s]
+        //-------------------------------------------
+
+        //-------------------------------------------
+        // Mean semi-major axis
+        //Original value = 149.60e6
+        //Value from Gomez et al. 2002 (average over DE406) = 149598058.09228115
+        //-------------------------------------------
+        body->a = 149598058.09228115;          //[km]
+        //---------------------------------------
+        // Period.
+        // If from the Earth period: 365.25636*days
+        // From Gomez et al. 2002 (average over DE406) : 2pi/0.01720209883844
+        //---------------------------------------
+        body->T = 2*M_PI/0.01720209883844*days;     //[s]
 
         strcpy(body->name, "Earth+Moon");
         break;
     }
 }
 
-//-----------------------------------------------------------------------------------------------------------------------------
+/**
+* \brief Initialize a solar system, composed of 11 bodies (Sun, planets and the Moon)
+**/
+void init_SS(SS* solarsys, QBCP_L* qbcp_l, int coordsys)
+{
+    //------------------------------------------------------------------------------------
+    //Allocate memory
+    //------------------------------------------------------------------------------------
+    solarsys->id  = (int*)    calloc(12, sizeof(int));
+    solarsys->Gmi = (double*) calloc(12, sizeof(double));
+    solarsys->mui = (double*) calloc(12, sizeof(double));
+
+    //------------------------------------------------------------------------------------
+    //Number of bodies taken into account
+    //------------------------------------------------------------------------------------
+    solarsys->maxBodies = 11;
+
+    //------------------------------------------------------------------------------------
+    //Set the values
+    //------------------------------------------------------------------------------------
+    int ids[12] = {SUN, MERCURY, VENUS, EARTH, MOON, MARS_BARYCENTER, JUPITER_BARYCENTER, SATURN_BARYCENTER, URANUS_BARYCENTER, NEPTUNE_BARYCENTER, PLUTO_BARYCENTER, EARTH_MOON_BARYCENTER};
+    Body body;
+    for(int i = 0; i < 11; i++)
+    {
+        init_body(&body, ids[i]);
+        solarsys->id[i]  = ids[i];
+        solarsys->Gmi[i] = body.GM;
+    }
+    //For last position: EARTH_MOON_BARYCENTER
+    solarsys->id[11]  = ids[11];
+    solarsys->Gmi[11] = solarsys->Gmi[3] + solarsys->Gmi[4];
+
+    //------------------------------------------------------------------------------------
+    //Set additional values, depending on the system.
+    //------------------------------------------------------------------------------------
+    switch(coordsys)
+    {
+    case F_VSEM:
+
+        //--------------------------------------------------------------------------------
+        //SEM focus: primaries are the Sun and Earth-Moon barycenter
+        //--------------------------------------------------------------------------------
+        solarsys->pos1      = 0;
+        solarsys->pos2      = 11;
+        solarsys->n         = qbcp_l->n_sem;
+        solarsys->coord_eph = VSEM;
+        break;
+
+    case F_VEM:
+        //--------------------------------------------------------------------------------
+        //EM focus: primaries are the Earth and Moon
+        //--------------------------------------------------------------------------------
+        solarsys->pos1      = 3;
+        solarsys->pos2      = 4;
+        solarsys->n         = qbcp_l->n_em;
+        solarsys->coord_eph = VEM;
+        break;
+
+    default:
+        cout << "init_SS. unknown coordsys. break." << endl;
+        break;
+    }
+
+    //------------------------------------------------------------------------------------
+    // Additionnal values when the primaries have been selected
+    //------------------------------------------------------------------------------------
+    //mui = mi/(m(pos1) + m(pos2))
+    for(int i = 0; i < 12; i++)
+    {
+        solarsys->mui[i] = solarsys->Gmi[i]/(solarsys->Gmi[solarsys->pos1] + solarsys->Gmi[solarsys->pos2]);
+    }
+
+    //Select the mu of the primaries
+    solarsys->mu1       = solarsys->mui[solarsys->pos1];
+    solarsys->mu2       = solarsys->mui[solarsys->pos2];
+
+    //Mean semi-major axis
+    solarsys->a = pow((solarsys->Gmi[solarsys->pos1] + solarsys->Gmi[solarsys->pos2])/(solarsys->n*solarsys->n), 1.0/3);
+
+    //------------------------------------------------------------------------------------
+    //Display
+    //------------------------------------------------------------------------------------
+    //cout << "solarsys->mui[SUN]   = " << solarsys->mui[0]  << endl;
+    //cout << "solarsys->mui[EARTH] = " << solarsys->mui[3]  << endl;
+    //cout << "solarsys->mui[Moon ] = " << solarsys->mui[4]  << endl;
+    //cout << "Position of the barycenter on the line of the primaries [km]:" << endl;
+    //cout <<  solarsys->mu2/(solarsys->mu1+solarsys->mu2)*solarsys->a << endl;
+    //    cout << "solarsys->mui[EMB ]  = " << solarsys->mui[11] << endl;
+
+
+}
+
+//----------------------------------------------------------------------------------------
 //            COC
-//-----------------------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  *  \brief From EM to NC coordinates for the primaries. Used in qbtbp_ofs_fft_*
  */
@@ -1325,43 +1752,45 @@ void EMtoNC_prim(double Zc[3], double zc[3], double c1, double gamma)
     zc[2] =    + Zc[2]/gamma;
 }
 
-//-----------------------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 //            Change Coord. System
-//-----------------------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  *  \brief Change the default coordinate system
  **/
-void changeDCS(QBCP_L &qbcp_l, int coordsys)
+void changeDCS(QBCP_L& qbcp_l, int fwrk)
 {
-    qbcp_l.coordsys = coordsys;
-    switch(coordsys)
+    qbcp_l.fwrk = fwrk;
+    switch(fwrk)
     {
     case F_EM:
         qbcp_l.us = qbcp_l.us_em;
         qbcp_l.cs = qbcp_l.cs_em;
         qbcp_l.li = qbcp_l.li_EM;
+        qbcp_l.ss = qbcp_l.ss_em;
         break;
     case F_SEM:
         qbcp_l.us = qbcp_l.us_sem;
         qbcp_l.cs = qbcp_l.cs_sem;
         qbcp_l.li = qbcp_l.li_SEM;
+        qbcp_l.ss = qbcp_l.ss_sem;
         break;
     default:
-        cout << "changeDCS. Warning: unknown coordsys." << endl;
+        cout << "changeDCS. Warning: unknown fwrk." << endl;
     }
 }
 
 /**
  *  \brief Change the default coordinate system and the libration point for this coordinate system
  **/
-void changeLIDCS(QBCP_L &qbcp_l, int coordsys, int li)
+void changeLIDCS(QBCP_L& qbcp_l, int fwrk, int li)
 {
     //Default settings
-    qbcp_l.coordsys = coordsys;  //new default cs
-    qbcp_l.li = li;      //new default libration point
+    qbcp_l.fwrk = fwrk;  //new default cs
+    qbcp_l.li = li;              //new default libration point
 
-    //Change the coord. system approprietly: "coordsys" around "li"
-    switch(coordsys)
+    //Change the coord. system approprietly: "fwrk" around "li"
+    switch(fwrk)
     {
     case F_EM:
         switch(li)
@@ -1378,6 +1807,7 @@ void changeLIDCS(QBCP_L &qbcp_l, int coordsys, int li)
         }
         qbcp_l.us = qbcp_l.us_em;
         qbcp_l.cs = qbcp_l.cs_em;
+        qbcp_l.ss = qbcp_l.ss_em;
         break;
     case F_SEM:
         switch(li)
@@ -1394,6 +1824,7 @@ void changeLIDCS(QBCP_L &qbcp_l, int coordsys, int li)
         }
         qbcp_l.us = qbcp_l.us_sem;
         qbcp_l.cs = qbcp_l.cs_sem;
+        qbcp_l.ss = qbcp_l.ss_sem;
         break;
     default:
         cout << "changeLIDCS. Warning: unknown coordsys." << endl;
@@ -1401,9 +1832,24 @@ void changeLIDCS(QBCP_L &qbcp_l, int coordsys, int li)
 }
 
 
-//-----------------------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 //            Subroutines
-//-----------------------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
+/**
+ *   \brief Initialize an evenly spaced grid of size gsize, in the interval [gmin, gmax]
+ **/
+void init_grid(double *grid, double gmin, double gmax, int gsize)
+{
+    double di, ds;
+    for(int i = 0; i <= gsize; i++)
+    {
+        di = (double) i;
+        ds = (double) gsize;
+        if(gsize > 0) grid[i] = gmin +  (gmax - gmin)*di/ds;
+        else grid[i] = gmin;
+    }
+}
+
 /**
  *  \brief Return the string corresponding to the libration point number provided (e.g. "L1" if li == 1).
  **/
@@ -1451,16 +1897,16 @@ string init_F_MODEL(int model)
 /**
  *  \brief Return the string corresponding to the framework (coord. syst.) indix provided (e.g. "EM" if coordsys == F_EM).
  **/
-string init_F_COORDSYS(int coordsys)
+string init_F_FRAMEWORK(int fwrk)
 {
-    switch(coordsys)
+    switch(fwrk)
     {
     case F_EM:
         return  "EM";
     case F_SEM:
         return  "SEM";
     default:
-        cout << "init_F_COORDSYS. Warning: unknown model." << endl;
+        cout << "init_F_FRAMEWORK. Warning: unknown model." << endl;
     }
 
     return "EM"; //never here
@@ -1469,9 +1915,9 @@ string init_F_COORDSYS(int coordsys)
 /**
  *  \brief Return the folder name corresponding to the prefix/model/framework/libration point number combination provided (e.g. "prefix/QBCP/EM/L1").
  **/
-string init_F_FOLDER(string prefix, int model, int coordsys, int li)
+string init_F_FOLDER(string prefix, int model, int fwrk, int li)
 {
-    return prefix+"/"+init_F_MODEL(model)+"/"+init_F_COORDSYS(coordsys)+"/"+init_F_LI(li)+"/";
+    return prefix+"/"+init_F_MODEL(model)+"/"+init_F_FRAMEWORK(fwrk)+"/"+init_F_LI(li)+"/";
 }
 
 /**
@@ -1484,7 +1930,7 @@ string init_F_FOLDER(string prefix, int model, int coordsys, int li)
  *
  *  Warning: As of now, FFT coefficients must be used for betas and deltas (see QBCP_L structure).
  **/
-void coefRetrieving(string filename, double *params, int nf, int shift, int flag, int number)
+void coefRetrieving(string filename, double* params, int nf, int shift, int flag, int number)
 {
     //Reading tools
     ifstream readStream;
@@ -1549,7 +1995,7 @@ double cn(QBCP_L& qbcp_l, int n)
 {
     double gamma = qbcp_l.cs.gamma;
     double mu;
-    switch(qbcp_l.coordsys)
+    switch(qbcp_l.fwrk)
     {
     case F_EM:
         mu   = qbcp_l.us.mu_EM;
@@ -1623,7 +2069,7 @@ double cn(int li, double gamma, double mu, int n)
 *  funcd is a user-supplied routine that returns both the function value and the first derivative of the
 *  function at the point x.
 **/
-double rtnewt(void (*funcd)(double, int, double, double *, double *), double x1, double xacc, double mu, int number)
+double rtnewt(void (*funcd)(double, int, double, double*, double*), double x1, double xacc, double mu, int number)
 {
     void nrerror(char error_text[]);
     int j;
@@ -1648,7 +2094,7 @@ double rtnewt(void (*funcd)(double, int, double, double *, double *), double x1,
 * f corresponds to the equation satisfied by the Li-m2 distance for the L1/L2 cases
 * and by 1-(Li-m1 distance) for the L3 case
 **/
-void polynomialLi(double mu, int number, double y, double *f, double *df)
+void polynomialLi(double mu, int number, double y, double* f, double* df)
 {
     switch(number)
     {

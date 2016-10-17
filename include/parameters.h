@@ -6,7 +6,7 @@
 //------------------------------------------------------------------------------------
 // Environment
 //------------------------------------------------------------------------------------
-/// Numerotation of the Solar System planets and objects, consistent with JPL's HORIZON numerotation
+// Numerotation of the Solar System planets and objects, consistent with JPL's HORIZON numerotation (NAIF ID)
 #define SUN 10
 #define MERCURY 199
 #define VENUS 299
@@ -18,9 +18,22 @@
 #define NEPTUNE 899
 #define PLUTO 999
 #define MOON 301
-/// Custom indix for the Sun+Earth system
-#define EARTH_AND_MOON 700
-/// Precision on the position of the librations points L1/L2/L3 in define_env.h
+#define EARTH_AND_MOON 3
+#define EARTH_MOON_BARYCENTER 3
+#define SSB 0
+
+//Barycenters
+#define MERCURY_BARYCENTER 1
+#define VENUS_BARYCENTER   2
+#define EARTH_BARYCENTER   3
+#define MARS_BARYCENTER    4
+#define JUPITER_BARYCENTER 5
+#define SATURN_BARYCENTER  6
+#define URANUS_BARYCENTER  7
+#define NEPTUNE_BARYCENTER 8
+#define PLUTO_BARYCENTER   9
+
+// Precision on the position of the librations points L1/L2/L3 in define_env.h
 #define LIBRATION_POINT_PRECISION 1e-16
 
 
@@ -60,6 +73,12 @@ typedef complex double cdouble;
 #define F_VNCSEM 3
 #define F_NCEM   4
 #define F_NCSEM  5
+#define F_ECLI   6
+#define F_VSEM   7
+#define F_VEM    8
+#define F_INSEM  9
+#define F_INEM  10
+#define F_J2000 11
 
 //-------------------------------------------------------------------------
 // Available coordinates system
@@ -74,9 +93,8 @@ typedef complex double cdouble;
 #define VEM    7
 #define INEM   8
 #define INSEM  9
-
-//Order of the potential of the primaries
-#define POTENTIAL_ORDER 60
+#define VECLI  10
+#define J2000  11
 
 //Number of variables
 #define NV 6
@@ -101,18 +119,5 @@ void coutsp();
  *  \brief Sets an average precision in cout.
  **/
 void coutmp();
-
-//------------------------------------------------------------------------------------
-//   Print
-//------------------------------------------------------------------------------------
-/**
- *  \brief Prints an array of double using cout.
- **/
-void vector_printf(double *y, int n);
-
-/**
- *  \brief Prints an array of complex double using cout.
- **/
-void vector_complex_printf(cdouble *y, int n);
 
 #endif // PARAMETERS_H_INCLUDED

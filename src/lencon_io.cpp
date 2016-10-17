@@ -4,11 +4,11 @@
 #include <vector>       // std::vector
 #include <iterator>
 
-//=======================================================================================================================================
+//========================================================================================
 //
 //          I/O (1)
 //
-//=======================================================================================================================================
+//========================================================================================
 /**
  *  \brief Computes a data filename as a string, depending on the ofts_order, sizeOrbit, and type of the data.
  **/
@@ -28,6 +28,14 @@ string filenameCUM(int ofts_order, int type)
         return SEML.cs_em.F_PLOT+"sortprojintcu_order_"+numTostring(ofts_order)+".bin";
     case TYPE_CONT_ATF:
         return SEML.cs_em.F_PLOT+"cont_atf_order_"+numTostring(ofts_order)+".txt";
+    case TYPE_CU_3D:
+        return SEML.cs_em.F_PLOT+"cu_3d_order_"+numTostring(ofts_order)+".bin";
+    case TYPE_MAN_PROJ_3D:
+        return SEML.cs_em.F_PLOT+"projcu_3d_order_"+numTostring(ofts_order)+".bin";
+    case TYPE_MAN_PROJ_FROM_SERVER:
+        return SEML.cs_em.F_PLOT+"Serv/projcu_order_20.bin";
+    case TYPE_MAN_PROJ_3D_FROM_SERVER:
+        return SEML.cs_em.F_PLOT+"Serv/projcu_3d_order_20.bin";
     default:
         cout << "filenameOrbit: unknown type." << endl;
         return "";
@@ -55,6 +63,8 @@ string filenameCUM(int ofts_order, int type, double t0)
         return SEML.cs_em.F_PLOT+"cont_atf_order_"+numTostring(ofts_order)+"_t0_"+numTostring(t0)+".txt";
     case TYPE_CONT_ATF_TRAJ:
         return SEML.cs_em.F_PLOT+"cont_atf_traj_order_"+numTostring(ofts_order)+"_t0_"+numTostring(t0)+".bin";
+    case TYPE_CU_3D:
+        return SEML.cs_em.F_PLOT+"cu_3d_order_"+numTostring(ofts_order)+"_t0_"+numTostring(t0)+".bin";
     default:
         cout << "filenameOrbit: unknown type." << endl;
         return "";
@@ -275,6 +285,300 @@ int getLenghtCU_bin(int *s1_grid_size, int *s3_grid_size, int *t_grid_size, int 
 
 
 //-----------------------------------------------
+// CU 3D
+//-----------------------------------------------
+
+//----------
+// IN
+//----------
+/**
+ *  \brief init the data file of Initial Conditions of a 3D Center-Unstable manifold. Used in compute_grid_CMU_EM_3D.
+ *         The data are of type t0*s1*s2*s3*s4 and of size (t_grid_size +1)*(si_grid_size[0]+1)*(si_grid_size[1]+1)*(si_grid_size[2]+1)*(si_grid_size[3]+1)
+ **/
+int initCU_bin_3D(int *si_grid_size, int t_grid_size, int ofts_order, int type)
+{
+    //---------------------
+    //Filename
+    //---------------------
+    string filename = filenameCUM(ofts_order, type);
+
+    //----------------------------------------------------------
+    //Open datafile
+    //----------------------------------------------------------
+    fstream filestream(filename.c_str(), ios::binary | ios::out);
+    if (filestream.is_open())
+    {
+        int resi;
+        //---------------------
+        //Number of data on the time grid
+        //---------------------
+        resi = t_grid_size;
+        filestream.write((char*) &resi, sizeof(int));
+
+        //---------------------
+        //Number of data on the manifold grid on all four dimensions
+        //---------------------
+        for(int i = 0; i < 4; i++)
+        {
+            resi = si_grid_size[i];
+            filestream.write((char*) &resi, sizeof(int));
+        }
+
+        filestream.close();
+    }
+    else return 0;
+
+    return 1;
+}
+
+/**
+ *  \brief Write the current time in the data file of Initial Conditions of a 3D Center-Unstable manifold. Used in compute_grid_CMU_EM_3D.
+ *         The data are of type t0*s1*s2*s3*s4 and of size (t_grid_size +1)*(si_grid_size[0]+1)*(si_grid_size[1]+1)*(si_grid_size[2]+1)*(si_grid_size[3]+1).
+ *         Here, only the time is appended to the data file, so this routine must be used within the intricated loops. See compute_grid_CMU_EM_3D src code for details.
+ **/
+int appTimeCU_bin_3D(double *tGrid, int nt, int ofts_order, int type)
+{
+    //---------------------
+    //Filename
+    //---------------------
+    string filename = filenameCUM(ofts_order, type);
+
+    //----------------------------------------------------------
+    //Open datafile
+    //----------------------------------------------------------
+    fstream filestream(filename.c_str(), ios::binary | ios::out | ios::app);
+    if (filestream.is_open())
+    {
+        //Store the current time
+        double res = tGrid[nt];
+        filestream.write((char*) &res, sizeof(double));
+        filestream.close();
+    }
+    else return 0;
+
+    return 1;
+}
+
+/**
+ *  \brief Write the current state in the data file of Initial Conditions of a 3D Center-Unstable manifold. Used in compute_grid_CMU_EM_3D.
+ *         The data are of type t0*s1*s2*s3*s4 and of size (t_grid_size +1)*(si_grid_size[0]+1)*(si_grid_size[1]+1)*(si_grid_size[2]+1)*(si_grid_size[3]+1).
+ *         Here, only a single loop on s4 is appended to the data file, so this routine must be used within the intricated loops. See compute_grid_CMU_EM_3D src code for details.
+ **/
+int writeCU_bin_3D(double **yNCE, double **sNCE, int *si_grid_size, int ofts_order, int type)
+{
+    //---------------------
+    //Filename
+    //---------------------
+    string filename = filenameCUM(ofts_order, type);
+
+    //----------------------------------------------------------
+    //Open datafile
+    //----------------------------------------------------------
+    fstream filestream(filename.c_str(), ios::binary | ios::out | ios::app);
+    if (filestream.is_open())
+    {
+        double res;
+        //---------------------
+        //Loop
+        //---------------------
+        for(int n3 = 0; n3 <= si_grid_size[2]; n3++)
+        {
+            //NC state
+            for (int k = 0; k < 6; k++)
+            {
+                res = yNCE[k][n3];
+                filestream.write((char*) &res, sizeof(double));
+            }
+
+            //RCM state
+            for (int k = 0; k < 5; k++)
+            {
+                res = sNCE[k][n3];
+                filestream.write((char*) &res, sizeof(double));
+            }
+        }
+
+        filestream.close();
+    }
+    else return 0;
+
+    return 1;
+}
+
+//----------
+// OUT
+//----------
+
+/**
+ *  \brief Get the length of the data file the containing the Initial Conditions of a 3D Center-Unstable manifold. Used in compute_grid_CMU_EM_3D.
+ *         The data are of type t0*s1*s2*s3*s4 and of size (t_grid_size +1)*(si_grid_size[0]+1)*(si_grid_size[1]+1)*(si_grid_size[2]+1)*(si_grid_size[3]+1).
+ **/
+int getLenghtCU_bin_3D(int *si_grid_size, int *t_grid_size, int ofts_order, int type)
+{
+    //Offset
+    int offset = 0;
+
+    //---------------------
+    //Filename
+    //---------------------
+    string filename = filenameCUM(ofts_order, type);
+
+    //---------------------
+    //Open datafile
+    //---------------------
+    fstream filestream;
+    filestream.open (filename.c_str(), ios::binary | ios::in);
+    if (filestream.is_open())
+    {
+        int resi;
+
+        //---------------------
+        //Number of data on the time grid
+        //---------------------
+        filestream.read((char*) &resi, sizeof(int));
+        *t_grid_size = resi;
+
+        //---------------------
+        //Number of data on the manifold grid on all four dimensions
+        //---------------------
+        for(int i = 0; i < 4; i++)
+        {
+            filestream.read((char*) &resi, sizeof(int));
+            si_grid_size[i] = resi;
+        }
+
+        //---------------------
+        //Get the offset
+        //---------------------
+        offset = filestream.tellg();
+
+        //---------------------
+        //Close
+        //---------------------
+        filestream.close();
+
+    }
+    else return 0;
+
+    return offset;
+}
+
+/**
+ *  \brief Read in a data file the time at Initial Conditions of a planar Center-Unstable manifold. Used in int_proj_CMU_EM_on_CM_SEM and intMan
+ *         The data are of type t0*s1*s3 and of size (tGrid +1)*(gSize+1)*(gSize+1)
+ **/
+int readTCU_bin_3D(int offset, double *tGrid, int nt, int ofts_order, int type)
+{
+    //Offset
+    int offset2 = 0;
+
+    //---------------------
+    //Filename
+    //---------------------
+    string filename = filenameCUM(ofts_order, type);
+
+    //---------------------
+    //Open datafile
+    //---------------------
+    fstream filestream;
+    filestream.open (filename.c_str(), ios::binary | ios::in);
+    if (filestream.is_open())
+    {
+        //---------------------
+        //Set the offset
+        //---------------------
+        filestream.seekg (offset, ios::beg);
+
+        //---------------------
+        //Read the current time
+        //---------------------
+        double res;
+        filestream.read((char*) &res, sizeof(double));
+        tGrid[nt] = res;
+
+        //---------------------
+        //Get the offset
+        //---------------------
+        offset2 = filestream.tellg();
+
+        //---------------------
+        //Close
+        //---------------------
+        filestream.close();
+
+    }
+    else return 0;
+
+    return offset2;
+}
+
+/**
+ *  \brief Read in a data file the state at Initial Conditions of a planar Center-Unstable manifold. Used in int_proj_CMU_EM_on_CM_SEM and intMan
+ *         The data are of type t0*s1*s3 and of size (tGrid +1)*(gSize+1)*(gSize+1)
+ **/
+int readCU_bin_3D(int offset, double **yNCE, double **sNCE, int *si_grid_size, int ofts_order, int type)
+{
+    //Offset
+    int offset2 = 0;
+
+    //---------------------
+    //Filename
+    //---------------------
+    string filename = filenameCUM(ofts_order, type);
+
+    //---------------------
+    //Open datafile
+    //---------------------
+    fstream filestream;
+    filestream.open (filename.c_str(), ios::binary | ios::in);
+    if (filestream.is_open())
+    {
+        //---------------------
+        //Set the offset
+        //---------------------
+        filestream.seekg (offset, ios::beg);
+
+        //---------------------
+        //Loop
+        //---------------------
+        double res;
+        for(int n3 = 0; n3 <= si_grid_size[2]; n3++)
+        {
+            //NC state
+            for (int k = 0; k < 6; k++)
+            {
+                filestream.read((char*) &res, sizeof(double));
+                yNCE[k][n3] = res;
+            }
+
+            //RCM state
+            for (int k = 0; k < 5; k++)
+            {
+                filestream.read((char*) &res, sizeof(double));
+                sNCE[k][n3] = res;
+            }
+        }
+
+        //---------------------
+        //Get the offset
+        //---------------------
+        offset2 = filestream.tellg();
+
+        //---------------------
+        //Close
+        //---------------------
+        filestream.close();
+
+    }
+    else return 0;
+
+    return offset2;
+}
+
+
+
+
+//-----------------------------------------------
 // Int CU
 //-----------------------------------------------
 /**
@@ -308,9 +612,6 @@ int getLengthIntSortedCU_bin(int *number_of_sol, int ofts_order, int type)
 }
 
 
-//-----------------------------------------------
-// Int CU
-//-----------------------------------------------
 /**
  *  \brief Store in a data file the connections between EML2 and SEML1,2.
  *         Used in int_proj_CMU_EM_on_CM_SEM.
@@ -393,6 +694,97 @@ void writeIntProjCU_bin(string filename,
         for (int k = 0; k < 4; k++)
         {
             res = projected_state_CMU_RCM[k][kt][ks1][ks3];
+            filestream.write((char*) &res, sizeof(double));
+        }
+
+        filestream.close();
+    }
+}
+
+//-----------------------------------------------
+// Int CU 3D
+//-----------------------------------------------
+/**
+ *  \brief Store in a data file the connections between EML2 and SEML1,2.
+ *         Used in int_proj_CMU_EM_on_CM_SEM_3D.
+ **/
+void writeIntProjCU_bin_3D(string filename,
+                           double *init_time_grid_EM,          //time grid in NCEM units
+                           double **init_state_CMU_NCEM,       //initial state in NCEM coordinates
+                           double **init_state_CMU_SEM,        //initial state in SEM coordinates
+                           double **init_state_CMU_RCM,        //initial state in RCM coordinates
+                           double **final_state_CMU_SEM,       //final state in SEM coordinates
+                           double **projected_state_CMU_SEM,   //projected state in SEM coordinates
+                           double **projected_state_CMU_RCM,   //projected state in RCM coordinates
+                           double min_proj_dist_SEM,           //minimum distance of projection in SEM units
+                           double dv_at_projection_SEM,        //associated dv
+                           double *t_man_SEM,                  //time grid on manifold leg in SEM units
+                           int kmin,
+                           int ks3,
+                           int kt)
+{
+    //----------------------------------------------------------
+    //Open datafile
+    //----------------------------------------------------------
+    fstream filestream(filename.c_str(), ios::binary | ios::out | ios::app);
+    if (filestream.is_open())
+    {
+        double res;
+        // 1. time grid in NCEM units
+        res = init_time_grid_EM[kt];
+        filestream.write((char*) &res, sizeof(double));
+
+        // 2-7. initial state in NCEM coordinates
+        for (int k = 0; k < 6; k++)
+        {
+            res = init_state_CMU_NCEM[k][ks3];
+            filestream.write((char*) &res, sizeof(double));
+        }
+
+        // 8-13. initial state in SEM coordinates
+        for (int k = 0; k < 6; k++)
+        {
+            res = init_state_CMU_SEM[k][ks3];
+            filestream.write((char*) &res, sizeof(double));
+        }
+
+        // 14-18. initial state in RCM coordinates
+        for (int k = 0; k < 5; k++)
+        {
+            res = init_state_CMU_RCM[k][ks3];
+            filestream.write((char*) &res, sizeof(double));
+        }
+
+        // 19. minimum distance of projection
+        res = min_proj_dist_SEM;
+        filestream.write((char*) &res, sizeof(double));
+
+        // 20. associated dv
+        res = dv_at_projection_SEM;
+        filestream.write((char*) &res, sizeof(double));
+
+        // 21. tvMinTensor
+        res = t_man_SEM[kmin];
+        filestream.write((char*) &res, sizeof(double));
+
+        // 22-27. final_state_CMU_SEM state in SE coordinates
+        for (int k = 0; k < 6; k++)
+        {
+            res = final_state_CMU_SEM[k][ks3];
+            filestream.write((char*) &res, sizeof(double));
+        }
+
+        // 28-33. projected_state_CMU_SEM state in SE coordinates
+        for (int k = 0; k < 6; k++)
+        {
+            res = projected_state_CMU_SEM[k][ks3];
+            filestream.write((char*) &res, sizeof(double));
+        }
+
+        // 34-37. projected_state_CMU_RCM state in SE coordinates
+        for (int k = 0; k < 4; k++)
+        {
+            res = projected_state_CMU_RCM[k][ks3];
             filestream.write((char*) &res, sizeof(double));
         }
 
@@ -657,7 +1049,6 @@ void readIntProjCU_bin(string filename,
  **/
 void writeIntProjSortCU_bin(string filename,
                             double ****init_state_CMU_NCEM,       //initial state in NCEM coordinates
-                            double ****init_state_CMU_SEM,        //initial state in SEM coordinates
                             double ****init_state_CMU_RCM,        //initial state in RCM coordinates
                             double ****final_state_CMU_SEM,       //final state in SEM coordinates
                             double ****projected_state_CMU_SEM,   //projected state in SEM coordinates

@@ -64,6 +64,11 @@ typedef struct gnuplot_ctrl
     char*      tmp_filename_tbl[GP_MAX_TMP_FILES] ;
     /** Number of temporary files */
     int       ntmp ;
+    /** Ranges **/
+    double xrange[2];
+    double yrange[2];
+    double zrange[2];
+
 } gnuplot_ctrl;
 
 /*---------------------------------------------------------------------------
@@ -250,6 +255,17 @@ void gnuplot_plot_x(gnuplot_ctrl * handle, double * d, int n, char * title);
   @endcode
  */
 /*--------------------------------------------------------------------------*/
+void gnuplot_plotc_xy(
+    gnuplot_ctrl    * handle,
+    const double    * x,
+    const double    * y,
+    int               n,
+    char const      * title,
+    char const      * ls,
+    char const      * lt,
+    char const      * lw,
+    int               lc);
+
 void gnuplot_plot_xy(
     gnuplot_ctrl    *   handle,
     double          *   x,
@@ -293,7 +309,15 @@ void gnuplot_fplot_txyz(
     double          * y,
     double          * z,
     int               n,
-    char const      * tmpfname);
+    char const      * tmpfname,
+    char const      *mode);
+
+void gnuplot_fplot_txyzv(
+    double          *  t,
+    double          ** Z,
+    int             n,
+    char const      * tmpfname,
+    char const      *mode);
 
 void gnuplot_fplot_txp(
     double          * t,

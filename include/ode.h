@@ -1,9 +1,22 @@
 #ifndef CUSTOM_ODE_H_INCLUDED
 #define CUSTOM_ODE_H_INCLUDED
 
+//C++
+#include <iostream>
+
 //GSL
 #include <gsl/gsl_odeiv2.h>
+#include <gsl/gsl_errno.h>
 #include <gsl/gsl_roots.h>
+
+//Precision
+#define PREC_ABS    1e-14
+#define PREC_REL    1e-14
+#define PREC_ROOT   1e-13
+#define PREC_DIFF   1e-12
+#define PREC_HSTART 1e-8
+
+using namespace std;
 
 typedef struct OdeStruct OdeStruct;
 struct OdeStruct
@@ -60,6 +73,12 @@ void init_ode_structure(OdeStruct *ode_s,
                         int (* jacobian) (double t, const double y[], double * dfdy, double dfdt[], void * params),
                         void *params);
 
+void init_ode_structure(OdeStruct *ode_s,
+                        const gsl_odeiv2_step_type *T,
+                        const gsl_root_fsolver_type *T_root,
+                        size_t dim,
+                        int (* func) (double t, const double y[], double dydt[], void *params),
+                        void *params);
 void reset_ode_structure(OdeStruct *ode_s);
 void free_ode_structure(OdeStruct *ode_s);
 

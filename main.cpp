@@ -11,9 +11,13 @@
 #include "timec.h"
 #include "single_orbit.h"
 #include "lencon.h"
-
+#include "oolencon.h"
+#include "ephemerides.h"
+#include "Invman.h"
+#include "Orbit.h"
 extern "C" {
-#include "gnuplot_i.h"
+    #include "gnuplot_i.h"
+    #include "SpiceUsr.h"
 }
 
 // TYPE OF COMPUTATIONS
@@ -23,6 +27,12 @@ extern "C" {
 #define COMP_CM_EML2_TO_CMS_SEML_READ  3    //Read
 #define COMP_VF_TEST                   4    //Test of the QBCP vector field. Should probably be put in OOFTDA
 #define COMP_CM_EML2_TO_CM_SEML_REFINE 5    //EML2 Center Manifold to SEML2 Center Manifold
+#define COMP_EPHEMERIDES_TEST          6    //Ephemerides test
+#define COMP_CM_EML2_TO_CM_SEML_3D     7    //EML2 Center Manifold to SEML2 Center Manifold in 3D
+#define COMP_VOFTS_TO_VOFTS            8    //Store CS/CU into one-dimensionnal series to gain memory
+#define COMP_test_INVMAN               9    //Test of the new invariant manifold implementation
+
+
 using namespace std;
 
 /************* NOTES ********************
@@ -44,79 +54,94 @@ Is it close to the Moon?
 
 int main()
 {
-    //=====================================================================
+    //====================================================================================
     // Type of computation
-    //=====================================================================
-    int COMPTYPE = COMP_CM_EML2_TO_CM_SEML_REFINE;//COMP_CM_EML2_TO_CMS_SEML;//COMP_CM_EML2_TO_CMS_SEML;//COMP_SINGLE_ORBIT;//
+    //====================================================================================
+    int COMPTYPE = COMP_CM_EML2_TO_CMS_SEML;//COMP_CM_EML2_TO_CM_SEML_3D;//COMP_CM_EML2_TO_CMS_SEML;
 
-    //=====================================================================
+    //====================================================================================
     // cout settings
-    //=====================================================================
+    //====================================================================================
     cout << setiosflags(ios::scientific) << setprecision(15);
 
-    //=====================================================================
+    //====================================================================================
     // openMP settings
-    //=====================================================================
+    //====================================================================================
     int num_threads = 4;
     omp_set_num_threads(num_threads);
     cout << "num_threads  = "  << num_threads << endl;
 
-    //=====================================================================
+    //====================================================================================
     // Define the global parameters
-    //=====================================================================
-    //MODEL
+    //====================================================================================
     MODEL_TYPE = M_QBCP;
-    //OFTS_ORDER
-    OFTS_ORDER = 15; //IF 16 is set, the results came from the server (OFTS_ORDER = 20...) NOT the best practice!
-    //OFS_ORDER
+    OFTS_ORDER = 16;
     if(MODEL_TYPE == M_RTBP) OFS_ORDER  = 0;
     else OFS_ORDER  = 30;
 
-
-    //=====================================================================
+    //====================================================================================
     // Configuration parameters
-    //=====================================================================
-    int model = 0, coordsys = 0, isNorm = 0, li_EM = 0, li_SEM = 0, pms_EM = 0, pms_SEM = 0, mType_EM = 0, mType_SEM = 0, reduced_nv = 0;
+    //====================================================================================
+    int model = 0, coordsys = 0, isNorm = 0, li_EM = 0, li_SEM = 0;
+    int pms_EM = 0, pms_SEM = 0, mType_EM = 0, mType_SEM = 0, reduced_nv = 0;
     switch(COMPTYPE)
     {
-        //================================
+        //================================================================================
+        // Test and additionnal computations
+        //================================================================================
+     case COMP_EPHEMERIDES_TEST:
+     case COMP_VOFTS_TO_VOFTS:
+     case COMP_test_INVMAN:
+        model     = MODEL_TYPE;
+        coordsys  = F_SEM;
+        isNorm    = 1;
+        li_EM     = 2;
+        li_SEM    = 2;
+        pms_EM    = PMS_GRAPH;
+        pms_SEM   = PMS_GRAPH;
+        mType_EM  = MAN_CENTER_U;
+        mType_SEM = MAN_CENTER_S;
+        break;
+
+        //================================================================================
         // Projection CMU EML2 to CM SEMLi
-        //================================
+        //================================================================================
     case COMP_CM_EML2_TO_CM_SEML:
+    case COMP_CM_EML2_TO_CM_SEML_3D:
     case COMP_CM_EML2_TO_CM_SEML_REFINE:
         model     = MODEL_TYPE;
         coordsys  = F_EM;
         isNorm    = 1;
         li_EM     = 2;
         li_SEM    = 2;
-        pms_EM    = PMS_MIXED;
+        pms_EM    = PMS_GRAPH;
         pms_SEM   = PMS_GRAPH;
         mType_EM  = MAN_CENTER_U;
         mType_SEM = MAN_CENTER;
         break;
 
-        //================================
+        //================================================================================
         // Projection CMU EML2 to CMS SEMLi
-        //================================
+        //================================================================================
     case COMP_CM_EML2_TO_CMS_SEML:
     case COMP_CM_EML2_TO_CMS_SEML_READ:
         model     = MODEL_TYPE;
-        coordsys       = F_EM;
+        coordsys  = F_EM;
         isNorm    = 1;
         li_EM     = 2;
         li_SEM    = 2;
-        pms_EM    = PMS_MIXED;
-        pms_SEM   = PMS_MIXED;
+        pms_EM    = PMS_GRAPH;
+        pms_SEM   = PMS_GRAPH;
         mType_EM  = MAN_CENTER_U;
         mType_SEM = MAN_CENTER_S;
         break;
 
-        //================================
+        //================================================================================
         // Just some examples of solutions
-        //================================
+        //================================================================================
     case COMP_SINGLE_ORBIT:
         model     = MODEL_TYPE;
-        coordsys       = F_EM;
+        coordsys  = F_EM;
         isNorm    = 1;
         li_EM     = 2;
         li_SEM    = 2;
@@ -126,12 +151,12 @@ int main()
         mType_SEM = MAN_CENTER;
         break;
 
-        //================================
+        //================================================================================
         // Test of the vector fields
-        //================================
+        //================================================================================
     case COMP_VF_TEST:
         model     = MODEL_TYPE;
-        coordsys       = F_EM;
+        coordsys  = F_EM;
         isNorm    = 1;
         li_EM     = 2;
         li_SEM    = 2;
@@ -140,12 +165,15 @@ int main()
         mType_EM  = MAN_CENTER;
         mType_SEM = MAN_CENTER;
         break;
+
+    default:
+        cout << "main. Warning: unknown COMPTYPE!" << endl;
     }
 
-    //=====================================================================
+    //====================================================================================
     //Define the number of reduced variables
     //depending on the type of manifold
-    //=====================================================================
+    //====================================================================================
     if(coordsys == F_EM)
     {
         switch(mType_EM)
@@ -187,10 +215,10 @@ int main()
         }
     }
 
-    //=====================================================================
+    //====================================================================================
     // Initialization of the environnement
     // Mandatory to perform any computation
-    //=====================================================================
+    //====================================================================================
     initialize_environment(li_EM, li_SEM, isNorm, model, coordsys, pms_EM, pms_SEM, mType_EM, mType_SEM);
 
     //--------------------------------------
@@ -198,23 +226,17 @@ int main()
     //--------------------------------------
     vector<Oftsc> CM_NC;      //center manifold in NC coordinates
     vector<Oftsc> CM_TFC;     //center manifold in TFC coordinates
-    CM_NC.reserve(6);
-    for(int i = 0; i < 6; i++) CM_NC.push_back(Oftsc(reduced_nv, OFTS_ORDER, OFS_NV, OFS_ORDER));
-    CM_TFC.reserve(6);
-    for(int i = 0; i < 6; i++) CM_TFC.push_back(Oftsc(reduced_nv, OFTS_ORDER, OFS_NV, OFS_ORDER));
-
-    //Read from file
-    readVOFTS_bin(CM_NC,  SEML.cs.F_PMS+"W/W",  OFS_ORDER);
-    readVOFTS_bin(CM_TFC, SEML.cs.F_PMS+"W/Wh", OFS_ORDER);
+    //Init routine
+    initOFTS(CM_NC, CM_TFC, reduced_nv, OFTS_ORDER, OFS_ORDER, SEML.cs);
 
     //--------------------------------------
     // COC objects
     //--------------------------------------
-    matrix<Ofsc>  Mcoc(6,6);    ///COC matrix
-    matrix<Ofsc>  Pcoc(6,6);    ///COC matrix (Mcoc = Pcoc*Complex matrix)
-    matrix<Ofsc>  MIcoc(6,6);   ///COC matrix = inv(Mcoc)
-    matrix<Ofsc>  PIcoc(6,6);   ///COC matrix = inv(Pcoc)
-    vector<Ofsc>  Vcoc(6);      ///COC vector
+    matrix<Ofsc>  Mcoc(6,6);    //COC matrix
+    matrix<Ofsc>  Pcoc(6,6);    //COC matrix (Mcoc = Pcoc*Complex matrix)
+    matrix<Ofsc>  MIcoc(6,6);   //COC matrix = inv(Mcoc)
+    matrix<Ofsc>  PIcoc(6,6);   //COC matrix = inv(Pcoc)
+    vector<Ofsc>  Vcoc(6);      //COC vector
 
     //Read from files
     initCOC(Pcoc, Mcoc, PIcoc, MIcoc, Vcoc, SEML);
@@ -222,12 +244,17 @@ int main()
     //--------------------------------------
     //DCM_TFC : Jacobian of CM_TFC
     //--------------------------------------
-    matrix<Oftsc> DCM_TFC(6, 4, reduced_nv, OFTS_ORDER, OFS_NV, OFS_ORDER);
-    readMOFTS_bin(DCM_TFC, SEML.cs.F_PMS+"DWf/DWhc", OFS_ORDER);
+    matrix<Oftsc> DCM_TFC(6, reduced_nv, reduced_nv, OFTS_ORDER-1, OFS_NV, OFS_ORDER);
+    readMOFTS_bin(DCM_TFC, SEML.cs.F_PMS+"DWf/DWhc");
 
-    //=====================================================================
+    //====================================================================================
+    // Second init, with new implementation!!
+    //====================================================================================
+    Invman invman(OFTS_ORDER, OFS_ORDER, SEML.cs);
+
+    //====================================================================================
     // Initial conditions
-    //=====================================================================
+    //====================================================================================
     double st0[reduced_nv];
     switch(coordsys)
     {
@@ -263,24 +290,29 @@ int main()
         break;
     }
 
-
-    //=====================================================================
+    //====================================================================================
     // Computation parameters: Projection CMU EML2 to CM SEMLi
-    //=====================================================================
+    //====================================================================================
     //TIME
-    double TM    = 12*SEML.us.T;
-    double TMIN  = 0.9*SEML.us.T;
-    double TMAX  = 1.0*SEML.us.T;
-    int    TSIZE = 0;
+    double TM      = 12*SEML.us.T;
+    double TMIN    = 0.99*SEML.us.T;
+    double TMAX    = 1.0*SEML.us.T;
+    int    TSIZE   = 0;
+    double TLIM[2] = {TMIN, TMAX};
 
     //UNSTABLE MANIFOLD AT EML2
-    double GMIN_S1  = 20;
-    double GMAX_S1  = 20;
-    int    GSIZE_S1 = 0;
+    double GMIN_S1  = -30;
+    double GMAX_S1  = +30;
+    int    GSIZE_S1 = 80;
 
-    double GMIN_S3  = -17;
-    double GMAX_S3  = -10;
-    int    GSIZE_S3 = 1;
+    double GMIN_S3  = -30;
+    double GMAX_S3  = +30;
+    int    GSIZE_S3 = 80;
+
+    //In the form of a matrix & a vector
+    double  GMIN_SI[4][2] = {{-20, 20} , {10, 10} , {-20, 20} , {10, 10} };
+    int     GSIZE_SI[4]   = {30, 0, 30, 0};
+
 
     //TRAJECTORTY REFINMENT
     int MSIZE = 500;    //number of points on each trajectory
@@ -300,14 +332,35 @@ int main()
     int ISSAVED = 1;
 
     //User-defined direction?
-    int ISUSERDEFINED = 0;
+    int ISUSERDEFINED = 1;
 
     //Number of dimensions on which we compute the norm of the projection error
     int NOD = 6;
 
-    //=====================================================================
+    //Refinement structure
+    RefSt refst;
+    refst.type          = REF_CONT_D;
+    refst.dim           = REF_PLANAR;
+    refst.time          = REF_VAR_TIME;
+    refst.grid          = REF_FIXED_GRID;
+    refst.isDirUD       = 1;
+    refst.isLimUD       = 1;
+    refst.isPlotted     = 1;
+    refst.isSaved       = 1;
+    refst.isJPL         = 1;
+    refst.isDebug       = 0;
+    refst.isFromServer  = 0;
+    refst.s1_CMU_EM_MIN = +24;
+    refst.s1_CMU_EM_MAX = +30;
+    refst.s3_CMU_EM_MIN = -18;
+    refst.s3_CMU_EM_MAX = +6;
+    refst.cont_step_max = +150;
+    refst.tspan_EM      = +5*SEML.us_em.T;
+    refst.tspan_SEM     = +5*SEML.us_sem.T;
+
+    //====================================================================================
     // For COMP_CM_EML2_TO_CMS_SEML_READ
-    //=====================================================================
+    //====================================================================================
     //Vector to store the values of t0v_EM;
     vector<double> t0_CMU_EM;
     vector<double> tf_man_EM;
@@ -329,74 +382,110 @@ int main()
     int ind = 0;
     vector<size_t> sortId;
 
-    //=====================================================================
+    //====================================================================================
     // Switch
-    //=====================================================================
+    //====================================================================================
     switch(COMPTYPE)
     {
-        //================================
+        //================================================================================
+        // 3D Projection CMU EML2 to CM SEMLi
+        //================================================================================
+    case COMP_CM_EML2_TO_CM_SEML_3D:
+        //----------------------
+        // Compute initial conditions in CMU EML2 on a given grid
+        //----------------------
+//                tic();
+//                compute_grid_CMU_EM_3D(PROJ_EPSILON, TLIM, TSIZE, GMIN_SI, GSIZE_SI, CM_TFC, Mcoc, Vcoc, ISPAR);
+//                cout << "End of in compute_grid_CMU_EM_3D in " << toc() << endl;
+//        tic();
+        oo_compute_grid_CMU_EM_3D(PROJ_EPSILON, TLIM, TSIZE, GMIN_SI, GSIZE_SI, invman, ISPAR);
+        cout << "End of in oo_compute_grid_CMU_EM_3D in " << toc() << endl;
+
+
+        //----------------------
+        // Integrate those initial conditions and project them on the CM SEML2
+        //----------------------
+//                tic();
+//                int_proj_CMU_EM_on_CM_SEM_3D(TM, MSIZE , NOD, ISPAR, YNMAX, SNMAX);
+//                cout << "End of in int_proj_CMU_EM_on_CM_SEM_3D in " << toc() << endl;
+//        tic();
+        oo_int_proj_CMU_EM_on_CM_SEM_3D(TM, MSIZE, NOD, ISPAR, YNMAX, SNMAX);
+        cout << "End of in oo_int_proj_CMU_EM_on_CM_SEM_3D in " << toc() << endl;
+        break;
+
+        //================================================================================
         // Projection CMU EML2 to CM SEMLi
-        //================================
+        //================================================================================
     case COMP_CM_EML2_TO_CM_SEML:
         tic();
         //----------------------
         // Compute initial conditions in CMU EML2 on a given grid
         //----------------------
-        compute_grid_CMU_EM(PROJ_EPSILON, TMIN, TMAX, TSIZE,
+        //        tic();
+        //        compute_grid_CMU_EM(PROJ_EPSILON, TMIN, TMAX, TSIZE,
+        //                            GMIN_S1, GMAX_S1, GMIN_S3, GMAX_S3, GSIZE_S1, GSIZE_S3,
+        //                            CM_TFC, Mcoc, Vcoc, ISPAR);
+        //        cout << "End of in compute_grid_CMU_EM in " << toc() << endl;
+
+        tic();
+        oo_compute_grid_CMU_EM(PROJ_EPSILON, TMIN, TMAX, TSIZE,
                             GMIN_S1, GMAX_S1, GMIN_S3, GMAX_S3, GSIZE_S1, GSIZE_S3,
-                            CM_TFC, Mcoc, MIcoc, Vcoc, ISPAR);
-        cout << "End of in compute_grid_CMU_EM" <<  endl;
+                            invman, ISPAR);
+        cout << "End of in oo_compute_grid_CMU_EM in " << toc() << endl;
 
         //----------------------
         // Integrate those initial conditions and project them on the CM SEML2
         //----------------------
-        int_proj_CMU_EM_on_CM_SEM(TM, TSIZE, GSIZE_S1, GSIZE_S3, MSIZE, NSMIN, NOD,
+        //        tic();
+        //        int_proj_CMU_EM_on_CM_SEM(TM, TSIZE, GSIZE_S1, GSIZE_S3, MSIZE, NSMIN, NOD,
+        //                                  ISPAR, YNMAX, SNMAX);
+        //        cout << "End of in int_proj_CMU_EM_on_CM_SEM in " << toc() << endl;
+
+        tic();
+        oo_int_proj_CMU_EM_on_CM_SEM(TM, TSIZE, GSIZE_S1, GSIZE_S3, MSIZE, NSMIN, NOD,
                                   ISPAR, YNMAX, SNMAX);
-        cout << "int_proj_CMU_EM_on_CM_SEM" <<  endl;
+        cout << "End of in oo_int_proj_CMU_EM_on_CM_SEM in " << toc() << endl;
 
         //----------------------
         // Compute the best solutions from previous computation
+        // No equivalent in new implementation for now
         //----------------------
-        int_sorted_sol_CMU_EM_to_CM_SEM(OFTS_ORDER, MSIZE, ISPAR, CM_NC, CM_TFC, Mcoc, Pcoc, MIcoc, PIcoc, Vcoc);
-        cout << "End of int_sorted_sol_CMU_EM_to_CM_SEM in " << toc() << endl;
+        //int_sorted_sol_CMU_EM_to_CM_SEM(OFTS_ORDER, MSIZE, ISPAR, CM_NC, CM_TFC, Mcoc, MIcoc, Vcoc);
+        //cout << "End of int_sorted_sol_CMU_EM_to_CM_SEM in " << toc() << endl;
         break;
 
-        //================================
+        //================================================================================
         // Projection CMU EML2 to CMS SEMLi
-        //================================
+        //================================================================================
     case COMP_CM_EML2_TO_CMS_SEML:
+        //----------------------
+        // Test: complete routine
+        //----------------------
+        //refeml2seml(20, NCSEM, CM_NC, CM_TFC, DCM_TFC, Mcoc, MIcoc, Vcoc, refst);
+        //toCelestiaFormat("jpltraj.xyz");
+        refeml2seml(20, NCSEM, invman, refst);
+        break;
+
         //----------------------
         // Multiple shooting: CMU to CMS, with variable times
         //----------------------
-        ref_CMU_EM_to_CMS_SEM_MSD_RCM_2(20, NCSEM, CM_NC, CM_TFC, DCM_TFC, Mcoc, Pcoc, MIcoc, PIcoc, Vcoc, ISPLANAR, ISSAVED, ISUSERDEFINED);
+        //ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE(20, 60, NCSEM, CM_NC, CM_TFC, DCM_TFC, Mcoc, Pcoc, MIcoc, PIcoc, Vcoc, ISPLANAR, ISSAVED, ISUSERDEFINED);
+        //break;
 
         //----------------------
-        // Search for minimum of projection + Multiple shooting: CMU to CMS, with variable times
-        //        double st_EM[5];
-        //        st_EM[0] = 35;
-        //        st_EM[1] = 0.0;
-        //        st_EM[2] = 10.0;
-        //        st_EM[3] = 0.0;
-        //        st_EM[4] = PROJ_EPSILON;
-
-        // 1. the IC in CMS of EML2 are fixed
-        //ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ(MSIZE, 20, NCSEM, st_EM, T0EM, TM, CM_NC, CM_TFC, DCM_TFC, Mcoc, Pcoc, MIcoc, PIcoc, Vcoc, YNMAX, SNMAX, ISPLANAR);
-
-        // 2. Only s1_EM is fixed
-        //ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ_OPT(MSIZE, 20, NCSEM, st_EM, 0.9*SEML.us.T, TM, TM, GMIN_S3, GMAX_S3,
-        //                                                      GSIZE_S3, CM_NC, CM_TFC, DCM_TFC,
-        //                                                      Mcoc, Pcoc, MIcoc, PIcoc, Vcoc, YNMAX, SNMAX, ISPLANAR, ISPAR);
-
+        // Continuation: CMU to CMS, with variable times
+        //----------------------
+        ref_CMU_EM_to_CMS_SEM_MSD_RCM_2(20, NCSEM, CM_NC, CM_TFC, DCM_TFC, Mcoc, MIcoc, Vcoc, ISPLANAR, ISSAVED, ISUSERDEFINED);
         break;
 
-        //================================
+        //================================================================================
         // Refinement of the projection CMU EML2 to CM SEMLi
-        //================================
+        //================================================================================
     case COMP_CM_EML2_TO_CM_SEML_REFINE:
 
         //----------------------
         // Multiple shooting on the whole trajectory (base for JPL refinment)
-        ref_CMU_EM_to_CM_SEM_MSD_COMP(OFTS_ORDER, 60, NCSEM, CM_NC, CM_TFC, Mcoc, Pcoc, MIcoc, PIcoc, Vcoc);
+        ref_CMU_EM_to_CM_SEM_MSD_COMP(OFTS_ORDER, 60, NCSEM, CM_NC, CM_TFC, Mcoc, MIcoc, Vcoc);
 
         //----------------------
         // Multiple shooting on the manifold leg only
@@ -412,9 +501,51 @@ int main()
 
         break;
 
-    //================================
-    // READ CMU EML2 to CMS SEMLi
-    //================================
+        //================================================================================
+        // Test on ephemerides
+        //================================================================================
+    case COMP_EPHEMERIDES_TEST:
+
+        //----------------------
+        //load kernels
+        //----------------------
+        furnsh_c("spice/kernels/metakernel.furnsh");
+
+        //----------------------
+        //TEST 1: cocs
+        //----------------------
+        //double B[3];
+        //double C[3][3], k, kCprim[3][3], Bprim[3];
+        //init_ecl2synpos("2000 JAN 31 01:00", B, C, &k);
+        //init_ecl2synstate("1949 DEC 14 00:00:00.000", B, C, &k, Bprim, kCprim);
+
+        //----------------------
+        //TEST 2: Info
+        //----------------------
+        //displayKernelFeaturesOneBody();
+
+        //----------------------
+        //TEST 3: Search for the best fit
+        //----------------------
+        double et;
+        qbcp2jpl_disp(0.2, &et, VSEM);
+
+        //----------------------
+        //TEST 4: Compare the numerical constants
+        //----------------------
+        //comp_num_const();
+
+        //----------------------
+        //TEST 5: vector field
+        //----------------------
+        //test_asteroid();
+        //test_coc(VSEM);
+
+        break;
+
+        //================================================================================
+        // READ CMU EML2 to CMS SEMLi
+        //================================================================================
     case COMP_CM_EML2_TO_CMS_SEML_READ:
         //Read data file
         readIntProjCU_bin(filename, t0_CMU_EM, tf_man_EM, s1_CMU_EM, s2_CMU_EM, s3_CMU_EM, s4_CMU_EM, s5_CMU_EM,
@@ -441,28 +572,67 @@ int main()
         cout << "s_CM_SEM = (" << s1_CM_SEM[ind] << ", " << s2_CM_SEM[ind] << ", " << s3_CM_SEM[ind] << ", " << s4_CM_SEM[ind] << ")" << endl;
         break;
 
-        //================================
+        //================================================================================
         // Just some examples of solutions
-        //================================
+        //================================================================================
     case COMP_SINGLE_ORBIT:
-        cout << "mu " << SEML_SEM.us_sem.mu_SEM << endl;
-        cout << "L "  << SEML_SEM.cs_sem.cr3bp.L << endl;
-        cout << "T " << SEML_SEM.cs_sem.cr3bp.T << endl;
-        cout << "rh " << SEML_SEM.cs_em.cr3bp.rh << endl;
-        cout << "mu " << SEML_SEM.cs_em.cr3bp.mu << endl;
-        cout << "g1"  << SEML_SEM.cs_em.cr3bp.l1.gamma_i << endl;
-        cout << "g2 " << SEML_SEM.cs_em.cr3bp.l2.gamma_i << endl;
-        cout << "g3 " << SEML_SEM.cs_em.cr3bp.l3.gamma_i << endl;
-        gridOrbit(st0, +6.016997770510415e+00, -2.793897158902917e+01, 1e-2, CM_NC, CM_TFC, Mcoc, Pcoc, MIcoc, PIcoc, Vcoc);
+        //gridOrbit(st0, +6.016997770510415e+00, -2.793897158902917e+01, 1e-2, CM_NC, CM_TFC, Mcoc, MIcoc, Vcoc);
+        oo_gridOrbit(st0, +6.016997770510415e+00, -2.793897158902917e+01, 1e-2, invman);
         break;
-        //================================
-        // Test of the vector fields
-        //================================
+
+        //================================================================================
+        // Test of the vector fields. Better in OOFTDA?? €€TODO
+        //================================================================================
     case COMP_VF_TEST:
         qbtbp_test(0.25*SEML.us.T, SEML);
+        break;
+
+        //================================================================================
+        // Test of the new invariant manifold representation
+        //================================================================================
+    case COMP_test_INVMAN:
+
+        //Test in
+        //test_evalCCMtoTFC();
+        //test_evalRCMtoNC();
+        //test_evalDCCMtoTFC();
+        test_evalDRCMtoTFC();
 
         break;
 
+        //================================================================================
+        // Store CS/CU into one-dimensionnal series to gain memory.
+        // DEPRECATED: NOW DONE IN OOFTDA
+        //================================================================================
+    case COMP_VOFTS_TO_VOFTS:
+
+        cout << "-------------------------------------------------------" << endl;
+        cout << "Store CS/CU into one-dimensionnal series to gain memory" << endl;
+        cout << "-------------------------------------------------------" << endl;
+
+        //--------------------------------------------------------------------------------
+        //Storing
+        //--------------------------------------------------------------------------------
+        Oftsc W  = Oftsc(reduced_nv, OFTS_ORDER, OFS_NV, OFS_ORDER);
+        Oftsc W1 = Oftsc(1,          OFTS_ORDER, OFS_NV, OFS_ORDER);
+        fromVOFTStoVOFTS_bin(W, W1, SEML.cs.F_PMS+"W/Wh", SEML.cs.F_PMS+"W/Wh1");
+
+        //--------------------------------------------------------------------------------
+        //Test, only the 3 first orders
+        //--------------------------------------------------------------------------------
+        vector<Oftsc> W1v;
+        W1v.reserve(2);
+        for(int i = 0; i < 2; i++) W1v.push_back(Oftsc(1, min(3, OFTS_ORDER), OFS_NV, OFS_ORDER));
+        readVOFTS_bin(W1v, SEML.cs.F_PMS+"W/Wh1");
+
+        cout << "Test:" << endl;
+        for(int i = 0; i < 2; i++)
+        {
+            cout << "Wh1[" << i << "] = " << endl;
+            cout << W1v[i] << endl;
+            cout << "-------------------------------------------------------" << endl;
+        }
+        break;
     }
 
 

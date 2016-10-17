@@ -41,7 +41,7 @@ Ofsc::Ofsc(Ofsc const& b)
 {
     order = b.order;
     coef = new cdouble[2*order+1];
-    for(int i = -order ; i<= order; i++) coef[i+order] = b.coef[i+order]; //this->setCoef(b.getCoef(i), i);
+    for(int i = -order ; i<= order; i++) coef[i+order] = b.coef[i+order];
 }
 
 //---------------------------------------------------------------------------
@@ -253,7 +253,7 @@ bool Ofsc::isnull(const int ofs_order) const
  *  The sum is given in the form: \f$ c_0 + \sum \limits_{k = 1}^{J} \cos(k\theta) (c_k + c_{-k}) + i\sin(k\theta) (c_k - c_{-k}) \f$
  *  in order to avoid any additionnal roundoff errors by using cos and sin functions as little as possible.
  */
-cdouble Ofsc::fevaluate(double cR[], double sR[], int eff_order)
+cdouble Ofsc::fevaluate(double const cR[], double const sR[], int eff_order) const
 {
     cdouble result = 0+0.0*I;
     //Order -k and +k are calculated together to avoid any additionnal roundoff errors
@@ -270,7 +270,7 @@ cdouble Ofsc::fevaluate(double cR[], double sR[], int eff_order)
  *  The sum is given in the form: \f$ c_0 + \sum \limits_{k = 1}^{J} \cos(k\theta) (c_k + c_{-k}) + i\sin(k\theta) (c_k - c_{-k}) \f$
  *  in order to avoid any additionnal roundoff errors by using cos and sin functions as little as possible.
  */
-cdouble Ofsc::evaluate(double const& theta, int eff_order)
+cdouble Ofsc::evaluate(double const& theta, int eff_order) const
 {
     cdouble result = 0+0.0*I;
     double cR[eff_order];
@@ -299,7 +299,7 @@ cdouble Ofsc::evaluate(double const& theta, int eff_order)
  *  The sum is given in the form: \f$ c_0 + \sum \limits_{k = 1}^{J} \cos(k\theta) (c_k + c_{-k}) + i\sin(k\theta) (c_k - c_{-k}) \f$
  *  in order to avoid any additionnal roundoff errors by using cos and sin functions as little as possible.
  */
-cdouble Ofsc::evaluate(double const& theta)
+cdouble Ofsc::evaluate(double const& theta) const
 {
     cdouble result = 0+0.0*I;
     double cR[order];
@@ -327,25 +327,24 @@ cdouble Ofsc::evaluate(double const& theta)
 /**
  *  \brief  An operation. Adds the product: \c this \f$  += m a \f$ at a certain order eff_order.
  *
- *  Note: can be used in place.
+ *  Note 1: can be used in place.
+ *  Note 2: For speed, the use of addCoef and getCoef has been discarded,
+ *          which means no test at all in this routine!
  */
 void Ofsc::ofs_smult(Ofsc const& a, cdouble c, int eff_order)
 {
     //Sum
     for(int i = -eff_order; i <= eff_order; i++)
     {
-        addCoef(c*a.getCoef(i), i);
+        //addCoef(c*a.getCoef(i), i);
+        coef[i+order] += c*a.coef[i+order];
     }
 }
 
 
 /**
  *  \brief  An operation. Adds the product: \c this \f$ += a \times b \f$.
-
-    Notes:
-    1. \c this \f$ += a \times b \f$. with new order = max(order, a.order, b.order): the sum is truncated at max(a.getOrder(),b.getOrder()).
-    2. WARNING: Need improvement: for n <= a.getOrder(), b.getOrder(), some products are out of scope in: this->addCoef(a.getCoef(p)*b.getCoef(n-p), n). The getCoef function set these coefficients to zero, which guarantees the good result. However, unecessary product are made. psup and pinf must be redefined.
-    3. Works fine when a.order = b.order which is the default case.
+ *           Works fine when a.order = b.order which is the default case.
  */
 void Ofsc::ofs_sprod(Ofsc const& a, Ofsc const& b)
 {
@@ -355,7 +354,7 @@ void Ofsc::ofs_sprod(Ofsc const& a, Ofsc const& b)
     {
         psup = min(n+order,  order);
         pinf = max(n-order, -order);
-        for(int p=pinf; p<= psup; p++) coef[n+order] += a.coef[p+order]*b.coef[n-p+order];
+        for(int p = pinf; p <= psup; p++) coef[n+order] += a.coef[p+order]*b.coef[n-p+order];
     }
 }
 
@@ -389,9 +388,11 @@ void Ofsc::ofs_fsum(Ofsc const& a, cdouble const& ma, Ofsc const& b, cdouble con
 std::ostream& operator << (std::ostream& stream, Ofsc const& ofs)
 {
     //Coefficients
-    for(int i = 0 ; i< 2*ofs.order + 1; i++)
+    for(int i = -min(ofs.order,ofs.order) ; i<= min(ofs.order,ofs.order) ; i++)
     {
-        stream << setw(3) << setiosflags(ios::right) << std::showpos << i-ofs.order << "   " <<  setiosflags(ios::scientific) << setprecision(15) << creal(ofs.coef[i]) << "  " << cimag(ofs.coef[i]) << endl;
+        stream << setw(3) << setiosflags(ios::right) << std::showpos << i << "   ";
+        stream <<  setiosflags(ios::scientific) << setprecision(15);
+        stream << creal(ofs.coef[i+ofs.order]) << "  " << cimag(ofs.coef[i+ofs.order]) << endl;
 
     }
     return stream;

@@ -201,16 +201,15 @@ public:
      *  \param  t: a reference to a \c double t
      *  \return the evaluation \f$ F_s(t) \f$ at time t.
      */
-    cdouble evaluate(double const& t);
-
+    cdouble evaluate(double const& t)  const;
     /**
      *  \brief  Evaluates the Ofsc object at time t.
      *  \param  t: a reference to a \c double t
      *  \param  eff_order: the effective order of the operation
      *  \return the evaluation \f$ F_s(t) \f$ at time t.
      */
-    cdouble evaluate(double const& t, int eff_order);
-    cdouble fevaluate(double cR[], double sR[], int eff_order);
+    cdouble evaluate(double const& t, int eff_order) const;
+    cdouble fevaluate(double const cR[], double const sR[], int eff_order) const;
 
     //------------------
     //Print

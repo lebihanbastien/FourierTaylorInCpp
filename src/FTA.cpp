@@ -151,8 +151,12 @@ long int FTA::nmon(int nv, int nr)
     if(nv <= 1)
         return 1;
     else
+    {
+        //cout << "binomial(nv+nr-1, nv-1) = " << binomial(nv+nr-1, nv-1) << endl;
+        //cout << "psi[nv][nr] = " << psi[nv][nr] << endl;
         return(binomial(nv+nr-1, nv-1));
-    //return(psi[nv][nr]);
+        //return(psi[nv][nr]);
+    }
 
 }
 
