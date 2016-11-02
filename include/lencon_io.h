@@ -11,6 +11,32 @@
 
 using namespace std;
 
+
+//========================================================================================
+//
+//          I/O (complete trajectories)
+//
+//========================================================================================
+/**
+ *  \brief Stores the final_index+1 points trajectory contained in t_traj_n (time vector)
+ *         and y_traj_n (state vectors) into a data file of type TYPE_COMP_FOR_JPL.
+ **/
+void writeCOMP_txt(double *t_traj_n, double **y_traj_n, int final_index);
+
+/**
+ *  \brief Reads the final_index+1 points trajectory contained in a data file of type
+ *         TYPE_COMP_FOR_JPL and stores it in t_traj_n (time vector) and y_traj_n
+ *         (state vectors).
+ **/
+void readCOMP_txt(double *t_traj_n, double **y_traj_n, int final_index);
+
+/**
+ *  \brief Returns the length of the final_index+1 points trajectory contained in a
+ *         data file of type TYPE_COMP_FOR_JPL and stores it in t_traj_n (time vector)
+ *         and y_traj_n (state vectors).
+ **/
+int getLengthCOMP_txt();
+
 //========================================================================================
 //
 //          I/O (1)
@@ -19,12 +45,12 @@ using namespace std;
 /**
  *  \brief Computes a data filename as a string, depending on the ofts_order, sizeOrbit, and type of the data.
  **/
-string filenameCUM(int ofts_order, int type);
+string filenameCUM(int ofts_order, int type, int destination);
 
 /**
  *  \brief Computes a data filename as a string, depending on the ofts_order, sizeOrbit, and type of the data.
  **/
-string filenameCUM(int ofts_order, int type, double t0);
+string filenameCUM(int ofts_order, int type, int destination, double t0);
 
 //-----------------------------------------------
 // CU
@@ -33,19 +59,25 @@ string filenameCUM(int ofts_order, int type, double t0);
  *  \brief Store in a data file the Initial Conditions of a planar Center-Unstable manifold. Used in compute_grid_CMU_EM.
  *         The data are of type t0*s1*s3 and of size (tGrid +1)*(gSize+1)*(gSize+1)
  **/
-int writeCU_bin(double ****yNCE, double ****sNCE, double *tGrid, int s1_grid_size, int s3_grid_size, int t_grid_size, int ofts_order, int type);
+int writeCU_bin(double ****yNCE, double ****sNCE, double *tGrid,
+                int s1_grid_size, int s3_grid_size, int t_grid_size,
+                int ofts_order, int type, int destination);
 
 /**
  *  \brief Read in a data file the containing the Initial Conditions of a planar Center-Unstable manifold. Used in int_proj_CMU_EM_on_CM_SEM and intMan
  *         The data are of type t0*s1*s3 and of size (tGrid +1)*(gSize+1)*(gSize+1)
  **/
-int readCU_bin(double ****yNCE, double ****sNCE, double *tGrid, int s1_grid_size, int s3_grid_size, int t_grid_size, int ofts_order, int type);
+int readCU_bin(double ****yNCE, double ****sNCE, double *tGrid,
+               int s1_grid_size, int s3_grid_size, int t_grid_size,
+               int ofts_order, int type, int destination);
 
 /**
  *  \brief Get the length of the data file the containing the Initial Conditions of a planar Center-Unstable manifold. Used in int_proj_CMU_EM_on_CM_SEM and intMan
  *         The data are of type t0*s1*s3 and of size (tGrid +1)*(gSize+1)*(gSize+1)
  **/
-int getLenghtCU_bin(int *s1_grid_size, int *s3_grid_size, int *t_grid_size, int ofts_order, int type);
+int getLenghtCU_bin(int *s1_grid_size, int *s3_grid_size,
+                    int *t_grid_size, int ofts_order,
+                    int type, int destination);
 
 //-----------------------------------------------
 // CU 3D
@@ -58,21 +90,21 @@ int getLenghtCU_bin(int *s1_grid_size, int *s3_grid_size, int *t_grid_size, int 
  *  \brief init the data file of Initial Conditions of a 3D Center-Unstable manifold. Used in compute_grid_CMU_EM_3D.
  *         The data are of type t0*s1*s2*s3*s4 and of size (t_grid_size +1)*(si_grid_size[0]+1)*(si_grid_size[1]+1)*(si_grid_size[2]+1)*(si_grid_size[3]+1)
  **/
-int initCU_bin_3D(int *si_grid_size, int t_grid_size, int ofts_order, int type);
+int initCU_bin_3D(int *si_grid_size, int t_grid_size, int ofts_order, int type, int destination);
 
 /**
  *  \brief Write the current time in the data file of Initial Conditions of a 3D Center-Unstable manifold. Used in compute_grid_CMU_EM_3D.
  *         The data are of type t0*s1*s2*s3*s4 and of size (t_grid_size +1)*(si_grid_size[0]+1)*(si_grid_size[1]+1)*(si_grid_size[2]+1)*(si_grid_size[3]+1).
  *         Here, only the time is appended to the data file, so this routine must be used within the intricated loops. See compute_grid_CMU_EM_3D src code for details.
  **/
-int appTimeCU_bin_3D(double *tGrid, int nt, int ofts_order, int type);
+int appTimeCU_bin_3D(double *tGrid, int nt, int ofts_order, int type, int destination);
 
 /**
  *  \brief Write the current state in the data file of Initial Conditions of a 3D Center-Unstable manifold. Used in compute_grid_CMU_EM_3D.
  *         The data are of type t0*s1*s2*s3*s4 and of size (t_grid_size +1)*(si_grid_size[0]+1)*(si_grid_size[1]+1)*(si_grid_size[2]+1)*(si_grid_size[3]+1).
  *         Here, only a single loop on s4 is appended to the data file, so this routine must be used within the intricated loops. See compute_grid_CMU_EM_3D src code for details.
  **/
-int writeCU_bin_3D(double **yNCE, double **sNCE, int *si_grid_size, int ofts_order, int type);
+int writeCU_bin_3D(double **yNCE, double **sNCE, int *si_grid_size, int ofts_order, int type, int destination);
 
 //----------
 // OUT
@@ -81,19 +113,19 @@ int writeCU_bin_3D(double **yNCE, double **sNCE, int *si_grid_size, int ofts_ord
  *  \brief Get the length of the data file the containing the Initial Conditions of a 3D Center-Unstable manifold. Used in compute_grid_CMU_EM_3D.
  *         The data are of type t0*s1*s2*s3*s4 and of size (t_grid_size +1)*(si_grid_size[0]+1)*(si_grid_size[1]+1)*(si_grid_size[2]+1)*(si_grid_size[3]+1).
  **/
-int getLenghtCU_bin_3D(int *si_grid_size, int *t_grid_size, int ofts_order, int type);
+int getLenghtCU_bin_3D(int *si_grid_size, int *t_grid_size, int ofts_order, int type, int destination);
 
 /**
  *  \brief Read in a data file the time at Initial Conditions of a planar Center-Unstable manifold. Used in int_proj_CMU_EM_on_CM_SEM and intMan
  *         The data are of type t0*s1*s3 and of size (tGrid +1)*(gSize+1)*(gSize+1)
  **/
-int readTCU_bin_3D(int offset, double *tGrid, int nt, int ofts_order, int type);
+int readTCU_bin_3D(int offset, double *tGrid, int nt, int ofts_order, int type, int destination);
 
 /**
  *  \brief Read in a data file the state at Initial Conditions of a planar Center-Unstable manifold. Used in int_proj_CMU_EM_on_CM_SEM and intMan
  *         The data are of type t0*s1*s3 and of size (tGrid +1)*(gSize+1)*(gSize+1)
  **/
-int readCU_bin_3D(int offset, double **yNCE, double **sNCE, int *si_grid_size, int ofts_order, int type);
+int readCU_bin_3D(int offset, double **yNCE, double **sNCE, int *si_grid_size, int ofts_order, int type, int destination);
 
 //-----------------------------------------------
 // Int CU
@@ -102,7 +134,7 @@ int readCU_bin_3D(int offset, double **yNCE, double **sNCE, int *si_grid_size, i
  *  \brief Get the length of the data file containing the best connections between EML2 and SEML1,2.
  *         Used in int_sorted_sol_CMU_EM_to_CM_SEM/ref_CMU_EM_to_CM_SEM_MSD
  **/
-int getLengthIntSortedCU_bin(int *number_of_sol, int ofts_order, int type);
+int getLengthIntSortedCU_bin(int *number_of_sol, int ofts_order, int type, int destination);
 
 
 //-----------------------------------------------

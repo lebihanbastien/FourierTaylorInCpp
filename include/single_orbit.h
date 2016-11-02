@@ -32,6 +32,9 @@
 #define TYPE_CONT_ATF_TRAJ 10
 //3D
 #define TYPE_CU_3D         11
+//For JPL
+#define TYPE_COMP_FOR_JPL 12
+
 #define TYPE_MAN_PROJ_3D   61
 #define TYPE_MAN_PROJ_FROM_SERVER    62
 #define TYPE_MAN_PROJ_3D_FROM_SERVER 63

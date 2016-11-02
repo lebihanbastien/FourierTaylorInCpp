@@ -107,10 +107,7 @@ int oo_int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM, int t_grid_size_x,
  *         The time at each point except the first one is allowed to vary.
  *         A continuation procedure can be performed to get more than one refined solution.
  **/
-int refeml2seml(int man_grid_size,
-                int coord_type,
-                Invman &invman,
-                RefSt &refst);
+int oorefeml2seml(int man_grid_size, int coord_type, Invman &invman, RefSt &refst);
 
 //========================================================================================
 //
@@ -123,13 +120,9 @@ int refeml2seml(int man_grid_size,
  *         The Jacobian of the parameterization of the manifolds are
  *         contained in  DCM_EM_TFC and DCMS_SEM_TFC.
 **/
-void srefeml2seml(Orbit &orbit_EM,
-                  Orbit &orbit_SEM,
-                  int dcs,
-                  int coord_type,
-                  int man_grid_size_t,
-                  RefSt &refst,
-                  gnuplot_ctrl *h2);
+void oosrefeml2seml(Orbit &orbit_EM, Orbit &orbit_SEM,
+                  int dcs, int coord_type, int man_grid_size_t,
+                  RefSt &refst, gnuplot_ctrl *h2);
 
 //========================================================================================
 //
@@ -141,11 +134,14 @@ void srefeml2seml(Orbit &orbit_EM,
  *         A multiple_shooting_direct is applied on the WHOLE trajectory
  *         (EML2 orbit + manifold leg + SEML2 orbit).
  **/
-int comprefft3d(int man_grid_size_t,
-                int coord_type,
-                Orbit &orbit_EM,
-                Orbit &orbit_SEM,
-                RefSt refst);
+int oocomprefft3d(int man_grid_size_t, int coord_type,
+                  Orbit &orbit_EM, Orbit &orbit_SEM,
+                  RefSt refst);
+
+/**
+ *  \brief Refine a given output of oocomprefft3d into JPL ephemerides.
+ **/
+int oojplrefft3d(int coord_type);
 
 //----------------------------------------------------------------------------------------
 // Text format, read

@@ -1,7 +1,5 @@
 #include "lenconref.h"
 
-
-
 //========================================================================================
 //
 //          DIFFCORR BASED ON GOMEZ ET AL. 1998
@@ -1415,9 +1413,9 @@ int msft3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
         //OR
         //Here, we want to go "in the same direction" for some components of Q
         dotNV += gsl_matrix_get(Q, 0, nfv-1)*nullvector[0];                //CMU of  EML2
-        dotNV += gsl_matrix_get(Q, 1, nfv-1)*nullvector[1];                //CMU of  EML2
+        //dotNV += gsl_matrix_get(Q, 1, nfv-1)*nullvector[1];                //CMU of  EML2
         dotNV += gsl_matrix_get(Q, 2, nfv-1)*nullvector[2];                //CMU of  EML2
-        dotNV += gsl_matrix_get(Q, 3, nfv-1)*nullvector[3];                //CMU of  EML2
+        //dotNV += gsl_matrix_get(Q, 3, nfv-1)*nullvector[3];                //CMU of  EML2
         sign = dotNV > 0? 1:-1;
         //        dotNV += gsl_matrix_get(Q, nfv-4, nfv-1)*nullvector[nfv-4];                //CMS of  SEML2
         //        dotNV += gsl_matrix_get(Q, nfv-2, nfv-1)*nullvector[nfv-2];                //CMS of  SEML2
@@ -3143,9 +3141,8 @@ int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
 //          DIFFCORR CUSTOM: CMU to CMS: UPDATE FREE VARIABLES with NEW IMPLEMENTATION
 //
 //========================================================================================
-/*
 int ufvarft3d(double **y_traj_n, double *t_traj_n, double ds, double *nullvector,
-              SingleOrbit &orbit_EM, SingleOrbit &orbit_SEM,
+              Orbit &orbit_EM, Orbit &orbit_SEM,
               int man_grid_size, int coord_type)
 {
     //-----------------------------------------------------
@@ -3158,11 +3155,11 @@ int ufvarft3d(double **y_traj_n, double *t_traj_n, double ds, double *nullvector
     //Updating CM_EM
     //-----------------------------------------------------
     //Updating CM_EM_RCM coordinates
-    for(int i = 0; i < 4; i++) orbit_EM.si[i] += ds*nullvector[i];
+    for(int i = 0; i < 4; i++) orbit_EM.addSi(ds*nullvector[i], i);
     //Updating CM_EM_NCEM coordinates
-    orbit_update_ic(orbit_EM, orbit_EM.si, t_traj_n[0]/SEML.us_em.ns);
+    orbit_EM.update_ic(orbit_EM.getSi(), t_traj_n[0]/SEML.us_em.ns);
     //To CM_EM_NCSEM coordinates
-    for(int i = 0; i < 42; i++) yv[i] = orbit_EM.z0[i];
+    for(int i = 0; i < 42; i++) yv[i] = orbit_EM.getZ0()[i];
     qbcp_coc(t_traj_n[0]/SEML.us_em.ns, yv, ye, NCEM, coord_type);
     for(int i = 0; i < 6; i++) y_traj_n[i][0] = ye[i];
 
@@ -3178,13 +3175,13 @@ int ufvarft3d(double **y_traj_n, double *t_traj_n, double ds, double *nullvector
     //Updating CM_SEM
     //-----------------------------------------------------
     //Updating CM_SEM_RCM coordinates
-    for(int i = 0; i < 5; i++) orbit_SEM.si[i] += ds*nullvector[i + 6*man_grid_size-2];
+    for(int i = 0; i < 5; i++) orbit_SEM.addSi(ds*nullvector[i + 6*man_grid_size-2], i);
 
     //Updating CM_SEM_NCSEM coordinates
-    orbit_update_ic(orbit_SEM, orbit_SEM.si, t_traj_n[man_grid_size]);
+    orbit_SEM.update_ic(orbit_SEM.getSi(), t_traj_n[man_grid_size]);
 
     //Updating CM_SEM_NCSEM coordinates (identity transformation is performed in qbcp_coc.
-    for(int i = 0; i < 6; i++) y_traj_n[i][man_grid_size] = orbit_SEM.z0[i];
+    for(int i = 0; i < 6; i++) y_traj_n[i][man_grid_size] = orbit_SEM.getZ0()[i];
 
 
     //-----------------------------------------------------
@@ -3194,11 +3191,11 @@ int ufvarft3d(double **y_traj_n, double *t_traj_n, double ds, double *nullvector
     free_dvector(ye, 0, 41);
     return GSL_SUCCESS;
 }
-*/
 
-/*
+
+
 int ufvarvt3d(double **y_traj_n, double *t_traj_n, double ds, double *nullvector,
-              SingleOrbit &orbit_EM, SingleOrbit &orbit_SEM,
+              Orbit &orbit_EM, Orbit &orbit_SEM,
               int man_grid_size, int coord_type)
 {
     //-----------------------------------------------------
@@ -3211,11 +3208,11 @@ int ufvarvt3d(double **y_traj_n, double *t_traj_n, double ds, double *nullvector
     //Updating CM_EM
     //-----------------------------------------------------
     //Updating CM_EM_RCM coordinates
-    for(int i = 0; i < 4; i++) orbit_EM.si[i] += ds*nullvector[i];
+    for(int i = 0; i < 4; i++) orbit_EM.addSi(ds*nullvector[i], i);
     //Updating CM_EM_NCEM coordinates
-    orbit_update_ic(orbit_EM, orbit_EM.si, t_traj_n[0]/SEML.us_em.ns);
+    orbit_EM.update_ic(orbit_EM.getSi(), t_traj_n[0]/SEML.us_em.ns);
     //To CM_EM_NCSEM coordinates
-    for(int i = 0; i < 42; i++) yv[i] = orbit_EM.z0[i];
+    for(int i = 0; i < 42; i++) yv[i] = orbit_EM.getZ0()[i];
     qbcp_coc(t_traj_n[0]/SEML.us_em.ns, yv, ye, NCEM, coord_type);
     for(int i = 0; i < 6; i++) y_traj_n[i][0] = ye[i];
 
@@ -3235,13 +3232,13 @@ int ufvarvt3d(double **y_traj_n, double *t_traj_n, double ds, double *nullvector
     //Last 4 correction variables is orbit.si
     //-----------------------------------------------------
     //Updating CM_SEM_RCM coordinates
-    for(int i = 0; i < 5; i++) orbit_SEM.si[i] += ds*nullvector[i + 7*man_grid_size-3];
+    for(int i = 0; i < 5; i++) orbit_SEM.addSi(ds*nullvector[i + 7*man_grid_size-3], i);
 
     //Updating CM_SEM_NCSEM coordinates
-    orbit_update_ic(orbit_SEM, orbit_SEM.si, t_traj_n[man_grid_size]);
+    orbit_SEM.update_ic(orbit_SEM.getSi(), t_traj_n[man_grid_size]);
 
     //Updating CM_SEM_NCSEM coordinates (identity transformation is performed in qbcp_coc.
-    for(int i = 0; i < 6; i++) y_traj_n[i][man_grid_size] = orbit_SEM.z0[i];
+    for(int i = 0; i < 6; i++) y_traj_n[i][man_grid_size] = orbit_SEM.getZ0()[i];
 
 
     //-----------------------------------------------------
@@ -3251,7 +3248,7 @@ int ufvarvt3d(double **y_traj_n, double *t_traj_n, double ds, double *nullvector
     free_dvector(ye, 0, 41);
     return GSL_SUCCESS;
 }
-*/
+
 
 int ufvarftplan(double **y_traj_n, double *t_traj_n, double ds, double *nullvector,
                 Orbit &orbit_EM, Orbit &orbit_SEM,

@@ -43,7 +43,7 @@
 extern int OFTS_ORDER;
 extern int OFS_ORDER;
 extern int OTS_ORDER;
-extern int MODEL_TYPE;
+//extern int MODEL_TYPE;
 //extern int REDUCED_NV;
 
 //------------------------------------------------------------------------------------

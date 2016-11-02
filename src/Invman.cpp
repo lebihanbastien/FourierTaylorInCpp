@@ -4,11 +4,10 @@
 // LOG
 //
 // - Evaluation is validated for RTBP.
-// TODO
-// - Update the CU/CS for QBCP EML1/EML2
-// - Write things clearly @ the beginning of this file.
 //
-// - Add tests at the beginning of each routine that is using ofts_order and ofs_order as inputs (compare with inner values!)
+// @todo Update the CU/CS for QBCP EML1/EML2
+// @todo Write things clearly @ the beginning of this file.
+// @todo Add tests at the beginning of each routine that is using ofts_order and ofs_order as inputs (compare with inner values!)
 //========================================================================================
 
 
@@ -760,7 +759,7 @@ void Invman::evalDRCMtoNC(double const st0[], double const t, gsl_matrix *m1, co
     //------------------------------------------------------------------------------------
     // Check sizes
     //------------------------------------------------------------------------------------
-    if(m1->size1 != 6 || m1->size2 != reduced_nv)
+    if( (int) m1->size1 != 6 || (int) m1->size2 != reduced_nv)
     {
         cout << "Invman::evalDRCMtoNC. Dimension mismatch: " << endl;
         cout << "m1->size1 = " << m1->size1 << "instead of " << 6 << endl;
@@ -1088,7 +1087,8 @@ void rotmat_CC_R_RCM_CENTER_6(gsl_matrix_complex *CCM_R_RCM_CH)
 // Tests
 //========================================================================================
 /**
- *  \brief Test of the routine Invman::evalCCMtoTFC.
+ *  \brief Test of the routine Invman::evalCCMtoTFC. From CCM coordinates
+ *         to TFC coordinates
  **/
 void test_evalCCMtoTFC()
 {
@@ -1179,15 +1179,9 @@ void test_evalDCCMtoTFC()
     //Initial conditions (random)
     //------------------------------------------------------------------------------------
     cdouble s0[reduced_nv];
-    //for(int i = 0; i < reduced_nv-1; i++) s0[i] = 0.01 * (rand() % 10);
-    //s0[reduced_nv-1] = 0.001 * (rand() % 10); //10% on the hyperbolic part
+    for(int i = 0; i < reduced_nv-1; i++) s0[i] = 0.01 * (rand() % 10);
+    s0[reduced_nv-1] = 0.001 * (rand() % 10); //10% on the hyperbolic part
 
-
-    s0[0] = -1.414213562373095e+00  + I*  -1.414213562373095e+00;
-    s0[1] = +7.071067811865475e+00  + I*  -7.071067811865475e+00;
-    s0[2] = +1.414213562373095e+00  + I*  +1.414213562373095e+00;
-    s0[3] = +7.071067811865475e+00  + I*  -7.071067811865475e+00;
-    s0[4] = +1.000000000000000e-06  + I*  +0.000000000000000e+00;
 
     //------------------------------------------------------------------------------------
     //Comparison
@@ -1236,7 +1230,7 @@ void test_evalDCCMtoTFC()
 }
 
 /**
- *  \brief Test of the routine Invman::evalRCMtoNC.
+ *  \brief Test of the routine Invman::evalRCMtoNC. RCM to NC coordinates
  **/
 void test_evalRCMtoNC()
 {
@@ -1344,13 +1338,8 @@ void test_evalDRCMtoTFC()
     //Initial conditions (random)
     //------------------------------------------------------------------------------------
     double s0[reduced_nv];
-    //    for(int i = 0; i < reduced_nv-1; i++) s0[i] = 0.01 * (rand() % 10);
-    //    s0[reduced_nv-1] = 0.001 * (rand() % 10); //10% on the hyperbolic part
-    s0[0] = -2.000000000000000e+00;
-    s0[1] = +1.000000000000000e+01;
-    s0[2] = +2.000000000000000e+00;
-    s0[3] = +1.000000000000000e+01;
-    s0[4] = +1.000000000000000e-06;
+    for(int i = 0; i < reduced_nv-1; i++) s0[i] = 0.01 * (rand() % 10);
+    s0[reduced_nv-1] = 0.001 * (rand() % 10); //10% on the hyperbolic part
 
     //Initial time
     double t = 0.01 * (rand() % 10);
@@ -1370,7 +1359,7 @@ void test_evalDRCMtoTFC()
     tic();
     RCMtoTFC_JAC(s0, t, SEML.us.n, OFTS_ORDER, OFS_ORDER, reduced_nv, DCM_TFC, ofs, zOld0, 0);
     cout << "With old version, isGS = 0 (reference), in " << toc() << endl;
-    gslc_matrix_complex_printf(zOld0);
+    //gslc_matrix_complex_printf(zOld0);
     cout << endl;
 
     tic();
@@ -1383,7 +1372,7 @@ void test_evalDRCMtoTFC()
     tic();
     invman.evalDRCMtoTFC_partial(s0, t, zNew, OFTS_ORDER, OFS_ORDER);
     cout << "With new version, in " << toc() << endl;
-    gslc_matrix_complex_printf(zNew);
+    //gslc_matrix_complex_printf(zNew);
     cout << "Delta with the reference = " << gslc_matrix_complex_diff_L2(zOld0, zNew) << endl;
     cout << endl;
 }

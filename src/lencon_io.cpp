@@ -6,13 +6,13 @@
 
 //========================================================================================
 //
-//          I/O (1)
+//          I/O (filename routines)
 //
 //========================================================================================
 /**
  *  \brief Computes a data filename as a string, depending on the ofts_order, sizeOrbit, and type of the data.
  **/
-string filenameCUM(int ofts_order, int type)
+string filenameCUM(int ofts_order, int type, int destination)
 {
     switch(type)
     {
@@ -21,21 +21,23 @@ string filenameCUM(int ofts_order, int type)
     case TYPE_MAN:
         return SEML.cs_em.F_PLOT+"intcu_order_"+numTostring(ofts_order)+".bin";
     case TYPE_MAN_PROJ:
-        return SEML.cs_em.F_PLOT+"projcu_order_"+numTostring(ofts_order)+".bin";
+        return SEML.cs_em.F_PLOT+"projcu_order_"+numTostring(ofts_order)+"_dest_L"+numTostring(destination)+".bin";
     case TYPE_MAN_SORT:
-        return SEML.cs_em.F_PLOT+"sortprojcu_order_"+numTostring(ofts_order)+".bin";
+        return SEML.cs_em.F_PLOT+"sortprojcu_order_"+numTostring(ofts_order)+"_dest_L"+numTostring(destination)+".bin";
     case TYPE_MAN_SORT_IN:
-        return SEML.cs_em.F_PLOT+"sortprojintcu_order_"+numTostring(ofts_order)+".bin";
+        return SEML.cs_em.F_PLOT+"sortprojintcu_order_"+numTostring(ofts_order)+"_dest_L"+numTostring(destination)+".bin";
     case TYPE_CONT_ATF:
-        return SEML.cs_em.F_PLOT+"cont_atf_order_"+numTostring(ofts_order)+".txt";
+        return SEML.cs_em.F_PLOT+"cont_atf_order_"+numTostring(ofts_order)+"_dest_L"+numTostring(destination)+".bin";
     case TYPE_CU_3D:
-        return SEML.cs_em.F_PLOT+"cu_3d_order_"+numTostring(ofts_order)+".bin";
+        return SEML.cs_em.F_PLOT+"cu_3d_order_"+numTostring(ofts_order)+"_dest_L"+numTostring(destination)+".bin";
     case TYPE_MAN_PROJ_3D:
-        return SEML.cs_em.F_PLOT+"projcu_3d_order_"+numTostring(ofts_order)+".bin";
+        return SEML.cs_em.F_PLOT+"projcu_3d_order_"+numTostring(ofts_order)+"_dest_L"+numTostring(destination)+".bin";
     case TYPE_MAN_PROJ_FROM_SERVER:
         return SEML.cs_em.F_PLOT+"Serv/projcu_order_20.bin";
     case TYPE_MAN_PROJ_3D_FROM_SERVER:
         return SEML.cs_em.F_PLOT+"Serv/projcu_3d_order_20.bin";
+    case TYPE_COMP_FOR_JPL:
+        return SEML.cs_em.F_PLOT+"comp_for_jpl_order_"+numTostring(ofts_order)+"_dest_L"+numTostring(destination)+".txt";
     default:
         cout << "filenameOrbit: unknown type." << endl;
         return "";
@@ -45,7 +47,7 @@ string filenameCUM(int ofts_order, int type)
 /**
  *  \brief Computes a data filename as a string, depending on the ofts_order, sizeOrbit, and type of the data.
  **/
-string filenameCUM(int ofts_order, int type, double t0)
+string filenameCUM(int ofts_order, int type, int destination, double t0)
 {
     switch(type)
     {
@@ -54,17 +56,17 @@ string filenameCUM(int ofts_order, int type, double t0)
     case TYPE_MAN:
         return SEML.cs_em.F_PLOT+"intcu_order_"+numTostring(ofts_order)+"_t0_"+numTostring(t0)+".bin";
     case TYPE_MAN_PROJ:
-        return SEML.cs_em.F_PLOT+"projcu_order_"+numTostring(ofts_order)+"_t0_"+numTostring(t0)+".bin";
+        return SEML.cs_em.F_PLOT+"projcu_order_"+numTostring(ofts_order)+"_dest_L"+numTostring(destination)+"_t0_"+numTostring(t0)+".bin";
     case TYPE_MAN_SORT:
-        return SEML.cs_em.F_PLOT+"sortprojcu_order_"+numTostring(ofts_order)+"_t0_"+numTostring(t0)+".bin";
+        return SEML.cs_em.F_PLOT+"sortprojcu_order_"+numTostring(ofts_order)+"_dest_L"+numTostring(destination)+"_t0_"+numTostring(t0)+".bin";
     case TYPE_MAN_SORT_IN:
-        return SEML.cs_em.F_PLOT+"sortprojintcu_order_"+numTostring(ofts_order)+"_t0_"+numTostring(t0)+".bin";
+        return SEML.cs_em.F_PLOT+"sortprojintcu_order_"+numTostring(ofts_order)+"_dest_L"+numTostring(destination)+"_t0_"+numTostring(t0)+".bin";
     case TYPE_CONT_ATF:
-        return SEML.cs_em.F_PLOT+"cont_atf_order_"+numTostring(ofts_order)+"_t0_"+numTostring(t0)+".txt";
+        return SEML.cs_em.F_PLOT+"cont_atf_order_"+numTostring(ofts_order)+"_dest_L"+numTostring(destination)+"_t0_"+numTostring(t0)+".txt";
     case TYPE_CONT_ATF_TRAJ:
-        return SEML.cs_em.F_PLOT+"cont_atf_traj_order_"+numTostring(ofts_order)+"_t0_"+numTostring(t0)+".bin";
+        return SEML.cs_em.F_PLOT+"cont_atf_traj_order_"+numTostring(ofts_order)+"_dest_L"+numTostring(destination)+"_t0_"+numTostring(t0)+".bin";
     case TYPE_CU_3D:
-        return SEML.cs_em.F_PLOT+"cu_3d_order_"+numTostring(ofts_order)+"_t0_"+numTostring(t0)+".bin";
+        return SEML.cs_em.F_PLOT+"cu_3d_order_"+numTostring(ofts_order)+"_dest_L"+numTostring(destination)+"_t0_"+numTostring(t0)+".bin";
     default:
         cout << "filenameOrbit: unknown type." << endl;
         return "";
@@ -72,6 +74,111 @@ string filenameCUM(int ofts_order, int type, double t0)
 }
 
 
+//========================================================================================
+//
+//          I/O (complete trajectories)
+//
+//========================================================================================
+/**
+ *  \brief Stores the final_index+1 points trajectory contained in t_traj_n (time vector)
+ *         and y_traj_n (state vectors) into a data file of type TYPE_COMP_FOR_JPL.
+ **/
+void writeCOMP_txt(double *t_traj_n, double **y_traj_n, int final_index)
+{
+    //====================================================================================
+    // Initialize the I/O objects
+    //====================================================================================
+    string filename = filenameCUM(OFTS_ORDER, TYPE_COMP_FOR_JPL, SEML.li_SEM);
+    fstream filestream;
+    filestream.open (filename.c_str(), ios::out);
+    filestream << setprecision(15) <<  setiosflags(ios::scientific) << std::showpos;
+
+    //====================================================================================
+    // First value is final_index
+    //====================================================================================
+    filestream << final_index << endl;
+
+    //====================================================================================
+    // Store the data in the format "t x y z px py pz" on each line
+    //====================================================================================
+    for(int k = 0; k <= final_index; k++)
+    {
+        filestream << t_traj_n[k] << "  ";
+        for(int i = 0; i < 6; i++) filestream << y_traj_n[i][k] << "  ";
+        filestream << endl;
+    }
+    filestream.close();
+}
+
+/**
+ *  \brief Reads the final_index+1 points trajectory contained in a data file of type
+ *         TYPE_COMP_FOR_JPL and stores it in t_traj_n (time vector) and y_traj_n
+ *         (state vectors). The size of the data file is given by getLengthCOMP_txt(), and
+ *         the data vectors should be initialized accordingly by the user prior to the use
+ *         of this routine.
+ **/
+void readCOMP_txt(double *t_traj_n, double **y_traj_n, int final_index)
+{
+    //====================================================================================
+    // Initialize the I/O objects
+    //====================================================================================
+    string filename = filenameCUM(OFTS_ORDER, TYPE_COMP_FOR_JPL, SEML.li_SEM);
+    fstream filestream;
+    filestream.open (filename.c_str(), ios::in);
+
+    //====================================================================================
+    // First value is discarded
+    //====================================================================================
+    string ct;
+    getline(filestream,  ct);
+
+
+    //====================================================================================
+    // Read the data in the format "t x y z px py pz" on each line
+    //====================================================================================
+    double tempd = 0.0;
+    for(int k = 0; k <= final_index; k++)
+    {
+        filestream >> tempd;
+        t_traj_n[k] = tempd;
+        for(int i = 0; i < 6; i++)
+        {
+            filestream >> tempd;
+            y_traj_n[i][k]=  tempd;
+        }
+    }
+    filestream.close();
+}
+
+/**
+ *  \brief Get the length of the final_index+1 points trajectory contained in a
+ *         data file of type TYPE_COMP_FOR_JPL and stores it in t_traj_n (time vector)
+ *         and y_traj_n (state vectors).
+ **/
+int getLengthCOMP_txt()
+{
+    //====================================================================================
+    // Initialize the I/O objects
+    //====================================================================================
+    string filename = filenameCUM(OFTS_ORDER, TYPE_COMP_FOR_JPL, SEML.li_SEM);
+    fstream filestream;
+    filestream.open (filename.c_str(), ios::in);
+
+    //====================================================================================
+    // First value is final_index
+    //====================================================================================
+    int final_index;
+    filestream >> final_index;
+    filestream.close();
+    return final_index;
+}
+
+
+//========================================================================================
+//
+//          I/O (CU/CS/CM)
+//
+//========================================================================================
 //-----------------------------------------------
 // CU
 //-----------------------------------------------
@@ -79,12 +186,14 @@ string filenameCUM(int ofts_order, int type, double t0)
  *  \brief Store in a data file the Initial Conditions of a planar Center-Unstable manifold. Used in compute_grid_CMU_EM.
  *         The data are of type t0*s1*s3 and of size (tGrid +1)*(gSize+1)*(gSize+1)
  **/
-int writeCU_bin(double ****yNCE, double ****sNCE, double *tGrid, int s1_grid_size, int s3_grid_size, int t_grid_size, int ofts_order, int type)
+int writeCU_bin(double**** yNCE, double**** sNCE, double* tGrid,
+                int s1_grid_size, int s3_grid_size, int t_grid_size,
+                int ofts_order, int type, int destination)
 {
     //---------------------
     //Filename
     //---------------------
-    string filename = filenameCUM(ofts_order, type);
+    string filename = filenameCUM(ofts_order, type, destination);
 
     //---------------------
     //Open datafile
@@ -155,12 +264,14 @@ int writeCU_bin(double ****yNCE, double ****sNCE, double *tGrid, int s1_grid_siz
  *  \brief Read in a data file the containing the Initial Conditions of a planar Center-Unstable manifold. Used in int_proj_CMU_EM_on_CM_SEM and intMan
  *         The data are of type t0*s1*s3 and of size (tGrid +1)*(gSize+1)*(gSize+1)
  **/
-int readCU_bin(double ****yNCE, double ****sNCE, double *tGrid, int s1_grid_size, int s3_grid_size, int t_grid_size, int ofts_order, int type)
+int readCU_bin(double**** yNCE, double**** sNCE, double* tGrid,
+               int s1_grid_size, int s3_grid_size, int t_grid_size,
+               int ofts_order, int type, int destination)
 {
     //---------------------
     //Filename
     //---------------------
-    string filename = filenameCUM(ofts_order, type);
+    string filename = filenameCUM(ofts_order, type, destination);
 
     //---------------------
     //Open datafile
@@ -242,12 +353,14 @@ int readCU_bin(double ****yNCE, double ****sNCE, double *tGrid, int s1_grid_size
  *  \brief Get the length of the data file the containing the Initial Conditions of a planar Center-Unstable manifold. Used in int_proj_CMU_EM_on_CM_SEM and intMan
  *         The data are of type t0*s1*s3 and of size (tGrid +1)*(gSize+1)*(gSize+1)
  **/
-int getLenghtCU_bin(int *s1_grid_size, int *s3_grid_size, int *t_grid_size, int ofts_order, int type)
+int getLenghtCU_bin(int* s1_grid_size, int* s3_grid_size,
+                    int* t_grid_size, int ofts_order,
+                    int type, int destination)
 {
     //---------------------
     //Filename
     //---------------------
-    string filename = filenameCUM(ofts_order, type);
+    string filename = filenameCUM(ofts_order, type, destination);
 
     //---------------------
     //Open datafile
@@ -295,12 +408,13 @@ int getLenghtCU_bin(int *s1_grid_size, int *s3_grid_size, int *t_grid_size, int 
  *  \brief init the data file of Initial Conditions of a 3D Center-Unstable manifold. Used in compute_grid_CMU_EM_3D.
  *         The data are of type t0*s1*s2*s3*s4 and of size (t_grid_size +1)*(si_grid_size[0]+1)*(si_grid_size[1]+1)*(si_grid_size[2]+1)*(si_grid_size[3]+1)
  **/
-int initCU_bin_3D(int *si_grid_size, int t_grid_size, int ofts_order, int type)
+int initCU_bin_3D(int* si_grid_size, int t_grid_size,
+                  int ofts_order, int type, int destination)
 {
     //---------------------
     //Filename
     //---------------------
-    string filename = filenameCUM(ofts_order, type);
+    string filename = filenameCUM(ofts_order, type, destination);
 
     //----------------------------------------------------------
     //Open datafile
@@ -336,12 +450,12 @@ int initCU_bin_3D(int *si_grid_size, int t_grid_size, int ofts_order, int type)
  *         The data are of type t0*s1*s2*s3*s4 and of size (t_grid_size +1)*(si_grid_size[0]+1)*(si_grid_size[1]+1)*(si_grid_size[2]+1)*(si_grid_size[3]+1).
  *         Here, only the time is appended to the data file, so this routine must be used within the intricated loops. See compute_grid_CMU_EM_3D src code for details.
  **/
-int appTimeCU_bin_3D(double *tGrid, int nt, int ofts_order, int type)
+int appTimeCU_bin_3D(double* tGrid, int nt, int ofts_order, int type, int destination)
 {
     //---------------------
     //Filename
     //---------------------
-    string filename = filenameCUM(ofts_order, type);
+    string filename = filenameCUM(ofts_order, type, destination);
 
     //----------------------------------------------------------
     //Open datafile
@@ -364,12 +478,13 @@ int appTimeCU_bin_3D(double *tGrid, int nt, int ofts_order, int type)
  *         The data are of type t0*s1*s2*s3*s4 and of size (t_grid_size +1)*(si_grid_size[0]+1)*(si_grid_size[1]+1)*(si_grid_size[2]+1)*(si_grid_size[3]+1).
  *         Here, only a single loop on s4 is appended to the data file, so this routine must be used within the intricated loops. See compute_grid_CMU_EM_3D src code for details.
  **/
-int writeCU_bin_3D(double **yNCE, double **sNCE, int *si_grid_size, int ofts_order, int type)
+int writeCU_bin_3D(double** yNCE, double** sNCE, int* si_grid_size,
+                   int ofts_order, int type, int destination)
 {
     //---------------------
     //Filename
     //---------------------
-    string filename = filenameCUM(ofts_order, type);
+    string filename = filenameCUM(ofts_order, type, destination);
 
     //----------------------------------------------------------
     //Open datafile
@@ -413,7 +528,8 @@ int writeCU_bin_3D(double **yNCE, double **sNCE, int *si_grid_size, int ofts_ord
  *  \brief Get the length of the data file the containing the Initial Conditions of a 3D Center-Unstable manifold. Used in compute_grid_CMU_EM_3D.
  *         The data are of type t0*s1*s2*s3*s4 and of size (t_grid_size +1)*(si_grid_size[0]+1)*(si_grid_size[1]+1)*(si_grid_size[2]+1)*(si_grid_size[3]+1).
  **/
-int getLenghtCU_bin_3D(int *si_grid_size, int *t_grid_size, int ofts_order, int type)
+int getLenghtCU_bin_3D(int* si_grid_size, int* t_grid_size,
+                       int ofts_order, int type, int destination)
 {
     //Offset
     int offset = 0;
@@ -421,7 +537,7 @@ int getLenghtCU_bin_3D(int *si_grid_size, int *t_grid_size, int ofts_order, int 
     //---------------------
     //Filename
     //---------------------
-    string filename = filenameCUM(ofts_order, type);
+    string filename = filenameCUM(ofts_order, type, destination);
 
     //---------------------
     //Open datafile
@@ -467,7 +583,8 @@ int getLenghtCU_bin_3D(int *si_grid_size, int *t_grid_size, int ofts_order, int 
  *  \brief Read in a data file the time at Initial Conditions of a planar Center-Unstable manifold. Used in int_proj_CMU_EM_on_CM_SEM and intMan
  *         The data are of type t0*s1*s3 and of size (tGrid +1)*(gSize+1)*(gSize+1)
  **/
-int readTCU_bin_3D(int offset, double *tGrid, int nt, int ofts_order, int type)
+int readTCU_bin_3D(int offset, double* tGrid, int nt,
+                   int ofts_order, int type, int destination)
 {
     //Offset
     int offset2 = 0;
@@ -475,7 +592,7 @@ int readTCU_bin_3D(int offset, double *tGrid, int nt, int ofts_order, int type)
     //---------------------
     //Filename
     //---------------------
-    string filename = filenameCUM(ofts_order, type);
+    string filename = filenameCUM(ofts_order, type, destination);
 
     //---------------------
     //Open datafile
@@ -516,7 +633,8 @@ int readTCU_bin_3D(int offset, double *tGrid, int nt, int ofts_order, int type)
  *  \brief Read in a data file the state at Initial Conditions of a planar Center-Unstable manifold. Used in int_proj_CMU_EM_on_CM_SEM and intMan
  *         The data are of type t0*s1*s3 and of size (tGrid +1)*(gSize+1)*(gSize+1)
  **/
-int readCU_bin_3D(int offset, double **yNCE, double **sNCE, int *si_grid_size, int ofts_order, int type)
+int readCU_bin_3D(int offset, double** yNCE, double** sNCE, int* si_grid_size,
+                  int ofts_order, int type, int destination)
 {
     //Offset
     int offset2 = 0;
@@ -524,7 +642,7 @@ int readCU_bin_3D(int offset, double **yNCE, double **sNCE, int *si_grid_size, i
     //---------------------
     //Filename
     //---------------------
-    string filename = filenameCUM(ofts_order, type);
+    string filename = filenameCUM(ofts_order, type, destination);
 
     //---------------------
     //Open datafile
@@ -585,12 +703,13 @@ int readCU_bin_3D(int offset, double **yNCE, double **sNCE, int *si_grid_size, i
  *  \brief Get the length of the data file containing the best connections between EML2 and SEML1,2.
  *         Used in int_sorted_sol_CMU_EM_to_CM_SEM/ref_CMU_EM_to_CM_SEM_MSD
  **/
-int getLengthIntSortedCU_bin(int *number_of_sol, int ofts_order, int type)
+int getLengthIntSortedCU_bin(int* number_of_sol, int ofts_order,
+                             int type, int destination)
 {
     //---------------------
     //Filename
     //---------------------
-    string filename = filenameCUM(ofts_order, type);
+    string filename = filenameCUM(ofts_order, type, destination);
 
     //---------------------
     //Open datafile
@@ -617,16 +736,16 @@ int getLengthIntSortedCU_bin(int *number_of_sol, int ofts_order, int type)
  *         Used in int_proj_CMU_EM_on_CM_SEM.
  **/
 void writeIntProjCU_bin(string filename,
-                        double *init_time_grid_EM,            //time grid in NCEM units
-                        double ****init_state_CMU_NCEM,       //initial state in NCEM coordinates
-                        double ****init_state_CMU_SEM,        //initial state in SEM coordinates
-                        double ****init_state_CMU_RCM,        //initial state in RCM coordinates
-                        double ****final_state_CMU_SEM,       //final state in SEM coordinates
-                        double ****projected_state_CMU_SEM,   //projected state in SEM coordinates
-                        double ****projected_state_CMU_RCM,   //projected state in RCM coordinates
+                        double* init_time_grid_EM,            //time grid in NCEM units
+                        double**** init_state_CMU_NCEM,      //initial state in NCEM coordinates
+                        double**** init_state_CMU_SEM,       //initial state in SEM coordinates
+                        double**** init_state_CMU_RCM,       //initial state in RCM coordinates
+                        double**** final_state_CMU_SEM,      //final state in SEM coordinates
+                        double**** projected_state_CMU_SEM,  //projected state in SEM coordinates
+                        double**** projected_state_CMU_RCM,  //projected state in RCM coordinates
                         double min_proj_dist_SEM,             //minimum distance of projection in SEM units
                         double dv_at_projection_SEM,          //associated dv
-                        double *t_man_SEM,                    //time grid on manifold leg in SEM units
+                        double* t_man_SEM,                    //time grid on manifold leg in SEM units
                         int kmin,
                         int ks1,
                         int ks3,
@@ -709,16 +828,16 @@ void writeIntProjCU_bin(string filename,
  *         Used in int_proj_CMU_EM_on_CM_SEM_3D.
  **/
 void writeIntProjCU_bin_3D(string filename,
-                           double *init_time_grid_EM,          //time grid in NCEM units
-                           double **init_state_CMU_NCEM,       //initial state in NCEM coordinates
-                           double **init_state_CMU_SEM,        //initial state in SEM coordinates
-                           double **init_state_CMU_RCM,        //initial state in RCM coordinates
-                           double **final_state_CMU_SEM,       //final state in SEM coordinates
-                           double **projected_state_CMU_SEM,   //projected state in SEM coordinates
-                           double **projected_state_CMU_RCM,   //projected state in RCM coordinates
+                           double* init_time_grid_EM,          //time grid in NCEM units
+                           double** init_state_CMU_NCEM,       //initial state in NCEM coordinates
+                           double** init_state_CMU_SEM,        //initial state in SEM coordinates
+                           double** init_state_CMU_RCM,        //initial state in RCM coordinates
+                           double** final_state_CMU_SEM,       //final state in SEM coordinates
+                           double** projected_state_CMU_SEM,   //projected state in SEM coordinates
+                           double** projected_state_CMU_RCM,   //projected state in RCM coordinates
                            double min_proj_dist_SEM,           //minimum distance of projection in SEM units
                            double dv_at_projection_SEM,        //associated dv
-                           double *t_man_SEM,                  //time grid on manifold leg in SEM units
+                           double* t_man_SEM,                  //time grid on manifold leg in SEM units
                            int kmin,
                            int ks3,
                            int kt)
@@ -793,7 +912,7 @@ void writeIntProjCU_bin_3D(string filename,
 }
 
 
-void vector_getUnique(vector<double> &v0U)
+void vector_getUnique(vector<double>& v0U)
 {
     //Creating iterator on v0U
     std::vector<double>::iterator it;
@@ -809,14 +928,15 @@ void vector_getUnique(vector<double> &v0U)
     std::cout << '\n';
 }
 
-void vector_getIndices(vector<size_t> &indRes, vector<double> &t0_CMU_EM, double t0)
+void vector_getIndices(vector<size_t>& indRes, vector<double>& t0_CMU_EM, double t0)
 {
     //Create an iterator that will contain the position of each component of t0_CMU_EM that matches t0
     //Here is the first one
     std::vector<double>::iterator itf = std::find(t0_CMU_EM.begin(), t0_CMU_EM.end(), t0);
 
     // Loop on all t0_CMU_EM, update of indRes
-    while (itf != t0_CMU_EM.end()) {
+    while (itf != t0_CMU_EM.end())
+    {
         indRes.push_back(std::distance(t0_CMU_EM.begin(), itf));
         std::advance(itf, 1);
         itf = std::find(itf, t0_CMU_EM.end(),  t0);
@@ -827,19 +947,19 @@ void vector_getIndices(vector<size_t> &indRes, vector<double> &t0_CMU_EM, double
  *  \brief Read in a data file the connections between EML2 and SEML1,2.
  **/
 void readIntProjCU_bin(string filename,
-                       vector<double> &t0_CMU_EM_0,
-                       vector<double> &tf_man_EM_0,
-                       vector<double> &s1_CMU_EM_0,
-                       vector<double> &s2_CMU_EM_0,
-                       vector<double> &s3_CMU_EM_0,
-                       vector<double> &s4_CMU_EM_0,
-                       vector<double> &s5_CMU_EM_0,
-                       vector<double> &pmin_dist_SEM_0,
-                       vector<double> &s1_CM_SEM_0,
-                       vector<double> &s2_CM_SEM_0,
-                       vector<double> &s3_CM_SEM_0,
-                       vector<double> &s4_CM_SEM_0,
-                       vector<size_t> &sortId)
+                       vector<double>& t0_CMU_EM_0,
+                       vector<double>& tf_man_EM_0,
+                       vector<double>& s1_CMU_EM_0,
+                       vector<double>& s2_CMU_EM_0,
+                       vector<double>& s3_CMU_EM_0,
+                       vector<double>& s4_CMU_EM_0,
+                       vector<double>& s5_CMU_EM_0,
+                       vector<double>& pmin_dist_SEM_0,
+                       vector<double>& s1_CM_SEM_0,
+                       vector<double>& s2_CM_SEM_0,
+                       vector<double>& s3_CM_SEM_0,
+                       vector<double>& s4_CM_SEM_0,
+                       vector<size_t>& sortId)
 {
     //==========================================================
     //Temporary variables
@@ -982,7 +1102,8 @@ void readIntProjCU_bin(string filename,
         cout << "Please enter a number between " << 0 << " and " << t0_CMU_EM_UNIQUE.size()-1;
         cout << " to select a specific starting time" << endl;
         scanf("%d", &ti);
-    }while(ti < 0 || ti > (int) t0_CMU_EM_UNIQUE.size()-1);
+    }
+    while(ti < 0 || ti > (int) t0_CMU_EM_UNIQUE.size()-1);
     cout << "You have selected " << ti << ", which corresponds to t0_EM = " << t0_CMU_EM_UNIQUE[ti] << endl;
 
     std::vector<size_t> indRes;
@@ -991,25 +1112,25 @@ void readIntProjCU_bin(string filename,
     //==========================================================
     // Display info on the indices that match t0_CMU_EM_UNIQUE[xxx]
     //==========================================================
-        coutmp();
-        cout << "--------------------------------------" << endl;
-        cout << "The first entry for this time is:" << endl;
-        int ind = indRes[0];
-        cout << "t0_EM    = " << t0_CMU_EM[ind]  << endl;
-        cout << "tf_EM    = " << tf_man_SEM[ind]/SEML.us_em.ns << endl;
-        cout << "pmin_SEM = " << pmin_dist_SEM[ind] << endl;
-        cout << "s_CM_EM  = (" << s1_CMU_EM[ind] << ", " << s2_CMU_EM[ind] << ", " << s3_CMU_EM[ind] << ", " << s4_CMU_EM[ind] << ")" << endl;
-        cout << "s_CM_SEM = (" << s1_CM_SEM[ind] << ", " << s2_CM_SEM[ind] << ", " << s3_CM_SEM[ind] << ", " << s4_CM_SEM[ind] << ")" << endl;
+    coutmp();
+    cout << "--------------------------------------" << endl;
+    cout << "The first entry for this time is:" << endl;
+    int ind = indRes[0];
+    cout << "t0_EM    = " << t0_CMU_EM[ind]  << endl;
+    cout << "tf_EM    = " << tf_man_SEM[ind]/SEML.us_em.ns << endl;
+    cout << "pmin_SEM = " << pmin_dist_SEM[ind] << endl;
+    cout << "s_CM_EM  = (" << s1_CMU_EM[ind] << ", " << s2_CMU_EM[ind] << ", " << s3_CMU_EM[ind] << ", " << s4_CMU_EM[ind] << ")" << endl;
+    cout << "s_CM_SEM = (" << s1_CM_SEM[ind] << ", " << s2_CM_SEM[ind] << ", " << s3_CM_SEM[ind] << ", " << s4_CM_SEM[ind] << ")" << endl;
 
-        cout << "--------------------------------------" << endl;
-        cout << "The last entry for this time is:" << endl;
-        ind = indRes[indRes.size()-1];
-        cout << "t0_EM    = " << t0_CMU_EM[ind]  << endl;
-        cout << "tf_EM    = " << tf_man_SEM[ind]/SEML.us_em.ns << endl;
-        cout << "pmin_SEM = " << pmin_dist_SEM[ind] << endl;
-        cout << "s_CM_EM  = (" << s1_CMU_EM[ind] << ", " << s2_CMU_EM[ind] << ", " << s3_CMU_EM[ind] << ", " << s4_CMU_EM[ind] << ")" << endl;
-        cout << "s_CM_SEM = (" << s1_CM_SEM[ind] << ", " << s2_CM_SEM[ind] << ", " << s3_CM_SEM[ind] << ", " << s4_CM_SEM[ind] << ")" << endl;
-        coutlp();
+    cout << "--------------------------------------" << endl;
+    cout << "The last entry for this time is:" << endl;
+    ind = indRes[indRes.size()-1];
+    cout << "t0_EM    = " << t0_CMU_EM[ind]  << endl;
+    cout << "tf_EM    = " << tf_man_SEM[ind]/SEML.us_em.ns << endl;
+    cout << "pmin_SEM = " << pmin_dist_SEM[ind] << endl;
+    cout << "s_CM_EM  = (" << s1_CMU_EM[ind] << ", " << s2_CMU_EM[ind] << ", " << s3_CMU_EM[ind] << ", " << s4_CMU_EM[ind] << ")" << endl;
+    cout << "s_CM_SEM = (" << s1_CM_SEM[ind] << ", " << s2_CM_SEM[ind] << ", " << s3_CM_SEM[ind] << ", " << s4_CM_SEM[ind] << ")" << endl;
+    coutlp();
 
     //==========================================================
     // Copy the selected results in the inputs
@@ -1048,16 +1169,16 @@ void readIntProjCU_bin(string filename,
  *         Used in int_proj_CMU_EM_on_CM_SEM.
  **/
 void writeIntProjSortCU_bin(string filename,
-                            double ****init_state_CMU_NCEM,       //initial state in NCEM coordinates
-                            double ****init_state_CMU_RCM,        //initial state in RCM coordinates
-                            double ****final_state_CMU_SEM,       //final state in SEM coordinates
-                            double ****projected_state_CMU_SEM,   //projected state in SEM coordinates
-                            double ****projected_state_CMU_RCM,   //projected state in RCM coordinates
-                            double ***min_proj_dist_tens_SEM,     //minimum distance of projection in SEM coordinates
-                            vector<size_t> &sortId, vector<int> &ktMin,
-                            vector<int> &ks1Min, vector<int> &ks3Min,
-                            vector<double> &t0_min_EM, vector<double> &tf_min_EM,
-                            vector<double> &distMin, int number_of_sol)
+                            double**** init_state_CMU_NCEM,      //initial state in NCEM coordinates
+                            double**** init_state_CMU_RCM,       //initial state in RCM coordinates
+                            double**** final_state_CMU_SEM,      //final state in SEM coordinates
+                            double**** projected_state_CMU_SEM,  //projected state in SEM coordinates
+                            double**** projected_state_CMU_RCM,  //projected state in RCM coordinates
+                            double** *min_proj_dist_tens_SEM,     //minimum distance of projection in SEM coordinates
+                            vector<size_t>& sortId, vector<int>& ktMin,
+                            vector<int>& ks1Min, vector<int>& ks3Min,
+                            vector<double>& t0_min_EM, vector<double>& tf_min_EM,
+                            vector<double>& distMin, int number_of_sol)
 {
     int ksortpos, ks1pos, ks3pos, ktpos;
     //----------------------------------------------------------
@@ -1152,18 +1273,18 @@ void writeIntProjSortCU_bin(string filename,
  *         Used in int_sorted_sol_CMU_EM_to_CM_SEM. The data file must have been build via writeIntProjSortCU_bin.
  **/
 void readIntProjSortCU_bin(string filename,
-                           double *label,
-                           double *t0_EM,
-                           double *tf_EM,
-                           double *s1_CMU_EM,
-                           double *s3_CMU_EM,
-                           double *s1_CM_SEM,
-                           double *s3_CM_SEM,
-                           double **init_state_CMU_NCEM,
-                           double **final_state_CMU_SEM,
-                           double **projected_state_CMU_SEM,
-                           double *min_proj_dist_SEM_1,
-                           double *min_proj_dist_SEM_2,
+                           double* label,
+                           double* t0_EM,
+                           double* tf_EM,
+                           double* s1_CMU_EM,
+                           double* s3_CMU_EM,
+                           double* s1_CM_SEM,
+                           double* s3_CM_SEM,
+                           double** init_state_CMU_NCEM,
+                           double** final_state_CMU_SEM,
+                           double** projected_state_CMU_SEM,
+                           double* min_proj_dist_SEM_1,
+                           double* min_proj_dist_SEM_2,
                            int number_of_sol)
 {
     //---------------------

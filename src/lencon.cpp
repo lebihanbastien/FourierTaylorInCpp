@@ -127,7 +127,9 @@ int compute_grid_CMU_EM(double dist_to_cm,
     //------------------------------------------
     //Store values
     //------------------------------------------
-    writeCU_bin(init_state_CMU_NCEM, init_state_CMU_RCM, grid_t_EM, s1_grid_size, s3_grid_size, t_grid_size, OFTS_ORDER, TYPE_CU);
+    writeCU_bin(init_state_CMU_NCEM, init_state_CMU_RCM,
+                grid_t_EM, s1_grid_size, s3_grid_size,
+                t_grid_size, OFTS_ORDER, TYPE_CU, SEML.li_SEM);
 
     //------------------------------------------
     //Free
@@ -205,7 +207,7 @@ int compute_grid_CMU_EM_3D(double dist_to_cm,
     //------------------------------------------
     // Reset the data file
     //------------------------------------------
-    initCU_bin_3D(si_grid_size, t_grid_size, OFTS_ORDER, TYPE_CU_3D);
+    initCU_bin_3D(si_grid_size, t_grid_size, OFTS_ORDER, TYPE_CU_3D, SEML.li_SEM);
 
     //====================================================================================
     // Loop on all elements.
@@ -219,7 +221,7 @@ int compute_grid_CMU_EM_3D(double dist_to_cm,
         //----------------------
         //Append the time in data file
         //----------------------
-        appTimeCU_bin_3D(grid_t_EM, kt, OFTS_ORDER, TYPE_CU_3D);
+        appTimeCU_bin_3D(grid_t_EM, kt, OFTS_ORDER, TYPE_CU_3D, SEML.li_SEM);
 
 
         for(int ks2 = 0; ks2 <= si_grid_size[1]; ks2++)
@@ -265,7 +267,8 @@ int compute_grid_CMU_EM_3D(double dist_to_cm,
                     //------------------------------------------
                     //Store values
                     //------------------------------------------
-                    writeCU_bin_3D(init_state_CMU_NCEM, init_state_CMU_RCM, si_grid_size, OFTS_ORDER, TYPE_CU_3D);
+                    writeCU_bin_3D(init_state_CMU_NCEM, init_state_CMU_RCM,
+                                   si_grid_size, OFTS_ORDER, TYPE_CU_3D, SEML.li_SEM);
                 }
             }
         }
@@ -329,7 +332,8 @@ int int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM,
     //Read data size
     //----------------------------------------------------------
     int t_grid_size, s1_grid_size, s3_grid_size;
-    getLenghtCU_bin(&s1_grid_size, &s3_grid_size, &t_grid_size, OFTS_ORDER, TYPE_CU);
+    getLenghtCU_bin(&s1_grid_size, &s3_grid_size, &t_grid_size,
+                    OFTS_ORDER, TYPE_CU, SEML.li_SEM);
 
     //----------------------------------------------------------
     //Initialize the actual sizes comparing t_grid_size/t_grid_size_x
@@ -349,7 +353,7 @@ int int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM,
     //Read data from file
     //----------------------------------------------------------
     readCU_bin(init_state_CMU_NCEM, init_state_CMU_RCM, init_time_grid_EM,
-               s1_grid_size, s3_grid_size, t_grid_size, OFTS_ORDER, TYPE_CU);
+               s1_grid_size, s3_grid_size, t_grid_size, OFTS_ORDER, TYPE_CU, SEML.li_SEM);
 
     //====================================================================================
     // 2.1. Initialize tools for the sorting phase
@@ -422,7 +426,7 @@ int int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM,
     // 2.4. Reset the data file (projection)
     //====================================================================================
     //Filename
-    string filename = filenameCUM(OFTS_ORDER, TYPE_MAN_PROJ);
+    string filename = filenameCUM(OFTS_ORDER, TYPE_MAN_PROJ, SEML.li_SEM);
     //Open whitout append datafile and therefore erase its content.
     fstream filestream;
     filestream.open (filename.c_str(), ios::binary | ios::out);
@@ -623,7 +627,7 @@ int int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM,
     //---------------------
     //Filename
     //---------------------
-    filename = filenameCUM(OFTS_ORDER, TYPE_MAN_SORT);
+    filename = filenameCUM(OFTS_ORDER, TYPE_MAN_SORT, SEML.li_SEM);
 
     //---------------------
     //Write sorted solutions
@@ -704,7 +708,8 @@ int int_proj_CMU_EM_on_CM_SEM_3D(double tmax_on_manifold_EM,
     //Read data size
     //----------------------------------------------------------
     int t_grid_size, si_grid_size[4], offset;
-    offset = getLenghtCU_bin_3D(si_grid_size, &t_grid_size, OFTS_ORDER, TYPE_CU_3D);
+    offset = getLenghtCU_bin_3D(si_grid_size, &t_grid_size,
+                                OFTS_ORDER, TYPE_CU_3D, SEML.li_SEM);
 
     //----------------------------------------------------------
     //To store all data
@@ -777,7 +782,7 @@ int int_proj_CMU_EM_on_CM_SEM_3D(double tmax_on_manifold_EM,
     // 2.4. Reset the data file (projection)
     //====================================================================================
     //Filename
-    string filename = filenameCUM(OFTS_ORDER, TYPE_MAN_PROJ_3D);
+    string filename = filenameCUM(OFTS_ORDER, TYPE_MAN_PROJ_3D, SEML.li_SEM);
     //Open whitout append datafile and therefore erase its content.
     fstream filestream;
     filestream.open (filename.c_str(), ios::binary | ios::out);
@@ -797,7 +802,8 @@ int int_proj_CMU_EM_on_CM_SEM_3D(double tmax_on_manifold_EM,
         //----------------------------------------------------------
         //Read time from file
         //----------------------------------------------------------
-        offset = readTCU_bin_3D(offset, init_time_grid_EM, kt, OFTS_ORDER, TYPE_CU_3D);
+        offset = readTCU_bin_3D(offset, init_time_grid_EM,
+                                kt, OFTS_ORDER, TYPE_CU_3D, SEML.li_SEM);
         cout << "init_time_grid_EM[kt] = " << init_time_grid_EM[kt] << endl;
 
         for(int ks2 = 0; ks2 <= si_grid_size[1]; ks2++)
@@ -809,7 +815,9 @@ int int_proj_CMU_EM_on_CM_SEM_3D(double tmax_on_manifold_EM,
                     //----------------------------------------------------------
                     //Read data from file
                     //----------------------------------------------------------
-                    offset = readCU_bin_3D(offset, init_state_CMU_NCEM, init_state_CMU_RCM, si_grid_size, OFTS_ORDER, TYPE_CU_3D);
+                    offset = readCU_bin_3D(offset, init_state_CMU_NCEM,
+                                           init_state_CMU_RCM, si_grid_size,
+                                           OFTS_ORDER, TYPE_CU_3D, SEML.li_SEM);
 
                     //----------------------------------------------------------
                     //Most inner loop is parallelized
@@ -1002,7 +1010,8 @@ int int_proj_CMU_EM_on_CMS_SEM(double tmax_on_manifold_EM,
     //Read data size
     //----------------------------------------------------------
     int t_grid_size, s1_grid_size, s3_grid_size;
-    getLenghtCU_bin(&s1_grid_size, &s3_grid_size, &t_grid_size, ofts_order, TYPE_CU);
+    getLenghtCU_bin(&s1_grid_size, &s3_grid_size, &t_grid_size,
+                    ofts_order, TYPE_CU, SEML.li_SEM);
 
     //----------------------------------------------------------
     //Initialize the actual sizes comparing t_grid_size/t_grid_size_x
@@ -1022,7 +1031,7 @@ int int_proj_CMU_EM_on_CMS_SEM(double tmax_on_manifold_EM,
     //Read data from file
     //----------------------------------------------------------
     readCU_bin(init_state_CMU_NCEM, init_state_CMU_RCM, init_time_grid_EM,
-               s1_grid_size, s3_grid_size, t_grid_size, ofts_order, TYPE_CU);
+               s1_grid_size, s3_grid_size, t_grid_size, ofts_order, TYPE_CU, SEML.li_SEM);
 
     //====================================================================================
     // 2.1. Initialize tools for the sorting phase
@@ -1095,7 +1104,7 @@ int int_proj_CMU_EM_on_CMS_SEM(double tmax_on_manifold_EM,
     // 2.4. Reset the data file (projection)
     //====================================================================================
     //Filename
-    string filename = filenameCUM(ofts_order, TYPE_MAN_PROJ);
+    string filename = filenameCUM(ofts_order, TYPE_MAN_PROJ, SEML.li_SEM);
     //Open whitout append datafile and therefore erase its content.
     fstream filestream;
     filestream.open (filename.c_str(), ios::binary | ios::out);
@@ -1300,7 +1309,7 @@ int int_proj_CMU_EM_on_CMS_SEM(double tmax_on_manifold_EM,
     //---------------------
     //Filename
     //---------------------
-    filename = filenameCUM(ofts_order, TYPE_MAN_SORT);
+    filename = filenameCUM(ofts_order, TYPE_MAN_SORT, SEML.li_SEM);
 
     //---------------------
     //Write sorted solutions
@@ -1479,7 +1488,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE(int cont_grid_size,
     // 6. Getting back the data
     //====================================================================================
     int type = isPlanar? TYPE_MAN_PROJ:TYPE_MAN_PROJ_3D;
-    string filename = filenameCUM(OFTS_ORDER, type);
+    string filename = filenameCUM(OFTS_ORDER, type, SEML.li_SEM);
 
     readIntProjCU_bin(filename, t0_EM, tf_EM, s1_CMU_EM, s2_CMU_EM, s3_CMU_EM, s4_CMU_EM, s5_CMU_EM,
                       pmin_dist_SEM, s1_CM_SEM, s2_CM_SEM, s3_CM_SEM, s4_CM_SEM, sortId);
@@ -1839,7 +1848,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_2(int man_grid_size,
     // 6. Getting back the data
     //====================================================================================
     int type = isPlanar? TYPE_MAN_PROJ:TYPE_MAN_PROJ_3D;
-    string filename = filenameCUM(OFTS_ORDER, type);
+    string filename = filenameCUM(OFTS_ORDER, type, SEML.li_SEM);
 
     readIntProjCU_bin(filename, t0_EM, tf_EM, s1_CMU_EM, s2_CMU_EM, s3_CMU_EM, s4_CMU_EM, s5_CMU_EM,
                       pmin_dist_SEM, s1_CM_SEM, s2_CM_SEM, s3_CM_SEM, s4_CM_SEM, sortId);
@@ -2133,7 +2142,7 @@ int refeml2seml(int man_grid_size,
     // 4. Getting back the data
     //====================================================================================
     int type = refst.dim == REF_PLANAR? TYPE_MAN_PROJ:TYPE_MAN_PROJ_3D;
-    string filename = filenameCUM(OFTS_ORDER, type);
+    string filename = filenameCUM(OFTS_ORDER, type, SEML.li_SEM);
 
     readIntProjCU_bin(filename, t0_EM, tf_EM, s1_CMU_EM, s2_CMU_EM, s3_CMU_EM, s4_CMU_EM,
             s5_CMU_EM, pmin_dist_SEM, s1_CM_SEM, s2_CM_SEM, s3_CM_SEM, s4_CM_SEM, sortId);
@@ -2669,8 +2678,8 @@ void srefeml2seml(SingleOrbit &orbit_EM,
         double **ymc   = dmatrix(0, 5, 0, mPlot);
         double *tmc    = dvector(0, mPlot);
         double yv[42];
-        string filename      = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF, orbit_EM.t0/SEML.us_em.T);
-        string filename_traj = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF_TRAJ, orbit_EM.t0/SEML.us_em.T);
+        string filename      = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF, SEML.li_SEM, orbit_EM.t0/SEML.us_em.T);
+        string filename_traj = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF_TRAJ, SEML.li_SEM, orbit_EM.t0/SEML.us_em.T);
         fstream filestream;
         if(refst.isSaved)
         {
@@ -3706,8 +3715,8 @@ void crefftplan(SingleOrbit &orbit_EM,
         //======================================================================
         // Save first entry
         //======================================================================
-        string filename      = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF, orbit_EM.t0/SEML.us_em.T);
-        string filename_traj = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF_TRAJ, orbit_EM.t0/SEML.us_em.T);
+        string filename      = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF, SEML.li_SEM, orbit_EM.t0/SEML.us_em.T);
+        string filename_traj = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF_TRAJ, SEML.li_SEM, orbit_EM.t0/SEML.us_em.T);
         fstream filestream;
         if(isSaved)
         {
@@ -4666,8 +4675,9 @@ void srefvtplan(SingleOrbit &orbit_EM,
     double *nullvector = dvector(0, nfv-1);
 
     //======================================================================
-    //NO CONTINUATION: @TODO Update msdvt_CMS_RCM to meet msvtplan
-    //standards in terms of inputs and plotting. msvtplan is used for now
+    // NO CONTINUATION:
+    // @todo Update msdvt_CMS_RCM to meet msvtplan
+    // standards in terms of inputs and plotting. msvtplan is used for now
     // BUT the computation of the null vector is NOT used...
     //======================================================================
     //    msdvt_CMS_RCM(y_traj, t_traj, y_traj_n, t_traj_n, 42,
@@ -5184,7 +5194,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ_T(int proj_grid_size,
 
 
     //====================================================================================
-    // @TODO: ADD AN ESTIMATE OF THE DISTANCE OF PROJECTION + by reproducing the PROJECTION METHOD
+    // @todo: ADD AN ESTIMATE OF THE DISTANCE OF PROJECTION + by reproducing the PROJECTION METHOD
     // THIS TIME ON THE CMS of SEML2! (set s5 of SEML2 to zero, or maybe a rough search...)
     // In this way, only 3 inputs: s1, s3 and t0.
     //====================================================================================
@@ -5576,7 +5586,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ_OPT(int proj_grid_size,
 
 
     //====================================================================================
-    // @TODO: ADD AN ESTIMATE OF THE DISTANCE OF PROJECTION + by reproducing the PROJECTION METHOD
+    // @todo: ADD AN ESTIMATE OF THE DISTANCE OF PROJECTION + by reproducing the PROJECTION METHOD
     // THIS TIME ON THE CMS of SEML2! (set s5 of SEML2 to zero, or maybe a rough search...)
     // In this way, only 3 inputs: s1, s3 and t0.
     //====================================================================================
@@ -7084,12 +7094,11 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP(int ofts_order,
     double tof_eml_EM   = 5*SEML.us.T;        //TOF on EML2 orbit
     double tof_seml_SEM = 10*SEML.us_sem.T;   //TOF on SEML2 orbit
 
-
     //====================================================================================
     // 1. Get the size of the data from the sorted solutions
     //====================================================================================
     int number_of_sol0;
-    getLengthIntSortedCU_bin(&number_of_sol0, ofts_order, TYPE_MAN_SORT);
+    getLengthIntSortedCU_bin(&number_of_sol0, ofts_order, TYPE_MAN_SORT, SEML.li_SEM);
 
     //---------------------------------------------------------------------
     //In fact, here, we select only ONE solution (!)
@@ -7237,7 +7246,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP(int ofts_order,
     //====================================================================================
     // 5. Getting back the data
     //====================================================================================
-    string filename = filenameCUM(ofts_order, TYPE_MAN_SORT);
+    string filename = filenameCUM(ofts_order, TYPE_MAN_SORT, SEML.li_SEM);
 
     readIntProjSortCU_bin(filename, label, t0_EM, tf_EM, s1_CMU_EM, s3_CMU_EM, s1_CM_SEM, s3_CM_SEM,
                           init_state_CMU_NCEM, final_state_CMU_SEM, projected_state_CMU_SEM,
@@ -10124,52 +10133,6 @@ int comprefft3d_test_seml_dimjpl(int man_grid_size_t,
     double *t_man_coord   = dvector(0, man_grid_2);
     double *t_man_comp    = dvector(0, man_grid_2);
 
-
-    //====================================================================================
-    // 4.2 Compute the initial orbit
-    //====================================================================================
-    //    cout << " comprefft3d. Compute the initial orbit..."  << endl;
-    //    //---------------------------------------------------------------------
-    //    //For the computation of the initial orbit, we kill the unstable part.
-    //    //---------------------------------------------------------------------
-    //    orbit_EM.si[4] = 0.0;
-    //
-    //    //---------------------------------------------------------------------
-    //    // Update the initial state in the orbit, with the RCM coordinates
-    //    //---------------------------------------------------------------------
-    //    orbit_update_ic(orbit_EM, orbit_EM.si, orbit_EM.t0);
-    //
-    //    //---------------------------------------------------------------------
-    //    //Integration on man_grid_size+1 fixed grid
-    //    //---------------------------------------------------------------------
-    //    int em_index = man_grid_2;
-    //    if(refst.grid == REF_FIXED_GRID) //fixed grid
-    //        trajectory_integration_grid(orbit_EM, orbit_EM.t0, orbit_EM.t0-tof_eml_EM, y_man_NCEM, t_man_EM, man_grid_2, 1);
-    //    else //variable grid
-    //        em_index = trajectory_integration_variable_grid(orbit_EM, orbit_EM.t0, orbit_EM.t0-tof_eml_EM, y_man_NCEM, t_man_EM, man_grid_2, 1);
-    //
-    //    //---------------------------------------------------------------------
-    //    //To coord_type coordinates
-    //    //---------------------------------------------------------------------
-    //    qbcp_coc_vec(y_man_NCEM, t_man_EM, y_man_coord, t_man_coord, em_index, NCEM, coord_type);
-    //    qbcp_coc_vec(y_man_NCEM, t_man_EM, y_man_comp,  t_man_comp,  em_index, NCEM, comp_type);
-    //
-    //    //---------------------------------------------------------------------
-    //    // Save All BUT the last point
-    //    //---------------------------------------------------------------------
-    //    for(int kman = 0; kman < em_index; kman++)
-    //    {
-    //        for(int i = 0; i < 6; i++) y_traj[i][kman] = y_man_coord[i][em_index-kman];
-    //        t_traj[kman] = t_man_coord[em_index-kman];
-    //    }
-    //
-    //    //---------------------------------------------------------------------
-    //    //Plot
-    //    //---------------------------------------------------------------------
-    //    gnuplot_plot_xyz(h2, y_man_coord[0], y_man_coord[1],  y_man_coord[2], em_index+1, (char*)"", "lines", "5", "3", 5);
-    //    //gnuplot_plot_xyz(h2, y_man_coord[0], y_man_coord[1],  y_man_coord[2], em_index+1, (char*)"EML2", "points", "5", "3", 5);
-    //    gnuplot_plot_xyz(h3, y_man_comp[0], y_man_comp[1],  y_man_comp[2], em_index+1, (char*)"", "lines", "5", "3", 5);
-
     //====================================================================================
     // 6.4 Compute the final SEML2 orbit
     //====================================================================================
@@ -10467,7 +10430,6 @@ int comprefft3d_test_seml_dimjpl(int man_grid_size_t,
             //Plot on h3
             if(k == 0) gnuplot_plot_xyz(h3, ymc_comp[0], ymc_comp[1],  ymc_comp[2], mPlot+1, (char*)"Initial guess in JPL", "lines", "1", "2", 1);
             else gnuplot_plot_xyz(h3, ymc_comp[0], ymc_comp[1],  ymc_comp[2], mPlot+1, (char*)"", "lines", "1", "2", 1);
-
         }
 
 
@@ -11136,7 +11098,7 @@ int comprefft3d_test_seml_synjpl(int man_grid_size_t,
 }
 
 /**
- *  \brief Computes only a SEML2 orbit and test a JPL refinement.
+ *  \brief Computes only an EML2 orbit and test a JPL refinement.
  **/
 int comprefft3d_test_eml_synjpl(int man_grid_size_t,
                      int coord_type,
@@ -11714,7 +11676,6 @@ int comprefft3d_test_eml_synjpl(int man_grid_size_t,
 
     return 0;
 }
-
 
 
 /**
@@ -12315,7 +12276,7 @@ int comprefft3d_test_eml2seml_synjpl(int man_grid_size_t,
             else gnuplot_plot_xyz(h2, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"", "lines", "1", "2", 1);
 
             //Back to comp_type coordinates
-            //TODO: put it NCEM  -> ECLIPTIC -> NCSEM, using ecl2coordstate_vec and its counterpart
+            // @todo: put it NCEM  -> ECLIPTIC -> NCSEM, using ecl2coordstate_vec and its counterpart
             syn2eclstate_vec(ymc_comp, tmc_comp, ymc, tmc,  mPlot, et0, tsys0, eph_coord(coord_type));
             ecl2coordstate_vec(ymc, tmc, ymc_comp, tmc_comp, mPlot, comp_type, et0, tsys0_comp, eph_coord(comp_type));
 
@@ -13052,7 +13013,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_PART(int ofts_order,
     // 1. Get the size of the data from the sorted solutions
     //====================================================================================
     int number_of_sol0;
-    getLengthIntSortedCU_bin(&number_of_sol0, ofts_order, TYPE_MAN_SORT);
+    getLengthIntSortedCU_bin(&number_of_sol0, ofts_order, TYPE_MAN_SORT, SEML.li_SEM);
 
     //---------------------------------------------------------------------
     //In fact, here, we select only ONE solution (!)
@@ -13217,7 +13178,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_PART(int ofts_order,
     //====================================================================================
     // 5. Getting back the data
     //====================================================================================
-    string filename = filenameCUM(ofts_order, TYPE_MAN_SORT);
+    string filename = filenameCUM(ofts_order, TYPE_MAN_SORT, SEML.li_SEM);
 
     readIntProjSortCU_bin(filename, label, t0_EM, tf_EM, s1_CMU_EM, s3_CMU_EM, s1_CM_SEM, s3_CM_SEM,
                           init_state_CMU_NCEM, final_state_CMU_SEM, projected_state_CMU_SEM,
@@ -13629,7 +13590,7 @@ int ref_CMU_EM_to_CM_SEM_MSD(int ofts_order,
     // 1. Get the data from the sorted solutions
     //====================================================================================
     int number_of_sol0;
-    getLengthIntSortedCU_bin(&number_of_sol0, ofts_order, TYPE_MAN_SORT);
+    getLengthIntSortedCU_bin(&number_of_sol0, ofts_order, TYPE_MAN_SORT, SEML.li_SEM);
 
     //---------------------------------------------------------------------
     //In fact, here, we select only ONE solution (!)
@@ -13674,7 +13635,7 @@ int ref_CMU_EM_to_CM_SEM_MSD(int ofts_order,
     //====================================================================================
     // 4. Getting back the data
     //====================================================================================
-    string filename = filenameCUM(ofts_order, TYPE_MAN_SORT);
+    string filename = filenameCUM(ofts_order, TYPE_MAN_SORT, SEML.li_SEM);
 
     readIntProjSortCU_bin(filename, label, t0_EM, tf_EM, s1_CMU_EM, s3_CMU_EM, s1_CM_SEM, s3_CM_SEM,
                           init_state_CMU_NCEM, final_state_CMU_SEM, projected_state_CMU_SEM,
@@ -13906,7 +13867,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_DEP(int ofts_order,
     // 1. Get the size of the data from the sorted solutions
     //====================================================================================
     int number_of_sol0;
-    getLengthIntSortedCU_bin(&number_of_sol0, ofts_order, TYPE_MAN_SORT);
+    getLengthIntSortedCU_bin(&number_of_sol0, ofts_order, TYPE_MAN_SORT, SEML.li_SEM);
 
     //---------------------------------------------------------------------
     //In fact, here, we select only ONE solution (!)
@@ -14071,7 +14032,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_DEP(int ofts_order,
     //====================================================================================
     // 5. Getting back the data
     //====================================================================================
-    string filename = filenameCUM(ofts_order, TYPE_MAN_SORT);
+    string filename = filenameCUM(ofts_order, TYPE_MAN_SORT, SEML.li_SEM);
 
     readIntProjSortCU_bin(filename, label, t0_EM, tf_EM, s1_CMU_EM, s3_CMU_EM, s1_CM_SEM, s3_CM_SEM,
                           init_state_CMU_NCEM, final_state_CMU_SEM, projected_state_CMU_SEM,
@@ -14487,7 +14448,7 @@ int int_sorted_sol_CMU_EM_to_CM_SEM(int ofts_order,
     // 1. Get the data from the sorted solutions
     //====================================================================================
     int number_of_sol;
-    getLengthIntSortedCU_bin(&number_of_sol, ofts_order, TYPE_MAN_SORT);
+    getLengthIntSortedCU_bin(&number_of_sol, ofts_order, TYPE_MAN_SORT, SEML.li_SEM);
     cout << "number_of_sol = " << number_of_sol << endl;
     cout << "man_grid_size = " << man_grid_size << endl;
 
@@ -14534,7 +14495,7 @@ int int_sorted_sol_CMU_EM_to_CM_SEM(int ofts_order,
     //====================================================================================
     // 3. Getting back the data
     //====================================================================================
-    string filename = filenameCUM(ofts_order, TYPE_MAN_SORT);
+    string filename = filenameCUM(ofts_order, TYPE_MAN_SORT, SEML.li_SEM);
 
     readIntProjSortCU_bin(filename, label, t0_EM, tf_EM, s1_CMU_EM, s3_CMU_EM, s1_CM_SEM, s3_CM_SEM,
                           init_state_CMU_NCEM, final_state_CMU_SEM, projected_state_CMU_SEM,
@@ -14827,7 +14788,7 @@ int int_sorted_sol_CMU_EM_to_CM_SEM(int ofts_order,
     //====================================================================================
     // 6. Save
     //====================================================================================
-    filename = filenameCUM(ofts_order, TYPE_MAN_SORT_IN);
+    filename = filenameCUM(ofts_order, TYPE_MAN_SORT_IN, SEML.li_SEM);
 
     //---------------------
     //Open datafile

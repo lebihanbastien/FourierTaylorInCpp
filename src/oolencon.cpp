@@ -29,9 +29,9 @@
  * The output data are saved in a binary file of the form:
  *                   "plot/QBCP/EM/L2/cu_3d_order_16.bin"
  **/
-int oo_compute_grid_CMU_EM_3D(double dist_to_cm, double *tlim_CMU_EM,
+int oo_compute_grid_CMU_EM_3D(double dist_to_cm, double* tlim_CMU_EM,
                               int t_grid_size, double si_LIM_CMU_RCM[4][2],
-                              int *si_grid_size, Invman &invman, bool isPar)
+                              int* si_grid_size, Invman& invman, bool isPar)
 {
     //====================================================================================
     // Check that the invman is an unstable-manifold
@@ -48,7 +48,7 @@ int oo_compute_grid_CMU_EM_3D(double dist_to_cm, double *tlim_CMU_EM,
     //------------------------------------------
     //Building the working grids
     //------------------------------------------
-    double **grid_si_CMU_RCM = (double**) calloc(4, sizeof(double*));
+    double** grid_si_CMU_RCM = (double**) calloc(4, sizeof(double*));
     for(int i = 0; i <4; i++)
     {
         grid_si_CMU_RCM[i] = (double*) calloc(si_grid_size[i]+1, sizeof(double));
@@ -59,7 +59,7 @@ int oo_compute_grid_CMU_EM_3D(double dist_to_cm, double *tlim_CMU_EM,
     //------------------------------------------
     //Building the time grid
     //------------------------------------------
-    double *grid_t_EM = dvector(0,  t_grid_size);
+    double* grid_t_EM = dvector(0,  t_grid_size);
     init_grid(grid_t_EM, tlim_CMU_EM[0], tlim_CMU_EM[1], t_grid_size);
 
     //------------------------------------------
@@ -71,13 +71,13 @@ int oo_compute_grid_CMU_EM_3D(double dist_to_cm, double *tlim_CMU_EM,
     //------------------------------------------
     // Data structures
     //------------------------------------------
-    double **init_state_CMU_NCEM = dmatrix(0, 5, 0, si_grid_size[2]);
-    double **init_state_CMU_RCM  = dmatrix(0, 4, 0, si_grid_size[2]);
+    double** init_state_CMU_NCEM = dmatrix(0, 5, 0, si_grid_size[2]);
+    double** init_state_CMU_RCM  = dmatrix(0, 4, 0, si_grid_size[2]);
 
     //------------------------------------------
     // Reset the data file
     //------------------------------------------
-    initCU_bin_3D(si_grid_size, t_grid_size, OFTS_ORDER, TYPE_CU_3D);
+    initCU_bin_3D(si_grid_size, t_grid_size, OFTS_ORDER, TYPE_CU_3D, SEML.li_SEM);
 
     //====================================================================================
     // Loop on all elements.
@@ -91,7 +91,7 @@ int oo_compute_grid_CMU_EM_3D(double dist_to_cm, double *tlim_CMU_EM,
         //----------------------
         //Append the time in data file
         //----------------------
-        appTimeCU_bin_3D(grid_t_EM, kt, OFTS_ORDER, TYPE_CU_3D);
+        appTimeCU_bin_3D(grid_t_EM, kt, OFTS_ORDER, TYPE_CU_3D, SEML.li_SEM);
 
 
         for(int ks2 = 0; ks2 <= si_grid_size[1]; ks2++)
@@ -104,8 +104,8 @@ int oo_compute_grid_CMU_EM_3D(double dist_to_cm, double *tlim_CMU_EM,
                     for(int ks3 = 0; ks3 <= si_grid_size[2]; ks3++)
                     {
                         Ofsc ofs(OFS_ORDER);
-                        double *yvu = dvector(0,5);
-                        double *sti = dvector(0,4);
+                        double* yvu = dvector(0,5);
+                        double* sti = dvector(0,4);
 
                         //----------------------
                         // Initialization on the center-unstable manifold
@@ -137,7 +137,8 @@ int oo_compute_grid_CMU_EM_3D(double dist_to_cm, double *tlim_CMU_EM,
                     //------------------------------------------
                     //Store values
                     //------------------------------------------
-                    writeCU_bin_3D(init_state_CMU_NCEM, init_state_CMU_RCM, si_grid_size, OFTS_ORDER, TYPE_CU_3D);
+                    writeCU_bin_3D(init_state_CMU_NCEM, init_state_CMU_RCM, si_grid_size,
+                                   OFTS_ORDER, TYPE_CU_3D, SEML.li_SEM);
                 }
             }
         }
@@ -181,24 +182,48 @@ int oo_compute_grid_CMU_EM_3D(double dist_to_cm, double *tlim_CMU_EM,
 int oo_compute_grid_CMU_EM(double dist_to_cm, double tmin_CMU_EM, double tmax_CMU_EM,
                            int t_grid_size, double s1_MIN_CMU_RCM, double s1_MAX_CMU_RCM,
                            double s3_MIN_CMU_RCM, double s3_MAX_CMU_RCM,
-                           int s1_grid_size, int s3_grid_size, Invman &invman, bool isPar)
+                           int s1_grid_size, int s3_grid_size, Invman& invman, bool isPar)
 
 {
+    //====================================================================================
+    // Splash screen
+    //====================================================================================
+    string filename = filenameCUM(OFTS_ORDER, TYPE_CU, SEML.li_SEM);
+    cout << resetiosflags(ios::scientific) << setprecision(15);
+
+    cout << "===================================================================" << endl;
+    cout << "       Computation of center-unstable planar IC at EML2            " << endl;
+    cout << "===================================================================" << endl;
+    cout << " The computation domain is the following:                          " << endl;
+    cout << " - OFTS_ORDER = " << OFTS_ORDER << endl;
+    cout << "  - " << s1_grid_size+1  << " value(s) of s1 in [" << s1_MIN_CMU_RCM;
+    cout << ", " << s1_MAX_CMU_RCM << "]" << endl;
+    cout << "  - " << s3_grid_size+1  << " value(s) of s3 in [" << s3_MIN_CMU_RCM;
+    cout << ", " << s3_MAX_CMU_RCM << "]" << endl;
+    cout << "  - " << t_grid_size+1  << " value(s) of t in [" << tmin_CMU_EM/SEML.us.T;
+    cout << ", " << tmax_CMU_EM/SEML.us.T << "] x T" << endl;
+    cout << " The data will be stored in " << filename << endl;
+    char ch;
+    printf("Press ENTER to go on\n");
+    //scanf("%c",&ch);
+    cout << setiosflags(ios::scientific) << setprecision(15);
+    cout << "===================================================================" << endl;
+
     //====================================================================================
     // Initialization
     //====================================================================================
     //------------------------------------------
     //Building the working grids
     //------------------------------------------
-    double *grid_s1_CMU_RCM = dvector(0,  s1_grid_size);
-    double *grid_s3_CMU_RCM = dvector(0,  s3_grid_size);
+    double* grid_s1_CMU_RCM = dvector(0,  s1_grid_size);
+    double* grid_s3_CMU_RCM = dvector(0,  s3_grid_size);
     init_grid(grid_s1_CMU_RCM, s1_MIN_CMU_RCM, s1_MAX_CMU_RCM, s1_grid_size);
     init_grid(grid_s3_CMU_RCM, s3_MIN_CMU_RCM, s3_MAX_CMU_RCM, s3_grid_size);
 
     //------------------------------------------
     //Building the time grid
     //------------------------------------------
-    double *grid_t_EM = dvector(0,  t_grid_size);
+    double* grid_t_EM = dvector(0,  t_grid_size);
     init_grid(grid_t_EM, tmin_CMU_EM, tmax_CMU_EM, t_grid_size);
 
     //------------------------------------------
@@ -210,8 +235,8 @@ int oo_compute_grid_CMU_EM(double dist_to_cm, double tmin_CMU_EM, double tmax_CM
     //------------------------------------------
     // Data structures
     //------------------------------------------
-    double ****init_state_CMU_NCEM = d4tensor(0, 5, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
-    double ****init_state_CMU_RCM  = d4tensor(0, 4, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
+    double**** init_state_CMU_NCEM = d4tensor(0, 5, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
+    double**** init_state_CMU_RCM  = d4tensor(0, 4, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
 
     //====================================================================================
     // Loop on all elements.
@@ -228,8 +253,8 @@ int oo_compute_grid_CMU_EM(double dist_to_cm, double tmin_CMU_EM, double tmax_CM
             for(int ks3 = 0; ks3 <= s3_grid_size; ks3++)
             {
                 Ofsc ofs(OFS_ORDER);
-                double *yvu = dvector(0,5);
-                double *sti = dvector(0,4);
+                double* yvu = dvector(0,5);
+                double* sti = dvector(0,4);
 
                 //----------------------
                 // Initialization on the center-unstable manifold
@@ -263,7 +288,9 @@ int oo_compute_grid_CMU_EM(double dist_to_cm, double tmin_CMU_EM, double tmax_CM
     //------------------------------------------
     //Store values
     //------------------------------------------
-    writeCU_bin(init_state_CMU_NCEM, init_state_CMU_RCM, grid_t_EM, s1_grid_size, s3_grid_size, t_grid_size, OFTS_ORDER, TYPE_CU);
+    writeCU_bin(init_state_CMU_NCEM, init_state_CMU_RCM, grid_t_EM,
+                s1_grid_size, s3_grid_size, t_grid_size, OFTS_ORDER,
+                TYPE_CU, SEML.li_SEM);
 
     //------------------------------------------
     //Free
@@ -330,14 +357,22 @@ int oo_int_proj_CMU_EM_on_CM_SEM_3D(double tmax_on_manifold_EM,
     //Read data size
     //----------------------------------------------------------
     int t_grid_size, si_grid_size[4], offset;
-    offset = getLenghtCU_bin_3D(si_grid_size, &t_grid_size, OFTS_ORDER, TYPE_CU_3D);
+    offset = getLenghtCU_bin_3D(si_grid_size, &t_grid_size,
+                                OFTS_ORDER, TYPE_CU_3D, SEML.li_SEM);
+
+
+    //====================================================================================
+    // Splash screen
+    //====================================================================================
+    string filename = filenameCUM(OFTS_ORDER, TYPE_CU, SEML.li_SEM);
+    cout << resetiosflags(ios::scientific) << setprecision(15);
 
     //----------------------------------------------------------
     //To store all data
     //----------------------------------------------------------
-    double **init_state_CMU_NCEM = dmatrix(0, 5, 0, si_grid_size[2]);
-    double **init_state_CMU_RCM  = dmatrix(0, 4, 0, si_grid_size[2]);
-    double *init_time_grid_EM    = dvector(0, t_grid_size);
+    double** init_state_CMU_NCEM = dmatrix(0, 5, 0, si_grid_size[2]);
+    double** init_state_CMU_RCM  = dmatrix(0, 4, 0, si_grid_size[2]);
+    double* init_time_grid_EM    = dvector(0, t_grid_size);
 
     //------------------------------------------
     //Number of elements
@@ -361,12 +396,12 @@ int oo_int_proj_CMU_EM_on_CM_SEM_3D(double tmax_on_manifold_EM,
     //----------------------------------------------------------
     //To store
     //----------------------------------------------------------
-    double **final_state_CMU_SEM      = dmatrix(0, 5, 0, si_grid_size[2]);
-    double **projected_state_CMU_SEM  = dmatrix(0, 5, 0, si_grid_size[2]);
-    double **projected_state_CMU_RCM  = dmatrix(0, 3, 0, si_grid_size[2]);
-    double **init_state_CMU_SEM       = dmatrix(0, 5, 0, si_grid_size[2]);
-    double **init_state_CMU_NCEM_0    = dmatrix(0, 5, 0, si_grid_size[2]);
-    double *min_proj_dist_tens_SEM    = dvector(0, si_grid_size[2]);
+    double** final_state_CMU_SEM      = dmatrix(0, 5, 0, si_grid_size[2]);
+    double** projected_state_CMU_SEM  = dmatrix(0, 5, 0, si_grid_size[2]);
+    double** projected_state_CMU_RCM  = dmatrix(0, 3, 0, si_grid_size[2]);
+    double** init_state_CMU_SEM       = dmatrix(0, 5, 0, si_grid_size[2]);
+    double** init_state_CMU_NCEM_0    = dmatrix(0, 5, 0, si_grid_size[2]);
+    double* min_proj_dist_tens_SEM    = dvector(0, si_grid_size[2]);
 
 
     //====================================================================================
@@ -375,7 +410,7 @@ int oo_int_proj_CMU_EM_on_CM_SEM_3D(double tmax_on_manifold_EM,
     //----------------------------------------------------------
     //Notable points in SEM system
     //----------------------------------------------------------
-    double **semP = dmatrix(0, 6, 0, 2);
+    double** semP = dmatrix(0, 6, 0, 2);
     semPoints(0.0, semP);
 
     //----------------------------------------------------------
@@ -387,7 +422,7 @@ int oo_int_proj_CMU_EM_on_CM_SEM_3D(double tmax_on_manifold_EM,
     // 2.4. Reset the data file (projection)
     //====================================================================================
     //Filename
-    string filename = filenameCUM(OFTS_ORDER, TYPE_MAN_PROJ_3D);
+    filename = filenameCUM(OFTS_ORDER, TYPE_MAN_PROJ_3D, SEML.li_SEM);
     //Open whitout append datafile and therefore erase its content.
     fstream filestream;
     filestream.open (filename.c_str(), ios::binary | ios::out);
@@ -407,7 +442,8 @@ int oo_int_proj_CMU_EM_on_CM_SEM_3D(double tmax_on_manifold_EM,
         //----------------------------------------------------------
         //Read time from file
         //----------------------------------------------------------
-        offset = readTCU_bin_3D(offset, init_time_grid_EM, kt, OFTS_ORDER, TYPE_CU_3D);
+        offset = readTCU_bin_3D(offset, init_time_grid_EM, kt,
+                                OFTS_ORDER, TYPE_CU_3D, SEML.li_SEM);
 
         for(int ks2 = 0; ks2 <= si_grid_size[1]; ks2++)
         {
@@ -418,7 +454,9 @@ int oo_int_proj_CMU_EM_on_CM_SEM_3D(double tmax_on_manifold_EM,
                     //----------------------------------------------------------
                     //Read data from file
                     //----------------------------------------------------------
-                    offset = readCU_bin_3D(offset, init_state_CMU_NCEM, init_state_CMU_RCM, si_grid_size, OFTS_ORDER, TYPE_CU_3D);
+                    offset = readCU_bin_3D(offset, init_state_CMU_NCEM,
+                                           init_state_CMU_RCM, si_grid_size, OFTS_ORDER,
+                                           TYPE_CU_3D, SEML.li_SEM);
 
                     //----------------------------------------------------------
                     //Most inner loop is parallelized
@@ -440,8 +478,8 @@ int oo_int_proj_CMU_EM_on_CM_SEM_3D(double tmax_on_manifold_EM,
                         //----------------------------------------------------------------
                         //Local variables to store the manifold leg
                         //----------------------------------------------------------------
-                        double **y_man_NCSEM = dmatrix(0, 5, 0, man_grid_size);
-                        double *t_man_SEM    = dvector(0, man_grid_size);
+                        double** y_man_NCSEM = dmatrix(0, 5, 0, man_grid_size);
+                        double* t_man_SEM    = dvector(0, man_grid_size);
 
 
                         //----------------------------------------------------------------
@@ -641,7 +679,8 @@ int oo_int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM, int t_grid_size_x,
     //Read data size
     //----------------------------------------------------------
     int t_grid_size, s1_grid_size, s3_grid_size;
-    getLenghtCU_bin(&s1_grid_size, &s3_grid_size, &t_grid_size, OFTS_ORDER, TYPE_CU);
+    getLenghtCU_bin(&s1_grid_size, &s3_grid_size, &t_grid_size,
+                    OFTS_ORDER, TYPE_CU, SEML.li_SEM);
 
     //----------------------------------------------------------
     //Initialize the actual sizes comparing t_grid_size/t_grid_size_x
@@ -653,15 +692,34 @@ int oo_int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM, int t_grid_size_x,
     //----------------------------------------------------------
     //To store all data
     //----------------------------------------------------------
-    double ****init_state_CMU_NCEM = d4tensor(0, 5, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
-    double ****init_state_CMU_RCM  = d4tensor(0, 4, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
-    double *init_time_grid_EM      = dvector(0, t_grid_size);
+    double**** init_state_CMU_NCEM = d4tensor(0, 5, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
+    double**** init_state_CMU_RCM  = d4tensor(0, 4, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
+    double* init_time_grid_EM      = dvector(0, t_grid_size);
 
     //----------------------------------------------------------
     //Read data from file
     //----------------------------------------------------------
     readCU_bin(init_state_CMU_NCEM, init_state_CMU_RCM, init_time_grid_EM,
-               s1_grid_size, s3_grid_size, t_grid_size, OFTS_ORDER, TYPE_CU);
+               s1_grid_size, s3_grid_size, t_grid_size, OFTS_ORDER, TYPE_CU, SEML.li_SEM);
+
+    //====================================================================================
+    // Splash screen
+    //====================================================================================
+    string filename = filenameCUM(OFTS_ORDER, TYPE_MAN_PROJ, SEML.li_SEM);
+    cout << "===================================================================" << endl;
+    cout << "              Computation of the connections between:              " << endl;
+    cout << "===================================================================" << endl;
+    cout << " The computation domain is the following:                          " << endl;
+    cout << " - OFTS_ORDER = " << OFTS_ORDER << endl;
+    cout << "  - " << s1_grid_size+1  << " value(s) of s1" << endl;
+    cout << "  - " << s3_grid_size+1  << " value(s) of s3" << endl;
+    cout << "  - " << t_grid_size+1   << " value(s) of t"  << endl;
+    cout << " The data will be stored in " << filename << endl;
+    char ch;
+    printf("Press ENTER to go on\n");
+    //scanf("%c",&ch);
+    cout << setiosflags(ios::scientific) << setprecision(15);
+    cout << "===================================================================" << endl;
 
     //====================================================================================
     // 2.1. Initialize tools for the sorting phase
@@ -681,7 +739,7 @@ int oo_int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM, int t_grid_size_x,
     //First, check that the type of manifold provided is good:
     if(SEML_SEM.cs.manType != MAN_CENTER)
     {
-        cout << "oo_int_proj_CMU_EM_on_CM_SEM_3D. The invariant manifold at SEMLi ";
+        cout << "oo_int_proj_CMU_EM_on_CM_SEM. The invariant manifold at SEMLi ";
         cout << "must be of center type. return." << endl;
         return -1;
     }
@@ -691,12 +749,12 @@ int oo_int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM, int t_grid_size_x,
     //----------------------------------------------------------
     //To store
     //----------------------------------------------------------
-    double ****final_state_CMU_SEM      = d4tensor(0, 5, 0, t_grid_size_t, 0, s1_grid_size_t, 0, s3_grid_size_t);
-    double ****projected_state_CMU_SEM  = d4tensor(0, 5, 0, t_grid_size_t, 0, s1_grid_size_t, 0, s3_grid_size_t);
-    double ****projected_state_CMU_RCM  = d4tensor(0, 3, 0, t_grid_size_t, 0, s1_grid_size_t, 0, s3_grid_size_t);
-    double ****init_state_CMU_SEM       = d4tensor(0, 5, 0, t_grid_size_t, 0, s1_grid_size_t, 0, s3_grid_size_t);
-    double ****init_state_CMU_NCEM_0    = d4tensor(0, 5, 0, t_grid_size_t, 0, s1_grid_size_t, 0, s3_grid_size_t);
-    double ***min_proj_dist_tens_SEM    = d3tensor(0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
+    double**** final_state_CMU_SEM      = d4tensor(0, 5, 0, t_grid_size_t, 0, s1_grid_size_t, 0, s3_grid_size_t);
+    double**** projected_state_CMU_SEM  = d4tensor(0, 5, 0, t_grid_size_t, 0, s1_grid_size_t, 0, s3_grid_size_t);
+    double**** projected_state_CMU_RCM  = d4tensor(0, 3, 0, t_grid_size_t, 0, s1_grid_size_t, 0, s3_grid_size_t);
+    double**** init_state_CMU_SEM       = d4tensor(0, 5, 0, t_grid_size_t, 0, s1_grid_size_t, 0, s3_grid_size_t);
+    double**** init_state_CMU_NCEM_0    = d4tensor(0, 5, 0, t_grid_size_t, 0, s1_grid_size_t, 0, s3_grid_size_t);
+    double** *min_proj_dist_tens_SEM    = d3tensor(0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
 
 
     //====================================================================================
@@ -706,7 +764,7 @@ int oo_int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM, int t_grid_size_x,
     //----------------------------------------------------------
     //Notable points in SEM system
     //----------------------------------------------------------
-    double **semP = dmatrix(0, 6, 0, 2);
+    double** semP = dmatrix(0, 6, 0, 2);
     semPoints(0.0, semP);
 
     //----------------------------------------------------------
@@ -718,7 +776,7 @@ int oo_int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM, int t_grid_size_x,
     // 2.4. Reset the data file (projection)
     //====================================================================================
     //Filename
-    string filename = filenameCUM(OFTS_ORDER, TYPE_MAN_PROJ);
+    filename = filenameCUM(OFTS_ORDER, TYPE_MAN_PROJ, SEML.li_SEM);
     //Open whitout append datafile and therefore erase its content.
     fstream filestream;
     filestream.open (filename.c_str(), ios::binary | ios::out);
@@ -752,8 +810,8 @@ int oo_int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM, int t_grid_size_x,
                 //---------------------------------------------------------------------
                 //Local variables to store the manifold leg
                 //---------------------------------------------------------------------
-                double **y_man_NCSEM = dmatrix(0, 5, 0, man_grid_size);
-                double *t_man_SEM    = dvector(0, man_grid_size);
+                double** y_man_NCSEM = dmatrix(0, 5, 0, man_grid_size);
+                double* t_man_SEM    = dvector(0, man_grid_size);
 
 
                 //---------------------------------------------------------------------
@@ -882,9 +940,13 @@ int oo_int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM, int t_grid_size_x,
                         //----------------------------------------------------------
                         //Open datafile
                         //----------------------------------------------------------
-                        writeIntProjCU_bin(filename, init_time_grid_EM, init_state_CMU_NCEM,
-                        init_state_CMU_SEM, init_state_CMU_RCM, final_state_CMU_SEM, projected_state_CMU_SEM,
-                        projected_state_CMU_RCM, min_proj_dist_SEM, dv_at_projection_SEM, t_man_SEM, kmin, ks1, ks3, kt);
+                        writeIntProjCU_bin(filename, init_time_grid_EM,
+                        init_state_CMU_NCEM, init_state_CMU_SEM,
+                        init_state_CMU_RCM, final_state_CMU_SEM,
+                        projected_state_CMU_SEM,
+                        projected_state_CMU_RCM,
+                        min_proj_dist_SEM, dv_at_projection_SEM,
+                        t_man_SEM, kmin, ks1, ks3, kt);
                     }
                 }
 
@@ -921,7 +983,7 @@ int oo_int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM, int t_grid_size_x,
     //---------------------
     //Filename
     //---------------------
-    filename = filenameCUM(OFTS_ORDER, TYPE_MAN_SORT);
+    filename = filenameCUM(OFTS_ORDER, TYPE_MAN_SORT, SEML.li_SEM);
 
     //---------------------
     //Write sorted solutions
@@ -967,10 +1029,7 @@ int oo_int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM, int t_grid_size_x,
  *         The time at each point except the first one is allowed to vary.
  *         A continuation procedure can be performed to get more than one refined solution.
  **/
-int refeml2seml(int man_grid_size,
-                int coord_type,
-                Invman &invman,
-                RefSt &refst)
+int oorefeml2seml(int man_grid_size, int coord_type, Invman& invman, RefSt& refst)
 {
     //====================================================================================
     // 1. Get the default coordinates system from the coord_type
@@ -1026,18 +1085,18 @@ int refeml2seml(int man_grid_size,
     int type = TYPE_MAN_PROJ;
     switch(refst.dim)
     {
-        case REF_PLANAR:
-            type = refst.isFromServer? TYPE_MAN_PROJ_FROM_SERVER:TYPE_MAN_PROJ;
+    case REF_PLANAR:
+        type = refst.isFromServer? TYPE_MAN_PROJ_FROM_SERVER:TYPE_MAN_PROJ;
         break;
 
-        case REF_3D:
-            type = refst.isFromServer? TYPE_MAN_PROJ_3D_FROM_SERVER:TYPE_MAN_PROJ_3D;
+    case REF_3D:
+        type = refst.isFromServer? TYPE_MAN_PROJ_3D_FROM_SERVER:TYPE_MAN_PROJ_3D;
         break;
     }
-    string filename = filenameCUM(OFTS_ORDER, type);
+    string filename = filenameCUM(OFTS_ORDER, type, SEML.li_SEM);
 
     readIntProjCU_bin(filename, t0_EM, tf_EM, s1_CMU_EM, s2_CMU_EM, s3_CMU_EM, s4_CMU_EM,
-            s5_CMU_EM, pmin_dist_SEM, s1_CM_SEM, s2_CM_SEM, s3_CM_SEM, s4_CM_SEM, sortId);
+                      s5_CMU_EM, pmin_dist_SEM, s1_CM_SEM, s2_CM_SEM, s3_CM_SEM, s4_CM_SEM, sortId);
 
     //====================================================================================
     // 5. Select given intervals for the inputs
@@ -1058,7 +1117,8 @@ int refeml2seml(int man_grid_size,
         cin >> s3_CMU_EM_MIN;
         cout << "Enter a value for s3_CMU_EM_MAX: ";
         cin >> s3_CMU_EM_MAX;
-    }else
+    }
+    else
     {
         s1_CMU_EM_MIN = refst.s1_CMU_EM_MIN;
         s1_CMU_EM_MAX = refst.s1_CMU_EM_MAX;
@@ -1110,7 +1170,8 @@ int refeml2seml(int man_grid_size,
             cin >> cont_steps_MAX;
             refst.cont_step_max = cont_steps_MAX;
         }
-    }else
+    }
+    else
     {
         cout << "refeml2seml. No continuation will be performed." << endl;
         refst.cont_step_max = 0;
@@ -1151,9 +1212,9 @@ int refeml2seml(int man_grid_size,
     //---------------------------------------------------------------------
     OdeStruct driver_EM;
     //Root-finding
-    const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
+    const gsl_root_fsolver_type* T_root = gsl_root_fsolver_brent;
     //Stepper
-    const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
+    const gsl_odeiv2_step_type* T = gsl_odeiv2_step_rk8pd;
     //Init ode structure
     init_ode_structure(&driver_EM, T, T_root, 6, qbfbp_vfn_novar, &SEML_EM);
     //Init routine
@@ -1196,8 +1257,8 @@ int refeml2seml(int man_grid_size,
     //====================================================================================
     // 8 Multiple shooting procedure
     //====================================================================================
-    double **semP_coord = dmatrix(0, 6, 0, 2);
-    gnuplot_ctrl *h2;
+    double** semP_coord = dmatrix(0, 6, 0, 2);
+    gnuplot_ctrl* h2;
     switch(refst.type)
     {
     case REF_CONT:
@@ -1236,7 +1297,7 @@ int refeml2seml(int man_grid_size,
         //--------------------------------------------------------------------------------
         //Multiple shooting procedure
         //--------------------------------------------------------------------------------
-        srefeml2seml(orbit_EM, orbit_SEM, dcs, coord_type, man_grid_size, refst, h2);
+        oosrefeml2seml(orbit_EM, orbit_SEM, dcs, coord_type, man_grid_size, refst, h2);
         gnuplot_close(h2);
         break;
 
@@ -1281,14 +1342,14 @@ int refeml2seml(int man_grid_size,
         //First step: variable time
         //--------------------------------------------------------------------------------
         refst.time = REF_VAR_TIME;
-        srefeml2seml(orbit_EM, orbit_SEM, dcs, coord_type, man_grid_size, refst, h2);
+        oosrefeml2seml(orbit_EM, orbit_SEM, dcs, coord_type, man_grid_size, refst, h2);
 
 
         //--------------------------------------------------------------------------------
         //Second step: fixed time
         //--------------------------------------------------------------------------------
         refst.time = REF_FIXED_TIME;
-        srefeml2seml(orbit_EM, orbit_SEM, dcs, coord_type, man_grid_size, refst, h2);
+        oosrefeml2seml(orbit_EM, orbit_SEM, dcs, coord_type, man_grid_size, refst, h2);
 
         gnuplot_close(h2);
         break;
@@ -1302,13 +1363,9 @@ int refeml2seml(int man_grid_size,
         cin >> msd_grid_size;
         char ch;
         scanf("%c",&ch);
-
-
-        comprefft3d(msd_grid_size, coord_type, orbit_EM, orbit_SEM, refst);
-
+        oocomprefft3d(msd_grid_size, coord_type, orbit_EM, orbit_SEM, refst);
+        //comprefft3d_test_seml_synjpl(msd_grid_size, coord_type, orbit_EM, orbit_SEM, refst);
         //comprefft3d_test_eml2seml_synjpl(msd_grid_size, coord_type, orbit_EM, orbit_SEM, refst);
-        //comprefft3d_test_seml_synjpl(msd_grid_size, coord_type, orbit_EM, orbit_SEM, refst);
-        //comprefft3d_test_seml_synjpl(msd_grid_size, coord_type, orbit_EM, orbit_SEM, refst);
         //comprefft3d_test_eml2seml_insem(msd_grid_size, coord_type, orbit_EM, orbit_SEM, refst);
         break;
     }
@@ -1332,13 +1389,9 @@ int refeml2seml(int man_grid_size,
  *  \brief Continuation of a single of EML2-to-SEML2 connection, between orbit_EM and orbit_SEM.
  *         The Jacobian of the parameterization of the manifolds are contained in  DCM_EM_TFC and DCMS_SEM_TFC.
 **/
-void srefeml2seml(Orbit &orbit_EM,
-                  Orbit &orbit_SEM,
-                  int dcs,
-                  int coord_type,
-                  int man_grid_size_t,
-                  RefSt &refst,
-                  gnuplot_ctrl *h2)
+void oosrefeml2seml(Orbit& orbit_EM, Orbit& orbit_SEM,
+                    int dcs, int coord_type, int man_grid_size_t,
+                    RefSt& refst, gnuplot_ctrl* h2)
 {
     //====================================================================================
     // 1. Initialize local variables
@@ -1362,43 +1415,43 @@ void srefeml2seml(Orbit &orbit_EM,
     //---------------------------------------------------------------------
     //Local variables to store the manifold leg
     //---------------------------------------------------------------------
-    double **y_man_coord  = dmatrix(0, 5, 0, man_grid_size);
-    double  *t_man_coord  = dvector(0, man_grid_size);
+    double** y_man_coord  = dmatrix(0, 5, 0, man_grid_size);
+    double*  t_man_coord  = dvector(0, man_grid_size);
 
     //---------------------------------------------------------------------
     //Local variables for plotting
     //---------------------------------------------------------------------
     int mPlot = 500;
-    double **y_man_NCEM        = dmatrix(0, 5, 0, mPlot);
-    double **y_man_NCSEM       = dmatrix(0, 5, 0, mPlot);
-    double *t_man_EM           = dvector(0, mPlot);
-    double *t_man_SEM          = dvector(0, mPlot);
-    double **y_man_coord_plot  = dmatrix(0, 5, 0, mPlot);
-    double *t_man_coord_plot   = dvector(0, mPlot);
+    double** y_man_NCEM        = dmatrix(0, 5, 0, mPlot);
+    double** y_man_NCSEM       = dmatrix(0, 5, 0, mPlot);
+    double* t_man_EM           = dvector(0, mPlot);
+    double* t_man_SEM          = dvector(0, mPlot);
+    double** y_man_coord_plot  = dmatrix(0, 5, 0, mPlot);
+    double* t_man_coord_plot   = dvector(0, mPlot);
 
     //---------------------------------------------------------------------
     //To store final data
     //---------------------------------------------------------------------
-    double **y_traj       = dmatrix(0, 41, 0, man_grid_size);
-    double  *t_traj       = dvector(0, man_grid_size);
-    double **y_traj_comp  = dmatrix(0, 41, 0, man_grid_size);
-    double  *t_traj_comp  = dvector(0, man_grid_size);
+    double** y_traj       = dmatrix(0, 41, 0, man_grid_size);
+    double*  t_traj       = dvector(0, man_grid_size);
+    double** y_traj_comp  = dmatrix(0, 41, 0, man_grid_size);
+    double*  t_traj_comp  = dvector(0, man_grid_size);
 
     //---------------------------------------------------------------------
     //Local variables to store the refined trajectory
     //---------------------------------------------------------------------
-    double **y_traj_n   = dmatrix(0, 41, 0, man_grid_size);
-    double *t_traj_n    = dvector(0, man_grid_size);
+    double** y_traj_n   = dmatrix(0, 41, 0, man_grid_size);
+    double* t_traj_n    = dvector(0, man_grid_size);
 
     //---------------------------------------------------------------------
     // Initialize the COC matrices
     //---------------------------------------------------------------------
     //CCM_R_RCM_EM: RCM to CCM in R(4,4), about EML2
-    gsl_matrix_complex *CCM_R_RCM_EM  = gsl_matrix_complex_calloc(4, 4);
+    gsl_matrix_complex* CCM_R_RCM_EM  = gsl_matrix_complex_calloc(4, 4);
     rotmat_CC_R_RCM_CENTER(CCM_R_RCM_EM);
 
     //CCM_R_RCM_SEM: RCM to CCM in R(5,5), about SEML2
-    gsl_matrix_complex *CCM_R_RCM_SEM  = gsl_matrix_complex_calloc(5, 5);
+    gsl_matrix_complex* CCM_R_RCM_SEM  = gsl_matrix_complex_calloc(5, 5);
     rotmat_CC_R_RCM_CENTER_HYP(CCM_R_RCM_SEM);
 
 
@@ -1462,7 +1515,7 @@ void srefeml2seml(Orbit &orbit_EM,
     //Free variables
     //======================================================================
     int nfv = nfreevariables(refst, man_index);
-    double *nullvector = dvector(0, nfv-1);
+    double* nullvector = dvector(0, nfv-1);
 
     //======================================================================
     //GNUPLOT:
@@ -1471,7 +1524,7 @@ void srefeml2seml(Orbit &orbit_EM,
     //  2. if there is a continuation procedure based on fixed time,
     //     several computations are produced.
     //======================================================================
-    gnuplot_ctrl *h3 = 0, *h4 = 0, *h5 = 0;
+    gnuplot_ctrl* h3 = 0, *h4 = 0, *h5 = 0;
     if(refst.type == REF_CONT)
     {
         if(refst.time == REF_VAR_TIME)
@@ -1562,7 +1615,7 @@ void srefeml2seml(Orbit &orbit_EM,
             perror("srefeml2seml. Unknown refst.time.");
             break;
         }
-         break;
+        break;
     default:
         perror("srefeml2seml. Unknown refst.dim.");
         break;
@@ -1580,11 +1633,11 @@ void srefeml2seml(Orbit &orbit_EM,
         //================================================================================
         // Save first entry
         //================================================================================
-        double **ymc   = dmatrix(0, 5, 0, mPlot);
-        double *tmc    = dvector(0, mPlot);
+        double** ymc   = dmatrix(0, 5, 0, mPlot);
+        double* tmc    = dvector(0, mPlot);
         double yv[42];
-        string filename      = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF, orbit_EM.getT0()/SEML.us_em.T);
-        string filename_traj = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF_TRAJ, orbit_EM.getT0()/SEML.us_em.T);
+        string filename      = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF, SEML.li_SEM, orbit_EM.getT0()/SEML.us_em.T);
+        string filename_traj = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF_TRAJ, SEML.li_SEM, orbit_EM.getT0()/SEML.us_em.T);
         fstream filestream;
         if(refst.isSaved)
         {
@@ -1772,15 +1825,15 @@ void srefeml2seml(Orbit &orbit_EM,
                 switch(refst.time)
                 {
                 case REF_FIXED_TIME:
-                //                    ufvarft3d(y_traj_n, t_traj_n, ds, nullvector,
-                //                              orbit_EM, orbit_SEM,
-                //                              man_grid_size, coord_type);
+                    ufvarft3d(y_traj_n, t_traj_n, ds, nullvector,
+                              orbit_EM, orbit_SEM,
+                              man_grid_size, coord_type);
                     break;
 
                 case REF_VAR_TIME:
-                //                    ufvarvt3d(y_traj_n, t_traj_n, ds, nullvector,
-                //                              orbit_EM, orbit_SEM,
-                //                              man_grid_size, coord_type);
+                    ufvarvt3d(y_traj_n, t_traj_n, ds, nullvector,
+                              orbit_EM, orbit_SEM,
+                              man_grid_size, coord_type);
                     break;
                 default:
                     perror("srefeml2seml. Unknown refst.time.");
@@ -1791,9 +1844,9 @@ void srefeml2seml(Orbit &orbit_EM,
                 switch(refst.time)
                 {
                 case REF_FIXED_TIME:
-                        ufvarftplan(y_traj_n, t_traj_n, ds, nullvector,
-                                    orbit_EM, orbit_SEM,
-                                    man_grid_size, coord_type);
+                    ufvarftplan(y_traj_n, t_traj_n, ds, nullvector,
+                                orbit_EM, orbit_SEM,
+                                man_grid_size, coord_type);
                     break;
 
                 case REF_VAR_TIME:
@@ -1928,18 +1981,18 @@ void srefeml2seml(Orbit &orbit_EM,
             //======================================================================
             dkn = (double) kn;
             if(kn % plotfreq == 0)
-            if(refst.type == REF_CONT)
-            {
-                if(refst.time == REF_VAR_TIME)
-                gnuplot_plotc_xy(h5, &dkn, &orbit_SEM.getSi()[4], 1, (char*)"", "points", "1", "2", 0);
-
-                if(refst.time == REF_FIXED_TIME)
+                if(refst.type == REF_CONT)
                 {
-                    gnuplot_plotc_xy(h3, &orbit_EM.getSi()[0],  &orbit_EM.getSi()[2], 1, (char*)"", "points", "1", "2", 0);
-                    gnuplot_plotc_xy(h4, &orbit_SEM.getSi()[0], &orbit_SEM.getSi()[2], 1, (char*)"", "points", "1", "2", 0);
-                    gnuplot_plotc_xy(h5, &dkn, &orbit_SEM.getSi()[4], 1, (char*)"", "points", "1", "2", 0);
+                    if(refst.time == REF_VAR_TIME)
+                        gnuplot_plotc_xy(h5, &dkn, &orbit_SEM.getSi()[4], 1, (char*)"", "points", "1", "2", 0);
+
+                    if(refst.time == REF_FIXED_TIME)
+                    {
+                        gnuplot_plotc_xy(h3, &orbit_EM.getSi()[0],  &orbit_EM.getSi()[2], 1, (char*)"", "points", "1", "2", 0);
+                        gnuplot_plotc_xy(h4, &orbit_SEM.getSi()[0], &orbit_SEM.getSi()[2], 1, (char*)"", "points", "1", "2", 0);
+                        gnuplot_plotc_xy(h5, &dkn, &orbit_SEM.getSi()[4], 1, (char*)"", "points", "1", "2", 0);
+                    }
                 }
-            }
 
 
             //======================================================================
@@ -2009,8 +2062,8 @@ void srefeml2seml(Orbit &orbit_EM,
         cout << "----------------------------------------------"  << endl;
         cout << " srefeml2seml Final trajectory, on a grid.    "  << endl;
         cout << "----------------------------------------------"  << endl;
-        double **ymc   = dmatrix(0, 5, 0, mPlot);
-        double *tmc    = dvector(0, mPlot);
+        double** ymc   = dmatrix(0, 5, 0, mPlot);
+        double* tmc    = dvector(0, mPlot);
         double yv[42];
         //Final trajectory on lines, segment by segment
         for(int k = 0; k < man_index; k++)
@@ -2122,11 +2175,9 @@ void srefeml2seml(Orbit &orbit_EM,
  *         A multiple_shooting_direct is applied on the WHOLE trajectory
  *         (EML2 orbit + manifold leg + SEML2 orbit).
  **/
-int comprefft3d(int man_grid_size_t,
-                int coord_type,
-                Orbit &orbit_EM,
-                Orbit &orbit_SEM,
-                RefSt refst)
+int oocomprefft3d(int man_grid_size_t, int coord_type,
+                  Orbit& orbit_EM, Orbit& orbit_SEM,
+                  RefSt refst)
 
 {
     //====================================================================================
@@ -2152,7 +2203,7 @@ int comprefft3d(int man_grid_size_t,
     //----------------------------------------------------------
     //Gnuplot window
     //----------------------------------------------------------
-    gnuplot_ctrl *h2, *h3;
+    gnuplot_ctrl* h2, *h3;
     h2 = gnuplot_init();
     h3 = gnuplot_init();
 
@@ -2167,8 +2218,8 @@ int comprefft3d(int man_grid_size_t,
     //----------------------------------------------------------
     //Notable points in SEM system
     //----------------------------------------------------------
-    double **semP_coord = dmatrix(0, 6, 0, 2);
-    double **semP_comp  = dmatrix(0, 6, 0, 2);
+    double** semP_coord = dmatrix(0, 6, 0, 2);
+    double** semP_comp  = dmatrix(0, 6, 0, 2);
     switch(coord_type)
     {
     case PSEM:
@@ -2276,19 +2327,19 @@ int comprefft3d(int man_grid_size_t,
     //---------------------------------------------------------------------
     //To store final data
     //---------------------------------------------------------------------
-    double **y_traj  = dmatrix(0, 41, 0, traj_grid_2);
-    double  *t_traj  = dvector(0, traj_grid_2);
+    double** y_traj  = dmatrix(0, 41, 0, traj_grid_2);
+    double*  t_traj  = dvector(0, traj_grid_2);
 
-    double **y_traj_comp  = dmatrix(0, 41, 0, traj_grid_2);
-    double  *t_traj_comp  = dvector(0, traj_grid_2);
+    double** y_traj_comp  = dmatrix(0, 41, 0, traj_grid_2);
+    double*  t_traj_comp  = dvector(0, traj_grid_2);
 
     //---------------------------------------------------------------------
     //Local variables to store the refined trajectory
     //---------------------------------------------------------------------
-    double **y_traj_n   = dmatrix(0, 41, 0, traj_grid_2);
-    double *t_traj_n    = dvector(0, traj_grid_2);
+    double** y_traj_n   = dmatrix(0, 41, 0, traj_grid_2);
+    double* t_traj_n    = dvector(0, traj_grid_2);
     //TBC
-    double **yma        = dmatrix(0, 41, 0, traj_grid_2);
+    double** yma        = dmatrix(0, 41, 0, traj_grid_2);
 
     //====================================================================================
     // 4. Build the trajectory
@@ -2300,14 +2351,14 @@ int comprefft3d(int man_grid_size_t,
     //---------------------------------------------------------------------
     //Local variables to store the manifold leg
     //---------------------------------------------------------------------
-    double **y_man_NCEM   = dmatrix(0, 5, 0, man_grid_2);
-    double **y_man_NCSEM  = dmatrix(0, 5, 0, man_grid_2);
-    double **y_man_coord  = dmatrix(0, 5, 0, man_grid_2);
-    double **y_man_comp   = dmatrix(0, 5, 0, man_grid_2);
-    double *t_man_EM      = dvector(0, man_grid_2);
-    double *t_man_SEM     = dvector(0, man_grid_2);
-    double *t_man_coord   = dvector(0, man_grid_2);
-    double *t_man_comp    = dvector(0, man_grid_2);
+    double** y_man_NCEM   = dmatrix(0, 5, 0, man_grid_2);
+    double** y_man_NCSEM  = dmatrix(0, 5, 0, man_grid_2);
+    double** y_man_coord  = dmatrix(0, 5, 0, man_grid_2);
+    double** y_man_comp   = dmatrix(0, 5, 0, man_grid_2);
+    double* t_man_EM      = dvector(0, man_grid_2);
+    double* t_man_SEM     = dvector(0, man_grid_2);
+    double* t_man_coord   = dvector(0, man_grid_2);
+    double* t_man_comp    = dvector(0, man_grid_2);
 
 
     //====================================================================================
@@ -2404,7 +2455,7 @@ int comprefft3d(int man_grid_size_t,
     gnuplot_plot_xyz(h3, y_man_comp[0], y_man_comp[1],  y_man_comp[2], man_index+1, (char*)"", "points", "1", "3", 4);
 
     //====================================================================================
-    // 6.4 Compute the final SEML2 orbit
+    // 4.4 Compute the final SEML2 orbit
     //====================================================================================
     cout << " comprefft3d. Compute the final SEML2 orbit..."  << endl;
     //---------------------------------------------------------------------
@@ -2496,15 +2547,15 @@ int comprefft3d(int man_grid_size_t,
     cout << " comprefft3d. Initial trajectory, on a grid..."  << endl;
     int mPlot = 100;
 
-    double **ymc        = dmatrix(0, 5, 0, mPlot);
-    double *tmc         = dvector(0, mPlot);
-    double **ymc_comp   = dmatrix(0, 5, 0, mPlot);
-    double *tmc_comp    = dvector(0, mPlot);
+    double** ymc        = dmatrix(0, 5, 0, mPlot);
+    double* tmc         = dvector(0, mPlot);
+    double** ymc_comp   = dmatrix(0, 5, 0, mPlot);
+    double* tmc_comp    = dvector(0, mPlot);
 
-    double **ymc_v      = dmatrix(0, 5, 0, mPlot*final_index);
-    double *tmc_v       = dvector(0, mPlot*final_index);
-    double **ymc_comp_v = dmatrix(0, 5, 0, mPlot*final_index);
-    double *tmc_comp_v  = dvector(0, mPlot*final_index);
+    double** ymc_v      = dmatrix(0, 5, 0, mPlot*final_index);
+    double* tmc_v       = dvector(0, mPlot*final_index);
+    double** ymc_comp_v = dmatrix(0, 5, 0, mPlot*final_index);
+    double* tmc_comp_v  = dvector(0, mPlot*final_index);
 
     //Initial trajectory on lines, segment by segment
     for(int k = 0; k < final_index; k++)
@@ -2532,9 +2583,9 @@ int comprefft3d(int man_grid_size_t,
 
 
     //====================================================================================
-    // 6.5 Differential correction & final trajectory
+    // 5. Differential correction & final trajectory
     //====================================================================================
-    cout << " comprefft3d. Differential correction procedure.          "  << endl;
+    cout << " comprefft3d. Differential correction procedure.           "  << endl;
     cout << "-----------------------------------------------------------"  << endl;
     char ch;
     printf("Press ENTER to go on\n");
@@ -2571,8 +2622,18 @@ int comprefft3d(int man_grid_size_t,
     //Plot on h3
     gnuplot_plot_xyz(h3, ymc_comp_v[0], ymc_comp_v[1],  ymc_comp_v[2], mPlot*final_index+1, (char*)"Final guess", "lines", "1", "2", 3);
 
+
     //====================================================================================
-    // JPL
+    // 6. Store the data, in sys units
+    //====================================================================================
+    cout << " comprefft3d. Storing the refined solution in system units "  << endl;
+    cout << " The solution will be stored in " << filenameCUM(OFTS_ORDER, TYPE_COMP_FOR_JPL, SEML.li_SEM) << endl;
+    cout << "-----------------------------------------------------------"  << endl;
+    writeCOMP_txt(t_traj_n, y_traj_n, final_index);
+
+
+    //====================================================================================
+    // 7. JPL refinement
     //====================================================================================
     if(refst.isJPL)
     {
@@ -2597,7 +2658,7 @@ int comprefft3d(int man_grid_size_t,
         //================================================================================
         // Initialize SPICE kernerls & VF
         //================================================================================
-        gnuplot_ctrl *h4 = gnuplot_init();
+        gnuplot_ctrl* h4 = gnuplot_init();
         cout << " comprefft3d. Initialize SPICE kernerls..." << endl;
         furnsh_c("spice/kernels/metakernel.furnsh");
         int shift = 0;
@@ -2618,7 +2679,7 @@ int comprefft3d(int man_grid_size_t,
         //----------------------------------------------------------
         //Display the value in "D" format
         //----------------------------------------------------------
-        ConstSpiceChar  *pictur  = "Wkd Mon DD HH:MN:SC PDT YYYY ::UTC-7";
+        ConstSpiceChar*  pictur  = "Wkd Mon DD HH:MN:SC PDT YYYY ::UTC-7";
         SpiceChar output[50];
         et2utc_c (et0, "C", 6, 51, output);
         cout << "comprefft3d. The best fit has been obtained for the following date:" << endl;
@@ -2633,13 +2694,13 @@ int comprefft3d(int man_grid_size_t,
         double tsys0_comp = tsys0;
         switch(eph_coord(comp_type))
         {
-                case VEM:
-                tsys0_comp /= SEML.us_em.ns;
-                break;
+        case VEM:
+            tsys0_comp /= SEML.us_em.ns;
+            break;
 
-                case VSEM:
-                tsys0_comp *= SEML.us_em.ns;
-                break;
+        case VSEM:
+            tsys0_comp *= SEML.us_em.ns;
+            break;
         }
 
         //================================================================================
@@ -2649,24 +2710,24 @@ int comprefft3d(int man_grid_size_t,
         //---------------------------------------------------------------------
         //Local variables to store the refined trajectory
         //---------------------------------------------------------------------
-        double **y_traj_jpl   = dmatrix(0, 41, 0, final_index);
-        double *t_traj_jpl   = dvector(0, final_index);
-        double *et_traj_jpl   = dvector(0, final_index);
-        double **y_traj_jpl_n = dmatrix(0, 41, 0, final_index);
-        double *t_traj_jpl_n  = dvector(0, final_index);
-        double **y_jpl_temp   = dmatrix(0, 41, 0, final_index);
-        double *t_jpl_temp    = dvector(0, final_index);
+        double** y_traj_jpl   = dmatrix(0, 41, 0, final_index);
+        double* t_traj_jpl   = dvector(0, final_index);
+        double* et_traj_jpl   = dvector(0, final_index);
+        double** y_traj_jpl_n = dmatrix(0, 41, 0, final_index);
+        double* t_traj_jpl_n  = dvector(0, final_index);
+        double** y_jpl_temp   = dmatrix(0, 41, 0, final_index);
+        double* t_jpl_temp    = dvector(0, final_index);
 
         //---------------------------------------------------------------------
         //Compute the change of coord: syn -> ecliptic
         //---------------------------------------------------------------------
         switch(coord_int)
         {
-            case VECLI:
+        case VECLI:
             coord2eclstate_vec(y_traj_n, t_traj_n, y_traj_jpl, t_traj_jpl, final_index, coord_type, et0,  tsys0, eph_coord(coord_type));
             break;
 
-            case J2000:
+        case J2000:
             coord2eclnstate_vec(y_traj_n, t_traj_n, y_traj_jpl, t_traj_jpl, final_index, coord_type, et0,  tsys0, eph_coord(coord_type));//, SEML.ss);
             break;
         }
@@ -2684,11 +2745,11 @@ int comprefft3d(int man_grid_size_t,
         //================================================================================
         switch(coord_int)
         {
-            case VECLI:
+        case VECLI:
             coord2eclstate_vec(y_traj_n, t_traj_n, y_traj_jpl_n, t_traj_jpl_n, final_index, coord_type, et0,  tsys0_comp, eph_coord(comp_type));
             break;
 
-            case J2000:
+        case J2000:
             coord2eclnstate_vec(y_traj_n, t_traj_n, y_traj_jpl_n, t_traj_jpl_n, final_index, coord_type, et0,  tsys0_comp, eph_coord(comp_type));//, SEML.ss);
             break;
         }
@@ -2699,15 +2760,15 @@ int comprefft3d(int man_grid_size_t,
         int begind = 0, endind = 0;
         switch(eph_coord(coord_type))
         {
-                case VEM:
-                begind = floor(final_index/2)-6; //-6 for 16, 3D
-                endind = final_index;
-                break;
+        case VEM:
+            begind = floor(final_index/2)-6; //-6 for 16, 3D
+            endind = final_index;
+            break;
 
-                case VSEM:
-                begind = 0;
-                endind = floor(final_index/2);
-                break;
+        case VSEM:
+            begind = 0;
+            endind = floor(final_index/2);
+            break;
         }
 
         for(int p = begind; p <= endind; p++)
@@ -2723,9 +2784,9 @@ int comprefft3d(int man_grid_size_t,
         //---------------------------------------------------------------------
         //Position of the Moon +  Earth + L2
         //---------------------------------------------------------------------
-        double **y_earth_spice = dmatrix(0, 5, 0, final_index);
-        double **y_moon_spice  = dmatrix(0, 5, 0, final_index);
-        double **y_l2_spice    = dmatrix(0, 5, 0, final_index);
+        double** y_earth_spice = dmatrix(0, 5, 0, final_index);
+        double** y_moon_spice  = dmatrix(0, 5, 0, final_index);
+        double** y_l2_spice    = dmatrix(0, 5, 0, final_index);
         double lt, YV[6];
         for(int p = 0; p <= final_index; p++)
         {
@@ -2773,11 +2834,11 @@ int comprefft3d(int man_grid_size_t,
             //Back to coord_type coordinates
             switch(coord_int)
             {
-                case VECLI:
+            case VECLI:
                 ecl2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coord_type, et0, tsys0, eph_coord(coord_type));
                 break;
 
-                case J2000:
+            case J2000:
                 ecln2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coord_type, et0, tsys0, eph_coord(coord_type));//, SEML.ss);
                 break;
             }
@@ -2793,11 +2854,11 @@ int comprefft3d(int man_grid_size_t,
             //ECLIPTIC -> comp_type
             switch(coord_int)
             {
-                case VECLI:
+            case VECLI:
                 ecl2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, comp_type, et0, tsys0_comp, eph_coord(comp_type));
                 break;
 
-                case J2000:
+            case J2000:
                 ecln2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, comp_type, et0, tsys0_comp, eph_coord(comp_type));//, SEML.ss);
                 break;
             }
@@ -2868,11 +2929,11 @@ int comprefft3d(int man_grid_size_t,
             //----------------------------------------------------------------------------
             switch(coord_int)
             {
-                case VECLI:
+            case VECLI:
                 ecl2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coord_type, et0, tsys0, eph_coord(coord_type));
                 break;
 
-                case J2000:
+            case J2000:
                 ecln2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coord_type, et0, tsys0, eph_coord(coord_type));//, SEML.ss);
                 break;
             }
@@ -2916,11 +2977,11 @@ int comprefft3d(int man_grid_size_t,
             //ECLIPTIC -> comp_type
             switch(coord_int)
             {
-                case VECLI:
+            case VECLI:
                 ecl2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, comp_type, et0, tsys0_comp, eph_coord(comp_type));
                 break;
 
-                case J2000:
+            case J2000:
                 ecln2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, comp_type, et0, tsys0_comp, eph_coord(comp_type));//, SEML.ss);
                 break;
             }
@@ -2990,6 +3051,611 @@ int comprefft3d(int man_grid_size_t,
     return 0;
 }
 
+/**
+ *  \brief Refine a given output of oocomprefft3d into JPL ephemerides.
+ **/
+int oojplrefft3d(int coord_type)
+{
+    //====================================================================================
+    // 1. Read the data, in sys units
+    //====================================================================================
+
+    //---------------------------------------------------------------------
+    //Local variables to store the refined trajectory
+    //---------------------------------------------------------------------
+    int final_index = getLengthCOMP_txt();
+    double** y_traj_n   = dmatrix(0, 41, 0, final_index);
+    double* t_traj_n    = dvector(0, final_index);
+
+    //---------------------------------------------------------------------
+    //Read the data stored in a data file
+    //---------------------------------------------------------------------
+    readCOMP_txt(t_traj_n, y_traj_n, final_index);
+
+
+    //====================================================================================
+    // 2. Local parameters
+    //====================================================================================
+    //----------------------------------------------------------
+    //Complementary coordinate type
+    //----------------------------------------------------------
+    int comp_type = 0;
+    switch(coord_type)
+    {
+    case PSEM:
+        comp_type = PEM;
+        break;
+    case NCSEM:
+    case VNCSEM:
+        comp_type = NCEM;
+        break;
+    case PEM:
+        comp_type = PSEM;
+        break;
+    case NCEM:
+    case VNCEM:
+        comp_type = NCSEM;
+        break;
+    }
+
+    //----------------------------------------------------------
+    // State and time vectors
+    //----------------------------------------------------------
+    cout << " comprefft3d. Initial trajectory, on a grid..."  << endl;
+    int mPlot = 100;
+
+    double** ymc        = dmatrix(0, 5, 0, mPlot);
+    double* tmc         = dvector(0, mPlot);
+    double** ymc_comp   = dmatrix(0, 5, 0, mPlot);
+    double* tmc_comp    = dvector(0, mPlot);
+
+    double** ymc_v      = dmatrix(0, 5, 0, mPlot*final_index);
+    double* tmc_v       = dvector(0, mPlot*final_index);
+    double** ymc_comp_v = dmatrix(0, 5, 0, mPlot*final_index);
+    double* tmc_comp_v  = dvector(0, mPlot*final_index);
+
+    //----------------------------------------------------------
+    //Get the default coordinates system from the coord_type
+    //----------------------------------------------------------
+    int dcs  = default_coordinate_system(coord_type);
+
+
+    //====================================================================================
+    // 3. Init the gnuplot
+    //====================================================================================
+    //----------------------------------------------------------
+    //Gnuplot window
+    //----------------------------------------------------------
+    gnuplot_ctrl* h2, *h3;
+    h2 = gnuplot_init();
+    h3 = gnuplot_init();
+
+    gnuplot_cmd(h2, "set title \"Computation coordinates\" ");
+    gnuplot_cmd(h3, "set title \"Complementary coordinates\" ");
+
+    //gnuplot_cmd(h2, "set view equal xyz");
+    //gnuplot_cmd(h3, "set view equal xyz");
+    gnuplot_cmd(h2, "set grid");
+    gnuplot_cmd(h3, "set grid");
+
+    //----------------------------------------------------------
+    //Notable points in SEM system
+    //----------------------------------------------------------
+    double** semP_coord = dmatrix(0, 6, 0, 2);
+    double** semP_comp  = dmatrix(0, 6, 0, 2);
+    switch(coord_type)
+    {
+    case PSEM:
+        semPoints(0.0, semP_coord);
+        semPlot(h2, semP_coord);
+        //Comp
+        emPoints(0.0, semP_comp);
+        emPlot(h3, semP_comp);
+
+        //h2 displays the system in SEM coordinates
+        gnuplot_set_xlabel(h2, (char*) "Xsem");
+        gnuplot_set_ylabel(h2, (char*) "Ysem");
+        gnuplot_set_zlabel(h2, (char*) "Zsem");
+
+        //h3 displays the system in EM coordinates
+        gnuplot_set_xlabel(h3, (char*) "Xem");
+        gnuplot_set_ylabel(h3, (char*) "Yem");
+        gnuplot_set_zlabel(h3, (char*) "Zem");
+        break;
+    case NCSEM:
+    case VNCSEM:
+        semNCPoints(0.0, semP_coord);
+        semPlot(h2, semP_coord);
+        //Comp
+        emNCPoints(0.0, semP_comp);
+        emPlot(h3, semP_comp);
+
+        //h2 displays the system in NCSEM coordinates
+        gnuplot_set_xlabel(h2, (char*) "xsem");
+        gnuplot_set_ylabel(h2, (char*) "ysem");
+        gnuplot_set_zlabel(h2, (char*) "zsem");
+
+        //h3 displays the system in NCEM coordinates
+        gnuplot_set_xlabel(h3, (char*) "xem");
+        gnuplot_set_ylabel(h3, (char*) "yem");
+        gnuplot_set_zlabel(h3, (char*) "zem");
+        break;
+
+    case PEM:
+        emPoints(0.0, semP_coord);
+        emPlot(h2, semP_coord);
+        //Comp
+        semPoints(0.0, semP_comp);
+        semPlot(h3, semP_comp);
+
+        //h3 displays the system in SEM coordinates
+        gnuplot_set_xlabel(h3, (char*) "Xsem");
+        gnuplot_set_ylabel(h3, (char*) "Ysem");
+        gnuplot_set_zlabel(h3, (char*) "Zsem");
+
+        //h2 displays the system in EM coordinates
+        gnuplot_set_xlabel(h2, (char*) "Xem");
+        gnuplot_set_ylabel(h2, (char*) "Yem");
+        gnuplot_set_zlabel(h2, (char*) "Zem");
+        break;
+    case NCEM:
+    case VNCEM:
+        emNCPoints(0.0, semP_coord);
+        emPlot(h2, semP_coord);
+        //Comp
+        semNCPoints(0.0, semP_comp);
+        semPlot(h3, semP_comp);
+
+        //h3 displays the system in NCSEM coordinates
+        gnuplot_set_xlabel(h3, (char*) "xsem");
+        gnuplot_set_ylabel(h3, (char*) "ysem");
+        gnuplot_set_zlabel(h3, (char*) "zsem");
+
+        //h2 displays the system in NCEM coordinates
+        gnuplot_set_xlabel(h2, (char*) "xem");
+        gnuplot_set_ylabel(h2, (char*) "yem");
+        gnuplot_set_zlabel(h2, (char*) "zem");
+        break;
+    }
+
+
+    //====================================================================================
+    // 5. Initial trajectory, on a grid
+    //====================================================================================
+    cout << " oojplrefft3d. Initial trajectory, on a grid..."  << endl;
+    double yv[6];
+    //Final trajectory on lines, segment by segment
+    for(int k = 0; k < final_index; k++)
+    {
+        //Integration segment by segment
+        for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
+        ode78_qbcp(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+
+        //Store
+        for(int p = 0; p <= mPlot; p++)
+        {
+            for(int i = 0; i < 6; i++) ymc_v[i][k*mPlot + p] = ymc[i][p];
+            tmc_v[k*mPlot + p] = tmc[p];
+        }
+    }
+
+    //To complementary coordinates
+    qbcp_coc_vec(ymc_v, tmc_v, ymc_comp_v, tmc_comp_v, mPlot*final_index, coord_type, comp_type);
+    //Plot on h2
+    gnuplot_plot_xyz(h2, ymc_v[0], ymc_v[1],  ymc_v[2], mPlot*final_index+1, (char*)"Final guess", "lines", "1", "2", 3);
+    gnuplot_plot_xyz(h2, y_traj_n[0], y_traj_n[1],  y_traj_n[2], final_index+1, (char*)"", "points", "1", "2", 3);
+    //Plot on h3
+    gnuplot_plot_xyz(h3, ymc_comp_v[0], ymc_comp_v[1],  ymc_comp_v[2], mPlot*final_index+1, (char*)"Final guess", "lines", "1", "2", 3);
+
+
+    //====================================================================================
+    // 5. JPL refinement
+    //====================================================================================
+    //----------------------------------------------------------
+    //Go on
+    //----------------------------------------------------------
+    char ch;
+    printf("Press ENTER to go on with the JPL ref");
+    scanf("%c",&ch);
+
+    //================================================================================
+    // Select between VECLI and J2000
+    //================================================================================
+    int choice = 0;
+    cout << "Enter 0 for VECLI, 1 for J2000: ";
+    cin >> choice;
+    int coord_int = choice == 0? VECLI:J2000;
+    int fwrk_int  = choice == 0? F_ECLI:F_J2000;
+
+    //Focus on SEM for normalized units
+    //if(choice == 1) changeDCS(SEML, F_SEM);
+
+    //================================================================================
+    // Initialize SPICE kernerls & VF
+    //================================================================================
+    gnuplot_ctrl* h4 = gnuplot_init();
+    cout << " comprefft3d. Initialize SPICE kernerls..." << endl;
+    furnsh_c("spice/kernels/metakernel.furnsh");
+    int shift = 0;
+
+
+    //================================================================================
+    // Search for best fit in  JPL ephemerides
+    //================================================================================
+    cout << " comprefft3d. Search for best fit in JPL DE430..." << endl;
+
+    //----------------------------------------------------------
+    //Get the best fit at t = t_traj_n[shift]. et0 is in seconds
+    //----------------------------------------------------------
+    double et0, et;
+    double tsys0 = t_traj_n[shift];
+    qbcp2jpl(tsys0, &et0, coord_type);
+
+    //----------------------------------------------------------
+    //Display the value in "D" format
+    //----------------------------------------------------------
+    ConstSpiceChar*  pictur  = "Wkd Mon DD HH:MN:SC PDT YYYY ::UTC-7";
+    SpiceChar output[50];
+    et2utc_c (et0, "C", 6, 51, output);
+    cout << "comprefft3d. The best fit has been obtained for the following date:" << endl;
+    printf ( "%s\n", output);
+
+    cout << "tsys0 = " << tsys0 << endl;
+    cout << "et0 = "   << et0   << endl;
+
+    //----------------------------------------------------------
+    // Complementary value ot tsys0
+    //----------------------------------------------------------
+    double tsys0_comp = tsys0;
+    switch(eph_coord(comp_type))
+    {
+    case VEM:
+        tsys0_comp /= SEML.us_em.ns;
+        break;
+
+    case VSEM:
+        tsys0_comp *= SEML.us_em.ns;
+        break;
+    }
+
+    //================================================================================
+    // Change of coordinates
+    //================================================================================
+    cout << " comprefft3d. Change of coordinates syn -> ecliptic..." << endl;
+    //---------------------------------------------------------------------
+    //Local variables to store the refined trajectory
+    //---------------------------------------------------------------------
+    double** y_traj_jpl   = dmatrix(0, 41, 0, final_index);
+    double* t_traj_jpl   = dvector(0, final_index);
+    double* et_traj_jpl   = dvector(0, final_index);
+    double** y_traj_jpl_n = dmatrix(0, 41, 0, final_index);
+    double* t_traj_jpl_n  = dvector(0, final_index);
+    double** y_jpl_temp   = dmatrix(0, 41, 0, final_index);
+    double* t_jpl_temp    = dvector(0, final_index);
+    //TBC
+    double** yma        = dmatrix(0, 41, 0, final_index);
+
+    //---------------------------------------------------------------------
+    //Compute the change of coord: syn -> ecliptic
+    //---------------------------------------------------------------------
+    switch(coord_int)
+    {
+    case VECLI:
+        coord2eclstate_vec(y_traj_n, t_traj_n, y_traj_jpl, t_traj_jpl, final_index, coord_type, et0,  tsys0, eph_coord(coord_type));
+        break;
+
+    case J2000:
+        coord2eclnstate_vec(y_traj_n, t_traj_n, y_traj_jpl, t_traj_jpl, final_index, coord_type, et0,  tsys0, eph_coord(coord_type));//, SEML.ss);
+        break;
+    }
+
+    //---------------------------------------------------------------------
+    //Time in seconds
+    //---------------------------------------------------------------------
+    for(int p = 0; p <= final_index; p++)
+    {
+        et_traj_jpl[p] = et0 + (t_traj_n[p]-tsys0)/mean_motion(eph_coord(coord_type));
+    }
+
+    //================================================================================
+    //Half of the trajectory is set in the other plane
+    //================================================================================
+    switch(coord_int)
+    {
+    case VECLI:
+        coord2eclstate_vec(y_traj_n, t_traj_n, y_traj_jpl_n, t_traj_jpl_n, final_index, coord_type, et0,  tsys0_comp, eph_coord(comp_type));
+        break;
+
+    case J2000:
+        coord2eclnstate_vec(y_traj_n, t_traj_n, y_traj_jpl_n, t_traj_jpl_n, final_index, coord_type, et0,  tsys0_comp, eph_coord(comp_type));//, SEML.ss);
+        break;
+    }
+
+    //----------------------------------------------------------
+    //Store the second half: at the beginning or at the end, depending on the computation coordinates
+    //----------------------------------------------------------
+    int begind = 0, endind = 0;
+    switch(eph_coord(coord_type))
+    {
+    case VEM:
+        begind = floor(final_index/2)-6; //-6 for 16, 3D
+        endind = final_index;
+        break;
+
+    case VSEM:
+        begind = 0;
+        endind = floor(final_index/2);
+        break;
+    }
+
+    for(int p = begind; p <= endind; p++)
+    {
+        for(int i = 0; i <6; i++) y_traj_jpl[i][p] =  y_traj_jpl_n[i][p];
+    }
+
+    //================================================================================
+    // Plotting Moon +  Earth + L2
+    //================================================================================
+    cout << " comprefft3d. Plotting Moon +  Earth + L2..." << endl;
+
+    //---------------------------------------------------------------------
+    //Position of the Moon +  Earth + L2
+    //---------------------------------------------------------------------
+    double** y_earth_spice = dmatrix(0, 5, 0, final_index);
+    double** y_moon_spice  = dmatrix(0, 5, 0, final_index);
+    double** y_l2_spice    = dmatrix(0, 5, 0, final_index);
+    double lt, YV[6];
+    for(int p = 0; p <= final_index; p++)
+    {
+        //Current time in seconds
+        et = et_traj_jpl[p];
+        //EARTH
+        spkezr_c ("EARTH", et, DEFFRAME,  "NONE", DEFOBS, YV, &lt);
+        for(int i = 0; i < 6; i++) y_earth_spice[i][p] = YV[i];
+        //MOON
+        spkezr_c ("MOON", et, DEFFRAME,  "NONE", DEFOBS, YV, &lt);
+        for(int i = 0; i < 6; i++) y_moon_spice[i][p] = YV[i];
+        //L2
+        spkez_c (392, et, DEFFRAME,  "NONE", 0, YV, &lt);
+        for(int i = 0; i < 6; i++) y_l2_spice[i][p] = YV[i];
+    }
+
+    //---------------------------------------------------------------------
+    //Position of the Sun +  Earth + Initial guess in coord_type coordinates
+    //---------------------------------------------------------------------
+    ecl2coordstate_vec(y_earth_spice, et_traj_jpl, y_jpl_temp, t_jpl_temp, final_index, coord_type, et0, tsys0, eph_coord(coord_type));
+    gnuplot_plot_xyz(h2, y_jpl_temp[0], y_jpl_temp[1],  y_jpl_temp[2], final_index+1, (char*) "EARTH", "points", "3", "2", 8);
+
+    ecl2coordstate_vec(y_moon_spice, et_traj_jpl, y_jpl_temp, t_jpl_temp, final_index, coord_type, et0, tsys0, eph_coord(coord_type));
+    gnuplot_plot_xyz(h2, y_jpl_temp[0], y_jpl_temp[1],  y_jpl_temp[2], final_index+1, (char*) "MOON", "points", "4", "2", 8);
+
+    ecl2coordstate_vec(y_l2_spice, et_traj_jpl, y_jpl_temp, t_jpl_temp, final_index, coord_type, et0, tsys0, eph_coord(coord_type));
+    gnuplot_plot_xyz(h2, y_jpl_temp[0], y_jpl_temp[1], y_jpl_temp[2], final_index+1, (char*) "SEML2", "points", "5", "2", 8);
+
+
+    //================================================================================
+    // Plotting Initial Guess
+    //================================================================================
+    printf("Press ENTER to plot the Initial Guess\n");
+    scanf("%c",&ch);
+    cout << " comprefft3d. Plotting Initial Guess..." << endl;
+    //--------------------------------------------------------------------------------
+    //Initial trajectory on lines, segment by segment
+    //--------------------------------------------------------------------------------
+    for(int k = 0; k < final_index; k++)
+    {
+        //Integration segment by segment
+        for(int i = 0; i < 6; i++) yv[i] = y_traj_jpl[i][k];
+        ode78_jpl(ymc_comp, tmc_comp, t_traj_jpl[k], t_traj_jpl[k+1], yv, 6, mPlot, fwrk_int, coord_int, coord_int);
+
+        //Back to coord_type coordinates
+        switch(coord_int)
+        {
+        case VECLI:
+            ecl2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coord_type, et0, tsys0, eph_coord(coord_type));
+            break;
+
+        case J2000:
+            ecln2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coord_type, et0, tsys0, eph_coord(coord_type));//, SEML.ss);
+            break;
+        }
+
+        //Plot on h2
+        if(k == 0) gnuplot_plot_xyz(h2, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"Initial guess in JPL", "lines", "1", "2", 1);
+        else gnuplot_plot_xyz(h2, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"", "lines", "1", "2", 1);
+
+
+        //----------------------------------------------------------------------------
+        //Back to comp_type coordinates
+        //----------------------------------------------------------------------------
+        //ECLIPTIC -> comp_type
+        switch(coord_int)
+        {
+        case VECLI:
+            ecl2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, comp_type, et0, tsys0_comp, eph_coord(comp_type));
+            break;
+
+        case J2000:
+            ecln2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, comp_type, et0, tsys0_comp, eph_coord(comp_type));//, SEML.ss);
+            break;
+        }
+
+
+        //Plot on h3
+        if(k == 0) gnuplot_plot_xyz(h3, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"Initial guess in JPL", "lines", "1", "2", 1);
+        else gnuplot_plot_xyz(h3, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"", "lines", "1", "2", 1);
+
+    }
+
+
+    //================================================================================
+    // 6.5 Differential correction
+    //================================================================================
+    printf("Press ENTER to refine\n");
+    scanf("%c",&ch);
+    cout << " comprefft3d. Refine trajectory in JPL ephemerides..." << endl;
+    multiple_shooting_direct_variable_time(y_traj_jpl, t_traj_jpl, y_traj_jpl_n, t_traj_jpl_n, yma, 42, final_index, coord_int, true, h4);
+    //multiple_shooting_direct(y_traj_jpl, t_traj_jpl, y_traj_jpl_n, t_traj_jpl_n, yma, 42, final_index, coord_int, isPlotted, h4);
+    //Plot
+    gnuplot_plot_xyz(h4, y_traj_jpl_n[0], y_traj_jpl_n[1], y_traj_jpl_n[2], final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
+
+
+    //================================================================================
+    //Final trajectory on lines, segment by segment, saved on txt file
+    //================================================================================
+    for(int k = 0; k < final_index; k++)
+    {
+        //----------------------------------------------------------------------------
+        //Integration segment by segment
+        //----------------------------------------------------------------------------
+        for(int i = 0; i < 6; i++) yv[i] = y_traj_jpl_n[i][k];
+        ode78_jpl(ymc_comp, tmc_comp, t_traj_jpl_n[k], t_traj_jpl_n[k+1], yv, 6, mPlot, fwrk_int, coord_int, coord_int);
+
+        //            //----------------------------------------------------------------------------
+        //            //To coord_type coordinates, non normalized
+        //            //----------------------------------------------------------------------------
+        //            switch(coord_int)
+        //            {
+        //                case VECLI:
+        //                break;
+        //
+        //                case J2000:
+        //                ecln2syndpos_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, et0, tsys0, eph_coord(coord_type));
+        //                break;
+        //            }
+
+
+        //----------------------------------------------------------------------------
+        //Store, in km, km/s and julian date
+        //----------------------------------------------------------------------------
+        for(int p = 0; p <= mPlot; p++)
+        {
+            tmc_v[k*mPlot + p] = tmc_comp[p]; //unitim_c(tmc_comp[p], "TDB", "JDTDB");
+            //position in km, velocity not taken into account for now.
+            ymc_v[0][k*mPlot + p] = ymc_comp[0][p];
+            ymc_v[1][k*mPlot + p] = ymc_comp[1][p];
+            ymc_v[2][k*mPlot + p] = ymc_comp[2][p];
+            //for(int i = 3; i < 6; i++) ymc_v[i][k*mPlot + p] = ymc[i][p]*SEML.ss.a*SEML.ss.n; //velocity in km/s
+        }
+
+
+        //----------------------------------------------------------------------------
+        //Back to coord_type coordinates
+        //----------------------------------------------------------------------------
+        switch(coord_int)
+        {
+        case VECLI:
+            ecl2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coord_type, et0, tsys0, eph_coord(coord_type));
+            break;
+
+        case J2000:
+            ecln2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coord_type, et0, tsys0, eph_coord(coord_type));//, SEML.ss);
+            break;
+        }
+
+
+        //Plot on h2
+        if(k == 0) gnuplot_plot_xyz(h2, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"Final trajectory in JPL", "lines", "1", "2", 2);
+        else gnuplot_plot_xyz(h2, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"", "lines", "1", "2", 2);
+
+
+        ////----------------------------------------------------------------------------
+        ////To comp_type coordinates, non normalized
+        ////----------------------------------------------------------------------------
+        //switch(coord_int)
+        //            {
+        //                case VECLI:
+        //                break;
+        //
+        //                case J2000:
+        //                ecln2syndpos_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, et0, tsys0, eph_coord(comp_type));
+        //                break;
+        //            }
+        //
+        //            //----------------------------------------------------------------------------
+        //            //Store, in km, km/s and julian date
+        //            //----------------------------------------------------------------------------
+        //            for(int p = 0; p <= mPlot; p++)
+        //            {
+        //                tmc_comp_v[k*mPlot + p] = unitim_c(tmc_comp[p], "TDB", "JDTDB");                                    //seconds in TDB to Julian Date
+        //                //position in km, velocity not taken into account for now.
+        //                ymc_comp_v[0][k*mPlot + p] = -ymc[0][p];
+        //                ymc_comp_v[1][k*mPlot + p] = -ymc[1][p];
+        //                ymc_comp_v[2][k*mPlot + p] = +ymc[2][p];
+        //                //for(int i = 3; i < 6; i++) ymc_v[i][k*mPlot + p] = ymc[i][p]*SEML.ss.a*SEML.ss.n; //velocity in km/s
+        //            }
+
+
+        //----------------------------------------------------------------------------
+        //To comp_type coordinates
+        //----------------------------------------------------------------------------
+        //ECLIPTIC -> comp_type
+        switch(coord_int)
+        {
+        case VECLI:
+            ecl2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, comp_type, et0, tsys0_comp, eph_coord(comp_type));
+            break;
+
+        case J2000:
+            ecln2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, comp_type, et0, tsys0_comp, eph_coord(comp_type));//, SEML.ss);
+            break;
+        }
+
+        //Plot on h3
+        if(k == 0) gnuplot_plot_xyz(h3, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"Final trajectory in JPL", "lines", "1", "2", 2);
+        else gnuplot_plot_xyz(h3, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"", "lines", "1", "2", 2);
+
+    }
+
+    //--------------------------------------------------------------------------------
+    //Store in files
+    //--------------------------------------------------------------------------------
+    //string fileEM  = "jpltraj_EM.xyz";
+    string fileSEM = "jpltraj.xyz";
+    //Save
+    //gnuplot_fplot_txyzv(tmc_comp_v, ymc_comp_v, mPlot*final_index+1, fileEM.c_str(), "w");
+    gnuplot_fplot_txyzv(tmc_v, ymc_v, mPlot*final_index+1, fileSEM.c_str(), "w");
+
+    //--------------------------------------------------------------------------------
+    //Gnuplot window
+    //--------------------------------------------------------------------------------
+    printf("Press ENTER to go on\n");
+    scanf("%c",&ch);
+    gnuplot_close(h4);
+
+
+    //------------------------------------------------------------------------------------
+    //Gnuplot window
+    //------------------------------------------------------------------------------------
+    printf("Press ENTER to go on\n");
+    scanf("%c",&ch);
+    gnuplot_close(h2);
+    gnuplot_close(h3);
+
+
+    //====================================================================================
+    // Free the data containers
+    //====================================================================================
+    free_dmatrix(semP_coord, 0, 6, 0, 2);
+    free_dmatrix(semP_comp, 0, 6, 0, 2);
+    free_dmatrix(y_traj_n, 0, 41, 0, final_index);
+    free_dvector(t_traj_n, 0, final_index);
+    free_dmatrix(yma, 0, 41, 0, final_index);
+
+    free_dmatrix(ymc, 0, 5, 0, mPlot);
+    free_dvector(tmc, 0, mPlot);
+    free_dmatrix(ymc_comp, 0, 5, 0, mPlot);
+    free_dvector(tmc_comp, 0, mPlot);
+
+    free_dmatrix(ymc_v, 0, 5, 0, mPlot*final_index);
+    free_dvector(tmc_v, 0, mPlot*final_index);
+    free_dmatrix(ymc_comp_v, 0, 5, 0, mPlot*final_index);
+    free_dvector(tmc_comp_v  , 0, mPlot*final_index);
+
+    return 0;
+}
+
+
 
 //----------------------------------------------------------------------------------------
 // Text format, read
@@ -3034,8 +3700,8 @@ void toCelestiaFormat(string filename)
         //--------------------------------------------------------------------------------
         // Read the data
         //--------------------------------------------------------------------------------
-        double **y1  = dmatrix(0, 5, 0, count0);
-        double *t1   = dvector(0, count0);
+        double** y1  = dmatrix(0, 5, 0, count0);
+        double* t1   = dvector(0, count0);
         for(int i = 0; i<= count0; i++)
         {
             //Time
@@ -3050,8 +3716,8 @@ void toCelestiaFormat(string filename)
         //--------------------------------------------------------------------------------
         // COC towards VSEM + store data
         //--------------------------------------------------------------------------------
-        double **y2  = dmatrix(0, 5, 0, count0);
-        double *t2   = dvector(0, count0);
+        double** y2  = dmatrix(0, 5, 0, count0);
+        double* t2   = dvector(0, count0);
 
         furnsh_c("spice/kernels/metakernel.furnsh");
         ecln2syndpos_vec(y1, t1, y2, t2, count0, VSEM);

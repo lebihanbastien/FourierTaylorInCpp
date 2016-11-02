@@ -24,7 +24,7 @@
 #include "Oftsc.h"
 #include "env.h"
 
-int MODEL_TYPE;
+//int MODEL_TYPE;
 
 
 
