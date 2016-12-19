@@ -174,6 +174,10 @@ int getLengthCOMP_txt()
 }
 
 
+
+
+
+
 //========================================================================================
 //
 //          I/O (CU/CS/CM)
@@ -255,9 +259,9 @@ int writeCU_bin(double**** yNCE, double**** sNCE, double* tGrid,
         }
         filestream.close();
     }
-    else return 0;
+    else return FTC_FAILURE;
 
-    return 1;
+    return FTC_SUCCESS;
 }
 
 /**
@@ -308,7 +312,7 @@ int readCU_bin(double**** yNCE, double**** sNCE, double* tGrid,
             cout << "t_grid_size    = " << t_grid_size    << ", but tSize0 = " << tSize0 << endl;
             cout << "s1_grid_size = " << s1_grid_size << ", but gSize0_s1 = " << gSize0_s1 << endl;
             cout << "s3_grid_size = " << s3_grid_size << ", but gSize0_s3 = " << gSize0_s3 << endl;
-            return 0;
+            return FTC_FAILURE;
         }
 
         //---------------------
@@ -344,9 +348,9 @@ int readCU_bin(double**** yNCE, double**** sNCE, double* tGrid,
         }
         filestream.close();
     }
-    else return 0;
+    else return FTC_FAILURE;
 
-    return 1;
+    return FTC_SUCCESS;
 }
 
 /**
@@ -391,9 +395,9 @@ int getLenghtCU_bin(int* s1_grid_size, int* s3_grid_size,
         filestream.close();
 
     }
-    else return 0;
+    else return FTC_FAILURE;
 
-    return 1;
+    return FTC_SUCCESS;
 }
 
 
@@ -440,9 +444,9 @@ int initCU_bin_3D(int* si_grid_size, int t_grid_size,
 
         filestream.close();
     }
-    else return 0;
+    else return FTC_FAILURE;
 
-    return 1;
+    return FTC_SUCCESS;
 }
 
 /**
@@ -468,9 +472,9 @@ int appTimeCU_bin_3D(double* tGrid, int nt, int ofts_order, int type, int destin
         filestream.write((char*) &res, sizeof(double));
         filestream.close();
     }
-    else return 0;
+    else return FTC_FAILURE;
 
-    return 1;
+    return FTC_SUCCESS;
 }
 
 /**
@@ -515,9 +519,9 @@ int writeCU_bin_3D(double** yNCE, double** sNCE, int* si_grid_size,
 
         filestream.close();
     }
-    else return 0;
+    else return FTC_FAILURE;
 
-    return 1;
+    return FTC_SUCCESS;
 }
 
 //----------
@@ -574,7 +578,7 @@ int getLenghtCU_bin_3D(int* si_grid_size, int* t_grid_size,
         filestream.close();
 
     }
-    else return 0;
+    else return FTC_FAILURE;
 
     return offset;
 }
@@ -624,7 +628,7 @@ int readTCU_bin_3D(int offset, double* tGrid, int nt,
         filestream.close();
 
     }
-    else return 0;
+    else return FTC_FAILURE;
 
     return offset2;
 }
@@ -688,7 +692,7 @@ int readCU_bin_3D(int offset, double** yNCE, double** sNCE, int* si_grid_size,
         filestream.close();
 
     }
-    else return 0;
+    else return FTC_FAILURE;
 
     return offset2;
 }
@@ -725,9 +729,9 @@ int getLengthIntSortedCU_bin(int* number_of_sol, int ofts_order,
         filestream.read((char*) &resi, sizeof(int));
         *number_of_sol = resi;
     }
-    else return 0;
+    else return FTC_FAILURE;
 
-    return 1;
+    return FTC_SUCCESS;
 }
 
 
@@ -922,10 +926,10 @@ void vector_getUnique(vector<double>& v0U)
     v0U.resize(std::distance(v0U.begin(),it) );
 
     //Print out content:
-    std::cout << "v0U contains:";
-    for (it=v0U.begin(); it!=v0U.end(); ++it)
-        std::cout << ' ' << *it;
-    std::cout << '\n';
+    //std::cout << "v0U contains:";
+    //for (it=v0U.begin(); it!=v0U.end(); ++it)
+    //    std::cout << ' ' << *it;
+    //std::cout << '\n';
 }
 
 void vector_getIndices(vector<size_t>& indRes, vector<double>& t0_CMU_EM, double t0)
@@ -1105,6 +1109,241 @@ void readIntProjCU_bin(string filename,
     }
     while(ti < 0 || ti > (int) t0_CMU_EM_UNIQUE.size()-1);
     cout << "You have selected " << ti << ", which corresponds to t0_EM = " << t0_CMU_EM_UNIQUE[ti] << endl;
+
+    std::vector<size_t> indRes;
+    vector_getIndices(indRes, t0_CMU_EM, t0_CMU_EM_UNIQUE[ti]);
+
+    //==========================================================
+    // Display info on the indices that match t0_CMU_EM_UNIQUE[xxx]
+    //==========================================================
+    coutmp();
+    cout << "--------------------------------------" << endl;
+    cout << "The first entry for this time is:" << endl;
+    int ind = indRes[0];
+    cout << "t0_EM    = " << t0_CMU_EM[ind]  << endl;
+    cout << "tf_EM    = " << tf_man_SEM[ind]/SEML.us_em.ns << endl;
+    cout << "pmin_SEM = " << pmin_dist_SEM[ind] << endl;
+    cout << "s_CM_EM  = (" << s1_CMU_EM[ind] << ", " << s2_CMU_EM[ind] << ", " << s3_CMU_EM[ind] << ", " << s4_CMU_EM[ind] << ")" << endl;
+    cout << "s_CM_SEM = (" << s1_CM_SEM[ind] << ", " << s2_CM_SEM[ind] << ", " << s3_CM_SEM[ind] << ", " << s4_CM_SEM[ind] << ")" << endl;
+
+    cout << "--------------------------------------" << endl;
+    cout << "The last entry for this time is:" << endl;
+    ind = indRes[indRes.size()-1];
+    cout << "t0_EM    = " << t0_CMU_EM[ind]  << endl;
+    cout << "tf_EM    = " << tf_man_SEM[ind]/SEML.us_em.ns << endl;
+    cout << "pmin_SEM = " << pmin_dist_SEM[ind] << endl;
+    cout << "s_CM_EM  = (" << s1_CMU_EM[ind] << ", " << s2_CMU_EM[ind] << ", " << s3_CMU_EM[ind] << ", " << s4_CMU_EM[ind] << ")" << endl;
+    cout << "s_CM_SEM = (" << s1_CM_SEM[ind] << ", " << s2_CM_SEM[ind] << ", " << s3_CM_SEM[ind] << ", " << s4_CM_SEM[ind] << ")" << endl;
+    coutlp();
+
+    //==========================================================
+    // Copy the selected results in the inputs
+    //==========================================================
+    for(int ind = 0; ind < (int) indRes.size(); ind++)
+    {
+        //Times
+        t0_CMU_EM_0.push_back(t0_CMU_EM[indRes[ind]]);
+        tf_man_EM_0.push_back(tf_man_SEM[indRes[ind]]/SEML.us_em.ns);
+        //CMU of EM
+        s1_CMU_EM_0.push_back(s1_CMU_EM[indRes[ind]]);
+        s2_CMU_EM_0.push_back(s2_CMU_EM[indRes[ind]]);
+        s3_CMU_EM_0.push_back(s3_CMU_EM[indRes[ind]]);
+        s4_CMU_EM_0.push_back(s4_CMU_EM[indRes[ind]]);
+        s5_CMU_EM_0.push_back(s5_CMU_EM[indRes[ind]]);
+        //Projection distance
+        pmin_dist_SEM_0.push_back(pmin_dist_SEM[indRes[ind]]);
+        //CM of SEM
+        s1_CM_SEM_0.push_back(s1_CM_SEM[indRes[ind]]);
+        s2_CM_SEM_0.push_back(s2_CM_SEM[indRes[ind]]);
+        s3_CM_SEM_0.push_back(s3_CM_SEM[indRes[ind]]);
+        s4_CM_SEM_0.push_back(s4_CM_SEM[indRes[ind]]);
+    }
+
+    //==========================================================
+    // Sort data wrt to the projection distance
+    //==========================================================
+    sortId = sort_indexes(pmin_dist_SEM_0);
+
+}
+
+
+
+/**
+ *  \brief Read in a data file the connections between EML2 and SEML1,2.
+ *         Interpolate in the data set to get the right desired t0 at EML2 departures.
+ **/
+void readAndInterpolateIntProjCU_bin(string filename,
+                                     double t0_des,
+                                     vector<double>& t0_CMU_EM_0,
+                                     vector<double>& tf_man_EM_0,
+                                     vector<double>& s1_CMU_EM_0,
+                                     vector<double>& s2_CMU_EM_0,
+                                     vector<double>& s3_CMU_EM_0,
+                                     vector<double>& s4_CMU_EM_0,
+                                     vector<double>& s5_CMU_EM_0,
+                                     vector<double>& pmin_dist_SEM_0,
+                                     vector<double>& s1_CM_SEM_0,
+                                     vector<double>& s2_CM_SEM_0,
+                                     vector<double>& s3_CM_SEM_0,
+                                     vector<double>& s4_CM_SEM_0,
+                                     vector<size_t>& sortId)
+{
+    //==========================================================
+    //Temporary variables
+    //==========================================================
+    vector<double> t0_CMU_EM;
+    vector<double> s1_CMU_EM;
+    vector<double> s2_CMU_EM;
+    vector<double> s3_CMU_EM;
+    vector<double> s4_CMU_EM;
+    vector<double> s5_CMU_EM;
+    vector<double> pmin_dist_SEM;
+    vector<double> tf_man_SEM;
+    vector<double> s1_CM_SEM;
+    vector<double> s2_CM_SEM;
+    vector<double> s3_CM_SEM;
+    vector<double> s4_CM_SEM;
+
+
+    //==========================================================
+    //Open and read datafile
+    //==========================================================
+    fstream filestream;
+    filestream.open (filename.c_str(), ios::binary | ios::in);
+    if (filestream.is_open())
+    {
+        double res;
+
+        do
+        {
+            // 1. time grid in NCEM units
+            filestream.read((char*) &res, sizeof(double));
+            t0_CMU_EM.push_back(res);
+
+            // 2-7. initial state in NCEM coordinates: NOT SAVED
+            for (int k = 0; k < 6; k++)
+            {
+                filestream.read((char*) &res, sizeof(double));
+
+            }
+
+            // 8-13. initial state in SEM coordinates: NOT SAVED
+            for (int k = 0; k < 6; k++)
+            {
+                filestream.read((char*) &res, sizeof(double));
+            }
+
+            // 14-18. initial state in RCM coordinates: SAVED
+            filestream.read((char*) &res, sizeof(double));
+            s1_CMU_EM.push_back(res);
+
+            filestream.read((char*) &res, sizeof(double));
+            s2_CMU_EM.push_back(res);
+
+            filestream.read((char*) &res, sizeof(double));
+            s3_CMU_EM.push_back(res);
+
+            filestream.read((char*) &res, sizeof(double));
+            s4_CMU_EM.push_back(res);
+
+            filestream.read((char*) &res, sizeof(double));
+            s5_CMU_EM.push_back(res);
+
+            // 19. minimum distance of projection: SAVED
+            filestream.read((char*) &res, sizeof(double));
+            pmin_dist_SEM.push_back(res);
+
+            // 20. associated dv: NOT SAVED
+            filestream.read((char*) &res, sizeof(double));
+
+            // 21. tf at SEM: SAVED
+            filestream.read((char*) &res, sizeof(double));
+            tf_man_SEM.push_back(res);
+
+
+            // 22-27. final_state_CMU_SEM state in SE coordinates: NOT SAVED
+            for (int k = 0; k < 6; k++)
+            {
+                filestream.read((char*) &res, sizeof(double));
+            }
+
+            // 28-33. projected_state_CMU_SEM state in SE coordinates: NOT SAVED
+            for (int k = 0; k < 6; k++)
+            {
+                filestream.read((char*) &res, sizeof(double));
+            }
+
+            // 34-37. projected_state_CMU_RCM state in SE coordinates: SAVED
+            filestream.read((char*) &res, sizeof(double));
+            s1_CM_SEM.push_back(res);
+
+            filestream.read((char*) &res, sizeof(double));
+            s2_CM_SEM.push_back(res);
+
+            filestream.read((char*) &res, sizeof(double));
+            s3_CM_SEM.push_back(res);
+
+            filestream.read((char*) &res, sizeof(double));
+            s4_CM_SEM.push_back(res);
+        }
+        while(!filestream.eof());
+
+        filestream.close();
+    }else{
+        cout << "readAndInterpolateIntProjCU_bin. Unable to open the file. Check file name. " << endl;
+        return;
+    }
+
+
+    //==========================================================
+    //Delete last element that is not a real value
+    //==========================================================
+    t0_CMU_EM.pop_back();
+    s1_CMU_EM.pop_back();
+    s2_CMU_EM.pop_back();
+    s3_CMU_EM.pop_back();
+    s4_CMU_EM.pop_back();
+    s5_CMU_EM.pop_back();
+    pmin_dist_SEM.pop_back();
+    tf_man_SEM.pop_back();
+    s1_CM_SEM.pop_back();
+    s2_CM_SEM.pop_back();
+    s3_CM_SEM.pop_back();
+    s4_CM_SEM.pop_back();
+
+
+    //==========================================================
+    //Get the unique elements in t0_CMU_EM
+    //==========================================================
+    //Copy t0_CMU_EM into t0_CMU_EM_UNIQUE
+    vector<double> t0_CMU_EM_UNIQUE(t0_CMU_EM);
+    //Get unique elements
+    vector_getUnique(t0_CMU_EM_UNIQUE);
+
+    //==========================================================
+    // Print all the indices that match t0_CMU_EM_UNIQUE[xxx]
+    //==========================================================
+    cout << "--------------------------------------" << endl;
+    cout << "There is " << t0_CMU_EM_UNIQUE.size() << " different times in data, in the following range:" << endl;
+    cout << "[" << t0_CMU_EM_UNIQUE[0]/SEML.us_em.T << ", " << t0_CMU_EM_UNIQUE[t0_CMU_EM_UNIQUE.size()-1]/SEML.us_em.T << "]x SEML.us_em.T" << endl;
+
+    //==========================================================
+    // Find the nearest t0 value
+    //==========================================================
+    double dmin = fabs(t0_CMU_EM_UNIQUE[0] - t0_des);
+    int ti = 0;
+    for(int i = 1; i < t0_CMU_EM_UNIQUE.size(); i++)
+    {
+        if(fabs(t0_CMU_EM_UNIQUE[i] - t0_des) < dmin)
+        {
+            dmin = fabs(t0_CMU_EM_UNIQUE[i] - t0_des);
+            ti = i;
+        }
+    }
+    cout << "The index of the time closer to the desired one is " << ti;
+    cout << ", which corresponds to;" << endl;
+    cout << "t0_EM = " << t0_CMU_EM_UNIQUE[ti]/SEML.us_em.T;
+    cout << " x SEML.us_em.T" <<  endl;
 
     std::vector<size_t> indRes;
     vector_getIndices(indRes, t0_CMU_EM, t0_CMU_EM_UNIQUE[ti]);

@@ -5,7 +5,8 @@
 //                         Subroutines to choose between SEM and EM representation
 //========================================================================================
 /**
- * \brief Get the ephemerides coordinate system associated to the current coordinate system.
+ * \brief Get the ephemerides coordinate system associated
+ *        to the current coordinate system.
  *        For now, only the only possible outputs are VSEM/VEM.
  *        In the future, VNCSEM and VNCEM should be made available.
  **/
@@ -17,6 +18,7 @@ int eph_coord(int coord_type)
     case VNCSEM :
     case PSEM   :
     case VSEM   :
+    case ECISEM :
         return VSEM;
 
     case NCEM   :
@@ -26,15 +28,15 @@ int eph_coord(int coord_type)
         return VEM;
 
     default:
-        cout << "eph_coord. Unknow type of coordinates. GSL_FAILURE is returned." << endl;
+        cout << "eph_coord. Unknown type of coordinates. GSL_FAILURE is returned." << endl;
         return GSL_FAILURE;
     }
 }
 
 /**
  * \brief Get the ephemerides fwrk associated to the current coordinate system.
- *        For now, only the only possible outputs are F_VSEM/F_VEM.
- *        In the future, F_VNCSEM and F_VNCEM should be made available.
+ *        For now, only the only possible outputs are I_VSEM/I_VEM.
+ *        In the future, I_VNCSEM and I_VNCEM should be made available.
  **/
 int eph_fwrk(int coord_type)
 {
@@ -44,16 +46,16 @@ int eph_fwrk(int coord_type)
     case VNCSEM :
     case PSEM   :
     case VSEM   :
-        return F_VSEM;
+        return I_VSEM;
 
     case NCEM   :
     case VNCEM  :
     case PEM    :
     case VEM    :
-        return F_VEM;
+        return I_VEM;
 
     default:
-        cout << "eph_coord. Unknow type of coordinates. GSL_FAILURE is returned." << endl;
+        cout << "eph_coord. Unknown type of coordinates. GSL_FAILURE is returned." << endl;
         return GSL_FAILURE;
     }
 }
@@ -73,11 +75,12 @@ double mean_motion(int coord_eph)
     case VEM    :
         return SEML.n_em;
     case J2000  :
+    case NJ2000 :
         return SEML.ss.n;
     case VECLI  : //no normalization!
         return 1.0;
     default:
-        cout << "mean_motion. Unknow type of coordinates. GSL_FAILURE is returned." << endl;
+        cout << "mean_motion. Unknown type of coordinates. GSL_FAILURE is returned." << endl;
         return GSL_FAILURE;
     }
 }
@@ -136,8 +139,8 @@ void qbcp2jpl(double tSYS, double *et, int coord_type)
     string epoch_start, epoch_end;
     SpiceDouble  et_start, et_end;
 
-    epoch_start = "1950 JAN 01 00:00:00.000"; //We start in 1950
-    epoch_end   = "1950 FEB 01 00:00:00.000"; //We end in 1950
+    epoch_start = "2046 MAR 01 00:00:00.000"; //We start in 1950
+    epoch_end   = "2046 JUN 01 00:00:00.000"; //We end in 1950
 
     //In ephemeris time
     str2et_c(epoch_start.c_str(), &et_start);
@@ -215,28 +218,28 @@ void qbcp2jpl(double tSYS, double *et, int coord_type)
     //============================================
     // Display results
     //============================================
-        //Initialize the change of coordinates
-        init_ecl2synpos(*et, B, C, &k, coord_eph);
-
-        //Compute the ecliptic positions of the Earth & the Moon
-        spkezr_c ("EARTH", *et, DEFFRAME,  "NONE", DEFOBS, RE, &lt);
-        spkezr_c ("MOON",  *et, DEFFRAME,  "NONE", DEFOBS, RM, &lt);
-        spkezr_c ("SUN",   *et, DEFFRAME,  "NONE", DEFOBS, RS, &lt);
-
-        //Back in synodical coordinates
-        ecl2synpos(RE, re, B, C, k);
-        ecl2synpos(RM, rm, B, C, k);
-        ecl2synpos(RS, rs, B, C, k);
-
-        cout << "Earth position at best fit: " << endl;
-        vector_printf_prec(re, 3);
-
-        cout << "Moon position at best fit: " << endl;
-        vector_printf_prec(rm, 3);
-
-        cout << "Sun position at best fit: " << endl;
-        vector_printf_prec(rs, 3);
-    //============================================
+    //        //Initialize the change of coordinates
+    //        init_ecl2synpos(*et, B, C, &k, coord_eph);
+    //
+    //        //Compute the ecliptic positions of the Earth & the Moon
+    //        spkezr_c ("EARTH", *et, DEFFRAME,  "NONE", DEFOBS, RE, &lt);
+    //        spkezr_c ("MOON",  *et, DEFFRAME,  "NONE", DEFOBS, RM, &lt);
+    //        spkezr_c ("SUN",   *et, DEFFRAME,  "NONE", DEFOBS, RS, &lt);
+    //
+    //        //Back in synodical coordinates
+    //        ecl2synpos(RE, re, B, C, k);
+    //        ecl2synpos(RM, rm, B, C, k);
+    //        ecl2synpos(RS, rs, B, C, k);
+    //
+    //        cout << "Earth position at best fit: " << endl;
+    //        vector_printf_prec(re, 3);
+    //
+    //        cout << "Moon position at best fit: " << endl;
+    //        vector_printf_prec(rm, 3);
+    //
+    //        cout << "Sun position at best fit: " << endl;
+    //        vector_printf_prec(rs, 3);
+    //    //============================================
 
 }
 
@@ -498,6 +501,203 @@ void qbcp2jpl_disp(double tSYS, double *et, int coord_type)
     scanf("%c",&ch);
 }
 
+/**
+ *  \brief Find the epoch that gives the best correspondance between the Sun-Earth-Moon QBCP configuration at time t, given in SEM/EM coordinates, and the Sun-Earth-Moon true motion
+ *         given by the JPL ephemerides. The input tSYS must be in SEM/EM normalized coordinates. The output epoch et is given in seconds.
+ **/
+void qbcp2jpl_inertial(double tSYS, double *et, int coord_type)
+{
+    //====================================================================================
+    //Precheck on the coord_type
+    //====================================================================================
+    int coord_eph = eph_coord(coord_type);
+    if(coord_eph == GSL_FAILURE)
+    {
+        cout << "qbcp2jpl. There is no ephemerides coordinates" << endl;
+        cout << " associated to the current coordinate system. return." << endl;
+        return;
+    }
+
+    //====================================================================================
+    //Compute the positions of primaries in ECISEM coordinates
+    //====================================================================================
+    double Pe[3], Pm[3], Ps[3];
+    double Pnorm = 0.0;
+    switch(coord_eph)
+    {
+        case VEM:
+            cout << "VEM cannot be used here!" << endl;
+            break;
+        case VSEM:
+            double n  = SEML.us_sem.n;
+            double ni = SEML.us_sem.ni;
+            double ns = SEML.us_sem.ns;
+            double ai = SEML.us_sem.ai;
+            double as = SEML.us_sem.as;
+            double me = SEML.us_sem.me;
+            double mm = SEML.us_sem.mm;
+
+            //----------------------------------------------------------------------------
+            //r & R
+            //----------------------------------------------------------------------------
+            //R
+            double R1 = creal(evz(SEML.cs_sem.Zt, tSYS, n, ns, as));
+            double R2 = cimag(evz(SEML.cs_sem.Zt, tSYS, n, ns, as));
+            //r
+            double r1 = creal(evz(SEML.cs_sem.zt, tSYS, n, ni, ai));
+            double r2 = cimag(evz(SEML.cs_sem.zt, tSYS, n, ni, ai));
+
+            //----------------------------------------------------------------------------
+            //Position of the primaries
+            //----------------------------------------------------------------------------
+            Ps[0] = R1;
+            Ps[1] = R2;
+            Ps[2] = 0.0;
+
+            Pm[0] = - me/(mm + me)* r1;
+            Pm[1] = - me/(mm + me)* r2;
+            Pm[2] = 0.0;
+
+            Pe[0] = + mm/(mm + me)* r1;
+            Pe[1] = + mm/(mm + me)* r2;
+            Pe[2] = 0.0;
+
+            //----------------------------------------------------------------------------
+            //Normalization
+            //----------------------------------------------------------------------------
+            //            Pnorm = vnorm_c(Pm);
+            //            for(int i = 0; i < 3; i++) Pm[i] /= Pnorm;
+            //
+            //            Pnorm = vnorm_c(Ps);
+            //            for(int i = 0; i < 3; i++) Ps[i] /= Pnorm;
+            //
+            //            Pnorm = vnorm_c(Pe);
+            //            for(int i = 0; i < 3; i++) Pe[i] /= Pnorm;
+
+        break;
+    }
+
+
+    //====================================================================================
+    // Init
+    //====================================================================================
+    //============================================
+    // Starting and end time
+    //============================================
+    //Covered time span in 432s.bsp is:
+    //Start:  1949 DEC 14 00:00:00.000 (TDB)
+    //Stop:   2050 JAN 02 00:00:00.000 (TDB)
+    string epoch_start, epoch_end;
+    SpiceDouble  et_start, et_end;
+
+    epoch_start = "2047 JAN 01 00:00:00.000"; //We start in 2047
+    epoch_end   = "2048 JAN 01 00:00:00.000"; //We end in 2048
+
+    //In ephemeris time
+    str2et_c(epoch_start.c_str(), &et_start);
+    str2et_c(epoch_end.c_str(), &et_end);
+
+    //============================================
+    // Initialize the change of coordinates:
+    // Ecliptic coordinates  <-> SEM/EM synodic in position.
+    //============================================
+    double B[3];
+    double C[3][3], k;
+    SpiceDouble lt, RE[6], RM[6], RS[6], re[3], rm[3], rs[3], REM[6];
+
+    //============================================
+    //Initialize the minimum distance
+    //============================================
+    double minDist    = 0.0;
+    double argMinDist = 0.0;
+    double dist       = 0.0;
+
+    //============================================
+    //Frequence of check
+    //============================================
+    int freq = 60;//spd_c();
+
+    //====================================================================================
+    // Loop in the Kernel, each day
+    //====================================================================================
+    *et = et_start;
+    double dSEM= 0.0;
+    double ddist = 0.0;
+    do
+    {
+        //Initialize the change of coordinates
+        init_ecl2synpos(*et, B, C, &k, coord_eph);
+
+        //Compute the ecliptic positions of the Earth & the Moon
+        spkezr_c ("EARTH", *et, DEFFRAME,  "NONE",  DEFOBS, RE, &lt);
+        spkezr_c ("MOON",  *et, DEFFRAME,  "NONE",  DEFOBS, RM, &lt);
+        spkezr_c ("SUN",   *et, DEFFRAME,  "NONE",  DEFOBS, RS, &lt);
+        spkezr_c ("EARTH MOON BARYCENTER", *et, DEFFRAME,  "NONE",  DEFOBS, REM, &lt);
+
+        //Back in ECI coordinates
+        //        ecl2neci(RE, REM, re, SEML.ss);
+        //        ecl2neci(RM, REM, rm, SEML.ss);
+        //        ecl2neci(RS, REM, rs, SEML.ss);
+
+        //Instead, we compute the Sun-Bem distance each time
+        dSEM= 0.0;
+        for(int i = 0; i < 3; i++) dSEM += (RS[i] - REM[i])*(RS[i] - REM[i]);
+        dSEM = sqrt(dSEM);
+
+        for(int i = 0; i < 3; i++)
+        {
+            re[i] = (RE[i] - REM[i])/dSEM;
+            rm[i] = (RM[i] - REM[i])/dSEM;
+            rs[i] = (RS[i] - REM[i])/dSEM;
+        }
+
+        //Normalisation
+        //        Pnorm = vnorm_c(re);
+        //        for(int i = 0; i < 3; i++) re[i] /= Pnorm;
+        //        Pnorm = vnorm_c(rs);
+        //        for(int i = 0; i < 3; i++) rs[i] /= Pnorm;
+        //        Pnorm = vnorm_c(rm);
+        //        for(int i = 0; i < 3; i++) rm[i] /= Pnorm;
+
+        //Compute the minimum distance
+        dist = 0.0;
+        ddist = 0.0;
+        for(int i = 0; i < 3; i++) ddist += (Pe[i] - re[i])*(Pe[i] - re[i]);
+        dist += sqrt(ddist);
+        ddist = 0.0;
+        for(int i = 0; i < 3; i++) ddist += (Pm[i] - rm[i])*(Pm[i] - rm[i]);
+        dist += sqrt(ddist);
+        ddist = 0.0;
+        for(int i = 0; i < 3; i++) ddist += (Ps[i] - rs[i])*(Ps[i] - rs[i]);
+        dist += sqrt(ddist);
+
+        if(*et == et_start)
+        {
+            minDist    = dist;
+            argMinDist = *et;
+        }
+        else
+        {
+            if(dist < minDist)
+            {
+                minDist    = dist;
+                argMinDist = *et;
+            }
+        }
+
+        //Add one freq
+        *et += freq;//spd_c();
+    }while(*et <= et_end);
+
+
+    //============================================
+    // Update results
+    //============================================
+    *et = argMinDist;
+}
+
+
+
 //========================================================================================
 //                         Name of the primaries
 //========================================================================================
@@ -514,6 +714,7 @@ int m1name(int coord_type)
     case VNCSEM :
     case PSEM   :
     case VSEM   :
+    case ECISEM :
             return SUN;
     case NCEM   :
     case VNCEM  :
@@ -521,7 +722,7 @@ int m1name(int coord_type)
     case VEM    :
             return EARTH;
     default:
-        cout << "m1name. Unknown coord_type. F_SEM is used by default." << endl;
+        cout << "m1name. Unknown coord_type. SUN is used by default." << endl;
         return SUN;
     }
 }
@@ -539,6 +740,7 @@ int m2name(int coord_type)
     case VNCSEM :
     case PSEM   :
     case VSEM   :
+    case ECISEM :
             return EARTH_MOON_BARYCENTER;
     case NCEM   :
     case VNCEM  :
@@ -546,11 +748,10 @@ int m2name(int coord_type)
     case VEM    :
             return MOON;
     default:
-        cout << "m2name. Unknown coord_type. F_SEM is used by default." << endl;
+        cout << "m2name. Unknown coord_type. EARTH_MOON_BARYCENTER is used by default." << endl;
         return EARTH_MOON_BARYCENTER;
     }
 }
-
 
 /**
  *      \brief Return the name of the second primary associated to the coord_type.
@@ -572,7 +773,7 @@ int m2name2(int coord_type)
     case VEM    :
             return MOON;
     default:
-        cout << "m2name2. Unknown coord_type. F_SEM is used by default." << endl;
+        cout << "m2name2. Unknown coord_type. EARTH is used by default." << endl;
         return EARTH;
     }
 }
@@ -856,10 +1057,10 @@ void init_ecl2syndpos(double et, double B[3], double C[3][3], int coord_eph)
 //              between the ecliptic coordinates and the synodic ones
 //              mainly from Dei Tos 2014 and Gomez et al. 2002.
 //========================================================================================
-//-----------------------------
+//----------------------------------------------------------------------------------------
 // Necessary parameters
 // From Dei Tos (2014)
-//-----------------------------
+//----------------------------------------------------------------------------------------
 /**
  * \brief Init k, k', and k" coefficients, with k = ||r21||, r21
  *        being the relative position of the primaries.
@@ -1063,9 +1264,9 @@ void init_coc(const double r21[3],  const double v21[3],
 //              Ecliptic coordinates  <-> Sun-(Earth+Moon) synodic
 //                            Position + Velocity
 //========================================================================================
-//-----------------------------
+//----------------------------------------------------------------------------------------
 // Init
-//-----------------------------
+//----------------------------------------------------------------------------------------
 /**
  * \brief Initialize the change of coordinates Ecliptic coordinates  <-> Sun-(Earth+Moon) synodic coordinates in position+velocity state.
  *        For a position vector R in ecliptic coordinates, and a position vector r in Sun-(Earth+Moon) synodical coordinates, we have the following relations:
@@ -1391,9 +1592,9 @@ void init_ecl2synstate_2(double et, double B[3], double C[3][3], double *k, doub
 }
 
 
-//-----------------------------
+//----------------------------------------------------------------------------------------
 // Ecliptic coordinates -> Sun-(Earth+Moon) synodic
-//-----------------------------
+//----------------------------------------------------------------------------------------
 /**
  * \brief Change of coordinates Ecliptic coordinates  -> Sun-(Earth+Moon) synodic coordinates in position+velocity state.
  *        For a position vector R in ecliptic coordinates, and a position vector r in Sun-(Earth+Moon) synodical coordinates, we have the following relations:
@@ -1486,9 +1687,9 @@ void ecl2synstate(double vin[6], double vout[6], double B[3], double C[3][3], do
 
 }
 
-//-----------------------------
+//----------------------------------------------------------------------------------------
 // Ecliptic coordinates  <- Sun-(Earth+Moon) synodic
-//-----------------------------
+//----------------------------------------------------------------------------------------
 /**
  * \brief Change of coordinates Ecliptic coordinates  <- Sun-(Earth+Moon) synodic coordinates in position+velocity state.
  *        For a position vector R in ecliptic coordinates, and a position vector r in Sun-(Earth+Moon) synodical coordinates, we have the following relations:
@@ -1554,9 +1755,12 @@ void syn2eclstate(double vin[6], double vout[6], double B[3], double C[3][3], do
 }
 
 
-//-----------------------------
+//----------------------------------------------------------------------------------------
 // On vectors
-//-----------------------------
+//----------------------------------------------------------------------------------------
+//---------------------------------
+// Ecliptic coordinates <-> any other native type (NCEM, NCSEM...)
+//---------------------------------
 /**
  *  From Ecliptic coordinates to a generic other coordinate system. The initial time tsys0 is given in SEM/EM coordinates, and yields the correspondance
  *  between the ephemerides epoch and the normalized QBCP time.
@@ -1573,35 +1777,6 @@ void ecl2coordstate_vec(double **yecl, double *etecl, double **yout, double *tou
     //Ecliptic coordinates to VSEM/VEM coordinates
     //=================================================================================
     ecl2synstate_vec(yecl, etecl, ytemp, ttemp, N, et0, tsys0, coord_eph);
-
-    //=================================================================================
-    //VSEM/VEM coordinates to coord_type coordinates
-    //=================================================================================
-    qbcp_coc_vec(ytemp, ttemp, yout, tout, N, coord_eph, coord_type);
-
-    //=================================================================================
-    //Free memory
-    //=================================================================================
-    free_dmatrix(ytemp, 0, 6, 0, N);
-    free_dvector(ttemp, 0, N);
-}
-
-/**
- *  From Normalized-Ecliptic coordinates to a generic other coordinate system. The initial time tsys0 is given in SEM/EM coordinates, and yields the correspondance
- *  between the ephemerides epoch and the normalized QBCP time.
- **/
-void ecln2coordstate_vec(double **yecl, double *etecl, double **yout, double *tout, int N, int coord_type, double et0,  double tsys0, int coord_eph)//, SS &ss)
-{
-    //=================================================================================
-    //Allocate memory
-    //=================================================================================
-    double **ytemp = dmatrix(0, 6, 0, N);
-    double *ttemp  = dvector(0, N);
-
-    //=================================================================================
-    //Ecliptic coordinates to VSEM/VEM coordinates
-    //=================================================================================
-    ecln2synstate_vec(yecl, etecl, ytemp, ttemp, N, et0, tsys0, coord_eph);//, ss);
 
     //=================================================================================
     //VSEM/VEM coordinates to coord_type coordinates
@@ -1644,35 +1819,9 @@ void coord2eclstate_vec(double **yin, double *tin, double **yecl, double *etecl,
     free_dvector(ttemp, 0, N);
 }
 
-/**
- *  To Normalized-Ecliptic coordinates from a generic other coordinate system. The initial time tsys0 is given in SEM/EM coordinates, and yields the correspondance
- *  between the ephemerides epoch and the normalized QBCP time.
- **/
-void coord2eclnstate_vec(double **yin, double *tin, double **yecl, double *etecl, int N, int coord_type, double et0,  double tsys0, int coord_eph)//, SS &ss)
-{
-    //=================================================================================
-    //Allocate memory
-    //=================================================================================
-    double **ytemp = dmatrix(0, 6, 0, N);
-    double *ttemp  = dvector(0, N);
-
-    //=================================================================================
-    //coord_type to VSEM/VEM coordinates
-    //=================================================================================
-    qbcp_coc_vec(yin, tin, ytemp, ttemp, N, coord_type, coord_eph);
-
-    //=================================================================================
-    //VSEM/VEM to ecliptic coordinates
-    //=================================================================================
-    syn2eclnstate_vec(ytemp, ttemp, yecl, etecl, N, et0, tsys0, coord_eph);//, ss);
-
-    //=================================================================================
-    //Free memory
-    //=================================================================================
-    free_dmatrix(ytemp, 0, 6, 0, N);
-    free_dvector(ttemp, 0, N);
-}
-
+//---------------------------------
+// Ecliptic coordinates <-> any other synodical type (VEM, VSEM...)
+//---------------------------------
 /**
  * \brief From ecliptic to synodic coordinates, vector format
  **/
@@ -1742,40 +1891,77 @@ void syn2eclstate_vec(double **yin, double *tin, double **yecl, double *etecl, i
 }
 
 
+//---------------------------------
+// Earth-centered inertial (ECI) coordinates <-> any other native type (NCEM, NCSEM...)
+//---------------------------------
 /**
- *  \brief From full ecliptic coordinates (directly from SPICE) to earth-centered normalized coordinates.
- *         Note: for now the normalization is NOT taken into account because the stepper is going wrong when the state is normalized.
+ *  From Normalized-Ecliptic coordinates to a generic other coordinate system. The initial time tsys0 is given in SEM/EM coordinates, and yields the correspondance
+ *  between the ephemerides epoch and the normalized QBCP time.
  **/
-void ecl2ecln(double YECL[6], double YEARTH[6], double yecln[6])//, SS &ss)
+void eci2coordstate_vec(double **yecl, double *etecl, double **yout, double *tout, int N, int coord_type, double et0,  double tsys0, int coord_eph)//, SS &ss)
 {
-    //Position
-    for(int i = 0; i < 3; i++) yecln[i] = (YECL[i]-YEARTH[i]); // /ss.a;
-    //Velocity
-    for(int i = 3; i < 6; i++) yecln[i] = (YECL[i]-YEARTH[i]); // /(ss.a*ss.n);
+    //=================================================================================
+    //Allocate memory
+    //=================================================================================
+    double **ytemp = dmatrix(0, 6, 0, N);
+    double *ttemp  = dvector(0, N);
+
+    //=================================================================================
+    //Ecliptic coordinates to VSEM/VEM coordinates
+    //=================================================================================
+    eci2synstate_vec(yecl, etecl, ytemp, ttemp, N, et0, tsys0, coord_eph);//, ss);
+
+    //=================================================================================
+    //VSEM/VEM coordinates to coord_type coordinates
+    //=================================================================================
+    qbcp_coc_vec(ytemp, ttemp, yout, tout, N, coord_eph, coord_type);
+
+    //=================================================================================
+    //Free memory
+    //=================================================================================
+    free_dmatrix(ytemp, 0, 6, 0, N);
+    free_dvector(ttemp, 0, N);
 }
 
 /**
- *  \brief To full ecliptic coordinates (directly from SPICE) from to earth-centered normalized coordinates.
- *         Note: for now the normalization is NOT taken into account because the stepper is going wrong when the state is normalized.
+ *  To Normalized-Ecliptic coordinates from a generic other coordinate system. The initial time tsys0 is given in SEM/EM coordinates, and yields the correspondance
+ *  between the ephemerides epoch and the normalized QBCP time.
  **/
-void ecln2ecl(double yecln[6], double YEARTH[6], double YECL[6])//, SS &ss)
+void coord2ecistate_vec(double **yin, double *tin, double **yecl, double *etecl, int N, int coord_type, double et0,  double tsys0, int coord_eph)//, SS &ss)
 {
-    //Position
-    //for(int i = 0; i < 3; i++) YECL[i] = yecln[i]*ss.a + YEARTH[i];
-    for(int i = 0; i < 3; i++) YECL[i] = yecln[i] + YEARTH[i];
-    //Velocity
-    //for(int i = 3; i < 6; i++) YECL[i] = yecln[i]*(ss.a*ss.n) + YEARTH[i];
-    for(int i = 3; i < 6; i++) YECL[i] = yecln[i] + YEARTH[i];
+    //=================================================================================
+    //Allocate memory
+    //=================================================================================
+    double **ytemp = dmatrix(0, 6, 0, N);
+    double *ttemp  = dvector(0, N);
+
+    //=================================================================================
+    //coord_type to VSEM/VEM coordinates
+    //=================================================================================
+    qbcp_coc_vec(yin, tin, ytemp, ttemp, N, coord_type, coord_eph);
+
+    //=================================================================================
+    //VSEM/VEM to ecliptic coordinates
+    //=================================================================================
+    syn2ecistate_vec(ytemp, ttemp, yecl, etecl, N, et0, tsys0, coord_eph);//, ss);
+
+    //=================================================================================
+    //Free memory
+    //=================================================================================
+    free_dmatrix(ytemp, 0, 6, 0, N);
+    free_dvector(ttemp, 0, N);
 }
 
-
+//---------------------------------
+// Earth-centered inertial (ECI)  <-> any other synodical type (VEM, VSEM...)
+//---------------------------------
 /**
  * \brief From synodic to earth-centered normalized coordinates, vector format.
  *        Note that coord_eph = VEM/VSEM can be chosen independantly from the ss structure
  *        that normalizes the state.
  *        Note: for now the normalization is NOT taken into account because the stepper is going wrong when the state is normalized.
  **/
-void syn2eclnstate_vec(double **yin, double *tin, double **yecln, double *tecln, int N, double et0, double tsys0, int coord_eph)//, SS &ss)
+void syn2ecistate_vec(double **yin, double *tin, double **yeci, double *teci, int N, double et0, double tsys0, int coord_eph)//, SS &ss)
 {
     //=================================================================================
     //Init
@@ -1812,18 +1998,18 @@ void syn2eclnstate_vec(double **yin, double *tin, double **yecln, double *tecln,
         //Store data
         //----------------------------
         //Normalization
-        ecl2ecln(vout, Re, vin);
+        ecl2eci(vout, Re, vin);
         //Update yecl
-        for(int i = 0; i <6; i++) yecln[i][p] = vin[i];
-        //Update tecl (shifted normalized time): tecln[p] = etecl/ss.n;
-        tecln[p] = etecl;
+        for(int i = 0; i <6; i++) yeci[i][p] = vin[i];
+        //Update tecl, which is also the non-normalized shifted time
+        teci[p] = etecl;
     }
 }
 
 /**
  * \brief From ecliptic to synodic coordinates, vector format
  **/
-void ecln2synstate_vec(double **yecln, double *tecln, double **yout, double *tout, int N, double et0, double tsys0, int coord_eph)//, SS & ss)
+void eci2synstate_vec(double **yeci, double *teci, double **yout, double *tout, int N, double et0, double tsys0, int coord_eph)//, SS & ss)
 {
     //=================================================================================
     //Init
@@ -1841,7 +2027,7 @@ void ecln2synstate_vec(double **yecln, double *tecln, double **yout, double *tou
         //Update etecl (non-normalized shifted time):
         //etecl = tecln[p]*ss.n;
         //----------------------------
-        etecl = tecln[p];
+        etecl = teci[p];
 
         //Position of the Earth
         double Re[6], lt;
@@ -1853,9 +2039,9 @@ void ecln2synstate_vec(double **yecln, double *tecln, double **yout, double *tou
         //Init the COC
         init_ecl2synstate(etecl, B, C, &k, Bprim, kCprim, coord_eph);
         //Update vin
-        for(int i = 0; i <6; i++) vin[i] = yecln[i][p];
+        for(int i = 0; i <6; i++) vin[i] = yeci[i][p];
         //Denormalization
-        ecln2ecl(vin, Re, vout);
+        eci2ecl(vin, Re, vout);
         //COC
         ecl2synstate(vout, vin, B, C, k, Bprim, kCprim, n_sys);
 
@@ -1864,16 +2050,43 @@ void ecln2synstate_vec(double **yecln, double *tecln, double **yout, double *tou
         //----------------------------
         //Update yout
         for(int i = 0; i <6; i++) yout[i][p] = vin[i];
-        //Update tout (normalized time): tout[p] = (tecln[p]*ss.n - et0)*n_sys + tsys0;
-        tout[p] = (tecln[p] - et0)*n_sys + tsys0;
+        //Update tout (normalized time):
+        tout[p] = (teci[p] - et0)*n_sys + tsys0;
     }
 }
 
 
 /**
- * \brief From ecliptic to synodic coordinates, vector format
+ *  \brief From full ecliptic coordinates (directly from SPICE) to Earth-centered inertial coordinates.
  **/
-void ecln2syndpos_vec(double **yecln, double *tecln, double **yout, double *tout, int N, int coord_eph)//, SS & ss)
+void ecl2eci(double YECL[6], double YEARTH[6], double yeci[6])//, SS &ss)
+{
+    //Position
+    for(int i = 0; i < 3; i++) yeci[i] = (YECL[i]-YEARTH[i]); // /ss.a;
+    //Velocity
+    for(int i = 3; i < 6; i++) yeci[i] = (YECL[i]-YEARTH[i]); // /(ss.a*ss.n);
+}
+
+/**
+ *  \brief To full ecliptic coordinates (directly from SPICE) from to earth-centered inertial coordinates.
+ **/
+void eci2ecl(double yeci[6], double YEARTH[6], double YECL[6])//, SS &ss)
+{
+    //Position
+    //for(int i = 0; i < 3; i++) YECL[i] = yecln[i]*ss.a + YEARTH[i];
+    for(int i = 0; i < 3; i++) YECL[i] = yeci[i] + YEARTH[i];
+    //Velocity
+    //for(int i = 3; i < 6; i++) YECL[i] = yecln[i]*(ss.a*ss.n) + YEARTH[i];
+    for(int i = 3; i < 6; i++) YECL[i] = yeci[i] + YEARTH[i];
+}
+
+
+/**
+ * \brief From ecliptic to synodic coordinates, vector format.
+ *        The final time is in Julian date.
+ *        @TODO: merge with
+ **/
+void eci2syndpos_vec(double **yeci, double *teci, double **yout, double *tout, int N, int coord_eph)//, SS & ss)
 {
     //=================================================================================
     //Init
@@ -1889,7 +2102,7 @@ void ecln2syndpos_vec(double **yecln, double *tecln, double **yout, double *tout
         //----------------------------
         //Update etecl (non-normalized shifted time):
         //----------------------------
-        etecl = tecln[p];
+        etecl = teci[p];
 
         //Position of the Earth
         double Re[6], lt;
@@ -1901,9 +2114,9 @@ void ecln2syndpos_vec(double **yecln, double *tecln, double **yout, double *tout
         //Init the COC
         init_ecl2syndpos(etecl, B, C, coord_eph);
         //Update vin
-        for(int i = 0; i < 6; i++) vin[i] = yecln[i][p];
+        for(int i = 0; i < 6; i++) vin[i] = yeci[i][p];
         //Denormalization
-        ecln2ecl(vin, Re, vout);
+        eci2ecl(vin, Re, vout);
         //COC, ONLY IN POSITION FOR NOW
         ecl2syndpos(vout, vin, B, C);
 
@@ -1914,9 +2127,199 @@ void ecln2syndpos_vec(double **yecln, double *tecln, double **yout, double *tout
         //Update yout
         for(int i = 0; i <6; i++) yout[i][p] = vin[i];
         //Update tout in Julian Date
-        tout[p] = unitim_c(tecln[p], "TDB", "JED");
+        tout[p] = unitim_c(teci[p], "TDB", "JED");
     }
 }
+
+
+//---------------------------------
+// Normalized Earth-centered inertial (NECI) coordinates <-> any other native type (NCEM, NCSEM...)
+//---------------------------------
+/**
+ *  From Normalized-Ecliptic coordinates to a generic other coordinate system. The initial time tsys0 is given in SEM/EM coordinates, and yields the correspondance
+ *  between the ephemerides epoch and the normalized QBCP time.
+ **/
+void neci2coordstate_vec(double **yecl, double *etecl, double **yout, double *tout, int N, int coord_type, double et0,  double tsys0, int coord_eph, SS &ss)
+{
+    //=================================================================================
+    //Allocate memory
+    //=================================================================================
+    double **ytemp = dmatrix(0, 6, 0, N);
+    double *ttemp  = dvector(0, N);
+
+    //=================================================================================
+    //NECI coordinates to VSEM/VEM coordinates
+    //=================================================================================
+    neci2synstate_vec(yecl, etecl, ytemp, ttemp, N, et0, tsys0, coord_eph, ss);
+
+    //=================================================================================
+    //VSEM/VEM coordinates to coord_type coordinates
+    //=================================================================================
+    qbcp_coc_vec(ytemp, ttemp, yout, tout, N, coord_eph, coord_type);
+
+    //=================================================================================
+    //Free memory
+    //=================================================================================
+    free_dmatrix(ytemp, 0, 6, 0, N);
+    free_dvector(ttemp, 0, N);
+}
+
+/**
+ *  To Normalized-Ecliptic coordinates from a generic other coordinate system. The initial time tsys0 is given in SEM/EM coordinates, and yields the correspondance
+ *  between the ephemerides epoch and the normalized QBCP time.
+ **/
+void coord2necistate_vec(double **yin, double *tin, double **yecl, double *etecl, int N, int coord_type, double et0,  double tsys0, int coord_eph, SS &ss)
+{
+    //=================================================================================
+    //Allocate memory
+    //=================================================================================
+    double **ytemp = dmatrix(0, 6, 0, N);
+    double *ttemp  = dvector(0, N);
+
+    //=================================================================================
+    //coord_type to VSEM/VEM coordinates
+    //=================================================================================
+    qbcp_coc_vec(yin, tin, ytemp, ttemp, N, coord_type, coord_eph);
+
+    //=================================================================================
+    //VSEM/VEM to NECI coordinates
+    //=================================================================================
+    syn2necistate_vec(ytemp, ttemp, yecl, etecl, N, et0, tsys0, coord_eph, ss);
+
+    //=================================================================================
+    //Free memory
+    //=================================================================================
+    free_dmatrix(ytemp, 0, 6, 0, N);
+    free_dvector(ttemp, 0, N);
+}
+
+
+
+//---------------------------------
+// Normalized Earth-centered inertial (NECI)  <-> any other synodical type (VEM, VSEM...)
+//---------------------------------
+/**
+ *  \brief From full ecliptic coordinates (directly from SPICE) to Earth-centered inertial coordinates.
+ **/
+void ecl2neci(double YECL[6], double YEARTH[6], double yneci[6], SS &ss)
+{
+    //Position
+    for(int i = 0; i < 3; i++) yneci[i] = (YECL[i]-YEARTH[i])/ss.a;
+    //Velocity
+    for(int i = 3; i < 6; i++) yneci[i] = (YECL[i]-YEARTH[i])/(ss.a*ss.n);
+}
+
+/**
+ *  \brief To full ecliptic coordinates (directly from SPICE) from to earth-centered inertial coordinates.
+ **/
+void neci2ecl(double yneci[6], double YEARTH[6], double YECL[6], SS &ss)
+{
+    //Position
+    for(int i = 0; i < 3; i++) YECL[i] = yneci[i]*ss.a + YEARTH[i];
+    //Velocity
+    for(int i = 3; i < 6; i++) YECL[i] = yneci[i]*(ss.a*ss.n) + YEARTH[i];
+}
+
+/**
+ * \brief From synodic to earth-centered normalized coordinates, vector format.
+ *        Note that coord_eph = VEM/VSEM can be chosen independantly from the ss structure
+ *        that normalizes the state.
+ *        Note: for now the normalization is NOT taken into account because the stepper is going wrong when the state is normalized.
+ **/
+void syn2necistate_vec(double **yin, double *tin, double **yneci, double *tneci, int N, double et0, double tsys0, int coord_eph, SS &ss)
+{
+    //=================================================================================
+    //Init
+    //=================================================================================
+    double B[3], C[3][3], k, Bprim[3], kCprim[3][3], etecl;
+    double vin[6], vout[6];
+
+    //=================================================================================
+    //Loop
+    //=================================================================================
+    double n_sys = mean_motion(coord_eph);
+    for(int p = 0; p <= N; p++)
+    {
+        //----------------------------
+        //Update etecl (non-normalized shifted time)
+        //----------------------------
+        etecl = et0 + (tin[p]-tsys0)/n_sys;
+
+        //----------------------------
+        // COC
+        //----------------------------
+        //Init the COC
+        init_ecl2synstate(etecl, B, C, &k, Bprim, kCprim, coord_eph);
+        //Update vin
+        for(int i = 0; i <6; i++) vin[i] = yin[i][p];
+        //COC
+        syn2eclstate(vin, vout, B, C, k, Bprim, kCprim, n_sys);
+
+        //Position of the Center
+        double Re[6], lt;
+        spkez_c (ss.center, etecl, DEFFRAME, "NONE", SSB, Re, &lt);
+
+        //----------------------------
+        //Store data
+        //----------------------------
+        //Normalization
+        ecl2neci(vout, Re, vin, ss);
+        //Update yecl
+        for(int i = 0; i <6; i++) yneci[i][p] = vin[i];
+        //Update tecl, which is the normalized shifted time
+        tneci[p] = etecl*ss.n;
+    }
+}
+
+/**
+ * \brief From ecliptic to synodic coordinates, vector format
+ **/
+void neci2synstate_vec(double **yneci, double *tneci, double **yout, double *tout, int N, double et0, double tsys0, int coord_eph, SS & ss)
+{
+    //=================================================================================
+    //Init
+    //=================================================================================
+    double B[3], C[3][3], k, Bprim[3], kCprim[3][3], etecl;
+    double vin[6], vout[6];
+
+    //=================================================================================
+    //Loop
+    //=================================================================================
+    double n_sys = mean_motion(coord_eph);
+    for(int p = 0; p <= N; p++)
+    {
+        //----------------------------
+        //Update etecl (non-normalized shifted time):
+        //----------------------------
+        etecl = tneci[p]/ss.n;
+
+        //Position of the Center
+        double Re[6], lt;
+        spkez_c (ss.center, etecl, DEFFRAME, "NONE", SSB, Re, &lt);
+
+        //----------------------------
+        // COC
+        //----------------------------
+        //Init the COC
+        init_ecl2synstate(etecl, B, C, &k, Bprim, kCprim, coord_eph);
+        //Update vin
+        for(int i = 0; i <6; i++) vin[i] = yneci[i][p];
+        //Denormalization
+        neci2ecl(vin, Re, vout, ss);
+        //COC
+        ecl2synstate(vout, vin, B, C, k, Bprim, kCprim, n_sys);
+
+        //----------------------------
+        //Store data
+        //----------------------------
+        //Update yout
+        for(int i = 0; i <6; i++) yout[i][p] = vin[i];
+        //Update tout (normalized time):
+        tout[p] = (etecl - et0)*n_sys + tsys0;
+    }
+}
+
+
 
 
 //========================================================================================

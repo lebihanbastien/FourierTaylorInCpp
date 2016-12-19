@@ -570,7 +570,7 @@ void gnuplot_plot_xyz(
     FILE*   tmpfd ;
     char const * tmpfname;
 
-    if (handle==NULL || x==NULL || y==NULL || (n<1)) return ;
+    if (handle==NULL || x==NULL || y==NULL || z==NULL || (n<1)) return ;
 
     /* Open temporary file for output   */
     tmpfname = gnuplot_tmpfile(handle);
@@ -594,11 +594,11 @@ void gnuplot_plot_xyz(
     //------------------------------------------------------------------------------------
     for (i=0 ; i<n; i++)
     {
-        if(z[i] < handle->xrange[0]) handle->xrange[0] = x[i];
-        if(z[i] > handle->xrange[1]) handle->xrange[1] = x[i];
+        if(x[i] < handle->xrange[0]) handle->xrange[0] = x[i];
+        if(x[i] > handle->xrange[1]) handle->xrange[1] = x[i];
 
-        if(z[i] < handle->yrange[0]) handle->yrange[0] = y[i];
-        if(z[i] > handle->yrange[1]) handle->yrange[1] = y[i];
+        if(y[i] < handle->yrange[0]) handle->yrange[0] = y[i];
+        if(y[i] > handle->yrange[1]) handle->yrange[1] = y[i];
 
         if(z[i] < handle->zrange[0]) handle->zrange[0] = z[i];
         if(z[i] > handle->zrange[1]) handle->zrange[1] = z[i];
@@ -611,6 +611,63 @@ void gnuplot_plot_xyz(
 
     return ;
 }
+
+void gnuplot_plot_X(
+    gnuplot_ctrl    * handle,
+    double          **X,
+    int               n,
+    char const      * title,
+    char const      * ls,
+    char const      * lt,
+    char const      * lw,
+    int lc)
+{
+    int     i ;
+    FILE*   tmpfd ;
+    char const * tmpfname;
+
+    if (handle==NULL || X[0]==NULL || X[1]==NULL ||  X[2]==NULL  ||  (n<1)) return ;
+
+    /* Open temporary file for output   */
+    tmpfname = gnuplot_tmpfile(handle);
+    tmpfd = fopen(tmpfname, "w");
+
+    if (tmpfd == NULL)
+    {
+        fprintf(stderr,"cannot create temporary file: exiting plot") ;
+        return ;
+    }
+
+    /* Write data to this file  */
+    for (i=0 ; i<n; i++)
+    {
+        fprintf(tmpfd, "%.18e %.18e %.18e\n", X[0][i], X[1][i], X[2][i]) ;
+    }
+    fclose(tmpfd) ;
+
+    //------------------------------------------------------------------------------------
+    //Min and max of xyz
+    //------------------------------------------------------------------------------------
+    for (i=0 ; i<n; i++)
+    {
+        if(X[0][i] < handle->xrange[0]) handle->xrange[0] = X[0][i];
+        if(X[0][i] > handle->xrange[1]) handle->xrange[1] = X[0][i];
+
+        if(X[1][i] < handle->yrange[0]) handle->yrange[0] = X[1][i];
+        if(X[1][i] > handle->yrange[1]) handle->yrange[1] = X[1][i];
+
+        if(X[2][i] < handle->zrange[0]) handle->zrange[0] = X[2][i];
+        if(X[2][i] > handle->zrange[1]) handle->zrange[1] = X[2][i];
+    }
+
+    //------------------------------------------------------------------------------------
+    //Plot
+    //------------------------------------------------------------------------------------
+    gnuplot_plot_atmpfile_3d(handle,tmpfname,title, ls, lt, lw, lc);
+
+    return ;
+}
+
 
 
 void gnuplot_fplot_xy(

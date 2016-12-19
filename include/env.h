@@ -186,6 +186,8 @@ struct CSYS
     Ofsc Zt;
     Ofsc ztdot;
     Ofsc Ztdot;
+    Ofsc ztddot;
+    Ofsc Ztddot;
 
     //Folders
     string F_COC;   //Change of coordinates Translation+Floquet+Complexification
@@ -242,6 +244,9 @@ struct SS
     int pos2;
     int coord_eph;
     int maxBodies;
+    int center;
+
+    double tshift;
 };
 
 
@@ -382,7 +387,7 @@ void EMtoNC_prim(double Zc[3], double zc[3], double c1, double gamma);
  * \param csys pointer on the CSYS structure to initialize.
  * \param qbcp_l pointer on the QBCP_L structure that contains csys.
  * \param qbcp pointer on the QBCP structure that contains parameters specific to each libration points (namely, gamma)
- * \param coordsys indix of the coordinate system to use (F_EM, F_SEM).
+ * \param fwrk indix of the framework to use (F_EM, F_SEM).
  * \param li number of the libration point to focus on (L1, L2).
  * \param coefNumber the number of vector field coefficients to initialize. It has been set in the QBCP_init function.
  * \param isNew boolean. if true, the qbtbp has not been computed via the qbtbp() routine, so the vector field coefficients cannot be initialized.
@@ -390,7 +395,7 @@ void EMtoNC_prim(double Zc[3], double zc[3], double c1, double gamma);
  *   Note that the QBCP structure is used only for the initialization of the coordinate systems. More precisely, it contains some parameters
  *   specific to each libration point (gamma), via its CR3BP structures.
  **/
-void init_CSYS(CSYS *csys, QBCP_L *qbcp_l, QBCP *qbcp, int coordsys, int li, int coefNumber, int isNew, int pmType, int manType);
+void init_CSYS(CSYS *csys, QBCP_L *qbcp_l, QBCP *qbcp, int fwrk, int li, int coefNumber, int isNew, int pmType, int manType);
 
 /**
 * \brief Initialize the Quasi-Bicircular Four-Body Problem in the form of a QBCP structure.
@@ -516,14 +521,14 @@ string init_F_LI(int li);
 string init_F_MODEL(int model);
 
 /**
- *  \brief Return the string corresponding to the framework (coord. syst.) indix provided (e.g. "EM" if coordsys == F_EM).
+ *  \brief Return the string corresponding to the framework  indix provided (e.g. "EM" if coordsys == F_EM).
  **/
-string init_F_FRAMEWORK(int coordsys);
+string init_F_FRAMEWORK(int fwrk);
 
 /**
  *  \brief Return the folder name corresponding to the prefix/model/framework/libration point number combination provided (e.g. "prefix/QBCP/EM/L1").
  **/
-string init_F_FOLDER(string prefix, int model, int coordsys, int li);
+string init_F_FOLDER(string prefix, int model, int fwrk, int li);
 
 /**
  * \brief Retrieve a set of coefficients, given as Fourier series from a txt file.
@@ -596,6 +601,10 @@ double rtnewt(void (*funcd)(double, int, double, double *, double *), double x1,
 **/
 void polynomialLi(double mu, int number, double y, double *f, double *df);
 
+/**
+ *  \brief Prompt "Press Enter to go on"
+ **/
+void pressEnter(bool isFlag);
 
 /**
  *   \brief Number to string inner routine

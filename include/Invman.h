@@ -26,6 +26,7 @@ class Invman
         int manType;                //type of manifold.
         int reduced_nv;             //number of reduced variables
         int fwrk;                   //framework (EM or SEM?)
+        int ncs;                    //Normalized Coordinate System (NCEM or NCSEM?)
 
 
         //--------------------------------------------------------------------------------
@@ -57,9 +58,6 @@ class Invman
         //--------------------------------------------------------------------------------
         double omega1;
         double omega3;
-
-
-
         //--------------------------------------------------------------------------------
         //Temporary objects (see constructor for details)
         //--------------------------------------------------------------------------------
@@ -87,6 +85,7 @@ class Invman
         int getManType() const;
         int getRnv() const;
         int getFwrk() const;
+        int getNCS() const;
 
         //--------------------------------------------------------------------------------
         //Evaluate
@@ -98,6 +97,7 @@ class Invman
         void evalCCMtoNC(cdouble const s0[], double const t, double z1[], const int ofts_order, const int ofs_order) const;
         void evalDRCMtoTFC_partial(double const  st0[], double const t, gsl_matrix_complex *m1, const int ofts_order, const int ofs_order) const;
         void evalDRCMtoNC(double const  st0[], double const t, gsl_matrix *m1, const int ofts_order, const int ofs_order) const;
+        void evalDRCMtoCOORD(double const  st0[], double const t, gsl_matrix *m1, const int ofts_order, const int ofs_order, const int coord_type) const;
         void evaldotRCMtoNC(double const st0[], double const t, double z1[], const int ofts_order, const int ofs_order) const;
 
         //--------------------------------------------------------------------------------

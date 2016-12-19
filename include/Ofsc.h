@@ -5,6 +5,7 @@
 #include <iomanip>
 #include <fstream>
 #include "parameters.h"
+#include "ftc_errno.h"
 #include <math.h>
 
 using namespace std;
@@ -21,7 +22,7 @@ using namespace std;
 class Ofsc
 {
 private:
-    int order;  /// order of the expansion (from -order to +order) !
+    int order;        /// order of the expansion (from -order to +order) !
     cdouble *coef;    /// array of coefficients
 
 public:

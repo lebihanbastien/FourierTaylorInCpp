@@ -52,8 +52,8 @@ int eph_coord(int coord_type);
 
 /**
  * \brief Get the ephemerides fwrk associated to the current coordinate system.
- *        For now, only the only possible outputs are F_VSEM/F_VEM.
- *        In the future, F_VNCSEM and F_VNCEM should be made available.
+ *        For now, only the only possible outputs are I_VSEM/I_VEM.
+ *        In the future, I_VNCSEM and I_VNCEM should be made available.
  **/
 int eph_fwrk(int coord_type);
 
@@ -69,6 +69,7 @@ double mean_motion(int coord_eph);
 //========================================================================================
 void qbcp2jpl(double t, double *et, int coord_type);
 void qbcp2jpl_disp(double tSYS, double *et, int coord_type);
+void qbcp2jpl_inertial(double tSYS, double *et, int coord_type);
 
 //========================================================================================
 //                         Name of the primaries
@@ -364,7 +365,7 @@ void ecl2coordstate_vec(double **yecl, double *etecl, double **yout, double *tou
  *  From Normalized-Ecliptic coordinates to a generic other coordinate system. The initial time tsys0 is given in SEM/EM coordinates, and yields the correspondance
  *  between the ephemerides epoch and the normalized QBCP time.
  **/
-void ecln2coordstate_vec(double **yecl, double *etecl, double **yout, double *tout, int N, int coord_type, double et0,  double tsys0, int coord_eph);//, SS &ss);
+void eci2coordstate_vec(double **yecl, double *etecl, double **yout, double *tout, int N, int coord_type, double et0,  double tsys0, int coord_eph);//, SS &ss);
 
 /**
  *  To Ecliptic coordinates from a generic other coordinate system. The initial time tsys0 is given in SEM/EM coordinates, and yields the correspondance
@@ -376,7 +377,7 @@ void coord2eclstate_vec(double **yin, double *tin, double **yecl, double *etecl,
  *  To Normalized-Ecliptic coordinates from a generic other coordinate system. The initial time tsys0 is given in SEM/EM coordinates, and yields the correspondance
  *  between the ephemerides epoch and the normalized QBCP time.
  **/
-void coord2eclnstate_vec(double **yin, double *tin, double **yecl, double *etecl, int N, int coord_type, double et0,  double tsys0, int coord_eph);//, SS &ss);
+void coord2ecistate_vec(double **yin, double *tin, double **yecl, double *etecl, int N, int coord_type, double et0,  double tsys0, int coord_eph);//, SS &ss);
 
 /**
  * \brief From ecliptic to synodic coordinates, vector format
@@ -393,23 +394,61 @@ void syn2eclstate_vec(double **yin, double *tin, double **yecl, double *etecl, i
  *        Note that coord_eph = VEM/VSEM can be chosen independantly from the ss structure
  *        that normalizes the state
  **/
-void syn2eclnstate_vec(double **yin, double *tin, double **yecl, double *tecl, int N, double et0, double tsys0, int coord_eph);//, SS &ss);
+void syn2ecistate_vec(double **yin, double *tin, double **yecl, double *tecl, int N, double et0, double tsys0, int coord_eph);//, SS &ss);
 
 /**
  * \brief From ecliptic to synodic coordinates, vector format
  **/
-void ecln2synstate_vec(double **yecl, double *tecl, double **yout, double *tout, int N, double et0, double tsys0, int coord_eph);//, SS & ss);
-void ecln2syndpos_vec(double **yecl, double *tecl, double **yout, double *tout, int N, int coord_eph);//, SS & ss);
+void eci2synstate_vec(double **yecl, double *tecl, double **yout, double *tout, int N, double et0, double tsys0, int coord_eph);//, SS & ss);
+void eci2syndpos_vec(double **yecl, double *tecl, double **yout, double *tout, int N, int coord_eph);//, SS & ss);
 
 /**
  *  \brief From full ecliptic coordinates (directly from SPICE) to normalized coordinates.
  **/
-void ecl2ecln(double YECL[6],  double YEARTH[6], double yecln[6]);//, SS &ss);
+void ecl2eci(double YECL[6],  double YEARTH[6], double yeci[6]);//, SS &ss);
 
 /**
  *  \brief To full ecliptic coordinates (directly from SPICE) from normalized coordinates.
  **/
-void ecln2ecl(double yecln[6],  double YEARTH[6], double YECL[6]);//, SS &ss);
+void eci2ecl(double yeci[6],  double YEARTH[6], double YECL[6]);//, SS &ss);
+
+//---------------------------------
+// Normalized Earth-centered inertial (NECI)  <-> any other synodical type (VEM, VSEM...)
+//---------------------------------
+/**
+ *  \brief From full ecliptic coordinates (directly from SPICE) to Earth-centered inertial coordinates.
+ **/
+void ecl2neci(double YECL[6], double YEARTH[6], double yneci[6], SS &ss);
+/**
+ *  \brief To full ecliptic coordinates (directly from SPICE) from to earth-centered inertial coordinates.
+ **/
+void neci2ecl(double yneci[6], double YEARTH[6], double YECL[6], SS &ss);
+/**
+ * \brief From synodic to earth-centered normalized coordinates, vector format.
+ *        Note that coord_eph = VEM/VSEM can be chosen independantly from the ss structure
+ *        that normalizes the state.
+ *        Note: for now the normalization is NOT taken into account because the stepper is going wrong when the state is normalized.
+ **/
+void syn2necistate_vec(double **yin, double *tin, double **yneci, double *tneci, int N, double et0, double tsys0, int coord_eph, SS &ss);
+/**
+ * \brief From ecliptic to synodic coordinates, vector format
+ **/
+void neci2synstate_vec(double **yneci, double *tneci, double **yout, double *tout, int N, double et0, double tsys0, int coord_eph, SS & ss);
+
+//---------------------------------
+// Normalized Earth-centered inertial (NECI) coordinates <-> any other native type (NCEM, NCSEM...)
+//---------------------------------
+/**
+ *  From Normalized-Ecliptic coordinates to a generic other coordinate system. The initial time tsys0 is given in SEM/EM coordinates, and yields the correspondance
+ *  between the ephemerides epoch and the normalized QBCP time.
+ **/
+void neci2coordstate_vec(double **yecl, double *etecl, double **yout, double *tout, int N, int coord_type, double et0,  double tsys0, int coord_eph, SS &ss);
+
+/**
+ *  To Normalized-Ecliptic coordinates from a generic other coordinate system. The initial time tsys0 is given in SEM/EM coordinates, and yields the correspondance
+ *  between the ephemerides epoch and the normalized QBCP time.
+ **/
+void coord2necistate_vec(double **yin, double *tin, double **yecl, double *etecl, int N, int coord_type, double et0,  double tsys0, int coord_eph, SS &ss);
 
 //========================================================================================
 //                          Compute the acceleration of the

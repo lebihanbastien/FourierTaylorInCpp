@@ -10,12 +10,12 @@
  */
 
 #include "vf.h"
+#include "ftc_errno.h"
 
-//=============================================================================================
-//
+//========================================================================================
 // Super COCs
 //
-//=============================================================================================
+//========================================================================================
 /**
  *  \brief COC: from inputType to outputType. Some specific checks are made.
  *         In particular, this routine makes sure that SEML is focused on the right system (either SEM or EM, depending on the inputType).
@@ -210,6 +210,43 @@ void ussem2usem(double *tc, double yINv[], QBCP_L *qbcp_l);
  **/
 void usem2ussem(double *tc, double yINv[], QBCP_L *qbcp_l);
 
+//========================================================================================
+//
+// INSEM to ECISEM
+//
+//========================================================================================
+/**
+ *   \brief Earth state in INSEM coordinates
+ **/
+void zEarth_INSEM(double t, double zEarth[], QBCP_L *qbcp_l);
+
+/**
+ *   \brief Earth acceleration in INSEM coordinates
+ **/
+void aEarth_INSEM(double t, double aEarth[], QBCP_L *qbcp_l);
+
+/**
+ *   \brief From INSEM to ECISEM (Earth-Centered) coordinates
+ **/
+void INSEMtoECISEM(double t, const double yINSEM[], double yECISEM[], QBCP_L *qbcp_l);
+
+
+/**
+ *   \brief From ECISEM to INSEM coordinates
+ **/
+void ECISEMtoINSEM(double t, const double yECISEM[], double yINSEM[], QBCP_L *qbcp_l);
+
+/**
+ *   \brief From INSEM to ECISEM (Earth-Centered) coordinates
+ **/
+void INSEMtoECISEM(double t, const double yINSEM[], double yECISEM[], double zEarth[]);
+
+
+/**
+ *   \brief From ECISEM to INSEM coordinates
+ **/
+void ECISEMtoINSEM(double t, const double yECISEM[], double yINSEM[], double zEarth[]);
+
 //=============================================================================================
 //
 // COC: SEM <--> IN <--> EM
@@ -244,7 +281,10 @@ void SEMtoIN(double t, const double ySE[], double yIN[],
  **/
 void INtoSEM(double t, const double yIN[], double ySE[],
              QBCP_L *qbcp_l);
-
+/**
+ * \brief From SEM to ECIN (in SEM units)
+ **/
+void SEMtoECISEM(double t, const double ySE[], double yIN[], QBCP_L *qbcp_l);
 
 //========================================================================================
 //
@@ -570,8 +610,18 @@ void ENorm(const double z0[], double z0n[], int k);
 int default_coordinate_system(int coord_type);
 
 /**
+ * \brief Get the default type of coordinates, from the dcs (inverse of default_coordinate_system).
+ **/
+int default_coordinate_type(int coord_type);
+
+/**
  * \brief Get the default framework, from the coord_type
  **/
 int default_framework(int coord_type);
+
+/**
+ * \brief Get the default framework, from the dcs
+ **/
+int default_framework_dcs(int dcs);
 
 #endif // EMINSEM_H_INCLUDED

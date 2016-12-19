@@ -179,6 +179,26 @@ void readIntProjCU_bin(string filename,
                        vector<size_t> &sortId);
 
 /**
+ *  \brief Read in a data file the connections between EML2 and SEML1,2.
+ *         Interpolate in the data set to get the right desired t0 at EML2 departures.
+ **/
+void readAndInterpolateIntProjCU_bin(string filename,
+                                     double t0_des,
+                                     vector<double>& t0_CMU_EM_0,
+                                     vector<double>& tf_man_EM_0,
+                                     vector<double>& s1_CMU_EM_0,
+                                     vector<double>& s2_CMU_EM_0,
+                                     vector<double>& s3_CMU_EM_0,
+                                     vector<double>& s4_CMU_EM_0,
+                                     vector<double>& s5_CMU_EM_0,
+                                     vector<double>& pmin_dist_SEM_0,
+                                     vector<double>& s1_CM_SEM_0,
+                                     vector<double>& s2_CM_SEM_0,
+                                     vector<double>& s3_CM_SEM_0,
+                                     vector<double>& s4_CM_SEM_0,
+                                     vector<size_t>& sortId);
+
+/**
  *  \brief Store in a data file the best connections between EML2 and SEML1,2.
  *         Used in int_proj_CMU_EM_on_CM_SEM.
  **/

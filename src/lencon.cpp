@@ -466,9 +466,9 @@ int int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM,
 
                 //---------------------------------------------------------------------
                 //Integration on man_grid_size+1 fixed grid
-                // PB: when Release + F_NCSEM!!
+                // PB: when Release + I_NCSEM!!
                 //---------------------------------------------------------------------
-                int status = ode78_qbcp(y_man_NCSEM, t_man_SEM, tv, tv+tmax_on_manifold_EM, yv, 6, man_grid_size, F_NCEM, NCEM, NCSEM);
+                int status = ode78(y_man_NCSEM, t_man_SEM, tv, tv+tmax_on_manifold_EM, yv, 6, man_grid_size, I_NCEM, NCEM, NCSEM);
 
                 //====================================================================================
                 // 3.2. Projection on the center manifold of SEML2. No use of SEML_EM or SEML after this point!
@@ -845,9 +845,9 @@ int int_proj_CMU_EM_on_CM_SEM_3D(double tmax_on_manifold_EM,
 
                         //---------------------------------------------------------------------
                         //Integration on man_grid_size+1 fixed grid
-                        // PB: when Release + F_NCSEM!!
+                        // PB: when Release + I_NCSEM!!
                         //---------------------------------------------------------------------
-                        int status = ode78_qbcp(y_man_NCSEM, t_man_SEM, tv, tv+tmax_on_manifold_EM, yv, 6, man_grid_size, F_NCEM, NCEM, NCSEM);
+                        int status = ode78(y_man_NCSEM, t_man_SEM, tv, tv+tmax_on_manifold_EM, yv, 6, man_grid_size, I_NCEM, NCEM, NCSEM);
 
                         //====================================================================================
                         // 3.2. Projection on the center manifold of SEML2. No use of SEML_EM or SEML after this point!
@@ -1144,7 +1144,7 @@ int int_proj_CMU_EM_on_CMS_SEM(double tmax_on_manifold_EM,
                 //---------------------------------------------------------------------
                 //Integration on man_grid_size+1 fixed grid
                 //---------------------------------------------------------------------
-                int status = ode78_qbcp(y_man_NCSEM, t_man_SEM, tv, tv+tmax_on_manifold_EM, yv, 6, man_grid_size, F_NCEM, NCEM, NCSEM);
+                int status = ode78(y_man_NCSEM, t_man_SEM, tv, tv+tmax_on_manifold_EM, yv, 6, man_grid_size, I_NCEM, NCEM, NCSEM);
 
                 //====================================================================================
                 // 3.2. Projection on the center manifold of SEML2. No use of SEML_EM or SEML after this point!
@@ -1581,7 +1581,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE(int cont_grid_size,
     //Stepper
     const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
     //Init ode structure
-    init_ode_structure(&driver_EM, T, T_root, 6, qbfbp_vfn_novar, &SEML_EM);
+    init_ode_structure(&driver_EM, T, T_root, 6, qbcp_vfn, &SEML_EM);
     //Init routine
     init_orbit(orbit_EM, &CM_EM_NC, &CM_EM_TFC,
                &Mcoc_EM, &MIcoc_EM, &Vcoc_EM, &orbit_ofs_EM, OFTS_ORDER, OFS_ORDER,
@@ -1615,7 +1615,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE(int cont_grid_size,
     SingleOrbit orbit_SEM;
 
     //Init ode structure
-    init_ode_structure(&driver_SEM, T, T_root, 6, qbfbp_vfn_novar, &SEML_SEM);
+    init_ode_structure(&driver_SEM, T, T_root, 6, qbcp_vfn, &SEML_SEM);
     //Init routine
     init_orbit(orbit_SEM, &CMS_SEM_NC, &CMS_SEM_TFC,
                &Mcoc_SEM, &MIcoc_SEM, &Vcoc_SEM, &orbit_ofs_SEM, OFTS_ORDER, OFS_ORDER,
@@ -1953,7 +1953,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_2(int man_grid_size,
     //Stepper
     const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
     //Init ode structure
-    init_ode_structure(&driver_EM, T, T_root, 6, qbfbp_vfn_novar, &SEML_EM);
+    init_ode_structure(&driver_EM, T, T_root, 6, qbcp_vfn, &SEML_EM);
     //Init routine
     init_orbit(orbit_EM, &CM_EM_NC, &CM_EM_TFC,
                &Mcoc_EM, &MIcoc_EM, &Vcoc_EM, &orbit_ofs_EM, OFTS_ORDER, OFS_ORDER,
@@ -1987,7 +1987,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_2(int man_grid_size,
     SingleOrbit orbit_SEM;
 
     //Init ode structure
-    init_ode_structure(&driver_SEM, T, T_root, 6, qbfbp_vfn_novar, &SEML_SEM);
+    init_ode_structure(&driver_SEM, T, T_root, 6, qbcp_vfn, &SEML_SEM);
     //Init routine
     init_orbit(orbit_SEM, &CMS_SEM_NC, &CMS_SEM_TFC,
                &Mcoc_SEM, &MIcoc_SEM, &Vcoc_SEM, &orbit_ofs_SEM, OFTS_ORDER, OFS_ORDER,
@@ -2266,7 +2266,7 @@ int refeml2seml(int man_grid_size,
     //Stepper
     const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
     //Init ode structure
-    init_ode_structure(&driver_EM, T, T_root, 6, qbfbp_vfn_novar, &SEML_EM);
+    init_ode_structure(&driver_EM, T, T_root, 6, qbcp_vfn, &SEML_EM);
     //Init routine
     init_orbit(orbit_EM, &CM_EM_NC, &CM_EM_TFC, &Mcoc_EM, &MIcoc_EM, &Vcoc_EM, &orbit_ofs_EM, OFTS_ORDER, OFS_ORDER,
                1, t0_EM_R[kpos], tf_EM_R[kpos], SEML.us_em.T/5, &driver_EM, &SEML_EM);
@@ -2299,7 +2299,7 @@ int refeml2seml(int man_grid_size,
     SingleOrbit orbit_SEM;
 
     //Init ode structure
-    init_ode_structure(&driver_SEM, T, T_root, 6, qbfbp_vfn_novar,&SEML_SEM);
+    init_ode_structure(&driver_SEM, T, T_root, 6, qbcp_vfn,&SEML_SEM);
     //Init routine
     init_orbit(orbit_SEM, &CMS_SEM_NC, &CMS_SEM_TFC,
                &Mcoc_SEM, &MIcoc_SEM, &Vcoc_SEM, &orbit_ofs_SEM, OFTS_ORDER, OFS_ORDER,
@@ -2477,7 +2477,7 @@ void srefeml2seml(SingleOrbit &orbit_EM,
     //---------------------------------------------------------------------
     int man_index = man_grid_size;
     if(refst.grid == REF_FIXED_GRID) //fixed time grid
-        ode78_qbcp(y_man_coord, t_man_coord, orbit_EM.t0, orbit_EM.tf, orbit_EM.z0, 6, man_grid_size, dcs, NCEM, coord_type);
+        ode78(y_man_coord, t_man_coord, orbit_EM.t0, orbit_EM.tf, orbit_EM.z0, 6, man_grid_size, dcs, NCEM, coord_type);
     else //variable time grid
         man_index = ode78_qbcp_vg(y_man_coord, t_man_coord, orbit_EM.t0, orbit_EM.tf, orbit_EM.z0, 6, man_grid_size, dcs, NCEM, coord_type, man_grid_size_t);
 
@@ -2717,7 +2717,7 @@ void srefeml2seml(SingleOrbit &orbit_EM,
             {
                 //Integration segment by segment
                 for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
-                ode78_qbcp(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+                ode78(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
 
                 for(int p = 0; p < mPlot; p++)
                 {
@@ -2904,7 +2904,7 @@ void srefeml2seml(SingleOrbit &orbit_EM,
                 {
                     //Integration segment by segment
                     for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
-                    ode78_qbcp(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+                    ode78(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
 
                     for(int p = 0; p < mPlot; p++)
                     {
@@ -3019,7 +3019,7 @@ void srefeml2seml(SingleOrbit &orbit_EM,
         {
             //Integration segment by segment
             for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
-            ode78_qbcp(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+            ode78(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
 
             //Plot on h2
             if(k == 0) gnuplot_plot_xyz(h2, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"Final trajectory", "lines", "1", "2", 0);
@@ -3189,7 +3189,7 @@ void crefvtplan(SingleOrbit &orbit_EM,
     //---------------------------------------------------------------------
     // Integration
     //---------------------------------------------------------------------
-    ode78_qbcp(y_man_coord, t_man_coord, orbit_EM.t0, orbit_EM.tf, orbit_EM.z0, 6, man_grid_size, dcs, NCEM, coord_type);
+    ode78(y_man_coord, t_man_coord, orbit_EM.t0, orbit_EM.tf, orbit_EM.z0, 6, man_grid_size, dcs, NCEM, coord_type);
 
     //---------------------------------------------------------------------
     // Save All BUT the last point
@@ -3429,7 +3429,7 @@ void crefvtplan(SingleOrbit &orbit_EM,
         {
             //Integration segment by segment
             for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
-            ode78_qbcp(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+            ode78(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
 
             //Plot on h2
             if(k == 0) gnuplot_plot_xyz(h2, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"Final trajectory", "lines", "1", "2", 0);
@@ -3579,7 +3579,7 @@ void crefftplan(SingleOrbit &orbit_EM,
     //---------------------------------------------------------------------
     // Integration
     //---------------------------------------------------------------------
-    ode78_qbcp(y_man_coord, t_man_coord, orbit_EM.t0, orbit_EM.tf, orbit_EM.z0, 6, man_grid_size, dcs, NCEM, coord_type);
+    ode78(y_man_coord, t_man_coord, orbit_EM.t0, orbit_EM.tf, orbit_EM.z0, 6, man_grid_size, dcs, NCEM, coord_type);
 
     //---------------------------------------------------------------------
     // Save All BUT the last point
@@ -3752,7 +3752,7 @@ void crefftplan(SingleOrbit &orbit_EM,
             {
                 //Integration segment by segment
                 for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
-                ode78_qbcp(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+                ode78(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
 
                 for(int p = 0; p < mPlot; p++)
                 {
@@ -3861,7 +3861,7 @@ void crefftplan(SingleOrbit &orbit_EM,
                 {
                     //Integration segment by segment
                     for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
-                    ode78_qbcp(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+                    ode78(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
 
                     for(int p = 0; p < mPlot; p++)
                     {
@@ -4044,7 +4044,7 @@ void crefftplan(SingleOrbit &orbit_EM,
         {
             //Integration segment by segment
             for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
-            ode78_qbcp(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+            ode78(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
             //Plot on h2
             if(k == 0) gnuplot_plot_xyz(h2, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"Final trajectory", "lines", "1", "2", 0);
             else gnuplot_plot_xyz(h2, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"", "lines", "1", "2", 0);
@@ -4165,7 +4165,7 @@ void crefft3d(SingleOrbit &orbit_EM,
     //---------------------------------------------------------------------
     // Integration
     //---------------------------------------------------------------------
-    ode78_qbcp(y_man_coord, t_man_coord, orbit_EM.t0, orbit_EM.tf, orbit_EM.z0, 6, man_grid_size, dcs, NCEM, coord_type);
+    ode78(y_man_coord, t_man_coord, orbit_EM.t0, orbit_EM.tf, orbit_EM.z0, 6, man_grid_size, dcs, NCEM, coord_type);
 
     //---------------------------------------------------------------------
     // Save All BUT the last point
@@ -4509,7 +4509,7 @@ void crefft3d(SingleOrbit &orbit_EM,
         {
             //Integration segment by segment
             for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
-            ode78_qbcp(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+            ode78(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
 
             //Plot on h2
             if(k == 0) gnuplot_plot_xyz(h2, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"Final trajectory", "lines", "1", "2", 0);
@@ -4628,7 +4628,7 @@ void srefvtplan(SingleOrbit &orbit_EM,
     //---------------------------------------------------------------------
     // Integration
     //---------------------------------------------------------------------
-    ode78_qbcp(y_man_coord, t_man_coord, orbit_EM.t0, orbit_EM.tf, orbit_EM.z0, 6, man_grid_size, dcs, NCEM, coord_type);
+    ode78(y_man_coord, t_man_coord, orbit_EM.t0, orbit_EM.tf, orbit_EM.z0, 6, man_grid_size, dcs, NCEM, coord_type);
 
     //---------------------------------------------------------------------
     // Save All BUT the last point
@@ -4868,7 +4868,7 @@ void srefvtplan(SingleOrbit &orbit_EM,
     {
         //Integration segment by segment
         for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
-        ode78_qbcp(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+        ode78(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
 
         //Plot on h2
         if(k == 0) gnuplot_plot_xyz(h2, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"Final trajectory", "lines", "1", "2", 0);
@@ -4880,7 +4880,7 @@ void srefvtplan(SingleOrbit &orbit_EM,
     //---------------------------------------------------------------------
     int kstart = 0; //starts at the CMU entry, and NOT at the EML2 orbit entry (kstart != 0)
     for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][kstart];
-    ode78_qbcp(y_traj, t_traj, t_traj_n[kstart], t2, yv, 6, traj_grid_size, dcs, coord_type, coord_type);
+    ode78(y_traj, t_traj, t_traj_n[kstart], t2, yv, 6, traj_grid_size, dcs, coord_type, coord_type);
 
     //Plot on h2
     //gnuplot_plot_xyz(h2, y_traj[0], y_traj[1],  y_traj[2], traj_grid_size+1, (char*)"Final trajectory (single shooting)", "lines", "1", "3", 8);
@@ -5055,7 +5055,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ_T(int proj_grid_size,
     //Stepper
     const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
     //Init ode structure
-    init_ode_structure(&driver_EM, T, T_root, 6, qbfbp_vfn_novar, &SEML_EM);
+    init_ode_structure(&driver_EM, T, T_root, 6, qbcp_vfn, &SEML_EM);
     //Init routine
     init_orbit(orbit_EM, &CM_EM_NC, &CM_EM_TFC,
                &Mcoc_EM, &MIcoc_EM, &Vcoc_EM, &orbit_ofs_EM, OFTS_ORDER, OFS_ORDER,
@@ -5081,7 +5081,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ_T(int proj_grid_size,
     //---------------------------------------------------------------------
     //Integration on proj_grid_size+1 fixed grid
     //---------------------------------------------------------------------
-    int status = ode78_qbcp(y_man_NCSEM, t_man_SEM, t0_EM, t0_EM+tmax_on_manifold_EM, orbit_EM.z0, 6, proj_grid_size, F_NCEM, NCEM, NCSEM);
+    int status = ode78(y_man_NCSEM, t_man_SEM, t0_EM, t0_EM+tmax_on_manifold_EM, orbit_EM.z0, 6, proj_grid_size, I_NCEM, NCEM, NCSEM);
 
     //----------------------------------------------------------
     // projection by default is arbitrarily big
@@ -5186,7 +5186,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ_T(int proj_grid_size,
     SingleOrbit orbit_SEM;
 
     //Init ode structure
-    init_ode_structure(&driver_SEM, T, T_root, 6, qbfbp_vfn_novar, &SEML_SEM);
+    init_ode_structure(&driver_SEM, T, T_root, 6, qbcp_vfn, &SEML_SEM);
     //Init routine
     init_orbit(orbit_SEM, &CMS_SEM_NC, &CMS_SEM_TFC,
                &Mcoc_SEM, &MIcoc_SEM, &Vcoc_SEM, &orbit_ofs_SEM, OFTS_ORDER, OFS_ORDER,
@@ -5366,7 +5366,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ_OPT(int proj_grid_size,
     //Stepper
     const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
     //Init ode structure
-    init_ode_structure(&driver_EM, T, T_root, 6, qbfbp_vfn_novar, &SEML_EM);
+    init_ode_structure(&driver_EM, T, T_root, 6, qbcp_vfn, &SEML_EM);
     //Init routine
     init_orbit(orbit_EM, &CM_EM_NC, &CM_EM_TFC,
                &Mcoc_EM, &MIcoc_EM, &Vcoc_EM, &orbit_ofs_EM, OFTS_ORDER, OFS_ORDER,
@@ -5421,7 +5421,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ_OPT(int proj_grid_size,
         //---------------------------------------------------------------------
         //Integration on proj_grid_size+1 fixed grid
         //---------------------------------------------------------------------
-        int status = ode78_qbcp(y_man_NCSEM, t_man_SEM, t0_EM, t0_EM+tmax_on_manifold_EM, orbit_EM.z0, 6, proj_grid_size, F_NCEM, NCEM, NCSEM);
+        int status = ode78(y_man_NCSEM, t_man_SEM, t0_EM, t0_EM+tmax_on_manifold_EM, orbit_EM.z0, 6, proj_grid_size, I_NCEM, NCEM, NCSEM);
 
         //----------------------------------------------------------
         // We need first to check that the integration went well
@@ -5578,7 +5578,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ_OPT(int proj_grid_size,
     SingleOrbit orbit_SEM;
 
     //Init ode structure
-    init_ode_structure(&driver_SEM, T, T_root, 6, qbfbp_vfn_novar, &SEML_SEM);
+    init_ode_structure(&driver_SEM, T, T_root, 6, qbcp_vfn, &SEML_SEM);
     //Init routine
     init_orbit(orbit_SEM, &CMS_SEM_NC, &CMS_SEM_TFC,
                &Mcoc_SEM, &MIcoc_SEM, &Vcoc_SEM, &orbit_ofs_SEM, OFTS_ORDER, OFS_ORDER,
@@ -5692,7 +5692,7 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_3D(SingleOrbit &orbit_EM,
     //---------------------------------------------------------------------
     // Integration
     //---------------------------------------------------------------------
-    ode78_qbcp(y_man_coord, t_man_coord, orbit_EM.t0, orbit_EM.tf, orbit_EM.z0, 6, man_grid_size, dcs, NCEM, coord_type);
+    ode78(y_man_coord, t_man_coord, orbit_EM.t0, orbit_EM.tf, orbit_EM.z0, 6, man_grid_size, dcs, NCEM, coord_type);
 
     //---------------------------------------------------------------------
     // Save All BUT the last point
@@ -6008,7 +6008,7 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_3D(SingleOrbit &orbit_EM,
     {
         //Integration segment by segment
         for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
-        ode78_qbcp(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+        ode78(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
 
         //Plot on h2
         if(k == 0) gnuplot_plot_xyz(h2, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"Final trajectory", "lines", "1", "2", 0);
@@ -6020,7 +6020,7 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_3D(SingleOrbit &orbit_EM,
     //---------------------------------------------------------------------
     int kstart = 0; //starts at the CMU entry, and NOT at the EML2 orbit entry (kstart != 0)
     for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][kstart];
-    ode78_qbcp(y_traj, t_traj, t_traj_n[kstart], t2, yv, 6, traj_grid_size, dcs, coord_type, coord_type);
+    ode78(y_traj, t_traj, t_traj_n[kstart], t2, yv, 6, traj_grid_size, dcs, coord_type, coord_type);
 
     //Plot on h2
     //gnuplot_plot_xyz(h2, y_traj[0], y_traj[1],  y_traj[2], traj_grid_size+1, (char*)"Final trajectory (single shooting)", "lines", "1", "3", 8);
@@ -6137,7 +6137,7 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR_CONT_PAC_AFT(SingleOrbit &orbit_EM,
     //---------------------------------------------------------------------
     // Integration
     //---------------------------------------------------------------------
-    ode78_qbcp(y_man_coord, t_man_coord, orbit_EM.t0, orbit_EM.tf, orbit_EM.z0, 6, man_grid_size, dcs, NCEM, coord_type);
+    ode78(y_man_coord, t_man_coord, orbit_EM.t0, orbit_EM.tf, orbit_EM.z0, 6, man_grid_size, dcs, NCEM, coord_type);
 
     //---------------------------------------------------------------------
     // Save All BUT the last point
@@ -6505,7 +6505,7 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR_CONT_PAC_AFT(SingleOrbit &orbit_EM,
     {
         //Integration segment by segment
         for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
-        ode78_qbcp(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+        ode78(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
 
         //Plot on h2
         if(k == 0) gnuplot_plot_xyz(h2, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"Final trajectory", "lines", "1", "2", 0);
@@ -6521,7 +6521,7 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR_CONT_PAC_AFT(SingleOrbit &orbit_EM,
     //---------------------------------------------------------------------
     int kstart = 0; //starts at the CMU entry, and NOT at the EML2 orbit entry (kstart != 0)
     for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][kstart];
-    ode78_qbcp(y_traj, t_traj, t_traj_n[kstart], t2, yv, 6, traj_grid_size, dcs, coord_type, coord_type);
+    ode78(y_traj, t_traj, t_traj_n[kstart], t2, yv, 6, traj_grid_size, dcs, coord_type, coord_type);
 
     //Plot on h2
     //gnuplot_plot_xyz(h2, y_traj[0], y_traj[1],  y_traj[2], traj_grid_size+1, (char*)"Final trajectory (single shooting)", "lines", "1", "3", 8);
@@ -6645,7 +6645,7 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR_CONT_PAC(SingleOrbit &orbit_EM,
     //---------------------------------------------------------------------
     // Integration
     //---------------------------------------------------------------------
-    ode78_qbcp(y_man_coord, t_man_coord, orbit_EM.t0, orbit_EM.tf, orbit_EM.z0, 6, man_grid_size, dcs, NCEM, coord_type);
+    ode78(y_man_coord, t_man_coord, orbit_EM.t0, orbit_EM.tf, orbit_EM.z0, 6, man_grid_size, dcs, NCEM, coord_type);
 
     //---------------------------------------------------------------------
     // Save All BUT the last point
@@ -7013,7 +7013,7 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR_CONT_PAC(SingleOrbit &orbit_EM,
     {
         //Integration segment by segment
         for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
-        ode78_qbcp(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+        ode78(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
 
         //Plot on h2
         if(k == 0) gnuplot_plot_xyz(h2, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"Final trajectory", "lines", "1", "2", 0);
@@ -7025,7 +7025,7 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR_CONT_PAC(SingleOrbit &orbit_EM,
     //---------------------------------------------------------------------
     int kstart = 0; //starts at the CMU entry, and NOT at the EML2 orbit entry (kstart != 0)
     for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][kstart];
-    ode78_qbcp(y_traj, t_traj, t_traj_n[kstart], t2, yv, 6, traj_grid_size, dcs, coord_type, coord_type);
+    ode78(y_traj, t_traj, t_traj_n[kstart], t2, yv, 6, traj_grid_size, dcs, coord_type, coord_type);
 
     //Plot on h2
     //gnuplot_plot_xyz(h2, y_traj[0], y_traj[1],  y_traj[2], traj_grid_size+1, (char*)"Final trajectory (single shooting)", "lines", "1", "3", 8);
@@ -7305,7 +7305,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP(int ofts_order,
         //Stepper
         const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
         //Init ode structure
-        init_ode_structure(&driver, T, T_root, 6, qbfbp_vfn_novar, &SEML_EM);
+        init_ode_structure(&driver, T, T_root, 6, qbcp_vfn, &SEML_EM);
         //Init routine
         init_orbit(orbit, &CM_EM_NC, &CM_EM_TFC,
                    &Mcoc_EM, &MIcoc_EM, &Vcoc_EM, &orbit_ofs, OFTS_ORDER, OFS_ORDER,
@@ -7353,7 +7353,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP(int ofts_order,
         //---------------------------------------------------------------------
         // Integration
         //---------------------------------------------------------------------
-        ode78_qbcp(y_man_coord, t_man_coord, t0_EM[kpos], tf_EM[kpos], yv, 6, man_grid_size, dcs, NCEM, coord_type);
+        ode78(y_man_coord, t_man_coord, t0_EM[kpos], tf_EM[kpos], yv, 6, man_grid_size, dcs, NCEM, coord_type);
 
         //---------------------------------------------------------------------
         // Save All BUT the last point
@@ -7395,7 +7395,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP(int ofts_order,
         // Initialisation of the orbit structure
         //---------------------------------------------------------------------
         //Init ode structure
-        init_ode_structure(&driver, T, T_root, 6, qbfbp_vfn_novar, &SEML_SEM);
+        init_ode_structure(&driver, T, T_root, 6, qbcp_vfn, &SEML_SEM);
         //Init routine
         init_orbit(orbit, &CM_SEM_NC, &CM_SEM_TFC,
                    &Mcoc_SEM, &MIcoc_SEM, &Vcoc_SEM, &orbit_ofs, OFTS_ORDER, OFS_ORDER,
@@ -7435,8 +7435,8 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP(int ofts_order,
         // 6.5 Differential correction & final trajectory
         //====================================================================================
         int isPlotted   = 0;
-        multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, yma, 42, traj_grid_size, coord_type, isPlotted, h2);
-        //multiple_shooting_direct_variable_time(y_traj, t_traj, y_traj_n, t_traj_n, yma, 42, traj_grid_size, coord_type, isPlotted, isTimeFixed, h2);
+        multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, 42, traj_grid_size, coord_type, isPlotted, h2);
+        //multiple_shooting_direct_variable_time(y_traj, t_traj, y_traj_n, t_traj_n, 42, traj_grid_size, coord_type, isPlotted, isTimeFixed, h2);
 
 
         //---------------------------------------------------------------------
@@ -7454,7 +7454,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP(int ofts_order,
         {
             //Integration segment by segment
             for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
-            ode78_qbcp(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+            ode78(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
 
             //Color
             //color = (int) 2*t_traj_n[k]/SEML.us_sem.T+1;
@@ -7480,7 +7480,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP(int ofts_order,
         //---------------------------------------------------------------------
         int kstart = man_grid_size; //starts at the CMU entry, and NOT at the EML2 orbit entry (kstart != 0)
         for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][kstart];
-        ode78_qbcp(y_traj, t_traj, t_traj_n[kstart], t_traj_n[traj_grid_size], yv, 6, traj_grid_size, dcs, coord_type, coord_type);
+        ode78(y_traj, t_traj, t_traj_n[kstart], t_traj_n[traj_grid_size], yv, 6, traj_grid_size, dcs, coord_type, coord_type);
 
         //Plot on h2
         //gnuplot_plot_xyz(h2, y_traj[0], y_traj[1],  y_traj[2], traj_grid_size+1, (char*)"Final trajectory (single shooting)", "lines", "1", "3", 8);
@@ -7775,7 +7775,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP(int man_grid_size,
     //---------------------------------------------------------------------
     // Integration
     //---------------------------------------------------------------------
-    ode78_qbcp(y_man_coord, t_man_coord, orbit_EM.t0, tf_EM, orbit_EM.z0, 6, man_grid_size, dcs, NCEM, coord_type);
+    ode78(y_man_coord, t_man_coord, orbit_EM.t0, tf_EM, orbit_EM.z0, 6, man_grid_size, dcs, NCEM, coord_type);
 
     //---------------------------------------------------------------------
     //To comp_type coordinates
@@ -7853,7 +7853,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP(int man_grid_size,
     {
         //Integration segment by segment
         for(int i = 0; i < 6; i++) yv[i] = y_traj[i][k];
-        ode78_qbcp(ymc, tmc, t_traj[k], t_traj[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+        ode78(ymc, tmc, t_traj[k], t_traj[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
 
         //Color
         //color = (int) 2*t_traj[k]/SEML.us_sem.T+1;
@@ -7874,8 +7874,8 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP(int man_grid_size,
     // 6.5 Differential correction & final trajectory
     //====================================================================================
     int isPlotted   = 0;
-    multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, yma, 42, traj_grid_size, coord_type, isPlotted, h2);
-    //multiple_shooting_direct_variable_time(y_traj, t_traj, y_traj_n, t_traj_n, yma, 42, traj_grid_size, coord_type, isPlotted, isTimeFixed, h2);
+    multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, 42, traj_grid_size, coord_type, isPlotted, h2);
+    //multiple_shooting_direct_variable_time(y_traj, t_traj, y_traj_n, t_traj_n, 42, traj_grid_size, coord_type, isPlotted, isTimeFixed, h2);
 
     //---------------------------------------------------------------------
     // Final trajectory, on a grid
@@ -7885,7 +7885,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP(int man_grid_size,
     //    {
     //        //Integration segment by segment
     //        for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
-    //        ode78_qbcp(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+    //        ode78(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
     //
     //        //Color
     //        //color = (int) 2*t_traj_n[k]/SEML.us_sem.T+1;
@@ -8034,7 +8034,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP(int man_grid_size,
     {
         //Integration segment by segment
         for(int i = 0; i < 6; i++) yv[i] = y_traj_jpl[i][k];
-        ode78_jpl(ymc_comp, tmc_comp, et_traj_jpl[k], et_traj_jpl[k+1], yv, 6, mPlot, F_ECLI, VECLI, VECLI);
+        ode78_jpl(ymc_comp, tmc_comp, et_traj_jpl[k], et_traj_jpl[k+1], yv, 6, mPlot, I_ECLI, VECLI, VECLI);
 
         //Back to NCSEM coordinates
         ecl2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coord_type, et0, t_traj[shift], eph_coord(coord_type));
@@ -8055,7 +8055,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP(int man_grid_size,
     // 6.5 Differential correction & final trajectory
     //====================================================================================
     isPlotted   = 1;
-    multiple_shooting_direct(y_traj_jpl, et_traj_jpl, y_traj_jpl_n, t_traj_jpl_n, yma, 42, man_grid_size, VECLI, isPlotted, h4);
+    multiple_shooting_direct(y_traj_jpl, et_traj_jpl, y_traj_jpl_n, t_traj_jpl_n, 42, man_grid_size, VECLI, isPlotted, h4);
     //Plot
     gnuplot_plot_xy(h4, y_traj_jpl_n[0], y_traj_jpl_n[1],  man_grid_size+1, (char*) "Final trajectory", "lines", "2", "2", 7);
 
@@ -8432,7 +8432,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP_VARIABLE_GRID(int coord_type,
     //    {
     //        //Integration segment by segment
     //        for(int i = 0; i < 6; i++) yv[i] = y_traj[i][k];
-    //        ode78_qbcp(ymc, tmc, t_traj[k], t_traj[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+    //        ode78(ymc, tmc, t_traj[k], t_traj[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
     //
     //        //Color
     //        //color = (int) 2*t_traj[k]/SEML.us_sem.T+1;
@@ -8453,8 +8453,8 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP_VARIABLE_GRID(int coord_type,
     // 6.5 Differential correction & final trajectory
     //====================================================================================
     int isPlotted   = 0;
-    multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, yma, 42, final_index, coord_type, isPlotted, h2);
-    //multiple_shooting_direct_variable_time(y_traj, t_traj, y_traj_n, t_traj_n, yma, 42, traj_grid_size, coord_type, isPlotted, isTimeFixed, h2);
+    multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, h2);
+    //multiple_shooting_direct_variable_time(y_traj, t_traj, y_traj_n, t_traj_n, 42, traj_grid_size, coord_type, isPlotted, isTimeFixed, h2);
 
     //---------------------------------------------------------------------
     // Final trajectory, on a grid
@@ -8464,7 +8464,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP_VARIABLE_GRID(int coord_type,
     //        {
     //            //Integration segment by segment
     //            for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
-    //            ode78_qbcp(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+    //            ode78(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
     //
     //            //Color
     //            //color = (int) 2*t_traj_n[k]/SEML.us_sem.T+1;
@@ -8619,7 +8619,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP_VARIABLE_GRID(int coord_type,
     {
         //Integration segment by segment
         for(int i = 0; i < 6; i++) yv[i] = y_traj_jpl[i][k];
-        ode78_jpl(ymc_comp, tmc_comp, et_traj_jpl[k], et_traj_jpl[k+1], yv, 6, mPlot, F_ECLI, VECLI, VECLI);
+        ode78_jpl(ymc_comp, tmc_comp, et_traj_jpl[k], et_traj_jpl[k+1], yv, 6, mPlot, I_ECLI, VECLI, VECLI);
 
         //Back to NCSEM coordinates
         ecl2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coord_type, et0, t_traj[shift], eph_coord(coord_type));
@@ -8640,7 +8640,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP_VARIABLE_GRID(int coord_type,
     // 6.5 Differential correction & final trajectory
     //====================================================================================
     isPlotted   = 1;
-    multiple_shooting_direct(y_traj_jpl, et_traj_jpl, y_traj_jpl_n, t_traj_jpl_n, yma, 42, final_index, VECLI, isPlotted, h4);
+    multiple_shooting_direct(y_traj_jpl, et_traj_jpl, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, VECLI, isPlotted, h4);
     //Plot
     gnuplot_plot_xy(h4, y_traj_jpl_n[0], y_traj_jpl_n[1], final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
 
@@ -8652,7 +8652,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP_VARIABLE_GRID(int coord_type,
     {
         //Integration segment by segment
         for(int i = 0; i < 6; i++) yv[i] = y_traj_jpl_n[i][k];
-        ode78_jpl(ymc_comp, tmc_comp, t_traj_jpl_n[k], t_traj_jpl_n[k+1], yv, 6, mPlot, F_ECLI, VECLI, VECLI);
+        ode78_jpl(ymc_comp, tmc_comp, t_traj_jpl_n[k], t_traj_jpl_n[k+1], yv, 6, mPlot, I_ECLI, VECLI, VECLI);
 
         //Back to NCSEM coordinates
         ecl2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coord_type, et0, t_traj[shift], eph_coord(coord_type));
@@ -9078,7 +9078,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP_VARIABLE_GRID_TEST(int coord_type, SingleOrbit
     {
         //Integration segment by segment
         for(int i = 0; i < 6; i++) yv[i] = y_traj_jpl[i][k];
-        ode78_jpl(ymc_comp, tmc_comp, et_traj_jpl[k], et_traj_jpl[k+1], yv, 6, mPlot, F_ECLI, VECLI, VECLI);
+        ode78_jpl(ymc_comp, tmc_comp, et_traj_jpl[k], et_traj_jpl[k+1], yv, 6, mPlot, I_ECLI, VECLI, VECLI);
 
         //Back to NCSEM coordinates
         ecl2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coord_type, et0, t_traj[shift], eph_coord(coord_type));
@@ -9099,7 +9099,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP_VARIABLE_GRID_TEST(int coord_type, SingleOrbit
     // 6.5 Differential correction & final trajectory
     //====================================================================================
     int isPlotted   = 1;
-    multiple_shooting_direct(y_traj_jpl, et_traj_jpl, y_traj_jpl_n, t_traj_jpl_n, yma, 42, final_index, VECLI, isPlotted, h4);
+    multiple_shooting_direct(y_traj_jpl, et_traj_jpl, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, VECLI, isPlotted, h4);
     //Plot
     gnuplot_plot_xy(h4, y_traj_jpl_n[0], y_traj_jpl_n[1], final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
 
@@ -9111,7 +9111,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP_VARIABLE_GRID_TEST(int coord_type, SingleOrbit
     {
         //Integration segment by segment
         for(int i = 0; i < 6; i++) yv[i] = y_traj_jpl_n[i][k];
-        ode78_jpl(ymc_comp, tmc_comp, t_traj_jpl_n[k], t_traj_jpl_n[k+1], yv, 6, mPlot, F_ECLI, VECLI, VECLI);
+        ode78_jpl(ymc_comp, tmc_comp, t_traj_jpl_n[k], t_traj_jpl_n[k+1], yv, 6, mPlot, I_ECLI, VECLI, VECLI);
 
         //Back to NCSEM coordinates
         ecl2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coord_type, et0, t_traj[shift], eph_coord(coord_type));
@@ -9415,7 +9415,7 @@ int comprefft3d(int man_grid_size_t,
     //---------------------------------------------------------------------
     int man_index = man_grid_2;
     if(refst.grid == REF_FIXED_GRID) //fixed grid
-        ode78_qbcp(y_man_coord, t_man_coord, orbit_EM.t0, tf_EM, orbit_EM.z0, 6, man_grid_2, dcs, NCEM, coord_type);
+        ode78(y_man_coord, t_man_coord, orbit_EM.t0, tf_EM, orbit_EM.z0, 6, man_grid_2, dcs, NCEM, coord_type);
     else //variable grid
         man_index = ode78_qbcp_vg(y_man_coord, t_man_coord, orbit_EM.t0, tf_EM, orbit_EM.z0, 6, man_grid_2, dcs, NCEM, coord_type, -1);
 
@@ -9547,7 +9547,7 @@ int comprefft3d(int man_grid_size_t,
     {
         //Integration segment by segment
         for(int i = 0; i < 6; i++) yv[i] = y_traj[i][k];
-        ode78_qbcp(ymc, tmc, t_traj[k], t_traj[k+1], yv, 6, mPlot, NCEM, coord_type, coord_type);
+        ode78(ymc, tmc, t_traj[k], t_traj[k+1], yv, 6, mPlot, NCEM, coord_type, coord_type);
 
         //Store
         for(int p = 0; p <= mPlot; p++)
@@ -9577,8 +9577,8 @@ int comprefft3d(int man_grid_size_t,
     scanf("%c",&ch);
 
     int isPlotted   = 0;
-    multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, yma, 42, final_index, coord_type, isPlotted, h2);
-    //multiple_shooting_direct_variable_time(y_traj, t_traj, y_traj_n, t_traj_n, yma, 42, final_index, coord_type, isPlotted, isTimeFixed, h2);
+    multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, h2);
+    //multiple_shooting_direct_variable_time(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, isTimeFixed, h2);
 
     //---------------------------------------------------------------------
     // Final trajectory, on a grid
@@ -9589,7 +9589,7 @@ int comprefft3d(int man_grid_size_t,
     {
         //Integration segment by segment
         for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
-        ode78_qbcp(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+        ode78(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
 
         //Store
         for(int p = 0; p <= mPlot; p++)
@@ -9625,7 +9625,7 @@ int comprefft3d(int man_grid_size_t,
         cout << "Enter 0 for VECLI, 1 for J2000: ";
         cin >> choice;
         int coord_int = choice == 0? VECLI:J2000;
-        int fwrk_int  = choice == 0? F_ECLI:F_J2000;
+        int fwrk_int  = choice == 0? I_ECLI:I_J2000;
 
         //Focus on SEM for normalized units
         //if(choice == 1) changeDCS(SEML, F_SEM);
@@ -9688,7 +9688,7 @@ int comprefft3d(int man_grid_size_t,
             break;
 
             case J2000:
-            coord2eclnstate_vec(y_traj_n, t_traj_n, y_traj_jpl, t_traj_jpl, final_index, coord_type, et0,  tsys0, eph_coord(coord_type));//, SEML.ss);
+            coord2ecistate_vec(y_traj_n, t_traj_n, y_traj_jpl, t_traj_jpl, final_index, coord_type, et0,  tsys0, eph_coord(coord_type));//, SEML.ss);
             break;
         }
 
@@ -9714,7 +9714,7 @@ int comprefft3d(int man_grid_size_t,
             break;
 
             case J2000:
-            coord2eclnstate_vec(y_traj_n, t_traj_n, y_traj_jpl_n, t_traj_jpl_n, final_index, coord_type, et0,  tsys0_comp, eph_coord(comp_type));//, SEML.ss);
+            coord2ecistate_vec(y_traj_n, t_traj_n, y_traj_jpl_n, t_traj_jpl_n, final_index, coord_type, et0,  tsys0_comp, eph_coord(comp_type));//, SEML.ss);
             break;
         }
 
@@ -9803,7 +9803,7 @@ int comprefft3d(int man_grid_size_t,
                 break;
 
                 case J2000:
-                ecln2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coord_type, et0, tsys0, eph_coord(coord_type));//, SEML.ss);
+                eci2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coord_type, et0, tsys0, eph_coord(coord_type));//, SEML.ss);
                 break;
             }
 
@@ -9823,7 +9823,7 @@ int comprefft3d(int man_grid_size_t,
                 break;
 
                 case J2000:
-                ecln2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, comp_type, et0, tsys0_comp, eph_coord(comp_type));//, SEML.ss);
+                eci2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, comp_type, et0, tsys0_comp, eph_coord(comp_type));//, SEML.ss);
                 break;
             }
 
@@ -9843,8 +9843,8 @@ int comprefft3d(int man_grid_size_t,
         cout << " comprefft3d. Refine trajectory in JPL ephemerides..." << endl;
 
         isPlotted   = 1;
-        multiple_shooting_direct_variable_time(y_traj_jpl, t_traj_jpl, y_traj_jpl_n, t_traj_jpl_n, yma, 42, final_index, coord_int, isPlotted, h4);
-        //multiple_shooting_direct(y_traj_jpl, t_traj_jpl, y_traj_jpl_n, t_traj_jpl_n, yma, 42, final_index, coord_int, isPlotted, h4);
+        multiple_shooting_direct_variable_time(y_traj_jpl, t_traj_jpl, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, coord_int, 5e-9, isPlotted, h4);
+        //multiple_shooting_direct(y_traj_jpl, t_traj_jpl, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, coord_int, isPlotted, h4);
         //Plot
         gnuplot_plot_xyz(h4, y_traj_jpl_n[0], y_traj_jpl_n[1], y_traj_jpl_n[2], final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
 
@@ -9866,7 +9866,7 @@ int comprefft3d(int man_grid_size_t,
                 break;
 
                 case J2000:
-                ecln2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coord_type, et0, tsys0, eph_coord(coord_type));//, SEML.ss);
+                eci2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coord_type, et0, tsys0, eph_coord(coord_type));//, SEML.ss);
                 break;
             }
 
@@ -9886,7 +9886,7 @@ int comprefft3d(int man_grid_size_t,
                 break;
 
                 case J2000:
-                ecln2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, comp_type, et0, tsys0_comp, eph_coord(comp_type));//, SEML.ss);
+                eci2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, comp_type, et0, tsys0_comp, eph_coord(comp_type));//, SEML.ss);
                 break;
             }
 
@@ -10240,7 +10240,7 @@ int comprefft3d_test_seml_dimjpl(int man_grid_size_t,
     {
         //Integration segment by segment
         for(int i = 0; i < 6; i++) yv[i] = y_traj[i][k];
-        ode78_qbcp(ymc, tmc, t_traj[k], t_traj[k+1], yv, 6, mPlot, NCEM, coord_type, coord_type);
+        ode78(ymc, tmc, t_traj[k], t_traj[k+1], yv, 6, mPlot, NCEM, coord_type, coord_type);
 
         //Store
         for(int p = 0; p <= mPlot; p++)
@@ -10270,8 +10270,8 @@ int comprefft3d_test_seml_dimjpl(int man_grid_size_t,
     scanf("%c",&ch);
 
     int isPlotted   = 0;
-    multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, yma, 42, final_index, coord_type, isPlotted, h2);
-    //multiple_shooting_direct_variable_time(y_traj, t_traj, y_traj_n, t_traj_n, yma, 42, final_index, coord_type, isPlotted, isTimeFixed, h2);
+    multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, h2);
+    //multiple_shooting_direct_variable_time(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, isTimeFixed, h2);
 
     //---------------------------------------------------------------------
     // Final trajectory, on a grid
@@ -10282,7 +10282,7 @@ int comprefft3d_test_seml_dimjpl(int man_grid_size_t,
     {
         //Integration segment by segment
         for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
-        ode78_qbcp(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+        ode78(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
 
         //Store
         for(int p = 0; p <= mPlot; p++)
@@ -10414,7 +10414,7 @@ int comprefft3d_test_seml_dimjpl(int man_grid_size_t,
         {
             //Integration segment by segment
             for(int i = 0; i < 6; i++) yv[i] = y_traj_jpl[i][k];
-            ode78_jpl(ymc_comp, tmc_comp, et_traj_jpl[k], et_traj_jpl[k+1], yv, 6, mPlot, F_ECLI, VECLI, VECLI);
+            ode78_jpl(ymc_comp, tmc_comp, et_traj_jpl[k], et_traj_jpl[k+1], yv, 6, mPlot, I_ECLI, VECLI, VECLI);
 
             //Back to coord_type coordinates
             ecl2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coord_type, et0, tsys0, eph_coord(coord_type));
@@ -10441,7 +10441,7 @@ int comprefft3d_test_seml_dimjpl(int man_grid_size_t,
         cout << " comprefft3d. Refine trajectory in JPL ephemerides..." << endl;
 
         isPlotted   = 1;
-        multiple_shooting_direct(y_traj_jpl, et_traj_jpl, y_traj_jpl_n, t_traj_jpl_n, yma, 42, final_index, VECLI, isPlotted, h4);
+        multiple_shooting_direct(y_traj_jpl, et_traj_jpl, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, VECLI, isPlotted, h4);
         //Plot
         gnuplot_plot_xy(h4, y_traj_jpl_n[0], y_traj_jpl_n[1], final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
 
@@ -10453,7 +10453,7 @@ int comprefft3d_test_seml_dimjpl(int man_grid_size_t,
         {
             //Integration segment by segment
             for(int i = 0; i < 6; i++) yv[i] = y_traj_jpl_n[i][k];
-            ode78_jpl(ymc_comp, tmc_comp, t_traj_jpl_n[k], t_traj_jpl_n[k+1], yv, 6, mPlot, F_ECLI, VECLI, VECLI);
+            ode78_jpl(ymc_comp, tmc_comp, t_traj_jpl_n[k], t_traj_jpl_n[k+1], yv, 6, mPlot, I_ECLI, VECLI, VECLI);
 
             //Back to coord_type coordinates
             ecl2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coord_type, et0, tsys0, eph_coord(coord_type));
@@ -10813,7 +10813,7 @@ int comprefft3d_test_seml_synjpl(int man_grid_size_t,
     {
         //Integration segment by segment
         for(int i = 0; i < 6; i++) yv[i] = y_traj[i][k];
-        ode78_qbcp(ymc, tmc, t_traj[k], t_traj[k+1], yv, 6, mPlot, NCEM, coord_type, coord_type);
+        ode78(ymc, tmc, t_traj[k], t_traj[k+1], yv, 6, mPlot, NCEM, coord_type, coord_type);
 
         //Store
         for(int p = 0; p <= mPlot; p++)
@@ -10843,8 +10843,8 @@ int comprefft3d_test_seml_synjpl(int man_grid_size_t,
     scanf("%c",&ch);
 
     int isPlotted   = 0;
-    multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, yma, 42, final_index, coord_type, isPlotted, h2);
-    //multiple_shooting_direct_variable_time(y_traj, t_traj, y_traj_n, t_traj_n, yma, 42, final_index, coord_type, isPlotted, isTimeFixed, h2);
+    multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, h2);
+    //multiple_shooting_direct_variable_time(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, isTimeFixed, h2);
 
     //---------------------------------------------------------------------
     // Final trajectory, on a grid
@@ -10855,7 +10855,7 @@ int comprefft3d_test_seml_synjpl(int man_grid_size_t,
     {
         //Integration segment by segment
         for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
-        ode78_qbcp(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+        ode78(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
 
         //Store
         for(int p = 0; p <= mPlot; p++)
@@ -11008,7 +11008,7 @@ int comprefft3d_test_seml_synjpl(int man_grid_size_t,
         cout << " comprefft3d. Refine trajectory in JPL ephemerides..." << endl;
 
         isPlotted   = 1;
-        multiple_shooting_direct(y_traj_syn, t_traj_syn, y_traj_jpl_n, t_traj_jpl_n, yma, 42, final_index, eph_coord(coord_type), isPlotted, h4);
+        multiple_shooting_direct(y_traj_syn, t_traj_syn, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, eph_coord(coord_type), isPlotted, h4);
         //Plot
         gnuplot_plot_xyz(h4, y_traj_jpl_n[0], y_traj_jpl_n[1], y_traj_jpl_n[2], final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
 
@@ -11394,7 +11394,7 @@ int comprefft3d_test_eml_synjpl(int man_grid_size_t,
     {
         //Integration segment by segment
         for(int i = 0; i < 6; i++) yv[i] = y_traj[i][k];
-        ode78_qbcp(ymc, tmc, t_traj[k], t_traj[k+1], yv, 6, mPlot, NCEM, coord_type, coord_type);
+        ode78(ymc, tmc, t_traj[k], t_traj[k+1], yv, 6, mPlot, NCEM, coord_type, coord_type);
 
         //Store
         for(int p = 0; p <= mPlot; p++)
@@ -11424,8 +11424,8 @@ int comprefft3d_test_eml_synjpl(int man_grid_size_t,
     scanf("%c",&ch);
 
     int isPlotted   = 0;
-    multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, yma, 42, final_index, coord_type, isPlotted, h2);
-    //multiple_shooting_direct_variable_time(y_traj, t_traj, y_traj_n, t_traj_n, yma, 42, final_index, coord_type, isPlotted, isTimeFixed, h2);
+    multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n,  42, final_index, coord_type, isPlotted, h2);
+    //multiple_shooting_direct_variable_time(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, isTimeFixed, h2);
 
     //---------------------------------------------------------------------
     // Final trajectory, on a grid
@@ -11436,7 +11436,7 @@ int comprefft3d_test_eml_synjpl(int man_grid_size_t,
     {
         //Integration segment by segment
         for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
-        ode78_qbcp(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+        ode78(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
 
         //Store
         for(int p = 0; p <= mPlot; p++)
@@ -11588,7 +11588,7 @@ int comprefft3d_test_eml_synjpl(int man_grid_size_t,
         cout << " comprefft3d. Refine trajectory in JPL ephemerides..." << endl;
 
         isPlotted   = 1;
-        multiple_shooting_direct(y_traj_syn, t_traj_syn, y_traj_jpl_n, t_traj_jpl_n, yma, 42, final_index, eph_coord(coord_type), isPlotted, h4);
+        multiple_shooting_direct(y_traj_syn, t_traj_syn, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, eph_coord(coord_type), isPlotted, h4);
         //Plot
         gnuplot_plot_xyz(h4, y_traj_jpl_n[0], y_traj_jpl_n[1], y_traj_jpl_n[2], final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
 
@@ -11936,7 +11936,7 @@ int comprefft3d_test_eml2seml_synjpl(int man_grid_size_t,
     //---------------------------------------------------------------------
     int man_index = man_grid_2;
     if(refst.grid == REF_FIXED_GRID) //fixed grid
-        ode78_qbcp(y_man_coord, t_man_coord, orbit_EM.t0, tf_EM, orbit_EM.z0, 6, man_grid_2, dcs, NCEM, coord_type);
+        ode78(y_man_coord, t_man_coord, orbit_EM.t0, tf_EM, orbit_EM.z0, 6, man_grid_2, dcs, NCEM, coord_type);
     else //variable grid
         man_index = ode78_qbcp_vg(y_man_coord, t_man_coord, orbit_EM.t0, tf_EM, orbit_EM.z0, 6, man_grid_2, dcs, NCEM, coord_type, -1);
 
@@ -12068,7 +12068,7 @@ int comprefft3d_test_eml2seml_synjpl(int man_grid_size_t,
     {
         //Integration segment by segment
         for(int i = 0; i < 6; i++) yv[i] = y_traj[i][k];
-        ode78_qbcp(ymc, tmc, t_traj[k], t_traj[k+1], yv, 6, mPlot, NCEM, coord_type, coord_type);
+        ode78(ymc, tmc, t_traj[k], t_traj[k+1], yv, 6, mPlot, NCEM, coord_type, coord_type);
 
         //Store
         for(int p = 0; p <= mPlot; p++)
@@ -12098,8 +12098,8 @@ int comprefft3d_test_eml2seml_synjpl(int man_grid_size_t,
     scanf("%c",&ch);
 
     int isPlotted   = 0;
-    multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, yma, 42, final_index, coord_type, isPlotted, h2);
-    //multiple_shooting_direct_variable_time(y_traj, t_traj, y_traj_n, t_traj_n, yma, 42, final_index, coord_type, isPlotted, isTimeFixed, h2);
+    multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, h2);
+    //multiple_shooting_direct_variable_time(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, isTimeFixed, h2);
 
     //---------------------------------------------------------------------
     // Final trajectory, on a grid
@@ -12110,7 +12110,7 @@ int comprefft3d_test_eml2seml_synjpl(int man_grid_size_t,
     {
         //Integration segment by segment
         for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
-        ode78_qbcp(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+        ode78(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
 
         //Store
         for(int p = 0; p <= mPlot; p++)
@@ -12293,7 +12293,7 @@ int comprefft3d_test_eml2seml_synjpl(int man_grid_size_t,
         cout << " comprefft3d. Refine trajectory in JPL ephemerides..." << endl;
 
         isPlotted   = 1;
-        multiple_shooting_direct(y_traj_syn, t_traj_syn, y_traj_syn_n, t_traj_syn_n, yma, 42, final_index, eph_coord(coord_type), isPlotted, h4);
+        multiple_shooting_direct(y_traj_syn, t_traj_syn, y_traj_syn_n, t_traj_syn_n, 42, final_index, eph_coord(coord_type), isPlotted, h4);
         //Plot
         gnuplot_plot_xyz(h4, y_traj_syn_n[0], y_traj_syn_n[1], y_traj_syn_n[2], final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
 
@@ -12629,7 +12629,7 @@ int comprefft3d_test_eml2seml_insem(int man_grid_size_t,
     //---------------------------------------------------------------------
     int man_index = man_grid_2;
     if(refst.grid == REF_FIXED_GRID) //fixed grid
-        ode78_qbcp(y_man_coord, t_man_coord, orbit_EM.t0, tf_EM, orbit_EM.z0, 6, man_grid_2, dcs, NCEM, coord_type);
+        ode78(y_man_coord, t_man_coord, orbit_EM.t0, tf_EM, orbit_EM.z0, 6, man_grid_2, dcs, NCEM, coord_type);
     else //variable grid
         man_index = ode78_qbcp_vg(y_man_coord, t_man_coord, orbit_EM.t0, tf_EM, orbit_EM.z0, 6, man_grid_2, dcs, NCEM, coord_type, -1);
 
@@ -12761,7 +12761,7 @@ int comprefft3d_test_eml2seml_insem(int man_grid_size_t,
     {
         //Integration segment by segment
         for(int i = 0; i < 6; i++) yv[i] = y_traj[i][k];
-        ode78_qbcp(ymc, tmc, t_traj[k], t_traj[k+1], yv, 6, mPlot, NCEM, coord_type, coord_type);
+        ode78(ymc, tmc, t_traj[k], t_traj[k+1], yv, 6, mPlot, NCEM, coord_type, coord_type);
 
         //Store
         for(int p = 0; p <= mPlot; p++)
@@ -12791,8 +12791,8 @@ int comprefft3d_test_eml2seml_insem(int man_grid_size_t,
     scanf("%c",&ch);
 
     int isPlotted   = 0;
-    multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, yma, 42, final_index, coord_type, isPlotted, h2);
-    //multiple_shooting_direct_variable_time(y_traj, t_traj, y_traj_n, t_traj_n, yma, 42, final_index, coord_type, isPlotted, isTimeFixed, h2);
+    multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, h2);
+    //multiple_shooting_direct_variable_time(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, isTimeFixed, h2);
 
     //---------------------------------------------------------------------
     // Final trajectory, on a grid
@@ -12803,7 +12803,7 @@ int comprefft3d_test_eml2seml_insem(int man_grid_size_t,
     {
         //Integration segment by segment
         for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
-        ode78_qbcp(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+        ode78(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
 
         //Store
         for(int p = 0; p <= mPlot; p++)
@@ -12838,7 +12838,7 @@ int comprefft3d_test_eml2seml_insem(int man_grid_size_t,
     cout << "Enter 0 for INSEM, 1 for INEM: ";
     cin >> choice;
     int coord_int = choice == 0? INSEM:INEM;
-    int fwrk_int  = choice == 0? F_INSEM:F_INEM;
+    int fwrk_int  = choice == 0? I_INSEM:I_INEM;
 
     //================================================================================
     // Change of coordinates
@@ -12873,7 +12873,7 @@ int comprefft3d_test_eml2seml_insem(int man_grid_size_t,
     {
         //Integration segment by segment
         for(int i = 0; i < 6; i++) yv[i] = y_traj_insem[i][k];
-        ode78_qbcp_inertial(ymc_comp, tmc_comp, t_traj_insem[k], t_traj_insem[k+1], yv, 6, mPlot, fwrk_int, coord_int, coord_int);
+        ode78(ymc_comp, tmc_comp, t_traj_insem[k], t_traj_insem[k+1], yv, 6, mPlot, fwrk_int, coord_int, coord_int);
 
         //To coord_type
         qbcp_coc_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coord_int, coord_type);
@@ -12898,7 +12898,7 @@ int comprefft3d_test_eml2seml_insem(int man_grid_size_t,
     cout << " comprefft3d. Refine trajectory in INSEM/INEM..." << endl;
 
     isPlotted   = 1;
-    multiple_shooting_direct(y_traj_insem, t_traj_insem, y_traj_insem_n, t_traj_insem_n, yma, 42, final_index, coord_int, isPlotted, h4);
+    multiple_shooting_direct(y_traj_insem, t_traj_insem, y_traj_insem_n, t_traj_insem_n, 42, final_index, coord_int, isPlotted, h4);
     //Plot
     gnuplot_plot_xyz(h4, y_traj_insem_n[0], y_traj_insem_n[1], y_traj_insem_n[2], final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
 
@@ -12910,7 +12910,7 @@ int comprefft3d_test_eml2seml_insem(int man_grid_size_t,
     {
         //Integration segment by segment
         for(int i = 0; i < 6; i++) yv[i] = y_traj_insem_n[i][k];
-        ode78_qbcp_inertial(ymc_comp, tmc_comp, t_traj_insem_n[k], t_traj_insem_n[k+1], yv, 6, mPlot, fwrk_int, coord_int, coord_int);
+        ode78(ymc_comp, tmc_comp, t_traj_insem_n[k], t_traj_insem_n[k+1], yv, 6, mPlot, fwrk_int, coord_int, coord_int);
 
         //To coord_type
         qbcp_coc_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coord_int, coord_type);
@@ -13249,7 +13249,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_PART(int ofts_order,
         //Stepper
         const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
         //Init ode structure
-        init_ode_structure(&driver_EM, T, T_root, 6, qbfbp_vfn_novar, &SEML_EM);
+        init_ode_structure(&driver_EM, T, T_root, 6, qbcp_vfn, &SEML_EM);
         //Init routine
         init_orbit(orbit_EM, &CM_EM_NC, &CM_EM_TFC,
                    &Mcoc_EM, &MIcoc_EM, &Vcoc_EM, &orbit_ofs_EM, OFTS_ORDER, OFS_ORDER,
@@ -13267,7 +13267,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_PART(int ofts_order,
         //---------------------------------------------------------------------
         // Integration
         //---------------------------------------------------------------------
-        ode78_qbcp(y_man_coord, t_man_coord, t0_EM[kpos], tf_EM[kpos], orbit_EM.z0, 6, man_grid_size, dcs, NCEM, coord_type);
+        ode78(y_man_coord, t_man_coord, t0_EM[kpos], tf_EM[kpos], orbit_EM.z0, 6, man_grid_size, dcs, NCEM, coord_type);
 
         //---------------------------------------------------------------------
         // Save All BUT the last point
@@ -13305,7 +13305,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_PART(int ofts_order,
         SingleOrbit orbit_SEM;
 
         //Init ode structure
-        init_ode_structure(&driver_SEM, T, T_root, 6, qbfbp_vfn_novar, &SEML_SEM);
+        init_ode_structure(&driver_SEM, T, T_root, 6, qbcp_vfn, &SEML_SEM);
         //Init routine
         init_orbit(orbit_SEM, &CM_SEM_NC, &CM_SEM_TFC,
                    &Mcoc_SEM, &MIcoc_SEM, &Vcoc_SEM, &orbit_ofs_SEM, OFTS_ORDER, OFS_ORDER,
@@ -13487,7 +13487,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_PART(int ofts_order,
         {
             //Integration segment by segment
             for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
-            ode78_qbcp(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+            ode78(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
 
             //Color
             //color = (int) 2*t_traj_n[k]/SEML.us_sem.T+1;
@@ -13513,7 +13513,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_PART(int ofts_order,
         //---------------------------------------------------------------------
         int kstart = man_grid_size; //starts at the CMU entry, and NOT at the EML2 orbit entry (kstart != 0)
         for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][kstart];
-        ode78_qbcp(y_traj, t_traj, t_traj_n[kstart], t_traj_n[traj_grid_size], yv, 6, traj_grid_size, dcs, coord_type, coord_type);
+        ode78(y_traj, t_traj, t_traj_n[kstart], t_traj_n[traj_grid_size], yv, 6, traj_grid_size, dcs, coord_type, coord_type);
 
         //Plot on h2
         //gnuplot_plot_xyz(h2, y_traj[0], y_traj[1],  y_traj[2], traj_grid_size+1, (char*)"Final trajectory (single shooting)", "lines", "1", "3", 8);
@@ -13672,16 +13672,16 @@ int ref_CMU_EM_to_CM_SEM_MSD(int ofts_order,
         // 4.2 Compute the manifold leg on a given grid
         //====================================================================================
         //---------------------------------------------------------------------
-        //Computation with ode78_qbcp, on the first 6 variables (the state)
+        //Computation with ode78, on the first 6 variables (the state)
         //---------------------------------------------------------------------
-        ode78_qbcp(ymd, tmd, t0_EM[kpos], tf_EM[kpos], yv, 6, man_grid_size, F_VNCSEM, NCEM, VNCSEM);
+        ode78(ymd, tmd, t0_EM[kpos], tf_EM[kpos], yv, 6, man_grid_size, I_VNCSEM, NCEM, VNCSEM);
 
         //---------------------------------------------------------------------
         //Again in SEM coordinates?
         //Not necessary, same precision at the end.
         //---------------------------------------------------------------------
         //for(int i = 0; i < 6; i++) yv[i] = ymd[i][0];
-        //ode78_qbcp(ymd, tmd, tmd[0], tmd[man_grid_size], yv, 6, man_grid_size, F_VNCSEM, VNCSEM, VNCSEM);
+        //ode78(ymd, tmd, tmd[0], tmd[man_grid_size], yv, 6, man_grid_size, I_VNCSEM, VNCSEM, VNCSEM);
 
         //---------------------------------------------------------------------
         //Plot
@@ -13716,8 +13716,8 @@ int ref_CMU_EM_to_CM_SEM_MSD(int ofts_order,
         int isPlotted   = 1;
         //differential_correction_level_I(ymd, tmd, ymdn, tmdn, yma, 42, man_grid_size, isPlotted, isTimeFixed, h2);
         tic();
-        //multiple_shooting_gomez(ymd, tmd, ymdn, tmdn, yma, 42, man_grid_size, isPlotted, isTimeFixed, h2);
-        multiple_shooting_direct(ymd, tmd, ymdn, tmdn, yma, 42, man_grid_size, VNCSEM, isPlotted, h2);
+        //multiple_shooting_gomez(ymd, tmd, ymdn, tmdn, 42, man_grid_size, isPlotted, isTimeFixed, h2);
+        multiple_shooting_direct(ymd, tmd, ymdn, tmdn, 42, man_grid_size, VNCSEM, isPlotted, h2);
         //multiple_shooting_direct_variable_time(ymd, tmd, ymdn, tmdn, yma, 42, man_grid_size, VNCSEM, isPlotted, isTimeFixed, h2);
         cout << "End of diffcorr in " << toc();
 
@@ -13768,7 +13768,7 @@ int ref_CMU_EM_to_CM_SEM_MSD(int ofts_order,
         for(int k = 0; k < man_grid_size; k++)
         {
             for(int i = 0; i < 6; i++) yv[i] = ymdn[i][k];
-            ode78_qbcp(ymc, tmc, tmdn[k], tmdn[k+1], yv, 6, mPlot, F_VNCSEM, VNCSEM, VNCSEM);
+            ode78(ymc, tmc, tmdn[k], tmdn[k+1], yv, 6, mPlot, I_VNCSEM, VNCSEM, VNCSEM);
             if(k == 0) gnuplot_plot_xyz(h2, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"Final trajectory", "lines", "1", "2", 8);
             else gnuplot_plot_xyz(h2, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"", "lines", "1", "2", 8);
         }
@@ -13782,7 +13782,7 @@ int ref_CMU_EM_to_CM_SEM_MSD(int ofts_order,
         for(int k = 0; k < man_grid_size; k++)
         {
             for(int i = 0; i < 6; i++) yv[i] = ymd[i][k];
-            ode78_qbcp(ymc, tmc, tmd[k], tmd[k+1], yv, 6, mPlot, F_VNCSEM, VNCSEM, VNCSEM);
+            ode78(ymc, tmc, tmd[k], tmd[k+1], yv, 6, mPlot, I_VNCSEM, VNCSEM, VNCSEM);
             if(k == 0) gnuplot_plot_xyz(h2, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"Initial trajectory", "lines", "dashed", "3", 7);
             else gnuplot_plot_xyz(h2, ymc[0], ymc[1],  ymc[2], mPlot+1, (char*)"", "lines", "dashed", "3", 7);
         }
@@ -14103,7 +14103,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_DEP(int ofts_order,
         //Stepper
         const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
         //Init ode structure
-        init_ode_structure(&driver_EM, T, T_root, 6, qbfbp_vfn_novar, &SEML_EM);
+        init_ode_structure(&driver_EM, T, T_root, 6, qbcp_vfn, &SEML_EM);
         //Init routine
         init_orbit(orbit_EM, &CM_EM_NC, &CM_EM_TFC,
                    &Mcoc_EM, &MIcoc_EM, &Vcoc_EM, &orbit_ofs_EM, OFTS_ORDER, OFS_ORDER,
@@ -14121,7 +14121,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_DEP(int ofts_order,
         //---------------------------------------------------------------------
         // Integration
         //---------------------------------------------------------------------
-        ode78_qbcp(y_man_coord, t_man_coord, t0_EM[kpos], tf_EM[kpos], orbit_EM.z0, 6, man_grid_size, dcs, NCEM, coord_type);
+        ode78(y_man_coord, t_man_coord, t0_EM[kpos], tf_EM[kpos], orbit_EM.z0, 6, man_grid_size, dcs, NCEM, coord_type);
 
         //---------------------------------------------------------------------
         // Save All BUT the last point
@@ -14154,7 +14154,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_DEP(int ofts_order,
         SingleOrbit orbit_SEM;
 
         //Init ode structure
-        init_ode_structure(&driver_SEM, T, T_root, 6, qbfbp_vfn_novar, &SEML_SEM);
+        init_ode_structure(&driver_SEM, T, T_root, 6, qbcp_vfn, &SEML_SEM);
         //Init routine
         init_orbit(orbit_SEM, &CM_SEM_NC, &CM_SEM_TFC,
                    &Mcoc_SEM, &MIcoc_SEM, &Vcoc_SEM, &orbit_ofs_SEM, OFTS_ORDER, OFS_ORDER,
@@ -14333,7 +14333,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_DEP(int ofts_order,
         {
             //Integration segment by segment
             for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
-            ode78_qbcp(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+            ode78(ymc, tmc, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
 
             //Color
             //color = (int) 2*t_traj_n[k]/SEML.us_sem.T+1;
@@ -14359,7 +14359,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_DEP(int ofts_order,
         //---------------------------------------------------------------------
         int kstart = man_grid_size; //starts at the CMU entry, and NOT at the EML2 orbit entry (kstart != 0)
         for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][kstart];
-        ode78_qbcp(y_traj, t_traj, t_traj_n[kstart], t_traj_n[traj_grid_size], yv, 6, traj_grid_size, dcs, coord_type, coord_type);
+        ode78(y_traj, t_traj, t_traj_n[kstart], t_traj_n[traj_grid_size], yv, 6, traj_grid_size, dcs, coord_type, coord_type);
 
         //Plot on h2
         //gnuplot_plot_xyz(h2, y_traj[0], y_traj[1],  y_traj[2], traj_grid_size+1, (char*)"Final trajectory (single shooting)", "lines", "1", "3", 8);
@@ -14547,7 +14547,7 @@ int int_sorted_sol_CMU_EM_to_CM_SEM(int ofts_order,
         //Stepper
         const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
         //Init ode structure
-        init_ode_structure(&driver, T, T_root, 6, qbfbp_vfn_novar, &SEML_EM);
+        init_ode_structure(&driver, T, T_root, 6, qbcp_vfn, &SEML_EM);
         //Init routine
         init_orbit(orbit, &CM_EM_NC, &CM_EM_TFC,
                    &Mcoc_EM, &MIcoc_EM, &Vcoc_EM, &orbit_ofs, OFTS_ORDER, OFS_ORDER,
@@ -14732,7 +14732,7 @@ int int_sorted_sol_CMU_EM_to_CM_SEM(int ofts_order,
         //Stepper
         const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
         //Init ode structure
-        init_ode_structure(&driver, T, T_root, 6, qbfbp_vfn_novar, &SEML_SEM);
+        init_ode_structure(&driver, T, T_root, 6, qbcp_vfn, &SEML_SEM);
         //Init routine
         init_orbit(orbit, &CM_SEM_NC, &CM_SEM_TFC,
                    &Mcoc_SEM, &MIcoc_SEM, &Vcoc_SEM, &orbit_ofs, OFTS_ORDER, OFS_ORDER,

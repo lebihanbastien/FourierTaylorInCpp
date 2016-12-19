@@ -5,6 +5,7 @@
 #include "Oftsc.h"
 #include "parameters.h"
 #include "gslc.h"
+#include "ftc_errno.h"
 
 /**
  * \file matrix.h

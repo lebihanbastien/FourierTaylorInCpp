@@ -1,70 +1,209 @@
 #include "vf.h"
 
-//=============================================================================================
+//========================================================================================
 //
-// Integration without STM
+// Selection of the vector fields
 //
-//=============================================================================================
-//----------------------------------------------------------------
-// Ecliptic coordinates for JPL ephemerides (X, X')
-//----------------------------------------------------------------
+//========================================================================================
 /**
- * \brief Vector field of the solar system (JPL ephemerides) in ecliptic coordinates. Included:
- *        SUN, MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE, PLUTO
+ *  \brief Select the vector field associated to dcs (default coordinate system)
  **/
-int jpl_vf(double et, const double y[], double f[], void* params_void)
+vfptr ftc_select_vf(int dcs, int nvar)
 {
-    //-------------------------------------------------------------------------------
-    // Misc parameters
-    //-------------------------------------------------------------------------------
-    //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
-
-    //-------------------------------------------------------------------------------
-    //Phase space derivatives: x', y', z', x", y", z"
-    //-------------------------------------------------------------------------------
-    //f[0] = x', f[1] = y', f[2] = z'
-    //------------------------------------
-    f[0] = y[3];
-    f[1] = y[4];
-    f[2] = y[5];
-
-    //f[3] = x", f[4] = y", f[5] = z"
-    //------------------------------------
-    f[3] = 0.0;
-    f[4] = 0.0;
-    f[5] = 0.0;
-
-    double Rb[6], lt;
-
-    //Loop on all the primaries
-    for(int i = 0; i < qbp->ss.maxBodies; i++)
+    switch(nvar)
     {
-        //Retrieve posiiton from SPICE kernel
-        spkez_c(qbp->ss.id[i], et, DEFFRAME,  "NONE", SSB, Rb, &lt);
-        //Build the vector field
-        f[3] += - qbp->ss.Gmi[i] / pow((y[0] - Rb[0]) * (y[0] - Rb[0]) + (y[1] - Rb[1]) * (y[1] - Rb[1]) + (y[2] - Rb[2]) * (y[2] - Rb[2]), 3.0 / 2) * (y[0] - Rb[0]);
-        f[4] += - qbp->ss.Gmi[i] / pow((y[0] - Rb[0]) * (y[0] - Rb[0]) + (y[1] - Rb[1]) * (y[1] - Rb[1]) + (y[2] - Rb[2]) * (y[2] - Rb[2]), 3.0 / 2) * (y[1] - Rb[1]);
-        f[5] += - qbp->ss.Gmi[i] / pow((y[0] - Rb[0]) * (y[0] - Rb[0]) + (y[1] - Rb[1]) * (y[1] - Rb[1]) + (y[2] - Rb[2]) * (y[2] - Rb[2]), 3.0 / 2) * (y[2] - Rb[2]);
+        //--------------------------------------------------------------------------------
+        // 6 variables: only the state is integrated
+        //--------------------------------------------------------------------------------
+    case 6:
+        switch(dcs)
+        {
+        case I_PEM:
+        case I_PSEM:
+            return qbcp_vf;
+        case I_VNCSEM:
+        case I_VNCEM:
+            return qbcp_vfn_xv;
+        case I_NCSEM:
+        case I_NCEM:
+            return qbcp_vfn;
+        case I_VSEM:
+        case I_VEM:
+            return qbcp_vf_xv; //;jpl_vf_syn; //CAREFUL: JPL vf here!!!
+        case I_INSEM:
+            return qbcp_vf_insem;
+        case I_INEM:
+            return qbcp_vf_inem;
+        case I_ECISEM:
+            return qbcp_vf_ecisem;
+        case I_ECLI:
+            return jpl_vf;
+        case I_J2000:
+            return jpl_vf_eci;
+        case I_NJ2000:
+            return jpl_vf_neci;
+        default:
+            cerr << "ftc_select_vf" << ". Unknown dcs. ref_errno = " << ". qbcp_vf is returned by default." << endl;
+            return qbcp_vf;
+        }
+        break;
+
+        //--------------------------------------------------------------------------------
+        // 42 variables: the state + var. eq. are integrated
+        //--------------------------------------------------------------------------------
+    case 42:
+        switch(dcs)
+        {
+        case I_PSEM:
+        case I_PEM:
+            return qbcp_vf_varnonlin;
+        case I_VNCEM:
+        case I_VNCSEM:
+            return qbcp_vfn_varnonlin_xv;
+        case I_NCSEM:
+        case I_NCEM:
+            return qbcp_vfn_varnonlin;
+        case I_VSEM:
+        case I_VEM:
+            return qbcp_vf_varnonlin_xv;//;jpl_vf_syn_var;  //CAREFUL: JPL vf here!!!
+        case I_INSEM:
+            return qbcp_vf_insem_var;
+        case I_INEM:
+            return qbcp_vf_inem_var;
+        case I_ECISEM:
+            return qbcp_vf_ecisem_var;
+        case I_ECLI:
+            return jpl_vf_var;
+        case I_J2000:
+            return jpl_vf_eci_var;
+        case I_NJ2000:
+            return jpl_vf_neci_var;
+        default:
+            cerr << "ftc_select_vf" << ". Unknown dcs. ref_errno = " << ". qbcp_vf_varnonlin is returned by default." << endl;
+            return qbcp_vf_varnonlin;
+        }
+        break;
+
+        //--------------------------------------------------------------------------------
+        // Default case: should NOT be reached
+        //--------------------------------------------------------------------------------
+    default:
+            cerr << "ftc_select_vf" << ". Unknown nvar. ref_errno = " << ". qbcp_vf is returned by default." << endl;
+            return qbcp_vf;
     }
-
-
-    //-------------------------------------------------------------------------------
-    //Display
-    //-------------------------------------------------------------------------------
-                cout << "y = " << endl;
-                vector_printf_prec((double*) y, 6);
-                cout << "et = " << et << endl;
-                cout << "f[3] = " << f[3] << endl;
-                cout << "f[4] = " << f[4] << endl;
-                cout << "f[5] = " << f[5] << endl;
-                char ch;
-                printf("Press ENTER to plot the Initial Guess\n");
-                scanf("%c",&ch);
-
-
-    return 0;
 }
+
+//========================================================================================
+//
+// Vector fields linked to EPHEMERIDES dynamics
+//
+//========================================================================================
+//----------------------------------------------------------------------------------------
+// Subroutines
+//----------------------------------------------------------------------------------------
+/**
+ *  \brief Computes the acceleration vector of a given center, contained in qbp.
+ *         If it is a primary, we go on with a simple Newtonian vf.
+ *         If it is the Earth-Moon barycenter, we need to compose two vfs.
+ **/
+void acc_center_from_vf(double et, double Ae[3],  double Rj[11][6], QBCP_L* qbp)
+{
+    //------------------------------------------------------------------------------------
+    //Reinit
+    //------------------------------------------------------------------------------------
+    double DR[3], DR2, Re[6], lt;
+    for(int i = 0; i < 3; i++) Ae[i] = 0;
+
+    //------------------------------------------------------------------------------------
+    //Select the center: if it is a primary, we go on with a simple Newtonian vf.
+    //If it is the Earth-Moon barycenter, we need to compose two vfs.
+    //------------------------------------------------------------------------------------
+    int center = qbp->ss.center;
+
+    if(center == EARTH_MOON_BARYCENTER)
+    {
+        //--------------------------------------------------------------------------------
+        // Additional ini
+        //--------------------------------------------------------------------------------
+        double Rm[3], A1[3], A2[3];
+        for(int i = 0; i < 3; i++) A1[i] = 0;
+        for(int i = 0; i < 3; i++) A2[i] = 0;
+
+        //--------------------------------------------------------------------------------
+        // Acceleration of the Earth-Moon barycenter
+        //--------------------------------------------------------------------------------
+        spkez_c (EARTH, et, DEFFRAME, "NONE", SSB, Re, &lt);
+        spkez_c (MOON,  et, DEFFRAME, "NONE", SSB, Rm, &lt);
+
+        //--------------------------------------------------------------------------------
+        //Loop on all primaries to compute the acceleration of the Earth and the Moon,
+        //--------------------------------------------------------------------------------
+        for(int p = 0; p < qbp->ss.maxBodies; p++)
+        {
+            //----------------------------------------------------------------------------
+            //Acceleration of the Earth
+            //----------------------------------------------------------------------------
+            if(p != 3)
+            {
+                //DR = R1 - Rj
+                for(int i = 0; i < 3; i++) DR[i]  = Re[i] - Rj[p][i];
+
+                //DR2 = DR . DR
+                DR2 = vdot_c(DR, DR);
+
+                //A1 += Gmj/|DR|^3*DR
+                for(int i = 0; i < 3; i++) A1[i] += - qbp->ss.Gmi[p] / pow(DR2, 3.0 / 2) * DR[i];
+            }
+
+            //----------------------------------------------------------------------------
+            //Acceleration of the Moon
+            //----------------------------------------------------------------------------
+            if(p != 4)
+            {
+                //DR = R2 - Rj
+                for(int i = 0; i < 3; i++) DR[i]  = Rm[i] - Rj[p][i];
+
+                //DR2 = DR . DR
+                DR2 = vdot_c(DR, DR);
+
+                //A2 += Gmj/|DR|^3*DR
+                for(int i = 0; i < 3; i++) A2[i] += - qbp->ss.Gmi[p] / pow(DR2, 3.0 / 2) * DR[i];
+            }
+        }
+
+        //--------------------------------------------------------------------------------
+        //Barycenter of Earth & Moon
+        //--------------------------------------------------------------------------------
+        double Gme = qbp->ss.Gmi[3]; //Earth mass
+        double Gmm = qbp->ss.Gmi[4]; //Moon mass
+        for(int i = 0; i < 3; i++) Ae[i] = (Gme * A1[i] + Gmm * A2[i]) / (Gme + Gmm);
+    }
+    else{
+        //--------------------------------------------------------------------------------
+        //Position of the center
+        //--------------------------------------------------------------------------------
+        spkez_c (center, et, DEFFRAME, "NONE", SSB, Re, &lt);
+
+        //--------------------------------------------------------------------------------
+        //Acceleration of the Earth
+        //--------------------------------------------------------------------------------
+        for(int p = 0; p < qbp->ss.maxBodies; p++)
+        {
+            if(p != 3)
+            {
+                //DR = R1 - Rj
+                for(int i = 0; i < 3; i++) DR[i]  = Re[i] - Rj[p][i];
+
+                //DR2 = DR . DR
+                DR2 = vdot_c(DR, DR);
+
+                //A1 += Gmj/|DR|^3*DR
+                for(int i = 0; i < 3; i++) Ae[i] += - qbp->ss.Gmi[p] / pow(DR2, 3.0 / 2) * DR[i];
+            }
+        }
+    }
+}
+
 
 /**
  *  \brief Computes the acceleration vector of the Earth.
@@ -119,132 +258,18 @@ void usspos(double et, double Rj[11][6], QBCP_L* qbp)
 }
 
 /**
- * \brief Vector field of the solar system (JPL ephemerides) in earth-centered normalized. Included:
- *        SUN, MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE, PLUTO.
- *         Note: for now the normalization is NOT taken into account because
- *         the stepper is going wrong when the state is normalized.
- **/
-int jpl_vfn(double t, const double y[], double f[], void* params_void)
-{
-    //-------------------------------------------------------------------------------
-    // Misc parameters
-    //-------------------------------------------------------------------------------
-    double rb[6], et, rbe2;
-    //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
-
-    //-------------------------------------------------------------------------------
-    //Phase space derivatives: x', y', z', x", y", z"
-    //-------------------------------------------------------------------------------
-    //f[0] = x', f[1] = y', f[2] = z'
-    //------------------------------------
-    f[0] = y[3];
-    f[1] = y[4];
-    f[2] = y[5];
-
-    //f[3] = x", f[4] = y", f[5] = z"
-    //------------------------------------
-    f[3] = 0.0;
-    f[4] = 0.0;
-    f[5] = 0.0;
-
-    //------------------------------------------------------------------------------------
-    //Epoch in seconds
-    //------------------------------------------------------------------------------------
-    //et = t*qbp->ss.n;
-    et = t;
-
-    //------------------------------------------------------------------------------------
-    // Update the positions of all the bodies
-    //------------------------------------------------------------------------------------
-    double Rj[11][6];
-    usspos(et, Rj, qbp);
-
-    //------------------------------------------------------------------------------------
-    //Acceleration of the Earth
-    //------------------------------------------------------------------------------------
-    double Ae[3], ae[3];
-    acc_earth_from_vf(et, Ae, Rj, qbp);
-    //for(int i = 0; i <3; i++) ae[i] = Ae[i]/(qbp->ss.a*qbp->ss.n*qbp->ss.n);
-    for(int i = 0; i <3; i++) ae[i] = Ae[i];
-
-    //Position of the Earth
-    double Re[6], lt;
-    spkez_c (EARTH, et, DEFFRAME, "NONE", SSB, Re, &lt);
-
-    //------------------------------------------------------------------------------------
-    //Loop on all the primaries
-    //------------------------------------------------------------------------------------
-    for(int i = 0; i < qbp->ss.maxBodies; i++)
-    {
-        //To normalized coordinates
-        ecl2ecln(Rj[i], Re, rb);//, qbp->ss);
-
-        //Distance
-        rbe2 = (y[0] - rb[0]) * (y[0] - rb[0]) + (y[1] - rb[1]) * (y[1] - rb[1]) + (y[2] - rb[2]) * (y[2] - rb[2]);
-
-        //Build the vector field
-        f[3] += - qbp->ss.Gmi[i] / pow(rbe2, 3.0 / 2) * (y[0] - rb[0]);
-        f[4] += - qbp->ss.Gmi[i] / pow(rbe2, 3.0 / 2) * (y[1] - rb[1]);
-        f[5] += - qbp->ss.Gmi[i] / pow(rbe2, 3.0 / 2) * (y[2] - rb[2]);
-        //        f[3] += - qbp->ss.mui[i] / pow(rbe2, 3.0 / 2) * (y[0] - rb[0]);
-        //        f[4] += - qbp->ss.mui[i] / pow(rbe2, 3.0 / 2) * (y[1] - rb[1]);
-        //        f[5] += - qbp->ss.mui[i] / pow(rbe2, 3.0 / 2) * (y[2] - rb[2]);
-    }
-
-    //------------------------------------------------------------------------------------
-    //Last contribution: acceleration of the Earth
-    //------------------------------------------------------------------------------------
-    f[3] += -ae[0];
-    f[4] += -ae[1];
-    f[5] += -ae[2];
-
-    //-------------------------------------------------------------------------------
-    //Display
-    //-------------------------------------------------------------------------------
-    //            double y0[6];
-    //            ecln2ecl((double*)y, Re, y0, qbp->ss);
-    //            cout << "y = " << endl;
-    //            vector_printf_prec((double*) y0, 6);
-    //            cout << "et = " << et << endl;
-    //            cout << "f[3] = " << f[3]* pow(qbp->ss.n, 2.0)* pow(qbp->ss.a, 1.0) + Ae[0] << endl;
-    //            cout << "f[4] = " << f[4]* pow(qbp->ss.n, 2.0)* pow(qbp->ss.a, 1.0) + Ae[1] << endl;
-    //            cout << "f[5] = " << f[5]* pow(qbp->ss.n, 2.0)* pow(qbp->ss.a, 1.0) + Ae[2] << endl;
-    //            cout << "-----------------------" << endl;
-    //            cout << "y = " << endl;
-    //            vector_printf_prec((double*) y, 6);
-    //            cout << "f[3] = " << f[3] << endl;
-    //            cout << "f[4] = " << f[4] << endl;
-    //            cout << "f[5] = " << f[5] << endl;
-    //            cout << "-----------------------" << endl;
-    //            cout << "-----------------------" << endl;
-
-    //            char ch;
-    //            printf("Press ENTER to plot the Initial Guess\n");
-    //            scanf("%c",&ch);
-
-
-    return 0;
-}
-
-//----------------------------------------------------------------
-// Synodic coordinates for JPL ephemerides (x, x')
-//----------------------------------------------------------------
-
-/**
  *  \brief Computes the acceleration vectors A1 and A2 of the two primaries that defines the synodic coordinates.
  *         They are computed from the newtonian vector field, i.e. the gravitational influence of the massive bodies of the solar system.
  *         If the smaller primary is the Earth-Moon Barycenter, the acceleration is computed as the barycenter of the acceleration of the Earth and the Moon.
  **/
-void acc_from_vf(double et, int pos1, int pos2, double A1[3], double A2[3], double R1[3], double R2[3], double Rj[11][6], QBCP_L* qbp)
+void acc_from_vf(double et, int pos1, int pos2, double A1[3], double A2[3],
+                 double R1[3], double R2[3], double Rj[11][6], QBCP_L* qbp)
 {
     //------------------------------------------------------------------------------------
     //Reinit
     //------------------------------------------------------------------------------------
     double DR[3], DR2;
-
     for(int i = 0; i < 3; i++) A1[i] = 0;
-
     for(int i = 0; i < 3; i++) A2[i] = 0;
 
     //------------------------------------------------------------------------------------
@@ -360,7 +385,8 @@ void acc_from_vf(double et, int pos1, int pos2, double A1[3], double A2[3], doub
  *         They are computed from the derivative of the newtonian vector field, i.e. the gravitational influence of the massive bodies of the solar system.
  *         If the smaller primary is the Earth-Moon Barycenter, the jerk is computed as the barycenter of the jerk of the Earth and the Moon.
  **/
-void jerk_from_vf(double et, int pos1, int pos2, double J1[3], double J2[3], double R1[3], double R2[3], double Rj[11][6], QBCP_L* qbp)
+void jerk_from_vf(double et, int pos1, int pos2, double J1[3], double J2[3],
+                  double R1[3], double R2[3], double Rj[11][6], QBCP_L* qbp)
 {
     //------------------------------------------------------------------------------------
     //Reinit
@@ -508,6 +534,774 @@ void jerk_from_vf(double et, int pos1, int pos2, double J1[3], double J2[3], dou
 
 }
 
+//----------------------------------------------------------------------------------------
+// Ecliptic coordinates for JPL ephemerides (X, X')
+//----------------------------------------------------------------------------------------
+/**
+ * \brief Vector field of the solar system (JPL ephemerides) in ecliptic coordinates
+ *       (SI units) Included:
+ *        SUN, MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE, PLUTO
+ **/
+int jpl_vf(double et, const double y[], double f[], void* params_void)
+{
+    //------------------------------------------------------------------------------------
+    // Misc parameters
+    //------------------------------------------------------------------------------------
+    //Retrieving the parameters
+    QBCP_L* qbp = (QBCP_L*) params_void;
+
+    //------------------------------------------------------------------------------------
+    //Phase space derivatives: x', y', z', x", y", z"
+    //------------------------------------------------------------------------------------
+    //f[0] = x', f[1] = y', f[2] = z'
+    //------------------------------------
+    f[0] = y[3];
+    f[1] = y[4];
+    f[2] = y[5];
+
+    //f[3] = x", f[4] = y", f[5] = z"
+    //------------------------------------
+    f[3] = 0.0;
+    f[4] = 0.0;
+    f[5] = 0.0;
+
+    double Rb[6], lt;
+
+    //Loop on all the primaries
+    for(int i = 0; i < qbp->ss.maxBodies; i++)
+    {
+        //Retrieve posiiton from SPICE kernel
+        spkez_c(qbp->ss.id[i], et, DEFFRAME,  "NONE", SSB, Rb, &lt);
+        //Build the vector field
+        f[3] += - qbp->ss.Gmi[i] / pow((y[0] - Rb[0]) * (y[0] - Rb[0]) + (y[1] - Rb[1]) * (y[1] - Rb[1]) + (y[2] - Rb[2]) * (y[2] - Rb[2]), 3.0 / 2) * (y[0] - Rb[0]);
+        f[4] += - qbp->ss.Gmi[i] / pow((y[0] - Rb[0]) * (y[0] - Rb[0]) + (y[1] - Rb[1]) * (y[1] - Rb[1]) + (y[2] - Rb[2]) * (y[2] - Rb[2]), 3.0 / 2) * (y[1] - Rb[1]);
+        f[5] += - qbp->ss.Gmi[i] / pow((y[0] - Rb[0]) * (y[0] - Rb[0]) + (y[1] - Rb[1]) * (y[1] - Rb[1]) + (y[2] - Rb[2]) * (y[2] - Rb[2]), 3.0 / 2) * (y[2] - Rb[2]);
+    }
+
+
+    //------------------------------------------------------------------------------------
+    //Display
+    //------------------------------------------------------------------------------------
+    //                cout << "y = " << endl;
+    //                vector_printf_prec((double*) y, 6);
+    //                cout << "et = " << et << endl;
+    //                cout << "f[3] = " << f[3] << endl;
+    //                cout << "f[4] = " << f[4] << endl;
+    //                cout << "f[5] = " << f[5] << endl;
+    //                char ch;
+    //                printf("Press ENTER to plot the Initial Guess\n");
+    //                scanf("%c",&ch);
+
+
+    return FTC_SUCCESS;
+}
+
+/**
+ * \brief Vector field of the solar system (JPL ephemerides) in ecliptic coordinates. Included:
+ *        SUN, MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE, PLUTO
+ **/
+int jpl_vf_var(double et, const double y[], double f[], void* params_void)
+{
+    //------------------------------------------------------------------------------------
+    // Memory allocation
+    //------------------------------------------------------------------------------------
+    gsl_matrix* STM  = gsl_matrix_calloc(6, 6);
+    gsl_matrix* STMd = gsl_matrix_calloc(6, 6);
+    gsl_matrix* Q    = gsl_matrix_calloc(6, 6);
+    double Rb[6], lt, Rbe2;
+    double b[6];
+
+    //------------------------------------------------------------------------------------
+    // Misc parameters
+    //------------------------------------------------------------------------------------
+    //Retrieving the parameters
+    QBCP_L* qbp = (QBCP_L*) params_void;
+
+    //------------------------------------------------------------------------------------
+    //Phase space derivatives: x', y', z', x", y", z"
+    //------------------------------------------------------------------------------------
+    //f[0] = x', f[1] = y', f[2] = z'
+    f[0] = y[3];
+    f[1] = y[4];
+    f[2] = y[5];
+    //f[3] = x", f[4] = y", f[5] = z", just init, the rest is done in the sequel
+    f[3] = 0.0;
+    f[4] = 0.0;
+    f[5] = 0.0;
+
+    //For differential equations
+    for(int i = 0; i < 6; i++) b[i] = 0.0;
+
+    //------------------------------------------------------------------------------------
+    //Loop on all the primaries
+    //------------------------------------------------------------------------------------
+    for(int i = 0; i < qbp->ss.maxBodies; i++)
+    {
+        //Retrieve posiiton from SPICE kernel
+        spkez_c(qbp->ss.id[i], et, DEFFRAME,  "NONE", SSB, Rb, &lt);
+
+        //Distance
+        Rbe2 = (y[0] - Rb[0]) * (y[0] - Rb[0]) + (y[1] - Rb[1]) * (y[1] - Rb[1]) + (y[2] - Rb[2]) * (y[2] - Rb[2]);
+
+        //Build the vector field
+        f[3] += - qbp->ss.Gmi[i] / pow(Rbe2, 3.0 / 2) * (y[0] - Rb[0]);
+        f[4] += - qbp->ss.Gmi[i] / pow(Rbe2, 3.0 / 2) * (y[1] - Rb[1]);
+        f[5] += - qbp->ss.Gmi[i] / pow(Rbe2, 3.0 / 2) * (y[2] - Rb[2]);
+
+        //For differential equations
+        b[0] += Uij(y, Rb, Rbe2, qbp->ss.Gmi[i], 1.0, 0, 0);
+        b[1] += Uij(y, Rb, Rbe2, qbp->ss.Gmi[i], 1.0, 0, 1);
+        b[2] += Uij(y, Rb, Rbe2, qbp->ss.Gmi[i], 1.0, 1, 1);
+        b[3] += Uij(y, Rb, Rbe2, qbp->ss.Gmi[i], 1.0, 0, 2);
+        b[4] += Uij(y, Rb, Rbe2, qbp->ss.Gmi[i], 1.0, 1, 2);
+        b[5] += Uij(y, Rb, Rbe2, qbp->ss.Gmi[i], 1.0, 2, 2);
+    }
+
+
+    //------------------------------------------------------------------------------------
+    // Build the variational equation matrix Q such that dot(STM) = Q * STM
+    //------------------------------------------------------------------------------------
+    gsl_matrix_set_zero(Q);
+
+    gsl_matrix_set(Q, 0, 3,  1.0);
+    gsl_matrix_set(Q, 1, 4,  1.0);
+    gsl_matrix_set(Q, 2, 5,  1.0);
+
+    gsl_matrix_set(Q, 3, 0,  b[0]);
+    gsl_matrix_set(Q, 3, 1,  b[1]);
+    gsl_matrix_set(Q, 3, 2,  b[3]);
+    gsl_matrix_set(Q, 4, 0,  b[1]);
+    gsl_matrix_set(Q, 4, 1,  b[2]);
+    gsl_matrix_set(Q, 4, 2,  b[4]);
+    gsl_matrix_set(Q, 5, 0,  b[3]);
+    gsl_matrix_set(Q, 5, 1,  b[4]);
+    gsl_matrix_set(Q, 5, 2,  b[5]);
+
+    //------------------------------------------------------------------------------------
+    //STM update & dot(STM) computation
+    //------------------------------------------------------------------------------------
+    //STM update
+    gslc_vectorToMatrix(STM, y, 6, 6, 6);
+
+    //dot(STM) = Q * STM
+    gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, Q, STM, 0.0, STMd);
+
+
+    //dot(STM) stored in f
+    gslc_matrixToVector(f, STMd, 6, 6 , 6);
+
+    //Memory release
+    gsl_matrix_free(STMd);
+    gsl_matrix_free(STM);
+    gsl_matrix_free(Q);
+    return FTC_SUCCESS;
+}
+
+/**
+ * \brief Vector field of the solar system (JPL ephemerides) in
+ *        earth-centered inertial coordinates (ECI). Included:
+ *        SUN, MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE, PLUTO.
+ **/
+int jpl_vf_eci(double t, const double y[], double f[], void* params_void)
+{
+    //------------------------------------------------------------------------------------
+    // Misc parameters
+    //------------------------------------------------------------------------------------
+    double rb[6], et, rbe2;
+    //Retrieving the parameters
+    QBCP_L* qbp = (QBCP_L*) params_void;
+
+    //------------------------------------------------------------------------------------
+    //Phase space derivatives: x', y', z', x", y", z"
+    //------------------------------------------------------------------------------------
+    //f[0] = x', f[1] = y', f[2] = z'
+    //------------------------------------
+    f[0] = y[3];
+    f[1] = y[4];
+    f[2] = y[5];
+
+    //f[3] = x", f[4] = y", f[5] = z"
+    //------------------------------------
+    f[3] = 0.0;
+    f[4] = 0.0;
+    f[5] = 0.0;
+
+    //------------------------------------------------------------------------------------
+    //Epoch in seconds
+    //------------------------------------------------------------------------------------
+    et = t;
+
+    //------------------------------------------------------------------------------------
+    // Update the positions of all the bodies
+    //------------------------------------------------------------------------------------
+    double Rj[11][6];
+    usspos(et, Rj, qbp);
+
+    //------------------------------------------------------------------------------------
+    //Acceleration of the Earth
+    //------------------------------------------------------------------------------------
+    double Ae[3], ae[3];
+    acc_earth_from_vf(et, Ae, Rj, qbp);
+    for(int i = 0; i <3; i++) ae[i] = Ae[i];
+
+    //Position of the Earth
+    double Re[6], lt;
+    spkez_c (EARTH, et, DEFFRAME, "NONE", SSB, Re, &lt);
+
+    //------------------------------------------------------------------------------------
+    //Loop on all the primaries
+    //------------------------------------------------------------------------------------
+    for(int i = 0; i < qbp->ss.maxBodies; i++)
+    {
+        //To ECI coordinates
+        ecl2eci(Rj[i], Re, rb);
+
+        //Distance
+        rbe2 = (y[0] - rb[0]) * (y[0] - rb[0]) + (y[1] - rb[1]) * (y[1] - rb[1]) + (y[2] - rb[2]) * (y[2] - rb[2]);
+
+        //Build the vector field
+        f[3] += - qbp->ss.Gmi[i] / pow(rbe2, 3.0 / 2) * (y[0] - rb[0]);
+        f[4] += - qbp->ss.Gmi[i] / pow(rbe2, 3.0 / 2) * (y[1] - rb[1]);
+        f[5] += - qbp->ss.Gmi[i] / pow(rbe2, 3.0 / 2) * (y[2] - rb[2]);
+    }
+
+    //------------------------------------------------------------------------------------
+    //Last contribution: acceleration of the Earth
+    //------------------------------------------------------------------------------------
+    f[3] += -ae[0];
+    f[4] += -ae[1];
+    f[5] += -ae[2];
+
+    //------------------------------------------------------------------------------------
+    //Display
+    //------------------------------------------------------------------------------------
+    //    cout << "--------------------------------------------------" << endl;
+    //    cout << "ECI" << endl;
+    //    cout << "--------------------------------------------------" << endl;
+    //    cout << "t    = " << t    << endl;
+    //    cout << "y[0] = " << y[0] << endl;
+    //    cout << "y[1] = " << y[1] << endl;
+    //    cout << "y[2] = " << y[2] << endl;
+    //    cout << "y[3] = " << y[3] << endl;
+    //    cout << "y[4] = " << y[4] << endl;
+    //    cout << "y[5] = " << y[5] << endl;
+    //    cout << "f[3] = " << f[3] << endl;
+    //    cout << "f[4] = " << f[4] << endl;
+    //    cout << "f[5] = " << f[5] << endl;
+    //    char ch;
+    //    printf("Press ENTER to plot the Initial Guess\n");
+    //    scanf("%c",&ch);
+
+
+    return FTC_SUCCESS;
+}
+
+/**
+ * \brief Vector field of the solar system (JPL ephemerides) in earth-centered inertial
+ *        coordinates with variationnal equations. Included:
+ *        SUN, MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE, PLUTO.
+ **/
+int jpl_vf_eci_var(double t, const double y[], double f[], void* params_void)
+{
+    //------------------------------------------------------------------------------------
+    // Memory allocation
+    //------------------------------------------------------------------------------------
+    gsl_matrix* STM  = gsl_matrix_calloc(6, 6);
+    gsl_matrix* STMd = gsl_matrix_calloc(6, 6);
+    gsl_matrix* Q    = gsl_matrix_calloc(6, 6);
+    double rb[6], rbe2, et, b[6];
+
+    //------------------------------------------------------------------------------------
+    // Misc parameters
+    //------------------------------------------------------------------------------------
+    //Retrieving the parameters
+    QBCP_L* qbp = (QBCP_L*) params_void;
+
+    //------------------------------------------------------------------------------------
+    //Phase space derivatives: x', y', z', x", y", z"
+    //------------------------------------------------------------------------------------
+    //f[0] = x', f[1] = y', f[2] = z'
+    f[0] = y[3];
+    f[1] = y[4];
+    f[2] = y[5];
+
+    //f[3] = x", f[4] = y", f[5] = z", just init, the rest is done in the sequel
+    f[3] = 0.0;
+    f[4] = 0.0;
+    f[5] = 0.0;
+
+
+    //------------------------------------------------------------------------------------
+    //Epoch in seconds
+    //------------------------------------------------------------------------------------
+    //et = t*qbp->ss.n;
+    et = t;
+
+    //------------------------------------------------------------------------------------
+    // Update the positions of all the bodies
+    //------------------------------------------------------------------------------------
+    double Rj[11][6];
+    usspos(et, Rj, qbp);
+
+    //------------------------------------------------------------------------------------
+    //Acceleration of the Earth
+    //------------------------------------------------------------------------------------
+    double ae[3];
+    acc_earth_from_vf(et, ae, Rj, qbp);
+    //Position of the Earth
+    double Re[6], lt;
+    spkez_c (EARTH, et, DEFFRAME, "NONE", SSB, Re, &lt);
+
+    //------------------------------------------------------------------------------------
+    //For differential equations
+    //------------------------------------------------------------------------------------
+    for(int i = 0; i < 6; i++) b[i] = 0.0;
+
+    //------------------------------------------------------------------------------------
+    //Loop on all the primaries
+    //------------------------------------------------------------------------------------
+    for(int i = 0; i < qbp->ss.maxBodies; i++)
+    {
+        //To normalized coordinates
+        ecl2eci(Rj[i], Re, rb);//, qbp->ss);
+
+        //Distance
+        rbe2 = (y[0] - rb[0]) * (y[0] - rb[0]) + (y[1] - rb[1]) * (y[1] - rb[1]) + (y[2] - rb[2]) * (y[2] - rb[2]);
+
+        //Build the vector field
+        f[3] += - qbp->ss.Gmi[i] / pow(rbe2, 3.0 / 2) * (y[0] - rb[0]);
+        f[4] += - qbp->ss.Gmi[i] / pow(rbe2, 3.0 / 2) * (y[1] - rb[1]);
+        f[5] += - qbp->ss.Gmi[i] / pow(rbe2, 3.0 / 2) * (y[2] - rb[2]);
+
+        //For differential equations
+        b[0] += Uij(y, rb, rbe2, qbp->ss.Gmi[i], 1.0, 0, 0);
+        b[1] += Uij(y, rb, rbe2, qbp->ss.Gmi[i], 1.0, 0, 1);
+        b[2] += Uij(y, rb, rbe2, qbp->ss.Gmi[i], 1.0, 1, 1);
+        b[3] += Uij(y, rb, rbe2, qbp->ss.Gmi[i], 1.0, 0, 2);
+        b[4] += Uij(y, rb, rbe2, qbp->ss.Gmi[i], 1.0, 1, 2);
+        b[5] += Uij(y, rb, rbe2, qbp->ss.Gmi[i], 1.0, 2, 2);
+    }
+
+    //------------------------------------------------------------------------------------
+    //Last contribution: acceleration of the Earth
+    //------------------------------------------------------------------------------------
+    f[3] += -ae[0];
+    f[4] += -ae[1];
+    f[5] += -ae[2];
+
+
+    //------------------------------------------------------------------------------------
+    // Build the variational equation matrix Q such that dot(STM) = Q * STM
+    //------------------------------------------------------------------------------------
+    gsl_matrix_set_zero(Q);
+
+    gsl_matrix_set(Q, 0, 3,  1.0);
+    gsl_matrix_set(Q, 1, 4,  1.0);
+    gsl_matrix_set(Q, 2, 5,  1.0);
+
+    gsl_matrix_set(Q, 3, 0,  b[0]);
+    gsl_matrix_set(Q, 3, 1,  b[1]);
+    gsl_matrix_set(Q, 3, 2,  b[3]);
+    gsl_matrix_set(Q, 4, 0,  b[1]);
+    gsl_matrix_set(Q, 4, 1,  b[2]);
+    gsl_matrix_set(Q, 4, 2,  b[4]);
+    gsl_matrix_set(Q, 5, 0,  b[3]);
+    gsl_matrix_set(Q, 5, 1,  b[4]);
+    gsl_matrix_set(Q, 5, 2,  b[5]);
+
+    //------------------------------------------------------------------------------------
+    //STM update & dot(STM) computation
+    //------------------------------------------------------------------------------------
+    //STM update
+    gslc_vectorToMatrix(STM, y, 6, 6, 6);
+
+    //dot(STM) = Q * STM
+    gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, Q, STM, 0.0, STMd);
+
+
+    //dot(STM) stored in f
+    gslc_matrixToVector(f, STMd, 6, 6 , 6);
+
+    //Memory release
+    gsl_matrix_free(STMd);
+    gsl_matrix_free(STM);
+    gsl_matrix_free(Q);
+    return FTC_SUCCESS;
+}
+
+/**
+ * \brief Vector field of the solar system (JPL ephemerides) in
+ *        normalized earth-centered inertial coordinates (NECI). Included:
+ *        SUN, MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE, PLUTO.
+ **/
+int jpl_vf_neci(double t, const double y[], double f[], void* params_void)
+{
+    //------------------------------------------------------------------------------------
+    // Misc parameters
+    //------------------------------------------------------------------------------------
+    double rb[6], et, rbe2;
+    //Retrieving the parameters
+    QBCP_L* qbp = (QBCP_L*) params_void;
+
+    //------------------------------------------------------------------------------------
+    //Phase space derivatives: x', y', z', x", y", z"
+    //------------------------------------------------------------------------------------
+    //f[0] = x', f[1] = y', f[2] = z'
+    //------------------------------------
+    f[0] = y[3];
+    f[1] = y[4];
+    f[2] = y[5];
+
+    //f[3] = x", f[4] = y", f[5] = z"
+    //------------------------------------
+    f[3] = 0.0;
+    f[4] = 0.0;
+    f[5] = 0.0;
+
+    //------------------------------------------------------------------------------------
+    //Epoch in seconds
+    //------------------------------------------------------------------------------------
+    et = t/qbp->ss.n;
+
+    //------------------------------------------------------------------------------------
+    // Update the positions of all the bodies
+    //------------------------------------------------------------------------------------
+    double Rj[11][6];
+    usspos(et, Rj, qbp);
+
+    //------------------------------------------------------------------------------------
+    //Acceleration of the Center
+    //------------------------------------------------------------------------------------
+    double Ae[3], ae[3];
+    acc_center_from_vf(et, Ae, Rj, qbp);
+    for(int i = 0; i <3; i++) ae[i] = Ae[i]/(qbp->ss.a*qbp->ss.n*qbp->ss.n);
+
+    //Position of the Center
+    double Re[6], lt;
+    spkez_c (qbp->ss.center, et, DEFFRAME, "NONE", SSB, Re, &lt);
+
+
+    //------------------------------------------------------------------------------------
+    //Loop on all the primaries
+    //------------------------------------------------------------------------------------
+    for(int i = 0; i < qbp->ss.maxBodies; i++)
+    {
+        //To NECI coordinates
+        ecl2neci(Rj[i], Re, rb, qbp->ss);
+
+        //Distance
+        rbe2 = (y[0] - rb[0]) * (y[0] - rb[0]) + (y[1] - rb[1]) * (y[1] - rb[1]) + (y[2] - rb[2]) * (y[2] - rb[2]);
+
+        //Build the vector field
+        f[3] += - qbp->ss.mui[i] / pow(rbe2, 3.0 / 2) * (y[0] - rb[0]);
+        f[4] += - qbp->ss.mui[i] / pow(rbe2, 3.0 / 2) * (y[1] - rb[1]);
+        f[5] += - qbp->ss.mui[i] / pow(rbe2, 3.0 / 2) * (y[2] - rb[2]);
+    }
+
+    //------------------------------------------------------------------------------------
+    //Last contribution: acceleration of the Earth
+    //------------------------------------------------------------------------------------
+    f[3] += -ae[0];
+    f[4] += -ae[1];
+    f[5] += -ae[2];
+
+    //------------------------------------------------------------------------------------
+    //Display
+    //------------------------------------------------------------------------------------
+    //    cout << "--------------------------------------------------" << endl;
+    //    cout << "NECI" << endl;
+    //    cout << "--------------------------------------------------" << endl;
+    //    cout << "t    = " << t/qbp->ss.n               << endl;
+    //    cout << "y[0] = " << y[0]* pow(qbp->ss.a, 1.0) << endl;
+    //    cout << "y[1] = " << y[1]* pow(qbp->ss.a, 1.0) << endl;
+    //    cout << "y[2] = " << y[2]* pow(qbp->ss.a, 1.0) << endl;
+    //    cout << "y[3] = " << y[3]* pow(qbp->ss.a, 1.0)*qbp->ss.n << endl;
+    //    cout << "y[4] = " << y[4]* pow(qbp->ss.a, 1.0)*qbp->ss.n << endl;
+    //    cout << "y[5] = " << y[5]* pow(qbp->ss.a, 1.0)*qbp->ss.n << endl;
+    //    cout << "f[3] = " << f[3]* pow(qbp->ss.n, 2.0)* pow(qbp->ss.a, 1.0) << endl;
+    //    cout << "f[4] = " << f[4]* pow(qbp->ss.n, 2.0)* pow(qbp->ss.a, 1.0) << endl;
+    //    cout << "f[5] = " << f[5]* pow(qbp->ss.n, 2.0)* pow(qbp->ss.a, 1.0) << endl;
+    //
+    //    char ch;
+    //    printf("Press ENTER to plot the Initial Guess\n");
+    //    scanf("%c",&ch);
+
+
+    return FTC_SUCCESS;
+}
+
+/**
+ * \brief Vector field of the solar system (JPL ephemerides) in NECI
+ *        coordinates with variationnal equations. Included:
+ *        SUN, MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE, PLUTO.
+ *        Note: for now the normalization is NOT taken into account because
+ *        the stepper is going wrong when the state is normalized.
+ **/
+int jpl_vf_neci_var(double t, const double y[], double f[], void* params_void)
+{
+    //------------------------------------------------------------------------------------
+    // Memory allocation
+    //------------------------------------------------------------------------------------
+    gsl_matrix* STM  = gsl_matrix_calloc(6, 6);
+    gsl_matrix* STMd = gsl_matrix_calloc(6, 6);
+    gsl_matrix* Q    = gsl_matrix_calloc(6, 6);
+    double rb[6], rbe2, et, b[6];
+
+    //------------------------------------------------------------------------------------
+    // Misc parameters
+    //------------------------------------------------------------------------------------
+    //Retrieving the parameters
+    QBCP_L* qbp = (QBCP_L*) params_void;
+
+    //------------------------------------------------------------------------------------
+    //Phase space derivatives: x', y', z', x", y", z"
+    //------------------------------------------------------------------------------------
+    //f[0] = x', f[1] = y', f[2] = z'
+    f[0] = y[3];
+    f[1] = y[4];
+    f[2] = y[5];
+
+    //f[3] = x", f[4] = y", f[5] = z", just init, the rest is done in the sequel
+    f[3] = 0.0;
+    f[4] = 0.0;
+    f[5] = 0.0;
+
+    //------------------------------------------------------------------------------------
+    //Epoch in seconds
+    //------------------------------------------------------------------------------------
+    et = t/qbp->ss.n;
+
+    //------------------------------------------------------------------------------------
+    // Update the positions of all the bodies
+    //------------------------------------------------------------------------------------
+    double Rj[11][6];
+    usspos(et, Rj, qbp);
+
+    //------------------------------------------------------------------------------------
+    //Acceleration of the Earth
+    //------------------------------------------------------------------------------------
+    double Ae[3], ae[3];
+    acc_center_from_vf(et, Ae, Rj, qbp);
+    for(int i = 0; i <3; i++) ae[i] = Ae[i]/(qbp->ss.a*qbp->ss.n*qbp->ss.n);
+    //Position of the Earth
+    double Re[6], lt;
+    spkez_c (qbp->ss.center, et, DEFFRAME, "NONE", SSB, Re, &lt);
+
+    //------------------------------------------------------------------------------------
+    //For differential equations
+    //------------------------------------------------------------------------------------
+    for(int i = 0; i < 6; i++) b[i] = 0.0;
+
+    //------------------------------------------------------------------------------------
+    //Loop on all the primaries
+    //------------------------------------------------------------------------------------
+    for(int i = 0; i < qbp->ss.maxBodies; i++)
+    {
+        //To normalized coordinates
+        ecl2neci(Rj[i], Re, rb, qbp->ss);
+
+        //Distance
+        rbe2 = (y[0] - rb[0]) * (y[0] - rb[0]) + (y[1] - rb[1]) * (y[1] - rb[1]) + (y[2] - rb[2]) * (y[2] - rb[2]);
+
+        //Build the vector field
+        f[3] += - qbp->ss.mui[i] / pow(rbe2, 3.0 / 2) * (y[0] - rb[0]);
+        f[4] += - qbp->ss.mui[i] / pow(rbe2, 3.0 / 2) * (y[1] - rb[1]);
+        f[5] += - qbp->ss.mui[i] / pow(rbe2, 3.0 / 2) * (y[2] - rb[2]);
+
+        //For differential equations
+        b[0] += Uij(y, rb, rbe2, qbp->ss.mui[i], 1.0, 0, 0);
+        b[1] += Uij(y, rb, rbe2, qbp->ss.mui[i], 1.0, 0, 1);
+        b[2] += Uij(y, rb, rbe2, qbp->ss.mui[i], 1.0, 1, 1);
+        b[3] += Uij(y, rb, rbe2, qbp->ss.mui[i], 1.0, 0, 2);
+        b[4] += Uij(y, rb, rbe2, qbp->ss.mui[i], 1.0, 1, 2);
+        b[5] += Uij(y, rb, rbe2, qbp->ss.mui[i], 1.0, 2, 2);
+    }
+
+    //------------------------------------------------------------------------------------
+    //Last contribution: acceleration of the Earth
+    //------------------------------------------------------------------------------------
+    f[3] += -ae[0];
+    f[4] += -ae[1];
+    f[5] += -ae[2];
+
+
+    //------------------------------------------------------------------------------------
+    // Build the variational equation matrix Q such that dot(STM) = Q * STM
+    //------------------------------------------------------------------------------------
+    gsl_matrix_set_zero(Q);
+
+    gsl_matrix_set(Q, 0, 3,  1.0);
+    gsl_matrix_set(Q, 1, 4,  1.0);
+    gsl_matrix_set(Q, 2, 5,  1.0);
+
+    gsl_matrix_set(Q, 3, 0,  b[0]);
+    gsl_matrix_set(Q, 3, 1,  b[1]);
+    gsl_matrix_set(Q, 3, 2,  b[3]);
+    gsl_matrix_set(Q, 4, 0,  b[1]);
+    gsl_matrix_set(Q, 4, 1,  b[2]);
+    gsl_matrix_set(Q, 4, 2,  b[4]);
+    gsl_matrix_set(Q, 5, 0,  b[3]);
+    gsl_matrix_set(Q, 5, 1,  b[4]);
+    gsl_matrix_set(Q, 5, 2,  b[5]);
+
+    //------------------------------------------------------------------------------------
+    //STM update & dot(STM) computation
+    //------------------------------------------------------------------------------------
+    //STM update
+    gslc_vectorToMatrix(STM, y, 6, 6, 6);
+
+    //dot(STM) = Q * STM
+    gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, Q, STM, 0.0, STMd);
+
+
+    //dot(STM) stored in f
+    gslc_matrixToVector(f, STMd, 6, 6 , 6);
+
+    //Memory release
+    gsl_matrix_free(STMd);
+    gsl_matrix_free(STM);
+    gsl_matrix_free(Q);
+    return FTC_SUCCESS;
+}
+
+/**
+ * \brief Vector field of the solar system (JPL ephemerides) in NECI
+ *        coordinates with variationnal equations. Included:
+ *        SUN, MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE, PLUTO.
+ *        Note: for now the normalization is NOT taken into account because
+ *        the stepper is going wrong when the state is normalized.
+ **/
+int jpl_vf_neci_var(double t, const double y[], double f[], gsl_matrix *Q, void* params_void)
+{
+    //------------------------------------------------------------------------------------
+    // Memory allocation
+    //------------------------------------------------------------------------------------
+    gsl_matrix* STM  = gsl_matrix_calloc(6, 6);
+    gsl_matrix* STMd = gsl_matrix_calloc(6, 6);
+    double rb[6], rbe2, et, b[6];
+
+    //------------------------------------------------------------------------------------
+    // Misc parameters
+    //------------------------------------------------------------------------------------
+    //Retrieving the parameters
+    QBCP_L* qbp = (QBCP_L*) params_void;
+
+    //------------------------------------------------------------------------------------
+    //Phase space derivatives: x', y', z', x", y", z"
+    //------------------------------------------------------------------------------------
+    //f[0] = x', f[1] = y', f[2] = z'
+    f[0] = y[3];
+    f[1] = y[4];
+    f[2] = y[5];
+
+    //f[3] = x", f[4] = y", f[5] = z", just init, the rest is done in the sequel
+    f[3] = 0.0;
+    f[4] = 0.0;
+    f[5] = 0.0;
+
+    //------------------------------------------------------------------------------------
+    //Epoch in seconds: CAREFUL: here the time needs to be shifted, to account for
+    //the QBCP/JPL synchronization. This is not the case e.g. in the other jpl_vf_neci_var
+    //routine (for continuation purposes).
+    //------------------------------------------------------------------------------------
+    et = (t + qbp->ss.tshift)/qbp->ss.n;
+
+    //------------------------------------------------------------------------------------
+    // Update the positions of all the bodies
+    //------------------------------------------------------------------------------------
+    double Rj[11][6];
+    usspos(et, Rj, qbp);
+
+    //------------------------------------------------------------------------------------
+    //Acceleration of the Earth
+    //------------------------------------------------------------------------------------
+    double Ae[3], ae[3];
+    acc_center_from_vf(et, Ae, Rj, qbp);
+    for(int i = 0; i <3; i++) ae[i] = Ae[i]/(qbp->ss.a*qbp->ss.n*qbp->ss.n);
+    //Position of the Earth
+    double Re[6], lt;
+    spkez_c (qbp->ss.center, et, DEFFRAME, "NONE", SSB, Re, &lt);
+
+    //------------------------------------------------------------------------------------
+    //For differential equations
+    //------------------------------------------------------------------------------------
+    for(int i = 0; i < 6; i++) b[i] = 0.0;
+
+    //------------------------------------------------------------------------------------
+    //Loop on all the primaries
+    //------------------------------------------------------------------------------------
+    for(int i = 0; i < qbp->ss.maxBodies; i++)
+    {
+        //To normalized coordinates
+        ecl2neci(Rj[i], Re, rb, qbp->ss);
+
+        //Distance
+        rbe2 = (y[0] - rb[0]) * (y[0] - rb[0]) + (y[1] - rb[1]) * (y[1] - rb[1]) + (y[2] - rb[2]) * (y[2] - rb[2]);
+
+        //Build the vector field
+        f[3] += - qbp->ss.mui[i] / pow(rbe2, 3.0 / 2) * (y[0] - rb[0]);
+        f[4] += - qbp->ss.mui[i] / pow(rbe2, 3.0 / 2) * (y[1] - rb[1]);
+        f[5] += - qbp->ss.mui[i] / pow(rbe2, 3.0 / 2) * (y[2] - rb[2]);
+
+        //For differential equations
+        b[0] += Uij(y, rb, rbe2, qbp->ss.mui[i], 1.0, 0, 0);
+        b[1] += Uij(y, rb, rbe2, qbp->ss.mui[i], 1.0, 0, 1);
+        b[2] += Uij(y, rb, rbe2, qbp->ss.mui[i], 1.0, 1, 1);
+        b[3] += Uij(y, rb, rbe2, qbp->ss.mui[i], 1.0, 0, 2);
+        b[4] += Uij(y, rb, rbe2, qbp->ss.mui[i], 1.0, 1, 2);
+        b[5] += Uij(y, rb, rbe2, qbp->ss.mui[i], 1.0, 2, 2);
+    }
+
+    //------------------------------------------------------------------------------------
+    //Last contribution: acceleration of the Earth
+    //------------------------------------------------------------------------------------
+    f[3] += -ae[0];
+    f[4] += -ae[1];
+    f[5] += -ae[2];
+
+
+    //------------------------------------------------------------------------------------
+    // Build the variational equation matrix Q such that dot(STM) = Q * STM
+    //------------------------------------------------------------------------------------
+    gsl_matrix_set_zero(Q);
+
+    gsl_matrix_set(Q, 0, 3,  1.0);
+    gsl_matrix_set(Q, 1, 4,  1.0);
+    gsl_matrix_set(Q, 2, 5,  1.0);
+
+    gsl_matrix_set(Q, 3, 0,  b[0]);
+    gsl_matrix_set(Q, 3, 1,  b[1]);
+    gsl_matrix_set(Q, 3, 2,  b[3]);
+    gsl_matrix_set(Q, 4, 0,  b[1]);
+    gsl_matrix_set(Q, 4, 1,  b[2]);
+    gsl_matrix_set(Q, 4, 2,  b[4]);
+    gsl_matrix_set(Q, 5, 0,  b[3]);
+    gsl_matrix_set(Q, 5, 1,  b[4]);
+    gsl_matrix_set(Q, 5, 2,  b[5]);
+
+    //------------------------------------------------------------------------------------
+    //STM update & dot(STM) computation
+    //------------------------------------------------------------------------------------
+    //STM update
+    gslc_vectorToMatrix(STM, y, 6, 6, 6);
+
+    //dot(STM) = Q * STM
+    gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, Q, STM, 0.0, STMd);
+
+
+    //dot(STM) stored in f
+    gslc_matrixToVector(f, STMd, 6, 6 , 6);
+
+    //Memory release
+    gsl_matrix_free(STMd);
+    gsl_matrix_free(STM);
+    return FTC_SUCCESS;
+}
+
+
+//----------------------------------------------------------------------------------------
+// Synodic coordinates for JPL ephemerides (x, x')
+//----------------------------------------------------------------------------------------
 /**
  * \brief Vector field of the solar system (JPL ephemerides) in synodical coordinates. Included:
  *        SUN, MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE, PLUTO (11 bodies)
@@ -709,11 +1503,8 @@ int jpl_vf_syn(double t, const double y[], double f[], void* params_void)
     //Reduced positions of the primaries
     //------------------------------------------------------------------------------------
     double C[3][3];
-
     for(int i = 0; i < 3; i++) C[i][0] = e1[i];
-
     for(int i = 0; i < 3; i++) C[i][1] = e2[i];
-
     for(int i = 0; i < 3; i++) C[i][2] = e3[i];
 
     double vin[3], vout[3];
@@ -749,792 +1540,20 @@ int jpl_vf_syn(double t, const double y[], double f[], void* params_void)
         f[5] += - b[12] * qbp->ss.mui[p] / pow(DR2, 3.0 / 2) * DR[2];
     }
 
-    return 0;
+    return FTC_SUCCESS;
 
 
 }
 
-//----------------------------------------------------------------
-// Inertial SEM coordinates, (X, V)
-//----------------------------------------------------------------
-/**
- * \brief Vector field of the QBCP in SEM inertial coordinates
- **/
-int qbcp_vf_insem(double t, const double y[], double f[], void* params_void)
-{
-    //-------------------------------------------------------------------------------
-    // Misc parameters
-    //-------------------------------------------------------------------------------
-    //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
-    double ms = qbp->us_sem.ms;
-    double me = qbp->us_sem.me;
-    double mm = qbp->us_sem.mm;
-    double n  = qbp->us_sem.n;
-
-    //-------------------------------------------------------------------------------
-    //Phase space derivatives: x', y', z', x", y", z"
-    //-------------------------------------------------------------------------------
-    //f[0] = x', f[1] = y', f[2] = z'
-    //------------------------------------
-    f[0] = y[3];
-    f[1] = y[4];
-    f[2] = y[5];
-
-    //f[3] = x", f[4] = y", f[5] = z"
-    //------------------------------------
-    f[3] = 0.0;
-    f[4] = 0.0;
-    f[5] = 0.0;
-
-
-    //-------------------------------------------------------------------------------
-    //Evaluate the primaries positions @t, in SEM coordinates
-    //-------------------------------------------------------------------------------
-    double Ps_syn[3];
-    evaluateCoef(Ps_syn, t, n, qbp->nf, qbp->cs_sem.Ps, 3);
-    double Pe_syn[3];
-    evaluateCoef(Pe_syn, t, n, qbp->nf, qbp->cs_sem.Pe, 3);
-    double Pm_syn[3];
-    evaluateCoef(Pm_syn, t, n, qbp->nf, qbp->cs_sem.Pm, 3);
-
-    //-------------------------------------------------------------------------------
-    //Back to  INSEM coordinates
-    //-------------------------------------------------------------------------------
-    double Ps[6];
-    SEMtoIN(t, Ps_syn, Ps, qbp);
-    double Pe[6];
-    SEMtoIN(t, Pe_syn, Pe, qbp);
-    double Pm[6];
-    SEMtoIN(t, Pm_syn, Pm, qbp);
-
-    //-------------------------------------------------------------------------------
-    // Distances to 2nd power
-    //-------------------------------------------------------------------------------
-    double qPe2 = (y[0] - Pe[0]) * (y[0] - Pe[0]) + (y[1] - Pe[1]) * (y[1] - Pe[1]) + (y[2] - Pe[2]) * (y[2] - Pe[2]);
-    double qPs2 = (y[0] - Ps[0]) * (y[0] - Ps[0]) + (y[1] - Ps[1]) * (y[1] - Ps[1]) + (y[2] - Ps[2]) * (y[2] - Ps[2]);
-    double qPm2 = (y[0] - Pm[0]) * (y[0] - Pm[0]) + (y[1] - Pm[1]) * (y[1] - Pm[1]) + (y[2] - Pm[2]) * (y[2] - Pm[2]);
-
-
-    //-------------------------------------------------------------------------------
-    // Update the vector field
-    //-------------------------------------------------------------------------------
-    if(me != 0) f[3] += - me / pow(qPe2, 3.0 / 2) * (y[0] - Pe[0]);
-    if(mm != 0) f[3] += - mm / pow(qPm2, 3.0 / 2) * (y[0] - Pm[0]);
-    if(ms != 0) f[3] += - ms / pow(qPs2, 3.0 / 2) * (y[0] - Ps[0]);
-
-    if(me != 0) f[4] += - me / pow(qPe2, 3.0 / 2) * (y[1] - Pe[1]);
-    if(mm != 0) f[4] += - mm / pow(qPm2, 3.0 / 2) * (y[1] - Pm[1]);
-    if(ms != 0) f[4] += - ms / pow(qPs2, 3.0 / 2) * (y[1] - Ps[1]);
-
-    if(me != 0) f[5] += - me / pow(qPe2, 3.0 / 2) * (y[2] - Pe[2]);
-    if(mm != 0) f[5] += - mm / pow(qPm2, 3.0 / 2) * (y[2] - Pm[2]);
-    if(ms != 0) f[5] += - ms / pow(qPs2, 3.0 / 2) * (y[2] - Ps[2]);
-
-    return 0;
-}
-
-//----------------------------------------------------------------
-// Inertial EM coordinates, (X, V)
-//----------------------------------------------------------------
-/**
- * \brief Vector field of the QBCP in EM inertial coordinates
- **/
-int qbcp_vf_inem(double t, const double y[], double f[], void* params_void)
-{
-    //-------------------------------------------------------------------------------
-    // Misc parameters
-    //-------------------------------------------------------------------------------
-    //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
-    double ms = qbp->us_em.ms;
-    double me = qbp->us_em.me;
-    double mm = qbp->us_em.mm;
-    double n  = qbp->us_em.n;
-
-    //-------------------------------------------------------------------------------
-    //Phase space derivatives: x', y', z', x", y", z"
-    //-------------------------------------------------------------------------------
-    //f[0] = x', f[1] = y', f[2] = z'
-    //------------------------------------
-    f[0] = y[3];
-    f[1] = y[4];
-    f[2] = y[5];
-
-    //f[3] = x", f[4] = y", f[5] = z"
-    //------------------------------------
-    f[3] = 0.0;
-    f[4] = 0.0;
-    f[5] = 0.0;
-
-
-    //-------------------------------------------------------------------------------
-    //Evaluate the primaries positions @t, in SEM coordinates
-    //-------------------------------------------------------------------------------
-    double Ps_syn[3];
-    evaluateCoef(Ps_syn, t, n, qbp->nf, qbp->cs_em.Ps, 3);
-    double Pe_syn[3];
-    evaluateCoef(Pe_syn, t, n, qbp->nf, qbp->cs_em.Pe, 3);
-    double Pm_syn[3];
-    evaluateCoef(Pm_syn, t, n, qbp->nf, qbp->cs_em.Pm, 3);
-
-    //-------------------------------------------------------------------------------
-    //Back to  INSEM coordinates
-    //-------------------------------------------------------------------------------
-    double Ps[6];
-    EMvtoIN(t, Ps_syn, Ps, qbp);
-    double Pe[6];
-    EMvtoIN(t, Pe_syn, Pe, qbp);
-    double Pm[6];
-    EMvtoIN(t, Pm_syn, Pm, qbp);
-
-    //-------------------------------------------------------------------------------
-    // Distances to 2nd power
-    //-------------------------------------------------------------------------------
-    double qPe2 = (y[0] - Pe[0]) * (y[0] - Pe[0]) + (y[1] - Pe[1]) * (y[1] - Pe[1]) + (y[2] - Pe[2]) * (y[2] - Pe[2]);
-    double qPs2 = (y[0] - Ps[0]) * (y[0] - Ps[0]) + (y[1] - Ps[1]) * (y[1] - Ps[1]) + (y[2] - Ps[2]) * (y[2] - Ps[2]);
-    double qPm2 = (y[0] - Pm[0]) * (y[0] - Pm[0]) + (y[1] - Pm[1]) * (y[1] - Pm[1]) + (y[2] - Pm[2]) * (y[2] - Pm[2]);
-
-
-    //-------------------------------------------------------------------------------
-    // Update the vector field
-    //-------------------------------------------------------------------------------
-    if(me != 0) f[3] += - me / pow(qPe2, 3.0 / 2) * (y[0] - Pe[0]);
-    if(mm != 0) f[3] += - mm / pow(qPm2, 3.0 / 2) * (y[0] - Pm[0]);
-    if(ms != 0) f[3] += - ms / pow(qPs2, 3.0 / 2) * (y[0] - Ps[0]);
-
-    if(me != 0) f[4] += - me / pow(qPe2, 3.0 / 2) * (y[1] - Pe[1]);
-    if(mm != 0) f[4] += - mm / pow(qPm2, 3.0 / 2) * (y[1] - Pm[1]);
-    if(ms != 0) f[4] += - ms / pow(qPs2, 3.0 / 2) * (y[1] - Ps[1]);
-
-    if(me != 0) f[5] += - me / pow(qPe2, 3.0 / 2) * (y[2] - Pe[2]);
-    if(mm != 0) f[5] += - mm / pow(qPm2, 3.0 / 2) * (y[2] - Pm[2]);
-    if(ms != 0) f[5] += - ms / pow(qPs2, 3.0 / 2) * (y[2] - Ps[2]);
-
-    return 0;
-}
-
-
-//----------------------------------------------------------------
-// NC coordinates, (X, P)
-//----------------------------------------------------------------
-//Vector field of the QBCP with EM units and Normalized-Li centered coordinates (no variationnal equations)
-int qbfbp_vfn_novar(double t, const double y[], double f[], void* params_void)
-{
-    //-------------------------------------------------------------------------------
-    // Misc parameters
-    //-------------------------------------------------------------------------------
-    //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
-    int noc      = qbp->numberOfCoefs;
-    int nf       = qbp->nf;
-    double ms    = qbp->us.ms;
-    double me    = qbp->us.me;
-    double mm    = qbp->us.mm;
-    double n     = qbp->us.n;
-    double gamma = qbp->cs.gamma;
-
-    //-------------------------------------------------------------------------------
-    //Evaluate the alphas @ t
-    //-------------------------------------------------------------------------------
-    double alpha[noc];
-    evaluateCoef(alpha, t, n, nf, qbp->cs.coeffs, noc);
-
-    //-------------------------------------------------------------------------------
-    //Evaluate the primaries positions @ t
-    //-------------------------------------------------------------------------------
-    double ps[3];
-    evaluateCoef(ps, t, n, nf, qbp->cs.ps, 3);
-    double pe[3];
-    evaluateCoef(pe, t, n, nf, qbp->cs.pe, 3);
-    double pm[3];
-    evaluateCoef(pm, t, n, nf, qbp->cs.pm, 3);
-
-    //-------------------------------------------------------------------------------
-    // Distances to 2nd power
-    //-------------------------------------------------------------------------------
-    double qpe2 = (y[0] - pe[0]) * (y[0] - pe[0]) + (y[1] - pe[1]) * (y[1] - pe[1]) + (y[2] - pe[2]) * (y[2] - pe[2]);
-    double qps2 = (y[0] - ps[0]) * (y[0] - ps[0]) + (y[1] - ps[1]) * (y[1] - ps[1]) + (y[2] - ps[2]) * (y[2] - ps[2]);
-    double qpm2 = (y[0] - pm[0]) * (y[0] - pm[0]) + (y[1] - pm[1]) * (y[1] - pm[1]) + (y[2] - pm[2]) * (y[2] - pm[2]);
-
-    //-------------------------------------------------------------------------------
-    //Phase space derivatives: x', y', z', px', py', pz'
-    //-------------------------------------------------------------------------------
-    vfn_state(y, f, alpha, ps, pe, pm, qps2, qpe2, qpm2, ms, me, mm, gamma);
-
-    return 0;
-}
-
-//Update the normalized vector field of the state. Note that alpha[14] (alpha15) is zero for the QBCP
-int vfn_state(const double y[], double f[], double alpha[],
-              double ps[], double pe[], double pm[],
-              double qps2, double qpe2, double qpm2,
-              double ms, double me, double mm,
-              double gamma)
-{
-    //-------------------------------------------------------------------------------
-    //Phase space derivatives: x', y', z', px', py', pz'
-    //-------------------------------------------------------------------------------
-    //f[0] = x'
-    //------------------------------------
-    f[0] = alpha[0] * y[3] + alpha[1] * y[0] + alpha[2] * y[1];
-    //f[1] = y'
-    //------------------------------------
-    f[1] = alpha[0] * y[4] + alpha[1] * y[1] - alpha[2] * y[0];
-    //f[2] = z'
-    //------------------------------------
-    f[2] = alpha[0] * y[5] + alpha[1] * y[2];
-    //f[3] = px'
-    //------------------------------------
-    f[3] = - alpha[1] * y[3] + alpha[2] * y[4] + alpha[14] * y[0]
-           + alpha[12];
-
-    if(me != 0) f[3] += - alpha[5] / pow(gamma, 3.0) * me / pow(qpe2, 3.0 / 2) * (y[0] - pe[0]);
-
-    if(mm != 0) f[3] += - alpha[5] / pow(gamma, 3.0) * mm / pow(qpm2, 3.0 / 2) * (y[0] - pm[0]);
-
-    if(ms != 0) f[3] += - alpha[5] / pow(gamma, 3.0) * ms / pow(qps2, 3.0 / 2) * (y[0] - ps[0]);
-
-    //f[4] = py'
-    //------------------------------------
-    f[4] = - alpha[1] * y[4] - alpha[2] * y[3] + alpha[14] * y[1]
-           + alpha[13];
-
-    if(me != 0) f[4] += - alpha[5] / pow(gamma, 3.0) * me / pow(qpe2, 3.0 / 2) * (y[1] - pe[1]);
-
-    if(mm != 0) f[4] += - alpha[5] / pow(gamma, 3.0) * mm / pow(qpm2, 3.0 / 2) * (y[1] - pm[1]);
-
-    if(ms != 0) f[4] += - alpha[5] / pow(gamma, 3.0) * ms / pow(qps2, 3.0 / 2) * (y[1] - ps[1]);
-
-
-    //f[5] = pz'
-    //------------------------------------
-    f[5] = - alpha[1] * y[5] + alpha[14] * y[2];
-
-    if(me != 0) f[5] += - alpha[5] / pow(gamma, 3.0) * me / pow(qpe2, 3.0 / 2) * (y[2] - pe[2]);
-
-    if(mm != 0) f[5] += - alpha[5] / pow(gamma, 3.0) * mm / pow(qpm2, 3.0 / 2) * (y[2] - pm[2]);
-
-    if(ms != 0) f[5] += - alpha[5] / pow(gamma, 3.0) * ms / pow(qps2, 3.0 / 2) * (y[2] - ps[2]);
-
-    return 0;
-}
-
-
-//----------------------------------------------------------------
-// NC coordinates, (X, V)
-//----------------------------------------------------------------
-//Update the normalized vector field of the state. The state is here (x, xdot), and not (x, px)
-int vfn_state_xv(const double y[], double f[], double alpha[], double alphad[],
-                 double ps[], double pe[], double pm[],
-                 double qps2, double qpe2, double qpm2,
-                 double ms, double me, double mm,
-                 double gamma)
-{
-    //-------------------------------------------------------------------------------
-    //Phase space derivatives: x', y', z'
-    //-------------------------------------------------------------------------------
-    //f[0] = x'
-    //------------------------------------
-    f[0] = y[3];
-    //f[1] = y'
-    //------------------------------------
-    f[1] = y[4];
-    //f[2] = z'
-    //------------------------------------
-    f[2] = y[5];
-
-    //-------------------------------------------------------------------------------
-    //Intermediate coefficients
-    //-------------------------------------------------------------------------------
-    double alpha16 = alphad[1] - alphad[0] * alpha[1] / alpha[0] + alpha[1] * alpha[1] + alpha[2] * alpha[2]; //
-    double alpha17 = alphad[2] - alphad[0] * alpha[2] / alpha[0]; //
-    double alpha18 = alphad[0] / alpha[0]; //
-
-    //-------------------------------------------------------------------------------
-    //Phase space derivatives: x'', y'', z''
-    //-------------------------------------------------------------------------------
-    //f[3] = x''
-    //------------------------------------
-    f[3] = alpha16 * y[0] + alpha17 * y[1] + alpha18 * y[3] + 2 * alpha[2] * y[4] + alpha[0] * alpha[12];
-
-    if(me != 0) f[3] -=  alpha[0] * alpha[5] / pow(gamma, 3.0) * me / pow(qpe2, 3.0 / 2) * (y[0] - pe[0]);
-
-    if(mm != 0) f[3] -=  alpha[0] * alpha[5] / pow(gamma, 3.0) * mm / pow(qpm2, 3.0 / 2) * (y[0] - pm[0]);
-
-    if(ms != 0) f[3] -=  alpha[0] * alpha[5] / pow(gamma, 3.0) * ms / pow(qps2, 3.0 / 2) * (y[0] - ps[0]);
-
-    //f[4] = y''
-    //------------------------------------
-    f[4] = - alpha17 * y[0] + alpha16 * y[1] - 2 * alpha[2] * y[3] + alpha18 * y[4] + alpha[0] * alpha[13];
-
-    if(me != 0) f[4] -=  alpha[0] * alpha[5] / pow(gamma, 3.0) * me / pow(qpe2, 3.0 / 2) * (y[1] - pe[1]);
-
-    if(mm != 0) f[4] -=  alpha[0] * alpha[5] / pow(gamma, 3.0) * mm / pow(qpm2, 3.0 / 2) * (y[1] - pm[1]);
-
-    if(ms != 0) f[4] -=  alpha[0] * alpha[5] / pow(gamma, 3.0) * ms / pow(qps2, 3.0 / 2) * (y[1] - ps[1]);
-
-
-    //f[5] = z''
-    //------------------------------------
-    f[5] = (alpha16 - alpha[2] * alpha[2]) * y[2] + alpha18 * y[5];
-
-    if(me != 0) f[5] -=  alpha[0] * alpha[5] / pow(gamma, 3.0) * me / pow(qpe2, 3.0 / 2) * (y[2] - pe[2]);
-
-    if(mm != 0) f[5] -=  alpha[0] * alpha[5] / pow(gamma, 3.0) * mm / pow(qpm2, 3.0 / 2) * (y[2] - pm[2]);
-
-    if(ms != 0) f[5] -=  alpha[0] * alpha[5] / pow(gamma, 3.0) * ms / pow(qps2, 3.0 / 2) * (y[2] - ps[2]);
-
-    return 0;
-}
-
-//Vector field of the QBCP with EM units and Normalized-Li centered coordinates (no variationnal equations). The state is here (x, xdot), and not (x, px)
-int qbfbp_vfn_novar_xv(double t, const double y[], double f[], void* params_void)
-{
-    //-------------------------------------------------------------------------------
-    // Misc parameters
-    //-------------------------------------------------------------------------------
-    //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
-    int noc      = qbp->numberOfCoefs;
-    int nf       = qbp->nf;
-    double ms    = qbp->us.ms;
-    double me    = qbp->us.me;
-    double mm    = qbp->us.mm;
-    double n     = qbp->us.n;
-    double gamma = qbp->cs.gamma;
-
-    //-------------------------------------------------------------------------------
-    //Evaluate the alphas @ t, as well as the derivatives of the first 3 alphas
-    //-------------------------------------------------------------------------------
-    double alpha[noc];
-    evaluateCoef(alpha, t, n, nf, qbp->cs.coeffs, noc);
-    double alphad[3];
-    evaluateCoefDerivatives(alphad, t, n, nf, qbp->cs.coeffs, 3);
-
-    //-------------------------------------------------------------------------------
-    //Evaluate the primaries positions @ t
-    //-------------------------------------------------------------------------------
-    double ps[3];
-    evaluateCoef(ps, t, n, nf, qbp->cs.ps, 3);
-    double pe[3];
-    evaluateCoef(pe, t, n, nf, qbp->cs.pe, 3);
-    double pm[3];
-    evaluateCoef(pm, t, n, nf, qbp->cs.pm, 3);
-
-
-    //-------------------------------------------------------------------------------
-    // Distances to 2nd power
-    //-------------------------------------------------------------------------------
-    double qpe2 = (y[0] - pe[0]) * (y[0] - pe[0]) + (y[1] - pe[1]) * (y[1] - pe[1]) + (y[2] - pe[2]) * (y[2] - pe[2]);
-    double qps2 = (y[0] - ps[0]) * (y[0] - ps[0]) + (y[1] - ps[1]) * (y[1] - ps[1]) + (y[2] - ps[2]) * (y[2] - ps[2]);
-    double qpm2 = (y[0] - pm[0]) * (y[0] - pm[0]) + (y[1] - pm[1]) * (y[1] - pm[1]) + (y[2] - pm[2]) * (y[2] - pm[2]);
-
-    //-------------------------------------------------------------------------------
-    //Phase space derivatives: x', y', z', px', py', pz'
-    //-------------------------------------------------------------------------------
-    vfn_state_xv(y, f, alpha, alphad, ps, pe, pm, qps2, qpe2, qpm2, ms, me, mm, gamma);
-
-    return 0;
-}
-
-//----------------------------------------------------------------
-// SYS coordinates, (X, P)
-//----------------------------------------------------------------
-/**
- *  \brief Vector field of the QBCP with EM units and EM reference frame.
- **/
-int qbfbp_vf(double t, const double y[], double f[], void* params_void)
-{
-
-    //-------------------------------------------------------------------------------
-    // Misc parameters
-    //-------------------------------------------------------------------------------
-    //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
-    int noc   = qbp->numberOfCoefs;
-    double ms = qbp->us.ms;
-    double me = qbp->us.me;
-    double mm = qbp->us.mm;
-    double n  = qbp->us.n;
-
-    //-------------------------------------------------------------------------------
-    //Evaluate the alphas @t
-    //1, 3, 4, 6, 7 even
-    //2, 5, 8 odd
-    //-------------------------------------------------------------------------------
-    double alpha[noc];
-    evaluateCoef(alpha, t, n, qbp->nf, qbp->cs.coeffs, noc);
-
-    //-------------------------------------------------------------------------------
-    //Evaluate the primaries positions @ t
-    //-------------------------------------------------------------------------------
-    double Ps[3];
-    evaluateCoef(Ps, t, n, qbp->nf, qbp->cs.Ps, 3);
-    double Pe[3];
-    evaluateCoef(Pe, t, n, qbp->nf, qbp->cs.Pe, 3);
-    double Pm[3];
-    evaluateCoef(Pm, t, n, qbp->nf, qbp->cs.Pm, 3);
-
-    //-------------------------------------------------------------------------------
-    // Distances to 2nd power
-    //-------------------------------------------------------------------------------
-    double qPe2 = (y[0] - Pe[0]) * (y[0] - Pe[0]) + (y[1] - Pe[1]) * (y[1] - Pe[1]) + (y[2] - Pe[2]) * (y[2] - Pe[2]);
-    double qPs2 = (y[0] - Ps[0]) * (y[0] - Ps[0]) + (y[1] - Ps[1]) * (y[1] - Ps[1]) + (y[2] - Ps[2]) * (y[2] - Ps[2]);
-    double qPm2 = (y[0] - Pm[0]) * (y[0] - Pm[0]) + (y[1] - Pm[1]) * (y[1] - Pm[1]) + (y[2] - Pm[2]) * (y[2] - Pm[2]);
-
-    //-------------------------------------------------------------------------------
-    //Phase space derivatives: x', y', z', px', py', pz'
-    //-------------------------------------------------------------------------------
-    vf_state(y, f, alpha, Ps, Pe, Pm, qPs2, qPe2, qPm2, ms, me, mm);
-
-    return GSL_SUCCESS;
-}
-
-/**
- *  \brief Update the vector field of the state in system coordinates (non-normalized). Note that alpha[14] (alpha15) is zero for the QBCP
- **/
-int vf_state( const double y[], double f[], double alpha[],
-              double ps[], double pe[], double pm[],
-              double qps2, double qpe2, double qpm2,
-              double ms, double me, double mm )
-{
-    //-------------------------------------------------------------------------------
-    //Phase space derivatives: x', y', z', px', py', pz'
-    //-------------------------------------------------------------------------------
-    //f[0] = x'
-    //------------------------------------
-    f[0] = alpha[0] * y[3] + alpha[1] * y[0] + alpha[2] * y[1];
-    //f[1] = y'
-    //------------------------------------
-    f[1] = alpha[0] * y[4] + alpha[1] * y[1] - alpha[2] * y[0];
-    //f[2] = z'
-    //------------------------------------
-    f[2] = alpha[0] * y[5] + alpha[1] * y[2];
-    //f[3] = px'
-    //------------------------------------
-    f[3] = - alpha[1] * y[3] + alpha[2] * y[4] + alpha[14] * y[0]
-           - alpha[3];
-
-    if(me != 0) f[3] += - alpha[5] * me / pow(qpe2, 3.0 / 2) * (y[0] - pe[0]);
-
-    if(mm != 0) f[3] += - alpha[5] * mm / pow(qpm2, 3.0 / 2) * (y[0] - pm[0]);
-
-    if(ms != 0) f[3] += - alpha[5] * ms / pow(qps2, 3.0 / 2) * (y[0] - ps[0]);
-
-
-    //f[4] = py'
-    //------------------------------------
-    f[4] = - alpha[1] * y[4] - alpha[2] * y[3] + alpha[14] * y[1]
-           - alpha[4];
-
-    if(me != 0) f[4] += - alpha[5] * me / pow(qpe2, 3.0 / 2) * (y[1] - pe[1]);
-
-    if(mm != 0) f[4] += - alpha[5] * mm / pow(qpm2, 3.0 / 2) * (y[1] - pm[1]);
-
-    if(ms != 0) f[4] += - alpha[5] * ms / pow(qps2, 3.0 / 2) * (y[1] - ps[1]);
-
-    //f[5] = pz'
-    //------------------------------------
-    f[5] = - alpha[1] * y[5] + alpha[14] * y[2];
-
-    if(me != 0) f[5] += - alpha[5] * me / pow(qpe2, 3.0 / 2) * (y[2] - pe[2]);
-
-    if(mm != 0) f[5] += - alpha[5] * mm / pow(qpm2, 3.0 / 2) * (y[2] - pm[2]);
-
-    if(ms != 0) f[5] += - alpha[5] * ms / pow(qps2, 3.0 / 2) * (y[2] - ps[2]);
-
-
-    return GSL_SUCCESS;
-}
-
-
-
-//=============================================================================================
-//
-// Integration with STM
-//
-//=============================================================================================
-/**
- *  \brief Computes the second-order derivatives of the potential of one given primary
- **/
-double Uij(const double y[], double pc[], double qpc2, double mc, double factor, int i, int j)
-{
-    if(mc != 0.0)
-    {
-        if(i == j) return factor * (3 * mc / pow(qpc2, 5.0 / 2) * pow(y[i] - pc[i], 2.0) - mc / pow(qpc2, 3.0 / 2));
-        else return factor * 3 * mc / pow(qpc2, 5.0 / 2) * (y[i] - pc[i]) * (y[j] - pc[j]);
-    }
-    else return 0.0;
-}
-
-
-//----------------------------------------------------------------
-// Ecliptic coordinates for JPL ephemerides (X, X')
-//----------------------------------------------------------------
-/**
- * \brief Vector field of the solar system (JPL ephemerides) in ecliptic coordinates. Included:
- *        SUN, MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE, PLUTO
- **/
-int jpl_vf_var(double et, const double y[], double f[], void* params_void)
-{
-    //-------------------------------------------------------------------------------
-    // Memory allocation
-    //-------------------------------------------------------------------------------
-    gsl_matrix* STM  = gsl_matrix_calloc(6, 6);
-    gsl_matrix* STMd = gsl_matrix_calloc(6, 6);
-    gsl_matrix* Q    = gsl_matrix_calloc(6, 6);
-    double Rb[6], lt, Rbe2;
-    double b[6];
-
-    //-------------------------------------------------------------------------------
-    // Misc parameters
-    //-------------------------------------------------------------------------------
-    //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
-
-    //-------------------------------------------------------------------------------
-    //Phase space derivatives: x', y', z', x", y", z"
-    //-------------------------------------------------------------------------------
-    //f[0] = x', f[1] = y', f[2] = z'
-    f[0] = y[3];
-    f[1] = y[4];
-    f[2] = y[5];
-    //f[3] = x", f[4] = y", f[5] = z", just init, the rest is done in the sequel
-    f[3] = 0.0;
-    f[4] = 0.0;
-    f[5] = 0.0;
-
-    //For differential equations
-    for(int i = 0; i < 6; i++) b[i] = 0.0;
-
-    //-------------------------------------------------------------------------------
-    //Loop on all the primaries
-    //-------------------------------------------------------------------------------
-    for(int i = 0; i < qbp->ss.maxBodies; i++)
-    {
-        //Retrieve posiiton from SPICE kernel
-        spkez_c(qbp->ss.id[i], et, DEFFRAME,  "NONE", SSB, Rb, &lt);
-
-        //Distance
-        Rbe2 = (y[0] - Rb[0]) * (y[0] - Rb[0]) + (y[1] - Rb[1]) * (y[1] - Rb[1]) + (y[2] - Rb[2]) * (y[2] - Rb[2]);
-
-        //Build the vector field
-        f[3] += - qbp->ss.Gmi[i] / pow(Rbe2, 3.0 / 2) * (y[0] - Rb[0]);
-        f[4] += - qbp->ss.Gmi[i] / pow(Rbe2, 3.0 / 2) * (y[1] - Rb[1]);
-        f[5] += - qbp->ss.Gmi[i] / pow(Rbe2, 3.0 / 2) * (y[2] - Rb[2]);
-
-        //For differential equations
-        b[0] += Uij(y, Rb, Rbe2, qbp->ss.Gmi[i], 1.0, 0, 0);
-        b[1] += Uij(y, Rb, Rbe2, qbp->ss.Gmi[i], 1.0, 0, 1);
-        b[2] += Uij(y, Rb, Rbe2, qbp->ss.Gmi[i], 1.0, 1, 1);
-        b[3] += Uij(y, Rb, Rbe2, qbp->ss.Gmi[i], 1.0, 0, 2);
-        b[4] += Uij(y, Rb, Rbe2, qbp->ss.Gmi[i], 1.0, 1, 2);
-        b[5] += Uij(y, Rb, Rbe2, qbp->ss.Gmi[i], 1.0, 2, 2);
-    }
-
-
-    //-------------------------------------------------------------------------------
-    // Build the variational equation matrix Q such that dot(STM) = Q * STM
-    //-------------------------------------------------------------------------------
-    gsl_matrix_set_zero(Q);
-
-    gsl_matrix_set(Q, 0, 3,  1.0);
-    gsl_matrix_set(Q, 1, 4,  1.0);
-    gsl_matrix_set(Q, 2, 5,  1.0);
-
-    gsl_matrix_set(Q, 3, 0,  b[0]);
-    gsl_matrix_set(Q, 3, 1,  b[1]);
-    gsl_matrix_set(Q, 3, 2,  b[3]);
-    gsl_matrix_set(Q, 4, 0,  b[1]);
-    gsl_matrix_set(Q, 4, 1,  b[2]);
-    gsl_matrix_set(Q, 4, 2,  b[4]);
-    gsl_matrix_set(Q, 5, 0,  b[3]);
-    gsl_matrix_set(Q, 5, 1,  b[4]);
-    gsl_matrix_set(Q, 5, 2,  b[5]);
-
-    //-------------------------------------------------------------------------------
-    //STM update & dot(STM) computation
-    //-------------------------------------------------------------------------------
-    //STM update
-    gslc_vectorToMatrix(STM, y, 6, 6, 6);
-
-    //dot(STM) = Q * STM
-    gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, Q, STM, 0.0, STMd);
-
-
-    //dot(STM) stored in f
-    gslc_matrixToVector(f, STMd, 6, 6 , 6);
-
-    //Memory release
-    gsl_matrix_free(STMd);
-    gsl_matrix_free(STM);
-    gsl_matrix_free(Q);
-    return 0;
-}
-/**
- * \brief Vector field of the solar system (JPL ephemerides) in earth-centered normalized
- *        coordinates with variationnal equations. Included:
- *        SUN, MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE, PLUTO.
- *        Note: for now the normalization is NOT taken into account because
- *        the stepper is going wrong when the state is normalized.
- **/
-int jpl_vfn_var(double t, const double y[], double f[], void* params_void)
-{
-    //-------------------------------------------------------------------------------
-    // Memory allocation
-    //-------------------------------------------------------------------------------
-    gsl_matrix* STM  = gsl_matrix_calloc(6, 6);
-    gsl_matrix* STMd = gsl_matrix_calloc(6, 6);
-    gsl_matrix* Q    = gsl_matrix_calloc(6, 6);
-    double rb[6], rbe2, et, b[6];
-
-    //-------------------------------------------------------------------------------
-    // Misc parameters
-    //-------------------------------------------------------------------------------
-    //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
-
-    //-------------------------------------------------------------------------------
-    //Phase space derivatives: x', y', z', x", y", z"
-    //-------------------------------------------------------------------------------
-    //f[0] = x', f[1] = y', f[2] = z'
-    f[0] = y[3];
-    f[1] = y[4];
-    f[2] = y[5];
-
-    //f[3] = x", f[4] = y", f[5] = z", just init, the rest is done in the sequel
-    f[3] = 0.0;
-    f[4] = 0.0;
-    f[5] = 0.0;
-
-
-    //------------------------------------------------------------------------------------
-    //Epoch in seconds
-    //------------------------------------------------------------------------------------
-    //et = t*qbp->ss.n;
-    et = t;
-
-    //------------------------------------------------------------------------------------
-    // Update the positions of all the bodies
-    //------------------------------------------------------------------------------------
-    double Rj[11][6];
-    usspos(et, Rj, qbp);
-
-    //------------------------------------------------------------------------------------
-    //Acceleration of the Earth
-    //------------------------------------------------------------------------------------
-    double Ae[3], ae[3];
-    acc_earth_from_vf(et, Ae, Rj, qbp);
-    //for(int i = 0; i <3; i++) ae[i] = Ae[i]/(qbp->ss.a*qbp->ss.n*qbp->ss.n);
-    for(int i = 0; i <3; i++) ae[i] = Ae[i];
-    //Position of the Earth
-    double Re[6], lt;
-    spkez_c (EARTH, et, DEFFRAME, "NONE", SSB, Re, &lt);
-
-    //------------------------------------------------------------------------------------
-    //For differential equations
-    //------------------------------------------------------------------------------------
-    for(int i = 0; i < 6; i++) b[i] = 0.0;
-
-    //-------------------------------------------------------------------------------
-    //Loop on all the primaries
-    //-------------------------------------------------------------------------------
-    for(int i = 0; i < qbp->ss.maxBodies; i++)
-    {
-        //To normalized coordinates
-        ecl2ecln(Rj[i], Re, rb);//, qbp->ss);
-
-        //Distance
-        rbe2 = (y[0] - rb[0]) * (y[0] - rb[0]) + (y[1] - rb[1]) * (y[1] - rb[1]) + (y[2] - rb[2]) * (y[2] - rb[2]);
-
-        //Build the vector field
-        f[3] += - qbp->ss.Gmi[i] / pow(rbe2, 3.0 / 2) * (y[0] - rb[0]);
-        f[4] += - qbp->ss.Gmi[i] / pow(rbe2, 3.0 / 2) * (y[1] - rb[1]);
-        f[5] += - qbp->ss.Gmi[i] / pow(rbe2, 3.0 / 2) * (y[2] - rb[2]);
-
-        //For differential equations
-        b[0] += Uij(y, rb, rbe2, qbp->ss.Gmi[i], 1.0, 0, 0);
-        b[1] += Uij(y, rb, rbe2, qbp->ss.Gmi[i], 1.0, 0, 1);
-        b[2] += Uij(y, rb, rbe2, qbp->ss.Gmi[i], 1.0, 1, 1);
-        b[3] += Uij(y, rb, rbe2, qbp->ss.Gmi[i], 1.0, 0, 2);
-        b[4] += Uij(y, rb, rbe2, qbp->ss.Gmi[i], 1.0, 1, 2);
-        b[5] += Uij(y, rb, rbe2, qbp->ss.Gmi[i], 1.0, 2, 2);
-
-        //        //Build the vector field
-        //        f[3] += - qbp->ss.mui[i] / pow(rbe2, 3.0 / 2) * (y[0] - rb[0]);
-        //        f[4] += - qbp->ss.mui[i] / pow(rbe2, 3.0 / 2) * (y[1] - rb[1]);
-        //        f[5] += - qbp->ss.mui[i] / pow(rbe2, 3.0 / 2) * (y[2] - rb[2]);
-        //
-        //        //For differential equations
-        //        b[0] += Uij(y, rb, rbe2, qbp->ss.mui[i], 1.0, 0, 0);
-        //        b[1] += Uij(y, rb, rbe2, qbp->ss.mui[i], 1.0, 0, 1);
-        //        b[2] += Uij(y, rb, rbe2, qbp->ss.mui[i], 1.0, 1, 1);
-        //        b[3] += Uij(y, rb, rbe2, qbp->ss.mui[i], 1.0, 0, 2);
-        //        b[4] += Uij(y, rb, rbe2, qbp->ss.mui[i], 1.0, 1, 2);
-        //        b[5] += Uij(y, rb, rbe2, qbp->ss.mui[i], 1.0, 2, 2);
-    }
-
-    //------------------------------------------------------------------------------------
-    //Last contribution: acceleration of the Earth
-    //------------------------------------------------------------------------------------
-    f[3] += -ae[0];
-    f[4] += -ae[1];
-    f[5] += -ae[2];
-
-
-    //-------------------------------------------------------------------------------
-    // Build the variational equation matrix Q such that dot(STM) = Q * STM
-    //-------------------------------------------------------------------------------
-    gsl_matrix_set_zero(Q);
-
-    gsl_matrix_set(Q, 0, 3,  1.0);
-    gsl_matrix_set(Q, 1, 4,  1.0);
-    gsl_matrix_set(Q, 2, 5,  1.0);
-
-    gsl_matrix_set(Q, 3, 0,  b[0]);
-    gsl_matrix_set(Q, 3, 1,  b[1]);
-    gsl_matrix_set(Q, 3, 2,  b[3]);
-    gsl_matrix_set(Q, 4, 0,  b[1]);
-    gsl_matrix_set(Q, 4, 1,  b[2]);
-    gsl_matrix_set(Q, 4, 2,  b[4]);
-    gsl_matrix_set(Q, 5, 0,  b[3]);
-    gsl_matrix_set(Q, 5, 1,  b[4]);
-    gsl_matrix_set(Q, 5, 2,  b[5]);
-
-    //-------------------------------------------------------------------------------
-    //STM update & dot(STM) computation
-    //-------------------------------------------------------------------------------
-    //STM update
-    gslc_vectorToMatrix(STM, y, 6, 6, 6);
-
-    //dot(STM) = Q * STM
-    gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, Q, STM, 0.0, STMd);
-
-
-    //dot(STM) stored in f
-    gslc_matrixToVector(f, STMd, 6, 6 , 6);
-
-    //Memory release
-    gsl_matrix_free(STMd);
-    gsl_matrix_free(STM);
-    gsl_matrix_free(Q);
-    return 0;
-}
-
-
-//----------------------------------------------------------------
-// Synodic coordinates for JPL ephemerides (x, x')
-//----------------------------------------------------------------
 /**
  * \brief Vector field of the solar system (JPL ephemerides) in synodical coordinates. Included:
  *        SUN, MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE, PLUTO (11 bodies)
  **/
 int jpl_vf_syn_var(double t, const double y[], double f[], void* params_void)
 {
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Memory allocation
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     gsl_matrix* STM  = gsl_matrix_calloc(6, 6);
     gsl_matrix* STMd = gsl_matrix_calloc(6, 6);
     gsl_matrix* Q    = gsl_matrix_calloc(6, 6);
@@ -1756,9 +1775,9 @@ int jpl_vf_syn_var(double t, const double y[], double f[], void* params_void)
         q[5] += Uij(y, rb, DR2, qbp->ss.mui[p], b[12], 2, 2);
     }
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Build the variational equation matrix Q such that dot(STM) = Q * STM
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     gsl_matrix_set_zero(Q);
 
     gsl_matrix_set(Q, 0, 3,  1.0);
@@ -1787,9 +1806,9 @@ int jpl_vf_syn_var(double t, const double y[], double f[], void* params_void)
     gsl_matrix_set(Q, 5, 4,  -b[5]);
     gsl_matrix_set(Q, 5, 5,  +b[3]);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //STM update & dot(STM) computation
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //STM update
     gslc_vectorToMatrix(STM, y, 6, 6, 6);
 
@@ -1804,30 +1823,27 @@ int jpl_vf_syn_var(double t, const double y[], double f[], void* params_void)
     gsl_matrix_free(STMd);
     gsl_matrix_free(STM);
     gsl_matrix_free(Q);
-    return 0;
+    return FTC_SUCCESS;
 }
 
 
-//----------------------------------------------------------------
+//========================================================================================
+//
+// Vector fields linked to QBCP dynamics
+//
+//========================================================================================
+
+//----------------------------------------------------------------------------------------
 // Inertial SEM coordinates, (X, V)
-//----------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  * \brief Vector field of the QBCP in SEM inertial coordinates
  **/
-int qbcp_vf_insem_var(double t, const double y[], double f[], void* params_void)
+int qbcp_vf_insem(double t, const double y[], double f[], void* params_void)
 {
-    //-------------------------------------------------------------------------------
-    // Memory allocation
-    //-------------------------------------------------------------------------------
-    gsl_matrix* STM  = gsl_matrix_calloc(6, 6);
-    gsl_matrix* STMd = gsl_matrix_calloc(6, 6);
-    gsl_matrix* Q    = gsl_matrix_calloc(6, 6);
-    double b[6];
-
-
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Misc parameters
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Retrieving the parameters
     QBCP_L* qbp = (QBCP_L*) params_void;
     double ms = qbp->us_sem.ms;
@@ -1835,9 +1851,9 @@ int qbcp_vf_insem_var(double t, const double y[], double f[], void* params_void)
     double mm = qbp->us_sem.mm;
     double n  = qbp->us_sem.n;
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Phase space derivatives: x', y', z', x", y", z"
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //f[0] = x', f[1] = y', f[2] = z'
     //------------------------------------
     f[0] = y[3];
@@ -1851,9 +1867,9 @@ int qbcp_vf_insem_var(double t, const double y[], double f[], void* params_void)
     f[5] = 0.0;
 
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Evaluate the primaries positions @t, in SEM coordinates
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double Ps_syn[3];
     evaluateCoef(Ps_syn, t, n, qbp->nf, qbp->cs_sem.Ps, 3);
     double Pe_syn[3];
@@ -1861,9 +1877,9 @@ int qbcp_vf_insem_var(double t, const double y[], double f[], void* params_void)
     double Pm_syn[3];
     evaluateCoef(Pm_syn, t, n, qbp->nf, qbp->cs_sem.Pm, 3);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Back to  INSEM coordinates
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double Ps[6];
     SEMtoIN(t, Ps_syn, Ps, qbp);
     double Pe[6];
@@ -1871,17 +1887,17 @@ int qbcp_vf_insem_var(double t, const double y[], double f[], void* params_void)
     double Pm[6];
     SEMtoIN(t, Pm_syn, Pm, qbp);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Distances to 2nd power
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double qPe2 = (y[0] - Pe[0]) * (y[0] - Pe[0]) + (y[1] - Pe[1]) * (y[1] - Pe[1]) + (y[2] - Pe[2]) * (y[2] - Pe[2]);
     double qPs2 = (y[0] - Ps[0]) * (y[0] - Ps[0]) + (y[1] - Ps[1]) * (y[1] - Ps[1]) + (y[2] - Ps[2]) * (y[2] - Ps[2]);
     double qPm2 = (y[0] - Pm[0]) * (y[0] - Pm[0]) + (y[1] - Pm[1]) * (y[1] - Pm[1]) + (y[2] - Pm[2]) * (y[2] - Pm[2]);
 
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Update the vector field
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     if(me != 0) f[3] += - me / pow(qPe2, 3.0 / 2) * (y[0] - Pe[0]);
     if(mm != 0) f[3] += - mm / pow(qPm2, 3.0 / 2) * (y[0] - Pm[0]);
     if(ms != 0) f[3] += - ms / pow(qPs2, 3.0 / 2) * (y[0] - Ps[0]);
@@ -1894,89 +1910,41 @@ int qbcp_vf_insem_var(double t, const double y[], double f[], void* params_void)
     if(mm != 0) f[5] += - mm / pow(qPm2, 3.0 / 2) * (y[2] - Pm[2]);
     if(ms != 0) f[5] += - ms / pow(qPs2, 3.0 / 2) * (y[2] - Ps[2]);
 
-    //-------------------------------------------------------------------------------
-    //For differential equations
-    //-------------------------------------------------------------------------------
-    for(int i = 0; i < 6; i++) b[i] = 0.0;
+    //    cout << "f[3] = " << f[3] << endl;
+    //    cout << "f[4] = " << f[4] << endl;
+    //    cout << "f[5] = " << f[5] << endl;
+    //    pressEnter(true);
 
-
-    //For differential equations
-    b[0] += Uij(y, Pe, qPe2, me, 1.0, 0, 0) + Uij(y, Pm, qPm2, mm, 1.0, 0, 0) + Uij(y, Ps, qPs2, ms, 1.0, 0, 0);
-    b[1] += Uij(y, Pe, qPe2, me, 1.0, 0, 1) + Uij(y, Pm, qPm2, mm, 1.0, 0, 1) + Uij(y, Ps, qPs2, ms, 1.0, 0, 1);
-    b[2] += Uij(y, Pe, qPe2, me, 1.0, 1, 1) + Uij(y, Pm, qPm2, mm, 1.0, 1, 1) + Uij(y, Ps, qPs2, ms, 1.0, 1, 1);
-    b[3] += Uij(y, Pe, qPe2, me, 1.0, 0, 2) + Uij(y, Pm, qPm2, mm, 1.0, 0, 2) + Uij(y, Ps, qPs2, ms, 1.0, 0, 2);
-    b[4] += Uij(y, Pe, qPe2, me, 1.0, 1, 2) + Uij(y, Pm, qPm2, mm, 1.0, 1, 2) + Uij(y, Ps, qPs2, ms, 1.0, 1, 2);
-    b[5] += Uij(y, Pe, qPe2, me, 1.0, 2, 2) + Uij(y, Pm, qPm2, mm, 1.0, 2, 2) + Uij(y, Ps, qPs2, ms, 1.0, 2, 2);
-
-    //-------------------------------------------------------------------------------
-    // Build the variational equation matrix Q such that dot(STM) = Q * STM
-    //-------------------------------------------------------------------------------
-    gsl_matrix_set_zero(Q);
-
-    gsl_matrix_set(Q, 0, 3,  1.0);
-    gsl_matrix_set(Q, 1, 4,  1.0);
-    gsl_matrix_set(Q, 2, 5,  1.0);
-
-    gsl_matrix_set(Q, 3, 0,  b[0]);
-    gsl_matrix_set(Q, 3, 1,  b[1]);
-    gsl_matrix_set(Q, 3, 2,  b[3]);
-    gsl_matrix_set(Q, 4, 0,  b[1]);
-    gsl_matrix_set(Q, 4, 1,  b[2]);
-    gsl_matrix_set(Q, 4, 2,  b[4]);
-    gsl_matrix_set(Q, 5, 0,  b[3]);
-    gsl_matrix_set(Q, 5, 1,  b[4]);
-    gsl_matrix_set(Q, 5, 2,  b[5]);
-
-    //-------------------------------------------------------------------------------
-    //STM update & dot(STM) computation
-    //-------------------------------------------------------------------------------
-    //STM update
-    gslc_vectorToMatrix(STM, y, 6, 6, 6);
-
-    //dot(STM) = Q * STM
-    gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, Q, STM, 0.0, STMd);
-
-
-    //dot(STM) stored in f
-    gslc_matrixToVector(f, STMd, 6, 6 , 6);
-
-    //Memory release
-    gsl_matrix_free(STMd);
-    gsl_matrix_free(STM);
-    gsl_matrix_free(Q);
-    return 0;
+    return FTC_SUCCESS;
 }
 
-//----------------------------------------------------------------
-// Inertial EM coordinates, (X, V)
-//----------------------------------------------------------------
 /**
- * \brief Vector field of the QBCP in EM inertial coordinates
+ * \brief Vector field of the QBCP in SEM inertial coordinates
  **/
-int qbcp_vf_inem_var(double t, const double y[], double f[], void* params_void)
+int qbcp_vf_insem_var(double t, const double y[], double f[], void* params_void)
 {
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Memory allocation
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     gsl_matrix* STM  = gsl_matrix_calloc(6, 6);
     gsl_matrix* STMd = gsl_matrix_calloc(6, 6);
     gsl_matrix* Q    = gsl_matrix_calloc(6, 6);
     double b[6];
 
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Misc parameters
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Retrieving the parameters
     QBCP_L* qbp = (QBCP_L*) params_void;
-    double ms = qbp->us_em.ms;
-    double me = qbp->us_em.me;
-    double mm = qbp->us_em.mm;
-    double n  = qbp->us_em.n;
+    double ms = qbp->us_sem.ms;
+    double me = qbp->us_sem.me;
+    double mm = qbp->us_sem.mm;
+    double n  = qbp->us_sem.n;
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Phase space derivatives: x', y', z', x", y", z"
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //f[0] = x', f[1] = y', f[2] = z'
     //------------------------------------
     f[0] = y[3];
@@ -1990,37 +1958,37 @@ int qbcp_vf_inem_var(double t, const double y[], double f[], void* params_void)
     f[5] = 0.0;
 
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Evaluate the primaries positions @t, in SEM coordinates
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double Ps_syn[3];
-    evaluateCoef(Ps_syn, t, n, qbp->nf, qbp->cs_em.Ps, 3);
+    evaluateCoef(Ps_syn, t, n, qbp->nf, qbp->cs_sem.Ps, 3);
     double Pe_syn[3];
-    evaluateCoef(Pe_syn, t, n, qbp->nf, qbp->cs_em.Pe, 3);
+    evaluateCoef(Pe_syn, t, n, qbp->nf, qbp->cs_sem.Pe, 3);
     double Pm_syn[3];
-    evaluateCoef(Pm_syn, t, n, qbp->nf, qbp->cs_em.Pm, 3);
+    evaluateCoef(Pm_syn, t, n, qbp->nf, qbp->cs_sem.Pm, 3);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Back to  INSEM coordinates
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double Ps[6];
-    EMvtoIN(t, Ps_syn, Ps, qbp);
+    SEMtoIN(t, Ps_syn, Ps, qbp);
     double Pe[6];
-    EMvtoIN(t, Pe_syn, Pe, qbp);
+    SEMtoIN(t, Pe_syn, Pe, qbp);
     double Pm[6];
-    EMvtoIN(t, Pm_syn, Pm, qbp);
+    SEMtoIN(t, Pm_syn, Pm, qbp);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Distances to 2nd power
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double qPe2 = (y[0] - Pe[0]) * (y[0] - Pe[0]) + (y[1] - Pe[1]) * (y[1] - Pe[1]) + (y[2] - Pe[2]) * (y[2] - Pe[2]);
     double qPs2 = (y[0] - Ps[0]) * (y[0] - Ps[0]) + (y[1] - Ps[1]) * (y[1] - Ps[1]) + (y[2] - Ps[2]) * (y[2] - Ps[2]);
     double qPm2 = (y[0] - Pm[0]) * (y[0] - Pm[0]) + (y[1] - Pm[1]) * (y[1] - Pm[1]) + (y[2] - Pm[2]) * (y[2] - Pm[2]);
 
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Update the vector field
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     if(me != 0) f[3] += - me / pow(qPe2, 3.0 / 2) * (y[0] - Pe[0]);
     if(mm != 0) f[3] += - mm / pow(qPm2, 3.0 / 2) * (y[0] - Pm[0]);
     if(ms != 0) f[3] += - ms / pow(qPs2, 3.0 / 2) * (y[0] - Ps[0]);
@@ -2033,9 +2001,9 @@ int qbcp_vf_inem_var(double t, const double y[], double f[], void* params_void)
     if(mm != 0) f[5] += - mm / pow(qPm2, 3.0 / 2) * (y[2] - Pm[2]);
     if(ms != 0) f[5] += - ms / pow(qPs2, 3.0 / 2) * (y[2] - Ps[2]);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //For differential equations
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     for(int i = 0; i < 6; i++) b[i] = 0.0;
 
 
@@ -2047,9 +2015,9 @@ int qbcp_vf_inem_var(double t, const double y[], double f[], void* params_void)
     b[4] += Uij(y, Pe, qPe2, me, 1.0, 1, 2) + Uij(y, Pm, qPm2, mm, 1.0, 1, 2) + Uij(y, Ps, qPs2, ms, 1.0, 1, 2);
     b[5] += Uij(y, Pe, qPe2, me, 1.0, 2, 2) + Uij(y, Pm, qPm2, mm, 1.0, 2, 2) + Uij(y, Ps, qPs2, ms, 1.0, 2, 2);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Build the variational equation matrix Q such that dot(STM) = Q * STM
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     gsl_matrix_set_zero(Q);
 
     gsl_matrix_set(Q, 0, 3,  1.0);
@@ -2066,9 +2034,9 @@ int qbcp_vf_inem_var(double t, const double y[], double f[], void* params_void)
     gsl_matrix_set(Q, 5, 1,  b[4]);
     gsl_matrix_set(Q, 5, 2,  b[5]);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //STM update & dot(STM) computation
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //STM update
     gslc_vectorToMatrix(STM, y, 6, 6, 6);
 
@@ -2083,22 +2051,1612 @@ int qbcp_vf_inem_var(double t, const double y[], double f[], void* params_void)
     gsl_matrix_free(STMd);
     gsl_matrix_free(STM);
     gsl_matrix_free(Q);
-    return 0;
+    return FTC_SUCCESS;
+}
+
+/**
+ * \brief Vector field of the QBCP in SEM inertial coordinates
+ **/
+int qbcp_Df_insem_var(double t, const double y[], gsl_matrix* Q, void* params_void)
+{
+    //------------------------------------------------------------------------------------
+    // Memory allocation
+    //------------------------------------------------------------------------------------
+    double b[6];
+
+
+    //------------------------------------------------------------------------------------
+    // Misc parameters
+    //------------------------------------------------------------------------------------
+    //Retrieving the parameters
+    QBCP_L* qbp = (QBCP_L*) params_void;
+    double ms = qbp->us_sem.ms;
+    double me = qbp->us_sem.me;
+    double mm = qbp->us_sem.mm;
+    double n  = qbp->us_sem.n;
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the primaries positions @t, in SEM coordinates
+    //------------------------------------------------------------------------------------
+    double Ps_syn[3];
+    evaluateCoef(Ps_syn, t, n, qbp->nf, qbp->cs_sem.Ps, 3);
+    double Pe_syn[3];
+    evaluateCoef(Pe_syn, t, n, qbp->nf, qbp->cs_sem.Pe, 3);
+    double Pm_syn[3];
+    evaluateCoef(Pm_syn, t, n, qbp->nf, qbp->cs_sem.Pm, 3);
+
+    //------------------------------------------------------------------------------------
+    //Back to  INSEM coordinates
+    //------------------------------------------------------------------------------------
+    double Ps[6];
+    SEMtoIN(t, Ps_syn, Ps, qbp);
+    double Pe[6];
+    SEMtoIN(t, Pe_syn, Pe, qbp);
+    double Pm[6];
+    SEMtoIN(t, Pm_syn, Pm, qbp);
+
+    //------------------------------------------------------------------------------------
+    // Distances to 2nd power
+    //------------------------------------------------------------------------------------
+    double qPe2 = (y[0] - Pe[0]) * (y[0] - Pe[0]) + (y[1] - Pe[1]) * (y[1] - Pe[1]) + (y[2] - Pe[2]) * (y[2] - Pe[2]);
+    double qPs2 = (y[0] - Ps[0]) * (y[0] - Ps[0]) + (y[1] - Ps[1]) * (y[1] - Ps[1]) + (y[2] - Ps[2]) * (y[2] - Ps[2]);
+    double qPm2 = (y[0] - Pm[0]) * (y[0] - Pm[0]) + (y[1] - Pm[1]) * (y[1] - Pm[1]) + (y[2] - Pm[2]) * (y[2] - Pm[2]);
+
+
+    //------------------------------------------------------------------------------------
+    //For differential equations
+    //------------------------------------------------------------------------------------
+    for(int i = 0; i < 6; i++) b[i] = 0.0;
+
+
+    //For differential equations
+    b[0] += Uij(y, Pe, qPe2, me, 1.0, 0, 0) + Uij(y, Pm, qPm2, mm, 1.0, 0, 0) + Uij(y, Ps, qPs2, ms, 1.0, 0, 0);
+    b[1] += Uij(y, Pe, qPe2, me, 1.0, 0, 1) + Uij(y, Pm, qPm2, mm, 1.0, 0, 1) + Uij(y, Ps, qPs2, ms, 1.0, 0, 1);
+    b[2] += Uij(y, Pe, qPe2, me, 1.0, 1, 1) + Uij(y, Pm, qPm2, mm, 1.0, 1, 1) + Uij(y, Ps, qPs2, ms, 1.0, 1, 1);
+    b[3] += Uij(y, Pe, qPe2, me, 1.0, 0, 2) + Uij(y, Pm, qPm2, mm, 1.0, 0, 2) + Uij(y, Ps, qPs2, ms, 1.0, 0, 2);
+    b[4] += Uij(y, Pe, qPe2, me, 1.0, 1, 2) + Uij(y, Pm, qPm2, mm, 1.0, 1, 2) + Uij(y, Ps, qPs2, ms, 1.0, 1, 2);
+    b[5] += Uij(y, Pe, qPe2, me, 1.0, 2, 2) + Uij(y, Pm, qPm2, mm, 1.0, 2, 2) + Uij(y, Ps, qPs2, ms, 1.0, 2, 2);
+
+    //------------------------------------------------------------------------------------
+    // Build the variational equation matrix Q such that dot(STM) = Q * STM
+    //------------------------------------------------------------------------------------
+    gsl_matrix_set_zero(Q);
+
+    gsl_matrix_set(Q, 0, 3,  1.0);
+    gsl_matrix_set(Q, 1, 4,  1.0);
+    gsl_matrix_set(Q, 2, 5,  1.0);
+
+    gsl_matrix_set(Q, 3, 0,  b[0]);
+    gsl_matrix_set(Q, 3, 1,  b[1]);
+    gsl_matrix_set(Q, 3, 2,  b[3]);
+    gsl_matrix_set(Q, 4, 0,  b[1]);
+    gsl_matrix_set(Q, 4, 1,  b[2]);
+    gsl_matrix_set(Q, 4, 2,  b[4]);
+    gsl_matrix_set(Q, 5, 0,  b[3]);
+    gsl_matrix_set(Q, 5, 1,  b[4]);
+    gsl_matrix_set(Q, 5, 2,  b[5]);
+
+    return FTC_SUCCESS;
+}
+
+
+//----------------------------------------------------------------------------------------
+// Earth-centered Inertial SEM coordinates, (X, V)
+//----------------------------------------------------------------------------------------
+/**
+ * \brief Vector field of the QBCP in EC SEM inertial coordinates
+ **/
+int qbcp_vf_ecisem(double t, const double y[], double f[], void* params_void)
+{
+    //------------------------------------------------------------------------------------
+    // Misc parameters
+    //------------------------------------------------------------------------------------
+    //Retrieving the parameters
+    QBCP_L* qbp = (QBCP_L*) params_void;
+    double ms = qbp->us_sem.ms;
+    double me = qbp->us_sem.me;
+    double mm = qbp->us_sem.mm;
+    double n  = qbp->us_sem.n;
+    double ni = qbp->us_sem.ni;
+    double ns = qbp->us_sem.ns;
+    double ai = qbp->us_sem.ai;
+    double as = qbp->us_sem.as;
+    double M  = ms + me + mm;
+
+    //------------------------------------------------------------------------------------
+    //Phase space derivatives: x', y', z', x", y", z"
+    //------------------------------------------------------------------------------------
+    //f[0] = x', f[1] = y', f[2] = z'
+    //------------------------------------
+    f[0] = y[3];
+    f[1] = y[4];
+    f[2] = y[5];
+
+    //f[3] = x", f[4] = y", f[5] = z"
+    //------------------------------------
+    f[3] = 0.0;
+    f[4] = 0.0;
+    f[5] = 0.0;
+
+    //------------------------------------------------------------------------------------
+    //r & R
+    //------------------------------------------------------------------------------------
+    //R
+    double R1 = creal(evz(qbp->cs_sem.Zt, t, n, ns, as));
+    double R2 = cimag(evz(qbp->cs_sem.Zt, t, n, ns, as));
+    //r
+    double r1 = creal(evz(qbp->cs_sem.zt, t, n, ni, ai));
+    double r2 = cimag(evz(qbp->cs_sem.zt, t, n, ni, ai));
+
+    //------------------------------------------------------------------------------------
+    //Double derivatives
+    //------------------------------------------------------------------------------------
+    //Rddot
+    cdouble Rddot = evzddot(qbp->cs_sem.Zt, qbp->cs_sem.Ztdot, qbp->cs_sem.Ztddot, t, n, ns, as);
+
+    //------------------------------------------------------------------------------------
+    //Position of the primaries (Earth-Moon barycenter)
+    //------------------------------------------------------------------------------------
+    double Ps[3] = {R1, R2, 0.0};
+    double Pm[3] = {- me/(mm + me)*r1, - me/(mm + me)*r2, 0.0};
+    double Pe[3] = {+ mm/(mm + me)*r1, + mm/(mm + me)*r2, 0.0};
+
+    //------------------------------------------------------------------------------------
+    // Center acceleration in SEM coordinates
+    //------------------------------------------------------------------------------------
+    double ae[3] = {- ms / M * creal(Rddot), - ms / M * cimag(Rddot), 0.0};
+
+    //------------------------------------------------------------------------------------
+    // Distances to 2nd power
+    //------------------------------------------------------------------------------------
+    double qPe2 = (y[0] - Pe[0]) * (y[0] - Pe[0]) + (y[1] - Pe[1]) * (y[1] - Pe[1]) + (y[2] - Pe[2]) * (y[2] - Pe[2]);
+    double qPs2 = (y[0] - Ps[0]) * (y[0] - Ps[0]) + (y[1] - Ps[1]) * (y[1] - Ps[1]) + (y[2] - Ps[2]) * (y[2] - Ps[2]);
+    double qPm2 = (y[0] - Pm[0]) * (y[0] - Pm[0]) + (y[1] - Pm[1]) * (y[1] - Pm[1]) + (y[2] - Pm[2]) * (y[2] - Pm[2]);
+
+
+    //------------------------------------------------------------------------------------
+    // Update the vector field
+    //------------------------------------------------------------------------------------
+    if(me != 0) f[3] += - me / pow(qPe2, 3.0 / 2) * (y[0] - Pe[0]);
+    if(mm != 0) f[3] += - mm / pow(qPm2, 3.0 / 2) * (y[0] - Pm[0]);
+    if(ms != 0) f[3] += - ms / pow(qPs2, 3.0 / 2) * (y[0] - Ps[0]);
+
+    if(me != 0) f[4] += - me / pow(qPe2, 3.0 / 2) * (y[1] - Pe[1]);
+    if(mm != 0) f[4] += - mm / pow(qPm2, 3.0 / 2) * (y[1] - Pm[1]);
+    if(ms != 0) f[4] += - ms / pow(qPs2, 3.0 / 2) * (y[1] - Ps[1]);
+
+    if(me != 0) f[5] += - me / pow(qPe2, 3.0 / 2) * (y[2] - Pe[2]);
+    if(mm != 0) f[5] += - mm / pow(qPm2, 3.0 / 2) * (y[2] - Pm[2]);
+    if(ms != 0) f[5] += - ms / pow(qPs2, 3.0 / 2) * (y[2] - Ps[2]);
+
+    //------------------------------------------------------------------------------------
+    // Earth acceleration in SEM coordinates
+    //------------------------------------------------------------------------------------
+    aEarth_INSEM(t, ae, qbp);
+
+    //    cout << "f[3] = " << f[3] << endl;
+    //    cout << "f[4] = " << f[4] << endl;
+    //    cout << "f[5] = " << f[5] << endl;
+    //    pressEnter(true);
+
+    //------------------------------------------------------------------------------------
+    //Last contribution: acceleration of the Earth
+    //------------------------------------------------------------------------------------
+    f[3] += -ae[0];
+    f[4] += -ae[1];
+    f[5] += -ae[2];
+
+    return FTC_SUCCESS;
+}
+
+/**
+ * \brief Vector field of the QBCP in EC SEM inertial coordinates
+ **/
+int qbcp_vf_ecisem_var(double t, const double y[], double f[], void* params_void)
+{
+    //------------------------------------------------------------------------------------
+    // Memory allocation
+    //------------------------------------------------------------------------------------
+    gsl_matrix* STM  = gsl_matrix_calloc(6, 6);
+    gsl_matrix* STMd = gsl_matrix_calloc(6, 6);
+    gsl_matrix* Q    = gsl_matrix_calloc(6, 6);
+    double b[6];
+
+
+    //------------------------------------------------------------------------------------
+    // Misc parameters
+    //------------------------------------------------------------------------------------
+    //Retrieving the parameters
+    QBCP_L* qbp = (QBCP_L*) params_void;
+    double ms = qbp->us_sem.ms;
+    double me = qbp->us_sem.me;
+    double mm = qbp->us_sem.mm;
+    double n  = qbp->us_sem.n;
+    double ni = qbp->us_sem.ni;
+    double ns = qbp->us_sem.ns;
+    double ai = qbp->us_sem.ai;
+    double as = qbp->us_sem.as;
+    double M  = ms + me + mm;
+
+    //------------------------------------------------------------------------------------
+    //Phase space derivatives: x', y', z', x", y", z"
+    //------------------------------------------------------------------------------------
+    //f[0] = x', f[1] = y', f[2] = z'
+    //------------------------------------
+    f[0] = y[3];
+    f[1] = y[4];
+    f[2] = y[5];
+
+    //f[3] = x", f[4] = y", f[5] = z"
+    //------------------------------------
+    f[3] = 0.0;
+    f[4] = 0.0;
+    f[5] = 0.0;
+
+
+    //------------------------------------------------------------------------------------
+    //r & R
+    //------------------------------------------------------------------------------------
+    //R
+    double R1 = creal(evz(qbp->cs_sem.Zt, t, n, ns, as));
+    double R2 = cimag(evz(qbp->cs_sem.Zt, t, n, ns, as));
+    //r
+    double r1 = creal(evz(qbp->cs_sem.zt, t, n, ni, ai));
+    double r2 = cimag(evz(qbp->cs_sem.zt, t, n, ni, ai));
+
+    //------------------------------------------------------------------------------------
+    //Double derivatives
+    //------------------------------------------------------------------------------------
+    //Rddot
+    cdouble Rddot = evzddot(qbp->cs_sem.Zt, qbp->cs_sem.Ztdot, qbp->cs_sem.Ztddot, t, n, ns, as);
+
+    //------------------------------------------------------------------------------------
+    //Position of the primaries (Earth-Moon barycenter)
+    //------------------------------------------------------------------------------------
+    double Ps[3] = {R1, R2, 0.0};
+    double Pm[3] = {- me/(mm + me)*r1, - me/(mm + me)*r2, 0.0};
+    double Pe[3] = {+ mm/(mm + me)*r1, + mm/(mm + me)*r2, 0.0};
+
+    //------------------------------------------------------------------------------------
+    // Center acceleration in SEM coordinates
+    //------------------------------------------------------------------------------------
+    double ae[3] = {- ms / M * creal(Rddot), - ms / M * cimag(Rddot), 0.0};
+
+
+    //------------------------------------------------------------------------------------
+    // Distances to 2nd power
+    //------------------------------------------------------------------------------------
+    double qPe2 = (y[0] - Pe[0]) * (y[0] - Pe[0]) + (y[1] - Pe[1]) * (y[1] - Pe[1]) + (y[2] - Pe[2]) * (y[2] - Pe[2]);
+    double qPs2 = (y[0] - Ps[0]) * (y[0] - Ps[0]) + (y[1] - Ps[1]) * (y[1] - Ps[1]) + (y[2] - Ps[2]) * (y[2] - Ps[2]);
+    double qPm2 = (y[0] - Pm[0]) * (y[0] - Pm[0]) + (y[1] - Pm[1]) * (y[1] - Pm[1]) + (y[2] - Pm[2]) * (y[2] - Pm[2]);
+
+
+    //------------------------------------------------------------------------------------
+    // Update the vector field
+    //------------------------------------------------------------------------------------
+    if(me != 0) f[3] += - me / pow(qPe2, 3.0 / 2) * (y[0] - Pe[0]);
+    if(mm != 0) f[3] += - mm / pow(qPm2, 3.0 / 2) * (y[0] - Pm[0]);
+    if(ms != 0) f[3] += - ms / pow(qPs2, 3.0 / 2) * (y[0] - Ps[0]);
+
+    if(me != 0) f[4] += - me / pow(qPe2, 3.0 / 2) * (y[1] - Pe[1]);
+    if(mm != 0) f[4] += - mm / pow(qPm2, 3.0 / 2) * (y[1] - Pm[1]);
+    if(ms != 0) f[4] += - ms / pow(qPs2, 3.0 / 2) * (y[1] - Ps[1]);
+
+    if(me != 0) f[5] += - me / pow(qPe2, 3.0 / 2) * (y[2] - Pe[2]);
+    if(mm != 0) f[5] += - mm / pow(qPm2, 3.0 / 2) * (y[2] - Pm[2]);
+    if(ms != 0) f[5] += - ms / pow(qPs2, 3.0 / 2) * (y[2] - Ps[2]);
+
+    //------------------------------------------------------------------------------------
+    //Last contribution: acceleration of the Earth
+    //------------------------------------------------------------------------------------
+    f[3] += -ae[0];
+    f[4] += -ae[1];
+    f[5] += -ae[2];
+
+    //------------------------------------------------------------------------------------
+    //For differential equations
+    //------------------------------------------------------------------------------------
+    for(int i = 0; i < 6; i++) b[i] = 0.0;
+
+
+    //For differential equations
+    b[0] += Uij(y, Pe, qPe2, me, 1.0, 0, 0) + Uij(y, Pm, qPm2, mm, 1.0, 0, 0) + Uij(y, Ps, qPs2, ms, 1.0, 0, 0);
+    b[1] += Uij(y, Pe, qPe2, me, 1.0, 0, 1) + Uij(y, Pm, qPm2, mm, 1.0, 0, 1) + Uij(y, Ps, qPs2, ms, 1.0, 0, 1);
+    b[2] += Uij(y, Pe, qPe2, me, 1.0, 1, 1) + Uij(y, Pm, qPm2, mm, 1.0, 1, 1) + Uij(y, Ps, qPs2, ms, 1.0, 1, 1);
+    b[3] += Uij(y, Pe, qPe2, me, 1.0, 0, 2) + Uij(y, Pm, qPm2, mm, 1.0, 0, 2) + Uij(y, Ps, qPs2, ms, 1.0, 0, 2);
+    b[4] += Uij(y, Pe, qPe2, me, 1.0, 1, 2) + Uij(y, Pm, qPm2, mm, 1.0, 1, 2) + Uij(y, Ps, qPs2, ms, 1.0, 1, 2);
+    b[5] += Uij(y, Pe, qPe2, me, 1.0, 2, 2) + Uij(y, Pm, qPm2, mm, 1.0, 2, 2) + Uij(y, Ps, qPs2, ms, 1.0, 2, 2);
+
+    //------------------------------------------------------------------------------------
+    // Build the variational equation matrix Q such that dot(STM) = Q * STM
+    //------------------------------------------------------------------------------------
+    gsl_matrix_set_zero(Q);
+
+    gsl_matrix_set(Q, 0, 3,  1.0);
+    gsl_matrix_set(Q, 1, 4,  1.0);
+    gsl_matrix_set(Q, 2, 5,  1.0);
+
+    gsl_matrix_set(Q, 3, 0,  b[0]);
+    gsl_matrix_set(Q, 3, 1,  b[1]);
+    gsl_matrix_set(Q, 3, 2,  b[3]);
+    gsl_matrix_set(Q, 4, 0,  b[1]);
+    gsl_matrix_set(Q, 4, 1,  b[2]);
+    gsl_matrix_set(Q, 4, 2,  b[4]);
+    gsl_matrix_set(Q, 5, 0,  b[3]);
+    gsl_matrix_set(Q, 5, 1,  b[4]);
+    gsl_matrix_set(Q, 5, 2,  b[5]);
+
+    //------------------------------------------------------------------------------------
+    //STM update & dot(STM) computation
+    //------------------------------------------------------------------------------------
+    //STM update
+    gslc_vectorToMatrix(STM, y, 6, 6, 6);
+
+    //dot(STM) = Q * STM
+    gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, Q, STM, 0.0, STMd);
+
+
+    //dot(STM) stored in f
+    gslc_matrixToVector(f, STMd, 6, 6 , 6);
+
+    //Memory release
+    gsl_matrix_free(STMd);
+    gsl_matrix_free(STM);
+    gsl_matrix_free(Q);
+    return FTC_SUCCESS;
+}
+
+/**
+ * \brief Vector field of the QBCP in EC SEM inertial coordinates
+ **/
+int qbcp_vf_ecisem_var(double t, const double y[], double f[], gsl_matrix* Q, void* params_void)
+{
+    //------------------------------------------------------------------------------------
+    // Memory allocation
+    //------------------------------------------------------------------------------------
+    gsl_matrix* STM  = gsl_matrix_calloc(6, 6);
+    gsl_matrix* STMd = gsl_matrix_calloc(6, 6);
+    double b[6];
+
+
+    //------------------------------------------------------------------------------------
+    // Misc parameters
+    //------------------------------------------------------------------------------------
+    //Retrieving the parameters
+    QBCP_L* qbp = (QBCP_L*) params_void;
+    double ms = qbp->us_sem.ms;
+    double me = qbp->us_sem.me;
+    double mm = qbp->us_sem.mm;
+    double n  = qbp->us_sem.n;
+    double ni = qbp->us_sem.ni;
+    double ns = qbp->us_sem.ns;
+    double ai = qbp->us_sem.ai;
+    double as = qbp->us_sem.as;
+    double M  = ms + me + mm;
+
+    //------------------------------------------------------------------------------------
+    //Phase space derivatives: x', y', z', x", y", z"
+    //------------------------------------------------------------------------------------
+    //f[0] = x', f[1] = y', f[2] = z'
+    //------------------------------------
+    f[0] = y[3];
+    f[1] = y[4];
+    f[2] = y[5];
+
+    //f[3] = x", f[4] = y", f[5] = z"
+    //------------------------------------
+    f[3] = 0.0;
+    f[4] = 0.0;
+    f[5] = 0.0;
+
+
+    //------------------------------------------------------------------------------------
+    //r & R
+    //------------------------------------------------------------------------------------
+    //R
+    double R1 = creal(evz(qbp->cs_sem.Zt, t, n, ns, as));
+    double R2 = cimag(evz(qbp->cs_sem.Zt, t, n, ns, as));
+    //r
+    double r1 = creal(evz(qbp->cs_sem.zt, t, n, ni, ai));
+    double r2 = cimag(evz(qbp->cs_sem.zt, t, n, ni, ai));
+
+    //------------------------------------------------------------------------------------
+    //Double derivatives
+    //------------------------------------------------------------------------------------
+    //Rddot
+    cdouble Rddot = evzddot(qbp->cs_sem.Zt, qbp->cs_sem.Ztdot, qbp->cs_sem.Ztddot, t, n, ns, as);
+
+    //------------------------------------------------------------------------------------
+    //Position of the primaries (Earth-Moon barycenter)
+    //------------------------------------------------------------------------------------
+    double Ps[3] = {R1, R2, 0.0};
+    double Pm[3] = {- me/(mm + me)*r1, - me/(mm + me)*r2, 0.0};
+    double Pe[3] = {+ mm/(mm + me)*r1, + mm/(mm + me)*r2, 0.0};
+
+    //------------------------------------------------------------------------------------
+    // Center acceleration in SEM coordinates
+    //------------------------------------------------------------------------------------
+    double ae[3] = {- ms / M * creal(Rddot), - ms / M * cimag(Rddot), 0.0};
+
+    //------------------------------------------------------------------------------------
+    // Distances to 2nd power
+    //------------------------------------------------------------------------------------
+    double qPe2 = (y[0] - Pe[0]) * (y[0] - Pe[0]) + (y[1] - Pe[1]) * (y[1] - Pe[1]) + (y[2] - Pe[2]) * (y[2] - Pe[2]);
+    double qPs2 = (y[0] - Ps[0]) * (y[0] - Ps[0]) + (y[1] - Ps[1]) * (y[1] - Ps[1]) + (y[2] - Ps[2]) * (y[2] - Ps[2]);
+    double qPm2 = (y[0] - Pm[0]) * (y[0] - Pm[0]) + (y[1] - Pm[1]) * (y[1] - Pm[1]) + (y[2] - Pm[2]) * (y[2] - Pm[2]);
+
+
+    //------------------------------------------------------------------------------------
+    // Update the vector field
+    //------------------------------------------------------------------------------------
+    if(me != 0) f[3] += - me / pow(qPe2, 3.0 / 2) * (y[0] - Pe[0]);
+    if(mm != 0) f[3] += - mm / pow(qPm2, 3.0 / 2) * (y[0] - Pm[0]);
+    if(ms != 0) f[3] += - ms / pow(qPs2, 3.0 / 2) * (y[0] - Ps[0]);
+
+    if(me != 0) f[4] += - me / pow(qPe2, 3.0 / 2) * (y[1] - Pe[1]);
+    if(mm != 0) f[4] += - mm / pow(qPm2, 3.0 / 2) * (y[1] - Pm[1]);
+    if(ms != 0) f[4] += - ms / pow(qPs2, 3.0 / 2) * (y[1] - Ps[1]);
+
+    if(me != 0) f[5] += - me / pow(qPe2, 3.0 / 2) * (y[2] - Pe[2]);
+    if(mm != 0) f[5] += - mm / pow(qPm2, 3.0 / 2) * (y[2] - Pm[2]);
+    if(ms != 0) f[5] += - ms / pow(qPs2, 3.0 / 2) * (y[2] - Ps[2]);
+
+
+
+    //------------------------------------------------------------------------------------
+    //Last contribution: acceleration of the Earth
+    //------------------------------------------------------------------------------------
+    f[3] += -ae[0];
+    f[4] += -ae[1];
+    f[5] += -ae[2];
+
+    //------------------------------------------------------------------------------------
+    //For differential equations
+    //------------------------------------------------------------------------------------
+    for(int i = 0; i < 6; i++) b[i] = 0.0;
+
+
+    //For differential equations
+    b[0] += Uij(y, Pe, qPe2, me, 1.0, 0, 0) + Uij(y, Pm, qPm2, mm, 1.0, 0, 0) + Uij(y, Ps, qPs2, ms, 1.0, 0, 0);
+    b[1] += Uij(y, Pe, qPe2, me, 1.0, 0, 1) + Uij(y, Pm, qPm2, mm, 1.0, 0, 1) + Uij(y, Ps, qPs2, ms, 1.0, 0, 1);
+    b[2] += Uij(y, Pe, qPe2, me, 1.0, 1, 1) + Uij(y, Pm, qPm2, mm, 1.0, 1, 1) + Uij(y, Ps, qPs2, ms, 1.0, 1, 1);
+    b[3] += Uij(y, Pe, qPe2, me, 1.0, 0, 2) + Uij(y, Pm, qPm2, mm, 1.0, 0, 2) + Uij(y, Ps, qPs2, ms, 1.0, 0, 2);
+    b[4] += Uij(y, Pe, qPe2, me, 1.0, 1, 2) + Uij(y, Pm, qPm2, mm, 1.0, 1, 2) + Uij(y, Ps, qPs2, ms, 1.0, 1, 2);
+    b[5] += Uij(y, Pe, qPe2, me, 1.0, 2, 2) + Uij(y, Pm, qPm2, mm, 1.0, 2, 2) + Uij(y, Ps, qPs2, ms, 1.0, 2, 2);
+
+    //------------------------------------------------------------------------------------
+    // Build the variational equation matrix Q such that dot(STM) = Q * STM
+    //------------------------------------------------------------------------------------
+    gsl_matrix_set_zero(Q);
+
+    gsl_matrix_set(Q, 0, 3,  1.0);
+    gsl_matrix_set(Q, 1, 4,  1.0);
+    gsl_matrix_set(Q, 2, 5,  1.0);
+
+    gsl_matrix_set(Q, 3, 0,  b[0]);
+    gsl_matrix_set(Q, 3, 1,  b[1]);
+    gsl_matrix_set(Q, 3, 2,  b[3]);
+    gsl_matrix_set(Q, 4, 0,  b[1]);
+    gsl_matrix_set(Q, 4, 1,  b[2]);
+    gsl_matrix_set(Q, 4, 2,  b[4]);
+    gsl_matrix_set(Q, 5, 0,  b[3]);
+    gsl_matrix_set(Q, 5, 1,  b[4]);
+    gsl_matrix_set(Q, 5, 2,  b[5]);
+
+    //------------------------------------------------------------------------------------
+    //STM update & dot(STM) computation
+    //------------------------------------------------------------------------------------
+    //STM update
+    gslc_vectorToMatrix(STM, y, 6, 6, 6);
+
+    //dot(STM) = Q * STM
+    gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, Q, STM, 0.0, STMd);
+
+
+    //dot(STM) stored in f
+    gslc_matrixToVector(f, STMd, 6, 6 , 6);
+
+    //Memory release
+    gsl_matrix_free(STMd);
+    gsl_matrix_free(STM);
+    return FTC_SUCCESS;
+}
+
+
+/**
+ * \brief Vector field of the QBCP in EC SEM inertial coordinates
+ **/
+int qbcp_Df_ecisem_var(double t, const double y[], gsl_matrix* Q, void* params_void)
+{
+    //------------------------------------------------------------------------------------
+    // Memory allocation
+    //------------------------------------------------------------------------------------
+    double b[6];
+
+    //------------------------------------------------------------------------------------
+    // Misc parameters
+    //------------------------------------------------------------------------------------
+    //Retrieving the parameters
+    QBCP_L* qbp = (QBCP_L*) params_void;
+    double ms = qbp->us_sem.ms;
+    double me = qbp->us_sem.me;
+    double mm = qbp->us_sem.mm;
+    double n  = qbp->us_sem.n;
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the primaries positions @t, in SEM coordinates
+    //------------------------------------------------------------------------------------
+    double Ps_syn[3];
+    evaluateCoef(Ps_syn, t, n, qbp->nf, qbp->cs_sem.Ps, 3);
+    double Pe_syn[3];
+    evaluateCoef(Pe_syn, t, n, qbp->nf, qbp->cs_sem.Pe, 3);
+    double Pm_syn[3];
+    evaluateCoef(Pm_syn, t, n, qbp->nf, qbp->cs_sem.Pm, 3);
+
+    //------------------------------------------------------------------------------------
+    //Back to ECISEM coordinates
+    //------------------------------------------------------------------------------------
+    double Ps[6];
+    SEMtoECISEM(t, Ps_syn, Ps, qbp);
+    double Pe[6];
+    SEMtoECISEM(t, Pe_syn, Pe, qbp);
+    double Pm[6];
+    SEMtoECISEM(t, Pm_syn, Pm, qbp);
+
+    //------------------------------------------------------------------------------------
+    // Distances to 2nd power
+    //------------------------------------------------------------------------------------
+    double qPe2 = (y[0] - Pe[0]) * (y[0] - Pe[0]) + (y[1] - Pe[1]) * (y[1] - Pe[1]) + (y[2] - Pe[2]) * (y[2] - Pe[2]);
+    double qPs2 = (y[0] - Ps[0]) * (y[0] - Ps[0]) + (y[1] - Ps[1]) * (y[1] - Ps[1]) + (y[2] - Ps[2]) * (y[2] - Ps[2]);
+    double qPm2 = (y[0] - Pm[0]) * (y[0] - Pm[0]) + (y[1] - Pm[1]) * (y[1] - Pm[1]) + (y[2] - Pm[2]) * (y[2] - Pm[2]);
+
+    //------------------------------------------------------------------------------------
+    //For differential equations
+    //------------------------------------------------------------------------------------
+    for(int i = 0; i < 6; i++) b[i] = 0.0;
+
+    //For differential equations
+    b[0] += Uij(y, Pe, qPe2, me, 1.0, 0, 0) + Uij(y, Pm, qPm2, mm, 1.0, 0, 0) + Uij(y, Ps, qPs2, ms, 1.0, 0, 0);
+    b[1] += Uij(y, Pe, qPe2, me, 1.0, 0, 1) + Uij(y, Pm, qPm2, mm, 1.0, 0, 1) + Uij(y, Ps, qPs2, ms, 1.0, 0, 1);
+    b[2] += Uij(y, Pe, qPe2, me, 1.0, 1, 1) + Uij(y, Pm, qPm2, mm, 1.0, 1, 1) + Uij(y, Ps, qPs2, ms, 1.0, 1, 1);
+    b[3] += Uij(y, Pe, qPe2, me, 1.0, 0, 2) + Uij(y, Pm, qPm2, mm, 1.0, 0, 2) + Uij(y, Ps, qPs2, ms, 1.0, 0, 2);
+    b[4] += Uij(y, Pe, qPe2, me, 1.0, 1, 2) + Uij(y, Pm, qPm2, mm, 1.0, 1, 2) + Uij(y, Ps, qPs2, ms, 1.0, 1, 2);
+    b[5] += Uij(y, Pe, qPe2, me, 1.0, 2, 2) + Uij(y, Pm, qPm2, mm, 1.0, 2, 2) + Uij(y, Ps, qPs2, ms, 1.0, 2, 2);
+
+    //------------------------------------------------------------------------------------
+    // Build the variational equation matrix Q such that dot(STM) = Q * STM
+    //------------------------------------------------------------------------------------
+    gsl_matrix_set_zero(Q);
+
+    gsl_matrix_set(Q, 0, 3,  1.0);
+    gsl_matrix_set(Q, 1, 4,  1.0);
+    gsl_matrix_set(Q, 2, 5,  1.0);
+
+    gsl_matrix_set(Q, 3, 0,  b[0]);
+    gsl_matrix_set(Q, 3, 1,  b[1]);
+    gsl_matrix_set(Q, 3, 2,  b[3]);
+    gsl_matrix_set(Q, 4, 0,  b[1]);
+    gsl_matrix_set(Q, 4, 1,  b[2]);
+    gsl_matrix_set(Q, 4, 2,  b[4]);
+    gsl_matrix_set(Q, 5, 0,  b[3]);
+    gsl_matrix_set(Q, 5, 1,  b[4]);
+    gsl_matrix_set(Q, 5, 2,  b[5]);
+
+    return FTC_SUCCESS;
+}
+
+
+//----------------------------------------------------------------------------------------
+// Continuation between ECISEM and NECI (JPL)
+//----------------------------------------------------------------------------------------
+/**
+ *  \brief Vector field for continuation procedure. The result is f = (1.0 - epsilon)*f1 + espilon*f2. Variational equations included.
+ **/
+int qbcp_ecisem_cont_necijpl(double t, const double y[], double f[], void *params_void)
+{
+    //------------------------------------------------------------------------------------
+    //Inner variables
+    //------------------------------------------------------------------------------------
+    double f1[42], f2[42];
+    //Jacobian matrices
+    gsl_matrix *Df1 = gsl_matrix_alloc(6,6);
+    gsl_matrix *Df2 = gsl_matrix_alloc(6,6);
+
+    //------------------------------------------------------------------------------------
+    //Retrieving the parameters
+    //------------------------------------------------------------------------------------
+    QBCP_L* qbp = (QBCP_L*) params_void;
+
+    //------------------------------------------------------------------------------------
+    // Vector field: vf = epsilon * vf1 + (1 - epsilon) * vf2
+    //------------------------------------------------------------------------------------
+    //VF for model 1 & 2
+    qbcp_vf_ecisem_var(t, y, f1, Df1, params_void);
+    jpl_vf_neci_var(t, y, f2, Df2, params_void);
+
+    //f = (1-eps)*f1 + eps*f2 for the first 42 components
+    for(int i = 0; i < 42; i++) f[i] = (1.0-qbp->epsilon)*f1[i] + qbp->epsilon*f2[i];
+
+    //------------------------------------------------------------------------------------
+    // Vector field: dependency in epsilon
+    //------------------------------------------------------------------------------------
+    //Last 6 components of f: variational equations of epsilon
+    for(int i = 0; i < 6; i++)
+    {
+        f[42+i] = 0.0;
+        //omega[i]  = sum(j) Dfij*j
+        for(int j = 0; j < 6; j++) f[42+i] += ((1.0-qbp->epsilon)*gsl_matrix_get(Df1, i, j) + qbp->epsilon*gsl_matrix_get(Df2, i, j))*y[42+j];
+        //omega[i] += df/depsilon = f2 - f1
+        f[42+i] += f2[i] - f1[i];
+    }
+
+    //Memory release
+    gsl_matrix_free(Df1);
+    gsl_matrix_free(Df2);
+
+    return GSL_SUCCESS;
+}
+
+//----------------------------------------------------------------------------------------
+// Continuation between INSEM and ECISEM
+//----------------------------------------------------------------------------------------
+/**
+ *  \brief Vector field for continuation procedure. The result is f = (1.0 - epsilon)*f1 + espilon*f2. Variational equations included.
+ **/
+int qbcp_insem_cont_ecisem(double t, const double y[], double f[], void *params_void)
+{
+    //------------------------------------------------------------------------------------
+    //Inner variables
+    //------------------------------------------------------------------------------------
+    double f1[42], f2[42];
+
+    //------------------------------------------------------------------------------------
+    //Retrieving the parameters
+    //------------------------------------------------------------------------------------
+    QBCP_L* qbp = (QBCP_L*) params_void;
+
+    //------------------------------------------------------------------------------------
+    // Vector field: vf = epsilon * vf1 + (1 - epsilon) * vf2
+    //------------------------------------------------------------------------------------
+    //VF for model 1 & 2
+    qbcp_vf_insem_var(t, y, f1, params_void);
+    qbcp_vf_ecisem_var(t, y, f2, params_void);
+
+    //f = (1-eps)*f1 + eps*f2 for the first 42 components
+    for(int i = 0; i < 42; i++) f[i] = (1.0-qbp->epsilon)*f1[i] + qbp->epsilon*f2[i];
+
+    //------------------------------------------------------------------------------------
+    // Vector field: dependency in epsilon
+    //------------------------------------------------------------------------------------
+    //Jacobian matrices
+    gsl_matrix *Df1 = gsl_matrix_alloc(6,6);
+    gsl_matrix *Df2 = gsl_matrix_alloc(6,6);
+
+    //Get the jacobian matrices of the two vector fields that we compose
+    qbcp_Df_insem_var(t, y, Df1,  params_void);
+    qbcp_Df_ecisem_var(t, y, Df2, params_void);
+
+    //Last 6 components of f: variational equations of epsilon
+    for(int i = 0; i < 6; i++)
+    {
+        f[42+i] = 0.0;
+        //omega[i]  = sum(j) Dfij*j
+        for(int j = 0; j < 6; j++) f[42+i] += ((1.0-qbp->epsilon)*gsl_matrix_get(Df1, i, j) + qbp->epsilon*gsl_matrix_get(Df2, i, j))*y[42+j];
+        //omega[i] += df/depsilon = f2 - f1
+        f[42+i] += f2[i] - f1[i];
+    }
+
+    //Memory release
+    gsl_matrix_free(Df1);
+    gsl_matrix_free(Df2);
+
+    return GSL_SUCCESS;
+}
+
+//----------------------------------------------------------------------------------------
+// Inertial EM coordinates, (X, V)
+//----------------------------------------------------------------------------------------
+/**
+ * \brief Vector field of the QBCP in EM inertial coordinates
+ **/
+int qbcp_vf_inem(double t, const double y[], double f[], void* params_void)
+{
+    //------------------------------------------------------------------------------------
+    // Misc parameters
+    //------------------------------------------------------------------------------------
+    //Retrieving the parameters
+    QBCP_L* qbp = (QBCP_L*) params_void;
+    double ms = qbp->us_em.ms;
+    double me = qbp->us_em.me;
+    double mm = qbp->us_em.mm;
+    double n  = qbp->us_em.n;
+
+    //------------------------------------------------------------------------------------
+    //Phase space derivatives: x', y', z', x", y", z"
+    //------------------------------------------------------------------------------------
+    //f[0] = x', f[1] = y', f[2] = z'
+    //------------------------------------
+    f[0] = y[3];
+    f[1] = y[4];
+    f[2] = y[5];
+
+    //f[3] = x", f[4] = y", f[5] = z"
+    //------------------------------------
+    f[3] = 0.0;
+    f[4] = 0.0;
+    f[5] = 0.0;
+
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the primaries positions @t, in SEM coordinates
+    //------------------------------------------------------------------------------------
+    double Ps_syn[3];
+    evaluateCoef(Ps_syn, t, n, qbp->nf, qbp->cs_em.Ps, 3);
+    double Pe_syn[3];
+    evaluateCoef(Pe_syn, t, n, qbp->nf, qbp->cs_em.Pe, 3);
+    double Pm_syn[3];
+    evaluateCoef(Pm_syn, t, n, qbp->nf, qbp->cs_em.Pm, 3);
+
+    //------------------------------------------------------------------------------------
+    //Back to  INSEM coordinates
+    //------------------------------------------------------------------------------------
+    double Ps[6];
+    EMvtoIN(t, Ps_syn, Ps, qbp);
+    double Pe[6];
+    EMvtoIN(t, Pe_syn, Pe, qbp);
+    double Pm[6];
+    EMvtoIN(t, Pm_syn, Pm, qbp);
+
+    //------------------------------------------------------------------------------------
+    // Distances to 2nd power
+    //------------------------------------------------------------------------------------
+    double qPe2 = (y[0] - Pe[0]) * (y[0] - Pe[0]) + (y[1] - Pe[1]) * (y[1] - Pe[1]) + (y[2] - Pe[2]) * (y[2] - Pe[2]);
+    double qPs2 = (y[0] - Ps[0]) * (y[0] - Ps[0]) + (y[1] - Ps[1]) * (y[1] - Ps[1]) + (y[2] - Ps[2]) * (y[2] - Ps[2]);
+    double qPm2 = (y[0] - Pm[0]) * (y[0] - Pm[0]) + (y[1] - Pm[1]) * (y[1] - Pm[1]) + (y[2] - Pm[2]) * (y[2] - Pm[2]);
+
+
+    //------------------------------------------------------------------------------------
+    // Update the vector field
+    //------------------------------------------------------------------------------------
+    if(me != 0) f[3] += - me / pow(qPe2, 3.0 / 2) * (y[0] - Pe[0]);
+    if(mm != 0) f[3] += - mm / pow(qPm2, 3.0 / 2) * (y[0] - Pm[0]);
+    if(ms != 0) f[3] += - ms / pow(qPs2, 3.0 / 2) * (y[0] - Ps[0]);
+
+    if(me != 0) f[4] += - me / pow(qPe2, 3.0 / 2) * (y[1] - Pe[1]);
+    if(mm != 0) f[4] += - mm / pow(qPm2, 3.0 / 2) * (y[1] - Pm[1]);
+    if(ms != 0) f[4] += - ms / pow(qPs2, 3.0 / 2) * (y[1] - Ps[1]);
+
+    if(me != 0) f[5] += - me / pow(qPe2, 3.0 / 2) * (y[2] - Pe[2]);
+    if(mm != 0) f[5] += - mm / pow(qPm2, 3.0 / 2) * (y[2] - Pm[2]);
+    if(ms != 0) f[5] += - ms / pow(qPs2, 3.0 / 2) * (y[2] - Ps[2]);
+
+    return FTC_SUCCESS;
+}
+
+/**
+ * \brief Vector field of the QBCP in EM inertial coordinates
+ **/
+int qbcp_vf_inem_var(double t, const double y[], double f[], void* params_void)
+{
+    //------------------------------------------------------------------------------------
+    // Memory allocation
+    //------------------------------------------------------------------------------------
+    gsl_matrix* STM  = gsl_matrix_calloc(6, 6);
+    gsl_matrix* STMd = gsl_matrix_calloc(6, 6);
+    gsl_matrix* Q    = gsl_matrix_calloc(6, 6);
+    double b[6];
+
+
+    //------------------------------------------------------------------------------------
+    // Misc parameters
+    //------------------------------------------------------------------------------------
+    //Retrieving the parameters
+    QBCP_L* qbp = (QBCP_L*) params_void;
+    double ms = qbp->us_em.ms;
+    double me = qbp->us_em.me;
+    double mm = qbp->us_em.mm;
+    double n  = qbp->us_em.n;
+
+    //------------------------------------------------------------------------------------
+    //Phase space derivatives: x', y', z', x", y", z"
+    //------------------------------------------------------------------------------------
+    //f[0] = x', f[1] = y', f[2] = z'
+    //------------------------------------
+    f[0] = y[3];
+    f[1] = y[4];
+    f[2] = y[5];
+
+    //f[3] = x", f[4] = y", f[5] = z"
+    //------------------------------------
+    f[3] = 0.0;
+    f[4] = 0.0;
+    f[5] = 0.0;
+
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the primaries positions @t, in SEM coordinates
+    //------------------------------------------------------------------------------------
+    double Ps_syn[3];
+    evaluateCoef(Ps_syn, t, n, qbp->nf, qbp->cs_em.Ps, 3);
+    double Pe_syn[3];
+    evaluateCoef(Pe_syn, t, n, qbp->nf, qbp->cs_em.Pe, 3);
+    double Pm_syn[3];
+    evaluateCoef(Pm_syn, t, n, qbp->nf, qbp->cs_em.Pm, 3);
+
+    //------------------------------------------------------------------------------------
+    //Back to  INSEM coordinates
+    //------------------------------------------------------------------------------------
+    double Ps[6];
+    EMvtoIN(t, Ps_syn, Ps, qbp);
+    double Pe[6];
+    EMvtoIN(t, Pe_syn, Pe, qbp);
+    double Pm[6];
+    EMvtoIN(t, Pm_syn, Pm, qbp);
+
+    //------------------------------------------------------------------------------------
+    // Distances to 2nd power
+    //------------------------------------------------------------------------------------
+    double qPe2 = (y[0] - Pe[0]) * (y[0] - Pe[0]) + (y[1] - Pe[1]) * (y[1] - Pe[1]) + (y[2] - Pe[2]) * (y[2] - Pe[2]);
+    double qPs2 = (y[0] - Ps[0]) * (y[0] - Ps[0]) + (y[1] - Ps[1]) * (y[1] - Ps[1]) + (y[2] - Ps[2]) * (y[2] - Ps[2]);
+    double qPm2 = (y[0] - Pm[0]) * (y[0] - Pm[0]) + (y[1] - Pm[1]) * (y[1] - Pm[1]) + (y[2] - Pm[2]) * (y[2] - Pm[2]);
+
+
+    //------------------------------------------------------------------------------------
+    // Update the vector field
+    //------------------------------------------------------------------------------------
+    if(me != 0) f[3] += - me / pow(qPe2, 3.0 / 2) * (y[0] - Pe[0]);
+    if(mm != 0) f[3] += - mm / pow(qPm2, 3.0 / 2) * (y[0] - Pm[0]);
+    if(ms != 0) f[3] += - ms / pow(qPs2, 3.0 / 2) * (y[0] - Ps[0]);
+
+    if(me != 0) f[4] += - me / pow(qPe2, 3.0 / 2) * (y[1] - Pe[1]);
+    if(mm != 0) f[4] += - mm / pow(qPm2, 3.0 / 2) * (y[1] - Pm[1]);
+    if(ms != 0) f[4] += - ms / pow(qPs2, 3.0 / 2) * (y[1] - Ps[1]);
+
+    if(me != 0) f[5] += - me / pow(qPe2, 3.0 / 2) * (y[2] - Pe[2]);
+    if(mm != 0) f[5] += - mm / pow(qPm2, 3.0 / 2) * (y[2] - Pm[2]);
+    if(ms != 0) f[5] += - ms / pow(qPs2, 3.0 / 2) * (y[2] - Ps[2]);
+
+    //------------------------------------------------------------------------------------
+    //For differential equations
+    //------------------------------------------------------------------------------------
+    for(int i = 0; i < 6; i++) b[i] = 0.0;
+
+
+    //For differential equations
+    b[0] += Uij(y, Pe, qPe2, me, 1.0, 0, 0) + Uij(y, Pm, qPm2, mm, 1.0, 0, 0) + Uij(y, Ps, qPs2, ms, 1.0, 0, 0);
+    b[1] += Uij(y, Pe, qPe2, me, 1.0, 0, 1) + Uij(y, Pm, qPm2, mm, 1.0, 0, 1) + Uij(y, Ps, qPs2, ms, 1.0, 0, 1);
+    b[2] += Uij(y, Pe, qPe2, me, 1.0, 1, 1) + Uij(y, Pm, qPm2, mm, 1.0, 1, 1) + Uij(y, Ps, qPs2, ms, 1.0, 1, 1);
+    b[3] += Uij(y, Pe, qPe2, me, 1.0, 0, 2) + Uij(y, Pm, qPm2, mm, 1.0, 0, 2) + Uij(y, Ps, qPs2, ms, 1.0, 0, 2);
+    b[4] += Uij(y, Pe, qPe2, me, 1.0, 1, 2) + Uij(y, Pm, qPm2, mm, 1.0, 1, 2) + Uij(y, Ps, qPs2, ms, 1.0, 1, 2);
+    b[5] += Uij(y, Pe, qPe2, me, 1.0, 2, 2) + Uij(y, Pm, qPm2, mm, 1.0, 2, 2) + Uij(y, Ps, qPs2, ms, 1.0, 2, 2);
+
+    //------------------------------------------------------------------------------------
+    // Build the variational equation matrix Q such that dot(STM) = Q * STM
+    //------------------------------------------------------------------------------------
+    gsl_matrix_set_zero(Q);
+
+    gsl_matrix_set(Q, 0, 3,  1.0);
+    gsl_matrix_set(Q, 1, 4,  1.0);
+    gsl_matrix_set(Q, 2, 5,  1.0);
+
+    gsl_matrix_set(Q, 3, 0,  b[0]);
+    gsl_matrix_set(Q, 3, 1,  b[1]);
+    gsl_matrix_set(Q, 3, 2,  b[3]);
+    gsl_matrix_set(Q, 4, 0,  b[1]);
+    gsl_matrix_set(Q, 4, 1,  b[2]);
+    gsl_matrix_set(Q, 4, 2,  b[4]);
+    gsl_matrix_set(Q, 5, 0,  b[3]);
+    gsl_matrix_set(Q, 5, 1,  b[4]);
+    gsl_matrix_set(Q, 5, 2,  b[5]);
+
+    //------------------------------------------------------------------------------------
+    //STM update & dot(STM) computation
+    //------------------------------------------------------------------------------------
+    //STM update
+    gslc_vectorToMatrix(STM, y, 6, 6, 6);
+
+    //dot(STM) = Q * STM
+    gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, Q, STM, 0.0, STMd);
+
+
+    //dot(STM) stored in f
+    gslc_matrixToVector(f, STMd, 6, 6 , 6);
+
+    //Memory release
+    gsl_matrix_free(STMd);
+    gsl_matrix_free(STM);
+    gsl_matrix_free(Q);
+    return FTC_SUCCESS;
+}
+
+//----------------------------------------------------------------------------------------
+// NC coordinates, (X, P)
+//----------------------------------------------------------------------------------------
+//Vector field of the QBCP with EM units and Normalized-Li centered coordinates (no variationnal equations)
+int qbcp_vfn(double t, const double y[], double f[], void* params_void)
+{
+    //------------------------------------------------------------------------------------
+    // Misc parameters
+    //------------------------------------------------------------------------------------
+    //Retrieving the parameters
+    QBCP_L* qbp = (QBCP_L*) params_void;
+    int noc      = qbp->numberOfCoefs;
+    int nf       = qbp->nf;
+    double ms    = qbp->us.ms;
+    double me    = qbp->us.me;
+    double mm    = qbp->us.mm;
+    double n     = qbp->us.n;
+    double gamma = qbp->cs.gamma;
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the alphas @ t
+    //------------------------------------------------------------------------------------
+    double alpha[noc];
+    evaluateCoef(alpha, t, n, nf, qbp->cs.coeffs, noc);
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the primaries positions @ t
+    //------------------------------------------------------------------------------------
+    double ps[3];
+    evaluateCoef(ps, t, n, nf, qbp->cs.ps, 3);
+    double pe[3];
+    evaluateCoef(pe, t, n, nf, qbp->cs.pe, 3);
+    double pm[3];
+    evaluateCoef(pm, t, n, nf, qbp->cs.pm, 3);
+
+    //------------------------------------------------------------------------------------
+    // Distances to 2nd power
+    //------------------------------------------------------------------------------------
+    double qpe2 = (y[0] - pe[0]) * (y[0] - pe[0]) + (y[1] - pe[1]) * (y[1] - pe[1]) + (y[2] - pe[2]) * (y[2] - pe[2]);
+    double qps2 = (y[0] - ps[0]) * (y[0] - ps[0]) + (y[1] - ps[1]) * (y[1] - ps[1]) + (y[2] - ps[2]) * (y[2] - ps[2]);
+    double qpm2 = (y[0] - pm[0]) * (y[0] - pm[0]) + (y[1] - pm[1]) * (y[1] - pm[1]) + (y[2] - pm[2]) * (y[2] - pm[2]);
+
+    //------------------------------------------------------------------------------------
+    //Phase space derivatives: x', y', z', px', py', pz'
+    //------------------------------------------------------------------------------------
+    vfn_state(y, f, alpha, ps, pe, pm, qps2, qpe2, qpm2, ms, me, mm, gamma);
+
+    return FTC_SUCCESS;
+}
+
+//Update the normalized vector field of the state. Note that alpha[14] (alpha15) is zero for the QBCP
+int vfn_state(const double y[], double f[], double alpha[],
+              double ps[], double pe[], double pm[],
+              double qps2, double qpe2, double qpm2,
+              double ms, double me, double mm,
+              double gamma)
+{
+    //------------------------------------------------------------------------------------
+    //Phase space derivatives: x', y', z', px', py', pz'
+    //------------------------------------------------------------------------------------
+    //f[0] = x'
+    //------------------------------------
+    f[0] = alpha[0] * y[3] + alpha[1] * y[0] + alpha[2] * y[1];
+    //f[1] = y'
+    //------------------------------------
+    f[1] = alpha[0] * y[4] + alpha[1] * y[1] - alpha[2] * y[0];
+    //f[2] = z'
+    //------------------------------------
+    f[2] = alpha[0] * y[5] + alpha[1] * y[2];
+    //f[3] = px'
+    //------------------------------------
+    f[3] = - alpha[1] * y[3] + alpha[2] * y[4] + alpha[14] * y[0]
+           + alpha[12];
+
+    if(me != 0) f[3] += - alpha[5] / pow(gamma, 3.0) * me / pow(qpe2, 3.0 / 2) * (y[0] - pe[0]);
+
+    if(mm != 0) f[3] += - alpha[5] / pow(gamma, 3.0) * mm / pow(qpm2, 3.0 / 2) * (y[0] - pm[0]);
+
+    if(ms != 0) f[3] += - alpha[5] / pow(gamma, 3.0) * ms / pow(qps2, 3.0 / 2) * (y[0] - ps[0]);
+
+    //f[4] = py'
+    //------------------------------------
+    f[4] = - alpha[1] * y[4] - alpha[2] * y[3] + alpha[14] * y[1]
+           + alpha[13];
+
+    if(me != 0) f[4] += - alpha[5] / pow(gamma, 3.0) * me / pow(qpe2, 3.0 / 2) * (y[1] - pe[1]);
+
+    if(mm != 0) f[4] += - alpha[5] / pow(gamma, 3.0) * mm / pow(qpm2, 3.0 / 2) * (y[1] - pm[1]);
+
+    if(ms != 0) f[4] += - alpha[5] / pow(gamma, 3.0) * ms / pow(qps2, 3.0 / 2) * (y[1] - ps[1]);
+
+
+    //f[5] = pz'
+    //------------------------------------
+    f[5] = - alpha[1] * y[5] + alpha[14] * y[2];
+
+    if(me != 0) f[5] += - alpha[5] / pow(gamma, 3.0) * me / pow(qpe2, 3.0 / 2) * (y[2] - pe[2]);
+
+    if(mm != 0) f[5] += - alpha[5] / pow(gamma, 3.0) * mm / pow(qpm2, 3.0 / 2) * (y[2] - pm[2]);
+
+    if(ms != 0) f[5] += - alpha[5] / pow(gamma, 3.0) * ms / pow(qps2, 3.0 / 2) * (y[2] - ps[2]);
+
+    return FTC_SUCCESS;
+}
+
+
+//----------------------------------------------------------------------------------------
+// NC coordinates, (X, V)
+//----------------------------------------------------------------------------------------
+// Vector field of the QBCP with EM units and Normalized-Li centered coordinates
+// (no variationnal equations). The state is here (x, xdot), and not (x, px)
+int qbcp_vfn_xv(double t, const double y[], double f[], void* params_void)
+{
+    //------------------------------------------------------------------------------------
+    // Misc parameters
+    //------------------------------------------------------------------------------------
+    //Retrieving the parameters
+    QBCP_L* qbp = (QBCP_L*) params_void;
+    int noc      = qbp->numberOfCoefs;
+    int nf       = qbp->nf;
+    double ms    = qbp->us.ms;
+    double me    = qbp->us.me;
+    double mm    = qbp->us.mm;
+    double n     = qbp->us.n;
+    double gamma = qbp->cs.gamma;
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the alphas @ t, as well as the derivatives of the first 3 alphas
+    //------------------------------------------------------------------------------------
+    double alpha[noc];
+    evaluateCoef(alpha, t, n, nf, qbp->cs.coeffs, noc);
+    double alphad[3];
+    evaluateCoefDerivatives(alphad, t, n, nf, qbp->cs.coeffs, 3);
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the primaries positions @ t
+    //------------------------------------------------------------------------------------
+    double ps[3];
+    evaluateCoef(ps, t, n, nf, qbp->cs.ps, 3);
+    double pe[3];
+    evaluateCoef(pe, t, n, nf, qbp->cs.pe, 3);
+    double pm[3];
+    evaluateCoef(pm, t, n, nf, qbp->cs.pm, 3);
+
+
+    //------------------------------------------------------------------------------------
+    // Distances to 2nd power
+    //------------------------------------------------------------------------------------
+    double qpe2 = (y[0] - pe[0]) * (y[0] - pe[0]) + (y[1] - pe[1]) * (y[1] - pe[1]) + (y[2] - pe[2]) * (y[2] - pe[2]);
+    double qps2 = (y[0] - ps[0]) * (y[0] - ps[0]) + (y[1] - ps[1]) * (y[1] - ps[1]) + (y[2] - ps[2]) * (y[2] - ps[2]);
+    double qpm2 = (y[0] - pm[0]) * (y[0] - pm[0]) + (y[1] - pm[1]) * (y[1] - pm[1]) + (y[2] - pm[2]) * (y[2] - pm[2]);
+
+    //------------------------------------------------------------------------------------
+    //Phase space derivatives: x', y', z', px', py', pz'
+    //------------------------------------------------------------------------------------
+    vfn_state_xv(y, f, alpha, alphad, ps, pe, pm, qps2, qpe2, qpm2, ms, me, mm, gamma);
+
+    return FTC_SUCCESS;
+}
+
+// Update the normalized vector field of the state. The state is here (x, xdot),
+// and not (x, px)
+int vfn_state_xv(const double y[], double f[], double alpha[], double alphad[],
+                 double ps[], double pe[], double pm[],
+                 double qps2, double qpe2, double qpm2,
+                 double ms, double me, double mm,
+                 double gamma)
+{
+    //------------------------------------------------------------------------------------
+    //Phase space derivatives: x', y', z'
+    //------------------------------------------------------------------------------------
+    //f[0] = x'
+    //------------------------------------
+    f[0] = y[3];
+    //f[1] = y'
+    //------------------------------------
+    f[1] = y[4];
+    //f[2] = z'
+    //------------------------------------
+    f[2] = y[5];
+
+    //------------------------------------------------------------------------------------
+    //Intermediate coefficients
+    //------------------------------------------------------------------------------------
+    double alpha16 = alphad[1] - alphad[0] * alpha[1] / alpha[0] + alpha[1] * alpha[1] + alpha[2] * alpha[2]; //
+    double alpha17 = alphad[2] - alphad[0] * alpha[2] / alpha[0]; //
+    double alpha18 = alphad[0] / alpha[0]; //
+
+    //------------------------------------------------------------------------------------
+    //Phase space derivatives: x'', y'', z''
+    //------------------------------------------------------------------------------------
+    //f[3] = x''
+    //------------------------------------
+    f[3] = alpha16 * y[0] + alpha17 * y[1] + alpha18 * y[3] + 2 * alpha[2] * y[4] + alpha[0] * alpha[12];
+
+    if(me != 0) f[3] -=  alpha[0] * alpha[5] / pow(gamma, 3.0) * me / pow(qpe2, 3.0 / 2) * (y[0] - pe[0]);
+
+    if(mm != 0) f[3] -=  alpha[0] * alpha[5] / pow(gamma, 3.0) * mm / pow(qpm2, 3.0 / 2) * (y[0] - pm[0]);
+
+    if(ms != 0) f[3] -=  alpha[0] * alpha[5] / pow(gamma, 3.0) * ms / pow(qps2, 3.0 / 2) * (y[0] - ps[0]);
+
+    //f[4] = y''
+    //------------------------------------
+    f[4] = - alpha17 * y[0] + alpha16 * y[1] - 2 * alpha[2] * y[3] + alpha18 * y[4] + alpha[0] * alpha[13];
+
+    if(me != 0) f[4] -=  alpha[0] * alpha[5] / pow(gamma, 3.0) * me / pow(qpe2, 3.0 / 2) * (y[1] - pe[1]);
+
+    if(mm != 0) f[4] -=  alpha[0] * alpha[5] / pow(gamma, 3.0) * mm / pow(qpm2, 3.0 / 2) * (y[1] - pm[1]);
+
+    if(ms != 0) f[4] -=  alpha[0] * alpha[5] / pow(gamma, 3.0) * ms / pow(qps2, 3.0 / 2) * (y[1] - ps[1]);
+
+
+    //f[5] = z''
+    //------------------------------------
+    f[5] = (alpha16 - alpha[2] * alpha[2]) * y[2] + alpha18 * y[5];
+
+    if(me != 0) f[5] -=  alpha[0] * alpha[5] / pow(gamma, 3.0) * me / pow(qpe2, 3.0 / 2) * (y[2] - pe[2]);
+
+    if(mm != 0) f[5] -=  alpha[0] * alpha[5] / pow(gamma, 3.0) * mm / pow(qpm2, 3.0 / 2) * (y[2] - pm[2]);
+
+    if(ms != 0) f[5] -=  alpha[0] * alpha[5] / pow(gamma, 3.0) * ms / pow(qps2, 3.0 / 2) * (y[2] - ps[2]);
+
+    return FTC_SUCCESS;
+}
+
+//----------------------------------------------------------------------------------------
+// SYS coordinates, (X, P)
+//----------------------------------------------------------------------------------------
+/**
+ *  \brief Vector field of the QBCP with EM units and EM reference frame.
+ **/
+int qbcp_vf(double t, const double y[], double f[], void* params_void)
+{
+
+    //------------------------------------------------------------------------------------
+    // Misc parameters
+    //------------------------------------------------------------------------------------
+    //Retrieving the parameters
+    QBCP_L* qbp = (QBCP_L*) params_void;
+    int noc   = qbp->numberOfCoefs;
+    double ms = qbp->us.ms;
+    double me = qbp->us.me;
+    double mm = qbp->us.mm;
+    double n  = qbp->us.n;
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the alphas @t
+    //1, 3, 4, 6, 7 even
+    //2, 5, 8 odd
+    //------------------------------------------------------------------------------------
+    double alpha[noc];
+    evaluateCoef(alpha, t, n, qbp->nf, qbp->cs.coeffs, noc);
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the primaries positions @ t
+    //------------------------------------------------------------------------------------
+    double Ps[3];
+    evaluateCoef(Ps, t, n, qbp->nf, qbp->cs.Ps, 3);
+    double Pe[3];
+    evaluateCoef(Pe, t, n, qbp->nf, qbp->cs.Pe, 3);
+    double Pm[3];
+    evaluateCoef(Pm, t, n, qbp->nf, qbp->cs.Pm, 3);
+
+    //------------------------------------------------------------------------------------
+    // Distances to 2nd power
+    //------------------------------------------------------------------------------------
+    double qPe2 = (y[0] - Pe[0]) * (y[0] - Pe[0]) + (y[1] - Pe[1]) * (y[1] - Pe[1]) + (y[2] - Pe[2]) * (y[2] - Pe[2]);
+    double qPs2 = (y[0] - Ps[0]) * (y[0] - Ps[0]) + (y[1] - Ps[1]) * (y[1] - Ps[1]) + (y[2] - Ps[2]) * (y[2] - Ps[2]);
+    double qPm2 = (y[0] - Pm[0]) * (y[0] - Pm[0]) + (y[1] - Pm[1]) * (y[1] - Pm[1]) + (y[2] - Pm[2]) * (y[2] - Pm[2]);
+
+    //------------------------------------------------------------------------------------
+    //Phase space derivatives: x', y', z', px', py', pz'
+    //------------------------------------------------------------------------------------
+    vf_state(y, f, alpha, Ps, Pe, Pm, qPs2, qPe2, qPm2, ms, me, mm);
+
+    return GSL_SUCCESS;
+}
+
+/**
+ *  \brief Update the vector field of the state in system coordinates (non-normalized). Note that alpha[14] (alpha15) is zero for the QBCP
+ **/
+int vf_state( const double y[], double f[], double alpha[],
+              double ps[], double pe[], double pm[],
+              double qps2, double qpe2, double qpm2,
+              double ms, double me, double mm )
+{
+    //------------------------------------------------------------------------------------
+    //Phase space derivatives: x', y', z', px', py', pz'
+    //------------------------------------------------------------------------------------
+    //f[0] = x'
+    //------------------------------------
+    f[0] = alpha[0] * y[3] + alpha[1] * y[0] + alpha[2] * y[1];
+    //f[1] = y'
+    //------------------------------------
+    f[1] = alpha[0] * y[4] + alpha[1] * y[1] - alpha[2] * y[0];
+    //f[2] = z'
+    //------------------------------------
+    f[2] = alpha[0] * y[5] + alpha[1] * y[2];
+    //f[3] = px'
+    //------------------------------------
+    f[3] = - alpha[1] * y[3] + alpha[2] * y[4] + alpha[14] * y[0]
+           - alpha[3];
+
+    if(me != 0) f[3] += - alpha[5] * me / pow(qpe2, 3.0 / 2) * (y[0] - pe[0]);
+
+    if(mm != 0) f[3] += - alpha[5] * mm / pow(qpm2, 3.0 / 2) * (y[0] - pm[0]);
+
+    if(ms != 0) f[3] += - alpha[5] * ms / pow(qps2, 3.0 / 2) * (y[0] - ps[0]);
+
+
+    //f[4] = py'
+    //------------------------------------
+    f[4] = - alpha[1] * y[4] - alpha[2] * y[3] + alpha[14] * y[1]
+           - alpha[4];
+
+    if(me != 0) f[4] += - alpha[5] * me / pow(qpe2, 3.0 / 2) * (y[1] - pe[1]);
+
+    if(mm != 0) f[4] += - alpha[5] * mm / pow(qpm2, 3.0 / 2) * (y[1] - pm[1]);
+
+    if(ms != 0) f[4] += - alpha[5] * ms / pow(qps2, 3.0 / 2) * (y[1] - ps[1]);
+
+    //f[5] = pz'
+    //------------------------------------
+    f[5] = - alpha[1] * y[5] + alpha[14] * y[2];
+
+    if(me != 0) f[5] += - alpha[5] * me / pow(qpe2, 3.0 / 2) * (y[2] - pe[2]);
+
+    if(mm != 0) f[5] += - alpha[5] * mm / pow(qpm2, 3.0 / 2) * (y[2] - pm[2]);
+
+    if(ms != 0) f[5] += - alpha[5] * ms / pow(qps2, 3.0 / 2) * (y[2] - ps[2]);
+
+
+    return GSL_SUCCESS;
+}
+
+
+//----------------------------------------------------------------------------------------
+// SYS coordinates, (X, V)
+//----------------------------------------------------------------------------------------
+/**
+ *  \brief Vector field of the QBCP with EM units and EM coordinates. The state is here (x, xdot), and not (x, px)
+ **/
+int qbcp_vf_varnonlin_xv(double t, const double y[], double f[], void* params_void)
+{
+    //------------------------------------------------------------------------------------
+    // Memory allocation
+    //------------------------------------------------------------------------------------
+    gsl_matrix* STM  = gsl_matrix_calloc(6, 6);
+    gsl_matrix* STMd = gsl_matrix_calloc(6, 6);
+    gsl_matrix* Q    = gsl_matrix_calloc(6, 6);
+
+    //------------------------------------------------------------------------------------
+    // Misc parameters
+    //------------------------------------------------------------------------------------
+    //Retrieving the parameters
+    QBCP_L* qbp  = (QBCP_L*) params_void;
+    int noc      = qbp->numberOfCoefs;
+    double ms    = qbp->us.ms;
+    double me    = qbp->us.me;
+    double mm    = qbp->us.mm;
+    double n     = qbp->us.n;
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the alphas and their derivatives @ t
+    //1, 3, 4, 6, 7 even
+    //2, 5, 8 odd
+    //------------------------------------------------------------------------------------
+    double alpha[noc];
+    evaluateCoef(alpha, t, n, qbp->nf, qbp->cs.coeffs, noc);
+    double alphad[3];
+    evaluateCoefDerivatives(alphad, t, n, qbp->nf, qbp->cs.coeffs, 3);
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the primaries positions @ t
+    //------------------------------------------------------------------------------------
+    double ps[3];
+    evaluateCoef(ps, t, n, qbp->nf, qbp->cs.Ps, 3);
+    double pe[3];
+    evaluateCoef(pe, t, n, qbp->nf, qbp->cs.Pe, 3);
+    double pm[3];
+    evaluateCoef(pm, t, n, qbp->nf, qbp->cs.Pm, 3);
+
+    //------------------------------------------------------------------------------------
+    // Distances to 2nd power
+    //------------------------------------------------------------------------------------
+    double qpe2 = (y[0] - pe[0]) * (y[0] - pe[0]) + (y[1] - pe[1]) * (y[1] - pe[1]) + (y[2] - pe[2]) * (y[2] - pe[2]);
+    double qps2 = (y[0] - ps[0]) * (y[0] - ps[0]) + (y[1] - ps[1]) * (y[1] - ps[1]) + (y[2] - ps[2]) * (y[2] - ps[2]);
+    double qpm2 = (y[0] - pm[0]) * (y[0] - pm[0]) + (y[1] - pm[1]) * (y[1] - pm[1]) + (y[2] - pm[2]) * (y[2] - pm[2]);
+
+    //------------------------------------------------------------------------------------
+    //Phase space derivatives: x', y', z', px', py', pz'
+    //------------------------------------------------------------------------------------
+    vf_state_xv(y, f, alpha, alphad, ps, pe, pm, qps2, qpe2, qpm2, ms, me, mm);
+
+    //------------------------------------------------------------------------------------
+    //Variationnal equations, nonlinear case
+    //------------------------------------------------------------------------------------
+    gsl_matrix_set_zero(Q);
+    vf_stm_xv(y, Q, alpha, alphad, ps, pe, pm, qps2, qpe2, qpm2, ms, me, mm);
+
+    //------------------------------------------------------------------------------------
+    //STM update & dot(STM) computation
+    //------------------------------------------------------------------------------------
+    //STM update
+    gslc_vectorToMatrix(STM, y, 6, 6, 6);
+
+    //dot(STM) = Q * STM
+    gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, Q, STM, 0.0, STMd);
+
+
+    //dot(STM) stored in f
+    gslc_matrixToVector(f, STMd, 6, 6 , 6);
+
+    //Memory release
+    gsl_matrix_free(STMd);
+    gsl_matrix_free(STM);
+    gsl_matrix_free(Q);
+
+    return GSL_SUCCESS;
+}
+
+// Vector field of the QBCP with EM units and system units centered coordinates
+// (no variationnal equations). The state is here (x, xdot), and not (x, px)
+int qbcp_vf_xv(double t, const double y[], double f[], void* params_void)
+{
+    //------------------------------------------------------------------------------------
+    // Misc parameters
+    //------------------------------------------------------------------------------------
+    //Retrieving the parameters
+    QBCP_L* qbp = (QBCP_L*) params_void;
+    int noc      = qbp->numberOfCoefs;
+    int nf       = qbp->nf;
+    double ms    = qbp->us.ms;
+    double me    = qbp->us.me;
+    double mm    = qbp->us.mm;
+    double n     = qbp->us.n;
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the alphas @ t, as well as the derivatives of the first 3 alphas
+    //------------------------------------------------------------------------------------
+    double alpha[noc];
+    evaluateCoef(alpha, t, n, nf, qbp->cs.coeffs, noc);
+    double alphad[3];
+    evaluateCoefDerivatives(alphad, t, n, nf, qbp->cs.coeffs, 3);
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the primaries positions @ t
+    //------------------------------------------------------------------------------------
+    double ps[3];
+    evaluateCoef(ps, t, n, nf, qbp->cs.Ps, 3);
+    double pe[3];
+    evaluateCoef(pe, t, n, nf, qbp->cs.Pe, 3);
+    double pm[3];
+    evaluateCoef(pm, t, n, nf, qbp->cs.Pm, 3);
+
+
+    //------------------------------------------------------------------------------------
+    // Distances to 2nd power
+    //------------------------------------------------------------------------------------
+    double qpe2 = (y[0] - pe[0]) * (y[0] - pe[0]) + (y[1] - pe[1]) * (y[1] - pe[1]) + (y[2] - pe[2]) * (y[2] - pe[2]);
+    double qps2 = (y[0] - ps[0]) * (y[0] - ps[0]) + (y[1] - ps[1]) * (y[1] - ps[1]) + (y[2] - ps[2]) * (y[2] - ps[2]);
+    double qpm2 = (y[0] - pm[0]) * (y[0] - pm[0]) + (y[1] - pm[1]) * (y[1] - pm[1]) + (y[2] - pm[2]) * (y[2] - pm[2]);
+
+    //------------------------------------------------------------------------------------
+    //Phase space derivatives: x', y', z', px', py', pz'
+    //------------------------------------------------------------------------------------
+    vf_state_xv(y, f, alpha, alphad, ps, pe, pm, qps2, qpe2, qpm2, ms, me, mm);
+
+    return FTC_SUCCESS;
 }
 
 
 
-//----------------------------------------------------------------
+// Update the vector field of the state. The state is here (x, xdot),
+// and not (x, px)
+int vf_state_xv(const double y[], double f[], double alpha[], double alphad[],
+                 double ps[], double pe[], double pm[],
+                 double qps2, double qpe2, double qpm2,
+                 double ms, double me, double mm)
+{
+    //------------------------------------------------------------------------------------
+    //Phase space derivatives: x', y', z'
+    //------------------------------------------------------------------------------------
+    //f[0] = x'
+    //------------------------------------
+    f[0] = y[3];
+    //f[1] = y'
+    //------------------------------------
+    f[1] = y[4];
+    //f[2] = z'
+    //------------------------------------
+    f[2] = y[5];
+
+    //------------------------------------------------------------------------------------
+    //Intermediate coefficients
+    //------------------------------------------------------------------------------------
+    double alpha16 = alphad[1] - alphad[0] * alpha[1] / alpha[0] + alpha[1] * alpha[1] + alpha[2] * alpha[2]; //
+    double alpha17 = alphad[2] - alphad[0] * alpha[2] / alpha[0]; //
+    double alpha18 = alphad[0] / alpha[0]; //
+
+    //------------------------------------------------------------------------------------
+    //Phase space derivatives: x'', y'', z''
+    //------------------------------------------------------------------------------------
+    //f[3] = x''
+    //------------------------------------
+    f[3] = alpha16 * y[0] + alpha17 * y[1] + alpha18 * y[3] + 2 * alpha[2] * y[4] - alpha[0] * alpha[3];
+
+    if(me != 0) f[3] -=  alpha[0] * alpha[5] * me / pow(qpe2, 3.0 / 2) * (y[0] - pe[0]);
+
+    if(mm != 0) f[3] -=  alpha[0] * alpha[5] * mm / pow(qpm2, 3.0 / 2) * (y[0] - pm[0]);
+
+    if(ms != 0) f[3] -=  alpha[0] * alpha[5] * ms / pow(qps2, 3.0 / 2) * (y[0] - ps[0]);
+
+    //f[4] = y''
+    //------------------------------------
+    f[4] = - alpha17 * y[0] + alpha16 * y[1] - 2 * alpha[2] * y[3] + alpha18 * y[4] - alpha[0] * alpha[4];
+
+    if(me != 0) f[4] -=  alpha[0] * alpha[5] * me / pow(qpe2, 3.0 / 2) * (y[1] - pe[1]);
+
+    if(mm != 0) f[4] -=  alpha[0] * alpha[5] * mm / pow(qpm2, 3.0 / 2) * (y[1] - pm[1]);
+
+    if(ms != 0) f[4] -=  alpha[0] * alpha[5] * ms / pow(qps2, 3.0 / 2) * (y[1] - ps[1]);
+
+
+    //f[5] = z''
+    //------------------------------------
+    f[5] = (alpha16 - alpha[2] * alpha[2]) * y[2] + alpha18 * y[5];
+
+    if(me != 0) f[5] -=  alpha[0] * alpha[5] * me / pow(qpe2, 3.0 / 2) * (y[2] - pe[2]);
+
+    if(mm != 0) f[5] -=  alpha[0] * alpha[5] * mm / pow(qpm2, 3.0 / 2) * (y[2] - pm[2]);
+
+    if(ms != 0) f[5] -=  alpha[0] * alpha[5] * ms / pow(qps2, 3.0 / 2) * (y[2] - ps[2]);
+
+    return FTC_SUCCESS;
+}
+
+
+
+/**
+ *  \brief Update the system variational equation matrix
+ **/
+int vf_stm_xv(const double y[], gsl_matrix* Q, double alpha[], double alphad[],
+               double ps[], double pe[], double pm[],
+               double qps2, double qpe2, double qpm2,
+               double ms, double me, double mm)
+{
+    double b[6];
+
+    //------------------------------------------------------------------------------------
+    // Variational equations, nonlinear case:
+    // The nonlinear terms of the equations of motion
+    // are the derivatives of the potential of the primaries U: Ux, Uy, Uz.
+    // The variational equations contain the second derivatives of this potential
+    //
+    // b1 = dUxx, b2 = dUxy, b4 = dUxz
+    // b2 = dUyx, b3 = dUyy, b5 = dUyz
+    // b4 = dUzx, b5 = dUzy, b6 = dUzz
+    //
+    //------------------------------------------------------------------------------------
+    double factor = alpha[0] * alpha[5];
+
+    b[0] =   Uij(y, pe, qpe2, me, factor, 0, 0)
+             + Uij(y, pm, qpm2, mm, factor, 0, 0)
+             + Uij(y, ps, qps2, ms, factor, 0, 0);
+
+    b[1] =   Uij(y, pe, qpe2, me, factor, 0, 1)
+             + Uij(y, pm, qpm2, mm, factor, 0, 1)
+             + Uij(y, ps, qps2, ms, factor, 0, 1);
+
+    b[2] =   Uij(y, pe, qpe2, me, factor, 1, 1)
+             + Uij(y, pm, qpm2, mm, factor, 1, 1)
+             + Uij(y, ps, qps2, ms, factor, 1, 1);
+
+    b[3] =   Uij(y, pe, qpe2, me, factor, 0, 2)
+             + Uij(y, pm, qpm2, mm, factor, 0, 2)
+             + Uij(y, ps, qps2, ms, factor, 0, 2);
+
+    b[4] =   Uij(y, pe, qpe2, me, factor, 1, 2)
+             + Uij(y, pm, qpm2, mm, factor, 1, 2)
+             + Uij(y, ps, qps2, ms, factor, 1, 2);
+
+    b[5] =   Uij(y, pe, qpe2, me, factor, 2, 2)
+             + Uij(y, pm, qpm2, mm, factor, 2, 2)
+             + Uij(y, ps, qps2, ms, factor, 2, 2);
+
+    //------------------------------------------------------------------------------------
+    // Build the variational equation matrix Q such that dot(STM) = Q * STM
+    //------------------------------------------------------------------------------------
+    set_vareq_matrix_xv(Q, b, alpha, alphad);
+
+    return GSL_SUCCESS;
+}
+
+
+
+//----------------------------------------------------------------------------------------
 // NC coordinates, (X, P)
-//----------------------------------------------------------------
+//----------------------------------------------------------------------------------------
+/**
+ *  \brief Vector field of the QBCP with EM units and Normalized-Centered coordinates.
+ **/
+int qbcp_vfn_varnonlin(double t, const double y[], double f[], void* params_void)
+{
+    //------------------------------------------------------------------------------------
+    // Memory allocation
+    //------------------------------------------------------------------------------------
+    gsl_matrix* STM  = gsl_matrix_calloc(6, 6);
+    gsl_matrix* STMd = gsl_matrix_calloc(6, 6);
+    gsl_matrix* Q    = gsl_matrix_calloc(6, 6);
+
+    //------------------------------------------------------------------------------------
+    // Misc parameters
+    //------------------------------------------------------------------------------------
+    //Retrieving the parameters
+    QBCP_L* qbp  = (QBCP_L*) params_void;
+    int noc      = qbp->numberOfCoefs;
+    double ms    = qbp->us.ms;
+    double me    = qbp->us.me;
+    double mm    = qbp->us.mm;
+    double n     = qbp->us.n;
+    double gamma = qbp->cs.gamma;
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the alphas and their derivatives @ t
+    //1, 3, 4, 6, 7 even
+    //2, 5, 8 odd
+    //------------------------------------------------------------------------------------
+    double alpha[noc];
+    evaluateCoef(alpha, t, n, qbp->nf, qbp->cs.coeffs, noc);
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the primaries positions @ t
+    //------------------------------------------------------------------------------------
+    double ps[3];
+    evaluateCoef(ps, t, n, qbp->nf, qbp->cs.ps, 3);
+    double pe[3];
+    evaluateCoef(pe, t, n, qbp->nf, qbp->cs.pe, 3);
+    double pm[3];
+    evaluateCoef(pm, t, n, qbp->nf, qbp->cs.pm, 3);
+
+    //------------------------------------------------------------------------------------
+    // Distances to 2nd power
+    //------------------------------------------------------------------------------------
+    double qpe2 = (y[0] - pe[0]) * (y[0] - pe[0]) + (y[1] - pe[1]) * (y[1] - pe[1]) + (y[2] - pe[2]) * (y[2] - pe[2]);
+    double qps2 = (y[0] - ps[0]) * (y[0] - ps[0]) + (y[1] - ps[1]) * (y[1] - ps[1]) + (y[2] - ps[2]) * (y[2] - ps[2]);
+    double qpm2 = (y[0] - pm[0]) * (y[0] - pm[0]) + (y[1] - pm[1]) * (y[1] - pm[1]) + (y[2] - pm[2]) * (y[2] - pm[2]);
+
+    //------------------------------------------------------------------------------------
+    //Phase space derivatives: x', y', z', px', py', pz'
+    //------------------------------------------------------------------------------------
+    vfn_state(y, f, alpha, ps, pe, pm, qps2, qpe2, qpm2, ms, me, mm, gamma);
+
+    //------------------------------------------------------------------------------------
+    //Variationnal equations, nonlinear case
+    //------------------------------------------------------------------------------------
+    gsl_matrix_set_zero(Q);
+    vfn_stm(y, Q, alpha, ps, pe, pm, qps2, qpe2, qpm2, ms, me, mm, gamma);
+
+    //------------------------------------------------------------------------------------
+    //STM update & dot(STM) computation
+    //------------------------------------------------------------------------------------
+    //STM update
+    gslc_vectorToMatrix(STM, y, 6, 6, 6);
+
+    //dot(STM) = Q * STM
+    gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, Q, STM, 0.0, STMd);
+
+
+    //dot(STM) stored in f
+    gslc_matrixToVector(f, STMd, 6, 6 , 6);
+
+    //Memory release
+    gsl_matrix_free(STMd);
+    gsl_matrix_free(STM);
+    gsl_matrix_free(Q);
+
+    return GSL_SUCCESS;
+}
+
 /**
  *  \brief Build the Variational Equation Matrix Q from the arrays b and alpha. Note that alpha[14] (alpha15) is zero for the QBCP
  **/
 void set_vareq_matrix(gsl_matrix* Q, double b[], double alpha[])
 {
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Build the variational equation matrix Q such that dot(STM) = Q * STM
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     gsl_matrix_set(Q, 0, 0,  alpha[1]);
     gsl_matrix_set(Q, 0, 1,  alpha[2]);
     gsl_matrix_set(Q, 0, 3,  alpha[0]);
@@ -2134,7 +3692,7 @@ int vfn_stm(const double y[], gsl_matrix* Q, double alpha[],
 {
     double b[6];
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Variational equations, nonlinear case:
     // The nonlinear terms of the equations of motion
     // are the derivatives of the potential of the primaries U: Ux, Uy, Uz.
@@ -2144,7 +3702,7 @@ int vfn_stm(const double y[], gsl_matrix* Q, double alpha[],
     // b2 = dUyx, b3 = dUyy, b5 = dUyz
     // b4 = dUzx, b5 = dUzy, b6 = dUzz
     //
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double factor = alpha[5] / pow(gamma, 3.0);
 
     b[0] =     Uij(y, pe, qpe2, me, factor, 0, 0)
@@ -2171,29 +3729,33 @@ int vfn_stm(const double y[], gsl_matrix* Q, double alpha[],
              + Uij(y, pm, qpm2, mm, factor, 2, 2)
              + Uij(y, ps, qps2, ms, factor, 2, 2);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Build the variational equation matrix Q such that dot(STM) = Q * STM
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     set_vareq_matrix(Q, b, alpha);
 
     return GSL_SUCCESS;
 }
 
+
+//----------------------------------------------------------------------------------------
+// NC coordinates, (X, V)
+//----------------------------------------------------------------------------------------
 /**
- *  \brief Vector field of the QBCP with EM units and Normalized-Centered coordinates.
+ *  \brief Vector field of the QBCP with EM units and Normalized-Centered coordinates. The state is here (x, xdot), and not (x, px)
  **/
-int qbfbp_vfn_varnonlin(double t, const double y[], double f[], void* params_void)
+int qbcp_vfn_varnonlin_xv(double t, const double y[], double f[], void* params_void)
 {
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Memory allocation
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     gsl_matrix* STM  = gsl_matrix_calloc(6, 6);
     gsl_matrix* STMd = gsl_matrix_calloc(6, 6);
     gsl_matrix* Q    = gsl_matrix_calloc(6, 6);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Misc parameters
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Retrieving the parameters
     QBCP_L* qbp  = (QBCP_L*) params_void;
     int noc      = qbp->numberOfCoefs;
@@ -2203,17 +3765,19 @@ int qbfbp_vfn_varnonlin(double t, const double y[], double f[], void* params_voi
     double n     = qbp->us.n;
     double gamma = qbp->cs.gamma;
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Evaluate the alphas and their derivatives @ t
     //1, 3, 4, 6, 7 even
     //2, 5, 8 odd
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double alpha[noc];
     evaluateCoef(alpha, t, n, qbp->nf, qbp->cs.coeffs, noc);
+    double alphad[3];
+    evaluateCoefDerivatives(alphad, t, n, qbp->nf, qbp->cs.coeffs, 3);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Evaluate the primaries positions @ t
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double ps[3];
     evaluateCoef(ps, t, n, qbp->nf, qbp->cs.ps, 3);
     double pe[3];
@@ -2221,27 +3785,27 @@ int qbfbp_vfn_varnonlin(double t, const double y[], double f[], void* params_voi
     double pm[3];
     evaluateCoef(pm, t, n, qbp->nf, qbp->cs.pm, 3);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Distances to 2nd power
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double qpe2 = (y[0] - pe[0]) * (y[0] - pe[0]) + (y[1] - pe[1]) * (y[1] - pe[1]) + (y[2] - pe[2]) * (y[2] - pe[2]);
     double qps2 = (y[0] - ps[0]) * (y[0] - ps[0]) + (y[1] - ps[1]) * (y[1] - ps[1]) + (y[2] - ps[2]) * (y[2] - ps[2]);
     double qpm2 = (y[0] - pm[0]) * (y[0] - pm[0]) + (y[1] - pm[1]) * (y[1] - pm[1]) + (y[2] - pm[2]) * (y[2] - pm[2]);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Phase space derivatives: x', y', z', px', py', pz'
-    //-------------------------------------------------------------------------------
-    vfn_state(y, f, alpha, ps, pe, pm, qps2, qpe2, qpm2, ms, me, mm, gamma);
+    //------------------------------------------------------------------------------------
+    vfn_state_xv(y, f, alpha, alphad, ps, pe, pm, qps2, qpe2, qpm2, ms, me, mm, gamma);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Variationnal equations, nonlinear case
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     gsl_matrix_set_zero(Q);
-    vfn_stm(y, Q, alpha, ps, pe, pm, qps2, qpe2, qpm2, ms, me, mm, gamma);
+    vfn_stm_xv(y, Q, alpha, alphad, ps, pe, pm, qps2, qpe2, qpm2, ms, me, mm, gamma);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //STM update & dot(STM) computation
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //STM update
     gslc_vectorToMatrix(STM, y, 6, 6, 6);
 
@@ -2260,25 +3824,21 @@ int qbfbp_vfn_varnonlin(double t, const double y[], double f[], void* params_voi
     return GSL_SUCCESS;
 }
 
-
-//----------------------------------------------------------------
-// NC coordinates, (X, V)
-//----------------------------------------------------------------
 /**
  *  \brief Build the Variational Equation Matrix Q from the arrays b and alpha
  **/
 void set_vareq_matrix_xv(gsl_matrix* Q, double b[], double alpha[], double alphad[])
 {
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Intermediate coefficients
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double alpha16 = alphad[1] - alphad[0] * alpha[1] / alpha[0] + alpha[1] * alpha[1] + alpha[2] * alpha[2]; //
     double alpha17 = alphad[2] - alphad[0] * alpha[2] / alpha[0]; //
     double alpha18 = alphad[0] / alpha[0]; //
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Build the variational equation matrix Q such that dot(STM) = Q * STM
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     gsl_matrix_set(Q, 0, 3,  1.0);
     gsl_matrix_set(Q, 1, 4,  1.0);
     gsl_matrix_set(Q, 2, 5,  1.0);
@@ -2301,7 +3861,6 @@ void set_vareq_matrix_xv(gsl_matrix* Q, double b[], double alpha[], double alpha
 }
 
 
-
 /**
  *  \brief Update the Normalized-Centered variational equation matrix
  **/
@@ -2313,7 +3872,7 @@ int vfn_stm_xv(const double y[], gsl_matrix* Q, double alpha[], double alphad[],
 {
     double b[6];
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Variational equations, nonlinear case:
     // The nonlinear terms of the equations of motion
     // are the derivatives of the potential of the primaries U: Ux, Uy, Uz.
@@ -2323,7 +3882,7 @@ int vfn_stm_xv(const double y[], gsl_matrix* Q, double alpha[], double alphad[],
     // b2 = dUyx, b3 = dUyy, b5 = dUyz
     // b4 = dUzx, b5 = dUzy, b6 = dUzz
     //
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double factor = alpha[0] * alpha[5] / pow(gamma, 3.0);
 
     b[0] =   Uij(y, pe, qpe2, me, factor, 0, 0)
@@ -2350,85 +3909,85 @@ int vfn_stm_xv(const double y[], gsl_matrix* Q, double alpha[], double alphad[],
              + Uij(y, pm, qpm2, mm, factor, 2, 2)
              + Uij(y, ps, qps2, ms, factor, 2, 2);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Build the variational equation matrix Q such that dot(STM) = Q * STM
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     set_vareq_matrix_xv(Q, b, alpha, alphad);
 
     return GSL_SUCCESS;
 }
 
+
+//----------------------------------------------------------------------------------------
+// SYS coordinates, (X, P)
+//----------------------------------------------------------------------------------------
 /**
- *  \brief Vector field of the QBCP with EM units and Normalized-Centered coordinates. The state is here (x, xdot), and not (x, px)
+ *  \brief Vector field of the QBCP with EM units and EM reference frame. Variational equations included.
  **/
-int qbfbp_vfn_varnonlin_xv(double t, const double y[], double f[], void* params_void)
+int qbcp_vf_varnonlin(double t, const double y[], double f[], void* params_void)
 {
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Memory allocation
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     gsl_matrix* STM  = gsl_matrix_calloc(6, 6);
     gsl_matrix* STMd = gsl_matrix_calloc(6, 6);
-    gsl_matrix* Q    = gsl_matrix_calloc(6, 6);
+    gsl_matrix* B    = gsl_matrix_calloc(6, 6);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Misc parameters
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Retrieving the parameters
-    QBCP_L* qbp  = (QBCP_L*) params_void;
-    int noc      = qbp->numberOfCoefs;
-    double ms    = qbp->us.ms;
-    double me    = qbp->us.me;
-    double mm    = qbp->us.mm;
-    double n     = qbp->us.n;
-    double gamma = qbp->cs.gamma;
+    QBCP_L* qbp = (QBCP_L*) params_void;
+    double ms = qbp->us.ms;
+    double me = qbp->us.me;
+    double mm = qbp->us.mm;
+    double n  = qbp->us.n;
+    int noc   = qbp->numberOfCoefs;
 
-    //-------------------------------------------------------------------------------
-    //Evaluate the alphas and their derivatives @ t
+    //------------------------------------------------------------------------------------
+    //Evaluate the alphas @t
     //1, 3, 4, 6, 7 even
     //2, 5, 8 odd
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double alpha[noc];
     evaluateCoef(alpha, t, n, qbp->nf, qbp->cs.coeffs, noc);
-    double alphad[3];
-    evaluateCoefDerivatives(alphad, t, n, qbp->nf, qbp->cs.coeffs, 3);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Evaluate the primaries positions @ t
-    //-------------------------------------------------------------------------------
-    double ps[3];
-    evaluateCoef(ps, t, n, qbp->nf, qbp->cs.ps, 3);
-    double pe[3];
-    evaluateCoef(pe, t, n, qbp->nf, qbp->cs.pe, 3);
-    double pm[3];
-    evaluateCoef(pm, t, n, qbp->nf, qbp->cs.pm, 3);
+    //------------------------------------------------------------------------------------
+    double Ps[3];
+    evaluateCoef(Ps, t, n, qbp->nf, qbp->cs.Ps, 3);
+    double Pe[3];
+    evaluateCoef(Pe, t, n, qbp->nf, qbp->cs.Pe, 3);
+    double Pm[3];
+    evaluateCoef(Pm, t, n, qbp->nf, qbp->cs.Pm, 3);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Distances to 2nd power
-    //-------------------------------------------------------------------------------
-    double qpe2 = (y[0] - pe[0]) * (y[0] - pe[0]) + (y[1] - pe[1]) * (y[1] - pe[1]) + (y[2] - pe[2]) * (y[2] - pe[2]);
-    double qps2 = (y[0] - ps[0]) * (y[0] - ps[0]) + (y[1] - ps[1]) * (y[1] - ps[1]) + (y[2] - ps[2]) * (y[2] - ps[2]);
-    double qpm2 = (y[0] - pm[0]) * (y[0] - pm[0]) + (y[1] - pm[1]) * (y[1] - pm[1]) + (y[2] - pm[2]) * (y[2] - pm[2]);
+    //------------------------------------------------------------------------------------
+    double qPe2 = (y[0] - Pe[0]) * (y[0] - Pe[0]) + (y[1] - Pe[1]) * (y[1] - Pe[1]) + (y[2] - Pe[2]) * (y[2] - Pe[2]);
+    double qPs2 = (y[0] - Ps[0]) * (y[0] - Ps[0]) + (y[1] - Ps[1]) * (y[1] - Ps[1]) + (y[2] - Ps[2]) * (y[2] - Ps[2]);
+    double qPm2 = (y[0] - Pm[0]) * (y[0] - Pm[0]) + (y[1] - Pm[1]) * (y[1] - Pm[1]) + (y[2] - Pm[2]) * (y[2] - Pm[2]);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Phase space derivatives: x', y', z', px', py', pz'
-    //-------------------------------------------------------------------------------
-    vfn_state_xv(y, f, alpha, alphad, ps, pe, pm, qps2, qpe2, qpm2, ms, me, mm, gamma);
+    //------------------------------------------------------------------------------------
+    vf_state(y, f, alpha, Ps, Pe, Pm, qPs2, qPe2, qPm2, ms, me, mm);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Variationnal equations, nonlinear case
-    //-------------------------------------------------------------------------------
-    gsl_matrix_set_zero(Q);
-    vfn_stm_xv(y, Q, alpha, alphad, ps, pe, pm, qps2, qpe2, qpm2, ms, me, mm, gamma);
+    //------------------------------------------------------------------------------------
+    gsl_matrix_set_zero(B);
+    vf_stm(y, B, alpha, Ps, Pe, Pm, qPs2, qPe2, qPm2, ms, me, mm);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //STM update & dot(STM) computation
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //STM update
     gslc_vectorToMatrix(STM, y, 6, 6, 6);
 
-    //dot(STM) = Q * STM
-    gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, Q, STM, 0.0, STMd);
-
+    //dot(STM) = B * STM
+    gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, B, STM, 0.0, STMd);
 
     //dot(STM) stored in f
     gslc_matrixToVector(f, STMd, 6, 6 , 6);
@@ -2436,15 +3995,12 @@ int qbfbp_vfn_varnonlin_xv(double t, const double y[], double f[], void* params_
     //Memory release
     gsl_matrix_free(STMd);
     gsl_matrix_free(STM);
-    gsl_matrix_free(Q);
+    gsl_matrix_free(B);
 
     return GSL_SUCCESS;
 }
 
 
-//----------------------------------------------------------------
-// SYS coordinates, (X, P)
-//----------------------------------------------------------------
 /**
  *  \brief Update the variational equation matrix in system coordinates (non-normalized)
  **/
@@ -2455,7 +4011,7 @@ int vf_stm(const double y[], gsl_matrix* Q, double alpha[],
 {
     double b[6];
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Variational equations, nonlinear case:
     // The nonlinear terms of the equations of motion
     // are the derivatives of the potential of the primaries U: Ux, Uy, Uz.
@@ -2465,7 +4021,7 @@ int vf_stm(const double y[], gsl_matrix* Q, double alpha[],
     // b2 = dUyx, b3 = dUyy, b5 = dUyz
     // b4 = dUzx, b5 = dUzy, b6 = dUzz
     //
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double factor = alpha[5];
 
     b[0] =   Uij(y, pe, qpe2, me, factor, 0, 0)
@@ -2492,92 +4048,30 @@ int vf_stm(const double y[], gsl_matrix* Q, double alpha[],
              + Uij(y, pm, qpm2, mm, factor, 2, 2)
              + Uij(y, ps, qps2, ms, factor, 2, 2);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Build the variational equation matrix Q such that dot(STM) = Q * STM
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     set_vareq_matrix(Q, b, alpha);
 
     return GSL_SUCCESS;
 }
 
-
+//========================================================================================
+//
+// SUBROUTINES
+//
+//========================================================================================
 /**
- *  \brief Vector field of the QBCP with EM units and EM reference frame. Variational equations included.
+ *  \brief Computes the second-order derivatives of the potential of one given primary
  **/
-int qbfbp_vf_varnonlin(double t, const double y[], double f[], void* params_void)
+double Uij(const double y[], double pc[], double qpc2, double mc, double factor, int i, int j)
 {
-    //-------------------------------------------------------------------------------
-    // Memory allocation
-    //-------------------------------------------------------------------------------
-    gsl_matrix* STM  = gsl_matrix_calloc(6, 6);
-    gsl_matrix* STMd = gsl_matrix_calloc(6, 6);
-    gsl_matrix* B    = gsl_matrix_calloc(6, 6);
-
-    //-------------------------------------------------------------------------------
-    // Misc parameters
-    //-------------------------------------------------------------------------------
-    //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
-    double ms = qbp->us.ms;
-    double me = qbp->us.me;
-    double mm = qbp->us.mm;
-    double n  = qbp->us.n;
-    int noc   = qbp->numberOfCoefs;
-
-    //-------------------------------------------------------------------------------
-    //Evaluate the alphas @t
-    //1, 3, 4, 6, 7 even
-    //2, 5, 8 odd
-    //-------------------------------------------------------------------------------
-    double alpha[noc];
-    evaluateCoef(alpha, t, n, qbp->nf, qbp->cs.coeffs, noc);
-
-    //-------------------------------------------------------------------------------
-    //Evaluate the primaries positions @ t
-    //-------------------------------------------------------------------------------
-    double Ps[3];
-    evaluateCoef(Ps, t, n, qbp->nf, qbp->cs.Ps, 3);
-    double Pe[3];
-    evaluateCoef(Pe, t, n, qbp->nf, qbp->cs.Pe, 3);
-    double Pm[3];
-    evaluateCoef(Pm, t, n, qbp->nf, qbp->cs.Pm, 3);
-
-    //-------------------------------------------------------------------------------
-    // Distances to 2nd power
-    //-------------------------------------------------------------------------------
-    double qPe2 = (y[0] - Pe[0]) * (y[0] - Pe[0]) + (y[1] - Pe[1]) * (y[1] - Pe[1]) + (y[2] - Pe[2]) * (y[2] - Pe[2]);
-    double qPs2 = (y[0] - Ps[0]) * (y[0] - Ps[0]) + (y[1] - Ps[1]) * (y[1] - Ps[1]) + (y[2] - Ps[2]) * (y[2] - Ps[2]);
-    double qPm2 = (y[0] - Pm[0]) * (y[0] - Pm[0]) + (y[1] - Pm[1]) * (y[1] - Pm[1]) + (y[2] - Pm[2]) * (y[2] - Pm[2]);
-
-    //-------------------------------------------------------------------------------
-    //Phase space derivatives: x', y', z', px', py', pz'
-    //-------------------------------------------------------------------------------
-    vf_state(y, f, alpha, Ps, Pe, Pm, qPs2, qPe2, qPm2, ms, me, mm);
-
-    //-------------------------------------------------------------------------------
-    //Variationnal equations, nonlinear case
-    //-------------------------------------------------------------------------------
-    gsl_matrix_set_zero(B);
-    vf_stm(y, B, alpha, Ps, Pe, Pm, qPs2, qPe2, qPm2, ms, me, mm);
-
-    //-------------------------------------------------------------------------------
-    //STM update & dot(STM) computation
-    //-------------------------------------------------------------------------------
-    //STM update
-    gslc_vectorToMatrix(STM, y, 6, 6, 6);
-
-    //dot(STM) = B * STM
-    gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, B, STM, 0.0, STMd);
-
-    //dot(STM) stored in f
-    gslc_matrixToVector(f, STMd, 6, 6 , 6);
-
-    //Memory release
-    gsl_matrix_free(STMd);
-    gsl_matrix_free(STM);
-    gsl_matrix_free(B);
-
-    return GSL_SUCCESS;
+    if(mc != 0.0)
+    {
+        if(i == j) return factor * (3 * mc / pow(qpc2, 5.0 / 2) * pow(y[i] - pc[i], 2.0) - mc / pow(qpc2, 3.0 / 2));
+        else return factor * 3 * mc / pow(qpc2, 5.0 / 2) * (y[i] - pc[i]) * (y[j] - pc[j]);
+    }
+    else return 0.0;
 }
 
 
@@ -2627,9 +4121,9 @@ int qbfbp_fh(double t, const double y[], double f[], void* params_void)
  **/
 double qbfbp_H(double t, const double y[], void* params_void)
 {
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Misc parameters
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Retrieving the parameters
     QBCP_L* qbp = (QBCP_L*) params_void;
     int noc   = qbp->numberOfCoefs;
@@ -2638,17 +4132,17 @@ double qbfbp_H(double t, const double y[], void* params_void)
     double mm = qbp->us.mm;
     double n  = qbp->us.n;
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Evaluate the alphas @t
     //1, 3, 4, 6, 7 even
     //2, 5, 8 odd
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double alpha[noc];
     evaluateCoef(alpha, t, n, qbp->nf, qbp->cs.coeffs, noc);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Evaluate the primaries positions @ t
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double Ps[3];
     evaluateCoef(Ps, t, n, qbp->nf, qbp->cs.Ps, 3);
     double Pe[3];
@@ -2656,16 +4150,16 @@ double qbfbp_H(double t, const double y[], void* params_void)
     double Pm[3];
     evaluateCoef(Pm, t, n, qbp->nf, qbp->cs.Pm, 3);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Distances to 2nd power
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double qPe2 = (y[0] - Pe[0]) * (y[0] - Pe[0]) + (y[1] - Pe[1]) * (y[1] - Pe[1]) + (y[2] - Pe[2]) * (y[2] - Pe[2]);
     double qPs2 = (y[0] - Ps[0]) * (y[0] - Ps[0]) + (y[1] - Ps[1]) * (y[1] - Ps[1]) + (y[2] - Ps[2]) * (y[2] - Ps[2]);
     double qPm2 = (y[0] - Pm[0]) * (y[0] - Pm[0]) + (y[1] - Pm[1]) * (y[1] - Pm[1]) + (y[2] - Pm[2]) * (y[2] - Pm[2]);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Hamiltonian
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double H = 0.5 * alpha[0] * (y[3] * y[3] + y[4] * y[4] + y[5] * y[5]) + alpha[1] * (y[3] * y[0] + y[4] * y[1] + y[5] * y[2])
                + alpha[2] * (y[3] * y[1] - y[4] * y[0])
                + alpha[3] * y[0] + alpha[4] * y[1]
@@ -2683,9 +4177,9 @@ double qbfbp_H(double t, const double y[], void* params_void)
  **/
 double qbfbp_H_SEM(double t, const double y[], void* params_void)
 {
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Misc parameters
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Retrieving the parameters
     QBCP_L* qbp = (QBCP_L*) params_void;
     int noc   = qbp->numberOfCoefs;
@@ -2694,17 +4188,17 @@ double qbfbp_H_SEM(double t, const double y[], void* params_void)
     double mm = qbp->us_sem.mm;
     double n  = qbp->us_sem.n;
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Evaluate the alphas @t
     //1, 3, 4, 6, 7 even
     //2, 5, 8 odd
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double alpha[noc];
     evaluateCoef(alpha, t, n, qbp->nf, qbp->cs_sem.coeffs, noc);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Evaluate the primaries positions @ t
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double Ps[3];
     evaluateCoef(Ps, t, n, qbp->nf, qbp->cs_sem.Ps, 3);
     double Pe[3];
@@ -2712,16 +4206,16 @@ double qbfbp_H_SEM(double t, const double y[], void* params_void)
     double Pm[3];
     evaluateCoef(Pm, t, n, qbp->nf, qbp->cs_sem.Pm, 3);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Distances to 2nd power
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double qPe2 = (y[0] - Pe[0]) * (y[0] - Pe[0]) + (y[1] - Pe[1]) * (y[1] - Pe[1]) + (y[2] - Pe[2]) * (y[2] - Pe[2]);
     double qPs2 = (y[0] - Ps[0]) * (y[0] - Ps[0]) + (y[1] - Ps[1]) * (y[1] - Ps[1]) + (y[2] - Ps[2]) * (y[2] - Ps[2]);
     double qPm2 = (y[0] - Pm[0]) * (y[0] - Pm[0]) + (y[1] - Pm[1]) * (y[1] - Pm[1]) + (y[2] - Pm[2]) * (y[2] - Pm[2]);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Hamiltonian
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double H = 0.5 * alpha[0] * (y[3] * y[3] + y[4] * y[4] + y[5] * y[5]) + alpha[1] * (y[3] * y[0] + y[4] * y[1] + y[5] * y[2])
                + alpha[2] * (y[3] * y[1] - y[4] * y[0])
                + alpha[3] * y[0] + alpha[4] * y[1]
@@ -2733,6 +4227,71 @@ double qbfbp_H_SEM(double t, const double y[], void* params_void)
     return H;
 }
 
+/**
+ *  \brief Hamiltonian of the QBCP with EM units and Normalized-Centered coordinates. Note that alpha[14] (alpha15) is zero for the QBCP
+ **/
+double qbfbp_Hn(double t, const double y[], void *params_void)
+{
+    //-------------------------------------------------------------------------------
+    // Misc parameters
+    //-------------------------------------------------------------------------------
+    //Retrieving the parameters
+    QBCP_L* qbp = (QBCP_L *) params_void;
+    int noc      = qbp->numberOfCoefs;
+    double ms    = qbp->us.ms;
+    double me    = qbp->us.me;
+    double mm    = qbp->us.mm;
+    double n     = qbp->us.n;
+    double gamma = qbp->cs.gamma;
+    double c1    = qbp->cs.c1;
+
+    //-------------------------------------------------------------------------------
+    //Evaluate the alphas @ t
+    //-------------------------------------------------------------------------------
+    double alpha[noc];
+    evaluateCoef(alpha, t, n, qbp->nf, qbp->cs.coeffs, noc);
+    double alphad[3];
+    evaluateCoefDerivatives(alphad, t, n, qbp->nf, qbp->cs.coeffs, 3);
+    //-------------------------------------------------------------------------------
+    //Evaluate the primaries positions @ t
+    //-------------------------------------------------------------------------------
+    double ps[3];
+    evaluateCoef(ps, t, n, qbp->nf, qbp->cs.ps, 3);
+    double pe[3];
+    evaluateCoef(pe, t, n, qbp->nf, qbp->cs.pe, 3);
+    double pm[3];
+    evaluateCoef(pm, t, n, qbp->nf, qbp->cs.pm, 3);
+
+    //-------------------------------------------------------------------------------
+    // Distances to 2nd power
+    //-------------------------------------------------------------------------------
+    double qpe2 = (y[0]-pe[0])*(y[0]-pe[0]) + (y[1]-pe[1])*(y[1]-pe[1]) + (y[2]-pe[2])*(y[2]-pe[2]);
+    double qps2 = (y[0]-ps[0])*(y[0]-ps[0]) + (y[1]-ps[1])*(y[1]-ps[1]) + (y[2]-ps[2])*(y[2]-ps[2]);
+    double qpm2 = (y[0]-pm[0])*(y[0]-pm[0]) + (y[1]-pm[1])*(y[1]-pm[1]) + (y[2]-pm[2])*(y[2]-pm[2]);
+
+    double alpha13 = alpha[3]/gamma - c1*(alpha[1]*alpha[1] + alpha[2]*alpha[2])/alpha[0];
+    double alpha14 = alpha[4]/gamma;
+
+    double alpha21d = (alphad[1]*alpha[0] - alphad[0]*alpha[1])/(alpha[0]*alpha[0]);
+    double alpha31d = (alphad[2]*alpha[0] - alphad[0]*alpha[2])/(alpha[0]*alpha[0]);
+
+    //-------------------------------------------------------------------------------
+    // Hamiltonian
+    //-------------------------------------------------------------------------------
+    double H = 0.5*alpha[0]*(y[3]*y[3] + y[4]*y[4] + y[5]*y[5])
+             + alpha[1]*(y[3]*y[0] + y[4]*y[1] + y[5]*y[2])
+             + alpha[2]*(y[3]*y[1] - y[4]*y[0])
+             - y[0]*alpha[12]
+             - y[1]*alpha[13]
+             + (alpha[3]*c1/gamma - c1*c1/(2*alpha[0])*(alpha[1]*alpha[1] + alpha[2]*alpha[2])) //only necessary for Elliptic case...
+             - 0.5*alpha[14]*(y[0]*y[0] + y[1]*y[1] + y[2]*y[2])
+             - alpha[5]/pow(gamma,3.0)*( me/pow(qpe2, 1.0/2) + mm/pow(qpm2, 1.0/2) + ms/pow(qps2, 1.0/2) );
+
+    H += +(alpha[3]*c1/gamma - c1*c1/(2*alpha[0])*(alpha[1]*alpha[1] + alpha[2]*alpha[2]));
+    H += -alpha21d*c1*y[0] + alpha31d*c1*y[1];
+    H *= gamma*gamma;
+    return H;
+}
 
 
 //========================================================================================
@@ -2769,9 +4328,9 @@ int qbtbp_derivatives(double t, const double y[], double f[], void* params)
     cdouble zdd = +0.0 * I - z / pow(cabs(z), 3.0) + ms * (temp1 - temp2);
     cdouble Zdd = -(1 + ms) * (mu * temp2 + (1 - mu) * temp1);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Phase space derivatives
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     f[0] = y[4];
     f[1] = y[5];
     f[2] = y[6];
@@ -2790,36 +4349,36 @@ int qbtbp_derivatives(double t, const double y[], double f[], void* params)
 void primary_analytical_position(int prim, double tem, double yEM_to_IN[], double ySEM_to_IN[], QBCP_L& qbcp_l)
 {
 
-    //====================================================================
+    //====================================================================================
     // 1. Init
-    //====================================================================
+    //====================================================================================
     int noc     = qbcp_l.numberOfCoefs;
     int nf      = qbcp_l.nf;
     double tsem = tem * qbcp_l.us_em.ns;   //new tem in SEM units
 
-    //====================================================================
+    //====================================================================================
     // 2. Evaluate the Fourier coefficients
-    //====================================================================
-    //-------------------------------------------------------------------------------
+    //====================================================================================
+    //------------------------------------------------------------------------------------
     //Evaluate the deltas @t = t0c
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double delta[noc];
     evaluateCoef(delta, tsem, qbcp_l.us_sem.n, nf, qbcp_l.cs_sem.coeffs, noc);
     double deltad[noc];
     evaluateCoefDerivatives(deltad, tsem, qbcp_l.us_sem.n, nf, qbcp_l.cs_sem.coeffs, noc);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Evaluate the alphas @t = t0
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double alpha[noc];
     evaluateCoef(alpha, tem, qbcp_l.us_em.n, nf, qbcp_l.cs_em.coeffs, noc);
     double alphad[noc];
     evaluateCoefDerivatives(alphad, tem, qbcp_l.us_em.n, nf, qbcp_l.cs_em.coeffs, noc);
 
 
-    //====================================================================
+    //====================================================================================
     // 3. Evaluate the semi-analytical position of the Primary
-    //====================================================================
+    //====================================================================================
     double ySEM[6], yEM[6];
 
     switch(prim)
@@ -2832,6 +4391,7 @@ void primary_analytical_position(int prim, double tem, double yEM_to_IN[], doubl
         ySEM[3] = deltad[8];
         ySEM[4] = deltad[9];
         ySEM[5] = 0.0;
+
         //Earth position & momenta in EM ref and EM units
         yEM[0] = qbcp_l.us_em.mu_EM;
         yEM[1] = 0.0;
@@ -2873,12 +4433,6 @@ void primary_analytical_position(int prim, double tem, double yEM_to_IN[], doubl
         yEM[3] = alphad[6];
         yEM[4] = alphad[7];
         yEM[5] = 0.0;
-
-        //            cout << "t*qbcp_l.us_em.n/(2*pi) = " << tem*qbcp_l.us_em.n/(2*M_PI) << endl;
-        //            cout << "angle/(2*pi)  = " << atan2 (yEM[1],yEM[0])/(2*M_PI) << endl;
-        //            cout << "Sun position = " << endl;
-        //            vector_printf(yEM, 3);
-
         break;
 
     default:
@@ -2887,12 +4441,13 @@ void primary_analytical_position(int prim, double tem, double yEM_to_IN[], doubl
 
 
 
-    //====================================================================
+    //====================================================================================
     // 4. Back in inertial coordinates,
     //    still with the use of the semi-analytical expressions
-    //====================================================================
+    //====================================================================================
     double ytp[6];
     qbcp_coc(tsem, ySEM, ytp, VSEM, VEM);
+
     EMvtoIN(tem, ytp, ySEM_to_IN, &qbcp_l);
     EMvtoIN(tem, yEM, yEM_to_IN,  &qbcp_l);
 }
@@ -2905,9 +4460,9 @@ void primary_integrated_position(int prim, double yIN[], cdouble z0, cdouble Z0,
     //Initialization
     USYS us_em  = qbcp_l.us_em;
 
-    //====================================================================
+    //====================================================================================
     // 1. Evaluate the integrated position of the Primary
-    //====================================================================
+    //====================================================================================
     switch(prim)
     {
     case EARTH:
@@ -2958,15 +4513,15 @@ void qbtbp_test(double t1, QBCP_L& qbcp_l)
     double as  = qbcp_l.us_em.as;
     double ni  = qbcp_l.us_em.ni;
     double ai  = qbcp_l.us_em.ai;
+    double ms  = qbcp_l.us_em.ms;
+    double me  = qbcp_l.us_em.me;
+    double mm  = qbcp_l.us_em.mm;
     int noc    = qbcp_l.numberOfCoefs;
     int nf     = qbcp_l.nf;
 
-    //====================================================================
+    //====================================================================================
     // 0. Gnuplot
-    //====================================================================
-    //----------------------------------------------------------
-    //Gnuplot window
-    //----------------------------------------------------------
+    //====================================================================================
     gnuplot_ctrl* h1;
     h1 = gnuplot_init();
     gnuplot_cmd(h1, "set title \"Variations of the error in the Primaries' state vector: EM vs IN\" ");
@@ -2987,9 +4542,9 @@ void qbtbp_test(double t1, QBCP_L& qbcp_l)
     gnuplot_cmd(h2, "set format y \"1e\%%L\"");
 
 
-    //====================================================================
+    //====================================================================================
     // 1. Init the integration tools
-    //====================================================================
+    //====================================================================================
     //Stepper
     const gsl_odeiv2_step_type* T = gsl_odeiv2_step_rk8pd;
     OdeStruct ode_s;
@@ -3000,12 +4555,12 @@ void qbtbp_test(double t1, QBCP_L& qbcp_l)
     param[0] = qbcp_l.us_em.mu_EM; //note that the qbtbp is computed in EM framework
     param[1] = qbcp_l.us_em.ms;    //note that the qbtbp is computed in EM framework
     //General structures
-    init_ode_structure(&ode_s, T, T_root, PREC_ABS, PREC_REL, PREC_ROOT, PREC_DIFF,  8, PREC_HSTART,  qbtbp_derivatives, NULL, param);
+    init_ode_structure(&ode_s, T, T_root, 8, qbtbp_derivatives, param);
 
-    //====================================================================
+    //====================================================================================
     // 2. Initial conditions
-    //====================================================================
-    double t0  = 0.0;             //new t0 in EM units
+    //====================================================================================
+    double t0  = 0.0;                    //new t0 in EM units
     double t0c = t0 * qbcp_l.us_em.ns;   //new t0 in SEM units
 
     //z(0) and Z(0)
@@ -3031,29 +4586,29 @@ void qbtbp_test(double t1, QBCP_L& qbcp_l)
     cout << "External motion: Z(t=0.0) = " << creal(Z0) << " + " << cimag(Z0) << "i" <<  endl;
     cout << "-------------------------------------------" << endl;
 
-    //====================================================================
+    //====================================================================================
     // 2.2 Same for the Primaries
-    //====================================================================
-    cout << std::showpos << setiosflags(ios::scientific)  << setprecision(5);
+    //====================================================================================
+    cout << std::showpos << setiosflags(ios::scientific)  << setprecision(15);
     double yEM_to_IN[6], ySEM_to_IN[6], yIN[6];
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Initial Earth position
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     primary_analytical_position(EARTH, t0, yEM_to_IN, ySEM_to_IN, qbcp_l);
     primary_integrated_position(EARTH, yIN, z0, Z0, zdot0, Zdot0, qbcp_l);
     cout << "Initial Earth position:" << endl;
     cout << "-------------------------------------------" << endl;
     cout << "EM to IN (1)     SEM to IN (2)     IN (3)         (1) - (3)       (2) - (3)" << endl;
 
-    for(int i = 0; i < 6; i++) cout << yEM_to_IN[i] << "    "  << ySEM_to_IN[i] << "    "  << yIN[i] << "    "
-                                        << yEM_to_IN[i] - yIN[i] << "    "  << ySEM_to_IN[i] - yIN[i] << endl;
+    for(int i = 0; i < 6; i++) cout << yEM_to_IN[i] << "    "  << ySEM_to_IN[i] << "    "                 << yIN[i] << "    "
+                                    << yEM_to_IN[i] - yIN[i]   << "    "        << ySEM_to_IN[i] - yIN[i] << endl;
 
     cout << "-------------------------------------------" << endl;
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Initial Moon position
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     primary_analytical_position(MOON, t0, yEM_to_IN, ySEM_to_IN, qbcp_l);
     primary_integrated_position(MOON, yIN, z0, Z0, zdot0, Zdot0, qbcp_l);
     cout << "Initial Moon position:" << endl;
@@ -3066,9 +4621,9 @@ void qbtbp_test(double t1, QBCP_L& qbcp_l)
     cout << "-------------------------------------------" << endl;
 
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Initial Sun position
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     primary_analytical_position(SUN, t0, yEM_to_IN, ySEM_to_IN, qbcp_l);
     primary_integrated_position(SUN, yIN, z0, Z0, zdot0, Zdot0, qbcp_l);
     cout << "Initial Sun position:" << endl;
@@ -3080,74 +4635,110 @@ void qbtbp_test(double t1, QBCP_L& qbcp_l)
 
     cout << "-------------------------------------------" << endl;
 
-    //====================================================================
+    //====================================================================================
     // 3. Initial conditions of the primaries
-    //====================================================================
-    //-------------------------------------------------------------------------------
+    //====================================================================================
+    //------------------------------------------------------------------------------------
     //Evaluate the deltas @t = t0c
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double delta[noc];
     evaluateCoef(delta, t0c, qbcp_l.us_sem.n, nf, qbcp_l.cs_sem.coeffs, noc);
     double deltad[noc];
     evaluateCoefDerivatives(deltad, t0c, qbcp_l.us_sem.n, nf, qbcp_l.cs_sem.coeffs, noc);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Evaluate the alphas @t = t0
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double alpha[noc];
     evaluateCoef(alpha, t0, qbcp_l.us_em.n, nf, qbcp_l.cs_em.coeffs, noc);
     double alphad[noc];
     evaluateCoefDerivatives(alphad, t0, qbcp_l.us_em.n, nf, qbcp_l.cs_em.coeffs, noc);
 
 
-    //====================================================================
+    //====================================================================================
     //Loop
-    //====================================================================
+    //====================================================================================
     int Nplot = 200;
     double t = t0, ti;
     double tvec[Nplot + 1], yEM_vs_IN_E[Nplot + 1], yEM_vs_IN_M[Nplot + 1], yEM_vs_IN_S[Nplot + 1];
     double ySEM_vs_IN_E[Nplot + 1], ySEM_vs_IN_M[Nplot + 1], ySEM_vs_IN_S[Nplot + 1];
 
+    double rE[3], vE[3], yBEM[6];
     for(int p = 0; p <= Nplot; p++)
     {
-        //-------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         //Integration from t to ti
-        //-------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         ti = t0 + (t1 - t0) * p / Nplot;
         gsl_odeiv2_driver_apply (ode_s.d, &t , ti, yv);
         tvec[p] = ti / qbcp_l.us_em.T;
 
-        //-------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         //Current Earth position
-        //-------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         primary_analytical_position(EARTH, ti, yEM_to_IN, ySEM_to_IN, qbcp_l);
         primary_integrated_position(EARTH, yIN, yv[0] + I * yv[1], yv[2] + I * yv[3], yv[4] + I * yv[5], yv[6] + I * yv[7], qbcp_l);
 
         yEM_vs_IN_E[p]  = DENorm(yEM_to_IN, yIN, 6);
         ySEM_vs_IN_E[p] = DENorm(ySEM_to_IN, yIN, 6);
 
-        //-------------------------------------------------------------------------------
+        //First part of the computation of the Earth-Moon barycenter state
+        for(int i = 0; i < 6; i++) yBEM[i] = me*yEM_to_IN[i];
+
+        //--------------------------------------------------------------------------------
         //Current Moon position
-        //-------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         primary_analytical_position(MOON, ti, yEM_to_IN, ySEM_to_IN, qbcp_l);
         primary_integrated_position(MOON, yIN, yv[0] + I * yv[1], yv[2] + I * yv[3], yv[4] + I * yv[5], yv[6] + I * yv[7], qbcp_l);
 
         yEM_vs_IN_M[p]  = DENorm(yEM_to_IN, yIN, 6);
         ySEM_vs_IN_M[p] = DENorm(ySEM_to_IN, yIN, 6);
 
-        //-------------------------------------------------------------------------------
+        //Second part of the computation of the Earth-Moon barycenter state
+        for(int i = 0; i < 6; i++)
+        {
+            yBEM[i] += mm*yEM_to_IN[i];
+            yBEM[i] /= (mm + me);
+        }
+
+        //--------------------------------------------------------------------------------
         //Current Sun position
-        //-------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         primary_analytical_position(SUN, ti, yEM_to_IN, ySEM_to_IN, qbcp_l);
         primary_integrated_position(SUN, yIN, yv[0] + I * yv[1], yv[2] + I * yv[3], yv[4] + I * yv[5], yv[6] + I * yv[7], qbcp_l);
 
         yEM_vs_IN_S[p]  = DENorm(yEM_to_IN, yIN, 6);
         ySEM_vs_IN_S[p] = DENorm(ySEM_to_IN, yIN, 6);
+
+        //State of the BEM wrt to the Sun is: yBEM[inertial] - ySun[inertial]
+        for(int i = 0; i < 3; i++)
+        {
+            rE[i] = yBEM[i]   - yEM_to_IN[i];
+            vE[i] = yBEM[i+3] - yEM_to_IN[i+3];
+        }
+
+
+        //--------------------------------------------------------------------------------
+        //Current Earth's eccentricity
+        //--------------------------------------------------------------------------------
+        //Cross product yiels the angular momentum vector
+        double hE[3];
+        vcrss_c(rE, vE, hE);
+
+        //Norms
+        double h = vnorm_c(hE);
+        double r = vnorm_c(rE);
+        double v = vnorm_c(vE);
+
+        double a = ms * r/(2*ms - r*v*v);
+        double e = sqrt(1 - h*h/(ms*a));
+        cout << "a = " << a << endl;
+        cout << "e = " << e << endl;
     }
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Plot: EM vs IN
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     gnuplot_plot_xy(h1, tvec, yEM_vs_IN_E, Nplot + 1, (char*)"Earth", "lines", "3", "2", 3);
     gnuplot_plot_xy(h1, tvec, yEM_vs_IN_M, Nplot + 1, (char*)"Moon", "lines", "3", "2", 4);
     gnuplot_plot_xy(h1, tvec, yEM_vs_IN_S, Nplot + 1, (char*)"Sun", "lines", "3", "2", 5);
@@ -3157,9 +4748,9 @@ void qbtbp_test(double t1, QBCP_L& qbcp_l)
     gnuplot_fplot_xy(tvec, yEM_vs_IN_S, Nplot + 1, (char*) (qbcp_l.cs.F_PLOT + "QBTBP_EM_vs_IN_S.txt").c_str());
 
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Plot: SEM vs IN
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     gnuplot_plot_xy(h2, tvec, ySEM_vs_IN_E, Nplot + 1, (char*)"Earth", "lines", "3", "2", 3);
     gnuplot_plot_xy(h2, tvec, ySEM_vs_IN_M, Nplot + 1, (char*)"Moon", "lines", "3", "2", 4);
     gnuplot_plot_xy(h2, tvec, ySEM_vs_IN_S, Nplot + 1, (char*)"Sun", "lines", "3", "2", 5);
@@ -3168,9 +4759,9 @@ void qbtbp_test(double t1, QBCP_L& qbcp_l)
     gnuplot_fplot_xy(tvec, ySEM_vs_IN_M, Nplot + 1, (char*) (qbcp_l.cs.F_PLOT + "QBTBP_SEM_vs_IN_M.txt").c_str());
     gnuplot_fplot_xy(tvec, ySEM_vs_IN_S, Nplot + 1, (char*) (qbcp_l.cs.F_PLOT + "QBTBP_SEM_vs_IN_S.txt").c_str());
 
-    //====================================================================
+    //====================================================================================
     //Final state
-    //====================================================================
+    //====================================================================================
     cout << "-------------------------------------------" << endl;
     cout << "End of integration." << endl;
     cout << "Final t: " << t << endl;
@@ -3201,14 +4792,14 @@ void qbtbp_test(double t1, QBCP_L& qbcp_l)
     cout << "dZdot = " << cabs(Zdotfinal - yv[6] - I * yv[7]) << endl;
     cout << "-------------------------------------------" << endl;
 
-    //====================================================================
+    //====================================================================================
     // 2.2 Same for the Primaries
-    //====================================================================
+    //====================================================================================
     cout << std::showpos << setiosflags(ios::scientific)  << setprecision(5);
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Current Earth position
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     primary_analytical_position(EARTH, t1, yEM_to_IN, ySEM_to_IN, qbcp_l);
     primary_integrated_position(EARTH, yIN, yv[0] + I * yv[1], yv[2] + I * yv[3], yv[4] + I * yv[5], yv[6] + I * yv[7], qbcp_l);
     cout << "Final Earth position:" << endl;
@@ -3220,9 +4811,9 @@ void qbtbp_test(double t1, QBCP_L& qbcp_l)
 
     cout << "-------------------------------------------" << endl;
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Current Moon position
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     primary_analytical_position(MOON, t1, yEM_to_IN, ySEM_to_IN, qbcp_l);
     primary_integrated_position(MOON, yIN, yv[0] + I * yv[1], yv[2] + I * yv[3], yv[4] + I * yv[5], yv[6] + I * yv[7], qbcp_l);
     cout << "Final Moon position:" << endl;
@@ -3235,9 +4826,9 @@ void qbtbp_test(double t1, QBCP_L& qbcp_l)
     cout << "-------------------------------------------" << endl;
 
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Current Sun position
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     primary_analytical_position(SUN, t1, yEM_to_IN, ySEM_to_IN, qbcp_l);
     primary_integrated_position(SUN, yIN, yv[0] + I * yv[1], yv[2] + I * yv[3], yv[4] + I * yv[5], yv[6] + I * yv[7], qbcp_l);
     cout << "Final Sun position:" << endl;

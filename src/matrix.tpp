@@ -167,13 +167,16 @@ template <typename T> T* matrix<T>::getCA(int i, int j) const
 
 /**
  *  \brief Gets the size (either size1 or size2) of the matrix.
- **/
+**/
 template <typename T> int matrix<T>::getSize(int num) const
 {
     if(num == 1) return size1;
     else if(num == 2) return size2;
-    else cout << "Error in matrix<T>::getSize: required number must be 1 or 2." << endl; return 0;
-
+    else
+    {
+        cout << "Error in matrix<T>::getSize: required number must be 1 or 2." << endl;
+        return FTC_FAILURE;
+    }
 }
 
 //----------------------------------------------------------------------------------------

@@ -1,9 +1,9 @@
 #ifndef ORBIT_H_INCLUDED
 #define ORBIT_H_INCLUDED
 
-#include "single_orbit.h"
-#include "pmcoc.h"
 #include "Invman.h"
+#include "ftc_errno.h"
+
 
 
 class Orbit
@@ -73,6 +73,7 @@ class Orbit
         //Integrates
         //--------------------------------------------------------------------------------
         int traj_int_grid(double tf, double **yNCE, double *tNCE, int N, int isResetOn);
+        int traj_int_grid(double **yNCE, double *tgridNCE, int N, int isResetOn);
         int traj_int_var_grid(double tf, double **yNCE, double *tNCE, int N, int isResetOn);
         int gslc_proj_step(double yv[], double *t, double t0, double t1, double *projdist, int *nreset, int isResetOn);
         int gslc_proj_evolve(double yv[], double *t, double t0, double t1, double *projdist, int *nreset, int isResetOn);
@@ -87,6 +88,6 @@ class Orbit
 //========================================================================================
 //          Orbit on a grid
 //========================================================================================
-int oo_gridOrbit(double st0[], double t0, double tf, double dt, Invman &invman);
+int oo_gridOrbit(double st0[], double t0, double tf, double dt);
 
 #endif // ORBIT_H_INCLUDED

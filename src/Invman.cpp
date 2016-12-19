@@ -31,6 +31,7 @@ Invman::Invman(int ofts_order_, int ofs_order_, CSYS& csys):
     manType(csys.manType),
     reduced_nv(compRNV(csys)),
     fwrk(csys.fwrk),
+    ncs(csys.fwrk==F_SEM?NCSEM:NCEM),
     Mcoc(6, 6, ofs_order_),
     MIcoc(6, 6, ofs_order_),
     Vcoc(6, Ofsc(ofs_order_)),
@@ -809,6 +810,77 @@ void Invman::evalDRCMtoNC(double const st0[], double const t, gsl_matrix *m1, co
 }
 
 /**
+ *  \brief Evaluate the jacobian of the invariant manifold from RCM coordinates
+ *         (double[]), to coord_type coordinates (gsl_matrix_complex*, i.e. a matrix of
+ *          double).
+ *
+ *         The computation uses evalDRCMtoNC to get the jacobian from RCM coordinates
+ *         to NC coordinates. Then, it uses the routine rot_mat_coc to get the COC matrix
+ *         to transform this matrix in coord_type coordinates. Then, it computes the
+ *         product of this two matrices.
+ *
+ **/
+void Invman::evalDRCMtoCOORD(double const st0[], double const t, gsl_matrix* m1, const int ofts_order, const int ofs_order, const int coord_type) const
+{
+    //------------------------------------------------------------------------------------
+    // Check sizes
+    //------------------------------------------------------------------------------------
+    if( (int) m1->size1 != 6 || (int) m1->size2 != reduced_nv)
+    {
+        cout << "Invman::evalDRCMtoCOORD. Dimension mismatch: " << endl;
+        cout << "m1->size1 = " << m1->size1 << "instead of "    << 6 << endl;
+        cout << "m1->size2 = " << m1->size2 << "instead of "    << reduced_nv << endl;
+        return;
+    }
+
+    //------------------------------------------------------------------------------------
+    // Computation: if the desired coord_type is different from ncs, which is the
+    // normalized coordinate system (either NCSEM or NCEM), the the matrix product is
+    // necessary. If it is equal, then we are back to the evalDRCMtoNC case.
+    //------------------------------------------------------------------------------------
+    if(ncs != coord_type)
+    {
+        //--------------------------------------------------------------------------------
+        // Inner variables
+        //--------------------------------------------------------------------------------
+        gsl_matrix* NC_J_RCM = gsl_matrix_calloc(6, reduced_nv);
+        gsl_matrix* COORD_R_NC = gsl_matrix_calloc(6,6);
+
+
+        //--------------------------------------------------------------------------------
+        // RCM to NC
+        //--------------------------------------------------------------------------------
+        evalDRCMtoNC(st0, t, NC_J_RCM, ofts_order, ofs_order);
+
+        //--------------------------------------------------------------------------------
+        // NC to coord_type, if necessary
+        //--------------------------------------------------------------------------------
+        //COORD_R_NC = COC matrix from ncs (either NCSEM or NCEM) to coord_type
+        rot_mat_coc(t, COORD_R_NC, ncs, coord_type);
+
+        //COORD_J_RCM = COORD_R_NC*NC_J_RCM, in R(6,6)*R(6,5) = R(6,5)
+        gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, COORD_R_NC, NC_J_RCM, 0.0, m1);
+
+
+        //--------------------------------------------------------------------------------
+        // Free
+        //--------------------------------------------------------------------------------
+        gsl_matrix_free(NC_J_RCM);
+        gsl_matrix_free(COORD_R_NC);
+    }
+    else
+    {
+        //--------------------------------------------------------------------------------
+        //A direction computation is possible, since the result is desired in NC
+        //coordinates
+        //--------------------------------------------------------------------------------
+        evalDRCMtoNC(st0, t, m1, ofts_order, ofs_order);
+    }
+}
+
+
+
+/**
  *  \brief Evaluate the time derivative of the invariant manifold from RCM coordinates
  *         (double[]), to NC coordinates (double[]).
  **/
@@ -957,6 +1029,12 @@ int Invman::getFwrk() const
 {
     return fwrk;
 }
+
+int Invman::getNCS() const
+{
+    return ncs;
+}
+
 
 //========================================================================================
 // Static

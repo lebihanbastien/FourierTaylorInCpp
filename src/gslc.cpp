@@ -366,8 +366,8 @@ double gslc_matrix_complex_diff_L2(const gsl_matrix_complex *M1c, const gsl_matr
     //------------------------------------------------------------------------------------
     if(M1c->size1 != M2c->size1 ||  M1c->size2 != M2c->size2)
     {
-        printf("gslc_matrix_complex_diff_L2. Dimension mismatch. 0 is returned\n");
-        return 0;
+        printf("gslc_matrix_complex_diff_L2. Dimension mismatch. 0.0 is returned\n");
+        return 0.0;
     }
 
     //------------------------------------------------------------------------------------

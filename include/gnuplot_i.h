@@ -289,6 +289,16 @@ void gnuplot_plot_xyz(
     char const      * lw,
     int lc);
 
+void gnuplot_plot_X(
+    gnuplot_ctrl    * handle,
+    double          **X,
+    int               n,
+    char const      * title,
+    char const      * ls,
+    char const      * lt,
+    char const      * lw,
+    int lc);
+
 void gnuplot_fplot_xy(
     double          * x,
     double          * y,

@@ -552,7 +552,8 @@ void init_QBCP_L(QBCP_L* qbcp_l, QBCP* qbcp, int isNormalized, int li_EM, int li
     //-----------------
     //Libration point
     //Note: passing the complete libration point structure as argument may be done in the near future.
-    //not necessary for now.
+    //not necessary for now.Initialization of the environnement
+    // Mandatory to perform any computation except qbtbp(int)
     //-----------------
     qbcp_l->li_EM  = li_EM;
     qbcp_l->li_SEM = li_SEM;
@@ -651,9 +652,9 @@ void init_QBCP_L(QBCP_L* qbcp_l, QBCP* qbcp, int isNormalized, int li_EM, int li
     //------------------------------------------------------------------------------------
     // Solar system (all planets + Moon + Sun + Pluto)
     //------------------------------------------------------------------------------------
-    init_SS(&qbcp_l->ss, qbcp_l, F_VSEM);
-    init_SS(&qbcp_l->ss_sem, qbcp_l, F_VSEM);
-    init_SS(&qbcp_l->ss_em,  qbcp_l, F_VEM);
+    init_SS(&qbcp_l->ss, qbcp_l, I_VSEM);
+    init_SS(&qbcp_l->ss_sem, qbcp_l, I_VSEM);
+    init_SS(&qbcp_l->ss_em,  qbcp_l, I_VEM);
 
 
     //------------------------------------------------------------------------------------
@@ -721,10 +722,9 @@ void init_QBCP_L(QBCP_L* qbcp_l, QBCP* qbcp, int isNormalized, int li_EM, int li
     qbcp_l->B  = (double*) calloc(36, sizeof(double));
 
     //------------------------------------------------------------------------------------
-    // When epsilon = 1.0, the Moon is "on". When epsilon = 0.0, the Moon is "off"
+    // For continuation procedure
     //------------------------------------------------------------------------------------
-    //Moon "on" by default. Deprecated value for now.
-    qbcp_l->epsilon = 1.0;
+    qbcp_l->epsilon = 0.0;
 
     //------------------------------------------------------------------------------------
     // Display
@@ -1273,6 +1273,9 @@ void init_CSYS(CSYS* csys, QBCP_L* qbcp_l, QBCP* qbcp, int fwrk, int li, int coe
         //Derivatives
         csys->ztdot.dot(csys->zt, csys->us.n);
         csys->Ztdot.dot(csys->Zt, csys->us.n);
+        //Double derivatives
+        csys->ztddot.dot(csys->ztdot, csys->us.n);
+        csys->Ztddot.dot(csys->Ztdot, csys->us.n);
         break;
     }
     }
@@ -1684,7 +1687,7 @@ void init_SS(SS* solarsys, QBCP_L* qbcp_l, int coordsys)
     //------------------------------------------------------------------------------------
     switch(coordsys)
     {
-    case F_VSEM:
+    case I_VSEM:
 
         //--------------------------------------------------------------------------------
         //SEM focus: primaries are the Sun and Earth-Moon barycenter
@@ -1695,7 +1698,7 @@ void init_SS(SS* solarsys, QBCP_L* qbcp_l, int coordsys)
         solarsys->coord_eph = VSEM;
         break;
 
-    case F_VEM:
+    case I_VEM:
         //--------------------------------------------------------------------------------
         //EM focus: primaries are the Earth and Moon
         //--------------------------------------------------------------------------------
@@ -1726,9 +1729,14 @@ void init_SS(SS* solarsys, QBCP_L* qbcp_l, int coordsys)
     //Mean semi-major axis
     solarsys->a = pow((solarsys->Gmi[solarsys->pos1] + solarsys->Gmi[solarsys->pos2])/(solarsys->n*solarsys->n), 1.0/3);
 
+    //Center for ECI coordinates
+    solarsys->center = EARTH;
+
     //------------------------------------------------------------------------------------
     //Display
     //------------------------------------------------------------------------------------
+    //cout << "solarsys->a   = " << solarsys->a  << endl;
+    //cout << "solarsys->n   = " << solarsys->n  << endl;
     //cout << "solarsys->mui[SUN]   = " << solarsys->mui[0]  << endl;
     //cout << "solarsys->mui[EARTH] = " << solarsys->mui[3]  << endl;
     //cout << "solarsys->mui[Moon ] = " << solarsys->mui[4]  << endl;
@@ -2117,6 +2125,21 @@ void polynomialLi(double mu, int number, double y, double* f, double* df)
         break;
     }
 }
+
+/**
+ *  \brief Prompt "Press Enter to go on"
+ **/
+void pressEnter(bool isFlag)
+{
+    if(isFlag)
+        {
+        char ch;
+        printf("Press ENTER to go on\n");
+        scanf("%c",&ch);
+    }
+}
+
+
 
 /**
  *   \brief Number to string inner routine

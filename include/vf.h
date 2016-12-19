@@ -13,6 +13,9 @@ extern "C" {
 #include "gnuplot_i.h"
 }
 
+//Pointer to a given vector field
+typedef int (*vfptr)(double, const double*, double*, void*);
+
 // Structure for the reduced vector field
 typedef struct RVF RVF;
 struct RVF
@@ -25,54 +28,178 @@ struct RVF
     int reduced_nv;      //Number of reduced variables
 };
 
-//=============================================================================================
+//========================================================================================
 //
-// Integration without STM
+// Selection of the vector fields
 //
-//=============================================================================================
-//----------------------------------------------------------------
-// Ecliptic coordinates, (X, X')
-//----------------------------------------------------------------
+//========================================================================================
 /**
- * \brief Vector field of the solar system (JPL ephemerides) in ecliptic coordinates. Included:
- *        SUN, MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE, PLUTO
+ *  \brief Select the vector field associated to dcs (default coordinate system)
  **/
-int jpl_vf(double et, const double y[], double f[], void *params_void);
+vfptr ftc_select_vf(int dcs, int nvar);
 
-/**
- * \brief Vector field of the solar system (JPL ephemerides) in normalized coordinates. Included:
- *        SUN, MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE, PLUTO
- **/
-int jpl_vfn(double t, const double y[], double f[], void* params_void);
-
-/**
- * \brief Vector field of the solar system (JPL ephemerides) in synodical coordinates. Included:
- *        SUN, MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE, PLUTO (11 bodies)
- **/
-int jpl_vf_syn(double t, const double y[], double f[], void *params_void);
-
+//========================================================================================
+//
+// Vector fields linked to EPHEMERIDES dynamics
+//
+//========================================================================================
+//----------------------------------------------------------------------------------------
+// Subroutines
+//----------------------------------------------------------------------------------------
 /**
  *  \brief Computes the acceleration vector of the Earth.
  **/
 void acc_earth_from_vf(double et, double Ae[3],  double Rj[11][6], QBCP_L* qbp);
 
-//----------------------------------------------------------------
+/**
+ *   \brief Update the positions of the primaries of the Solar system at epoch et.
+ **/
+void usspos(double et, double Rj[11][6], QBCP_L* qbp);
+
+/**
+ *  \brief Computes the acceleration vectors A1 and A2 of the two primaries that defines the synodic coordinates.
+ *         They are computed from the newtonian vector field, i.e. the gravitational influence of the massive bodies of the solar system.
+ *         If the smaller primary is the Earth-Moon Barycenter, the acceleration is computed as the barycenter of the acceleration of the Earth and the Moon.
+ **/
+void acc_from_vf(double et, int pos1, int pos2, double A1[3], double A2[3],
+                 double R1[3], double R2[3], double Rj[11][6], QBCP_L* qbp);
+
+/**
+ *  \brief Computes the jerk vectors A1 and A2 of the two primaries that defines the synodic coordinates.
+ *         They are computed from the derivative of the newtonian vector field, i.e. the gravitational influence of the massive bodies of the solar system.
+ *         If the smaller primary is the Earth-Moon Barycenter, the jerk is computed as the barycenter of the jerk of the Earth and the Moon.
+ **/
+void jerk_from_vf(double et, int pos1, int pos2, double J1[3], double J2[3],
+                  double R1[3], double R2[3], double Rj[11][6], QBCP_L* qbp);
+
+//----------------------------------------------------------------------------------------
+// Ecliptic coordinates for JPL ephemerides (X, X')
+//----------------------------------------------------------------------------------------
+/**
+ * \brief Vector field of the solar system (JPL ephemerides) in ecliptic coordinates
+ *       (SI units) Included:
+ *        SUN, MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE, PLUTO
+ **/
+int jpl_vf(double et, const double y[], double f[], void* params_void);
+
+/**
+ * \brief Vector field of the solar system (JPL ephemerides) in ecliptic coordinates. Included:
+ *        SUN, MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE, PLUTO
+ **/
+int jpl_vf_var(double et, const double y[], double f[], void* params_void);
+
+/**
+ * \brief Vector field of the solar system (JPL ephemerides) in
+ *        earth-centered inertial coordinates (ECI). Included:
+ *        SUN, MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE, PLUTO.
+ **/
+int jpl_vf_eci(double t, const double y[], double f[], void* params_void);
+
+/**
+ * \brief Vector field of the solar system (JPL ephemerides) in earth-centered inertial
+ *        coordinates with variationnal equations. Included:
+ *        SUN, MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE, PLUTO.
+ **/
+int jpl_vf_eci_var(double t, const double y[], double f[], void* params_void);
+
+/**
+ * \brief Vector field of the solar system (JPL ephemerides) in
+ *        normalized earth-centered inertial coordinates (NECI). Included:
+ *        SUN, MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE, PLUTO.
+ **/
+int jpl_vf_neci(double t, const double y[], double f[], void* params_void);
+
+/**
+ * \brief Vector field of the solar system (JPL ephemerides) in NECI
+ *        coordinates with variationnal equations. Included:
+ *        SUN, MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE, PLUTO.
+ *        Note: for now the normalization is NOT taken into account because
+ *        the stepper is going wrong when the state is normalized.
+ **/
+int jpl_vf_neci_var(double t, const double y[], double f[], void* params_void);
+
+//----------------------------------------------------------------------------------------
+// Synodic coordinates for JPL ephemerides (x, x')
+//----------------------------------------------------------------------------------------
+/**
+ * \brief Vector field of the solar system (JPL ephemerides) in synodical coordinates. Included:
+ *        SUN, MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE, PLUTO (11 bodies)
+ **/
+int jpl_vf_syn(double t, const double y[], double f[], void* params_void);
+
+/**
+ * \brief Vector field of the solar system (JPL ephemerides) in synodical coordinates. Included:
+ *        SUN, MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE, PLUTO (11 bodies)
+ **/
+int jpl_vf_syn_var(double t, const double y[], double f[], void* params_void);
+
+//========================================================================================
+//
+// Vector fields linked to QBCP dynamics
+//
+//========================================================================================
+//----------------------------------------------------------------------------------------
 // Inertial SEM coordinates, (X, V)
-//----------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  * \brief Vector field of the QBCP in SEM inertial coordinates
  **/
 int qbcp_vf_insem(double t, const double y[], double f[], void* params_void);
+
+/**
+ * \brief Vector field of the QBCP in SEM inertial coordinates
+ **/
+int qbcp_vf_insem_var(double t, const double y[], double f[], void* params_void);
+
+
+//----------------------------------------------------------------------------------------
+// Earth-centered Inertial SEM coordinates, (X, V)
+//----------------------------------------------------------------------------------------
+/**
+ * \brief Vector field of the QBCP in EC SEM inertial coordinates
+ **/
+int qbcp_vf_ecisem(double t, const double y[], double f[], void* params_void);
+
+/**
+ * \brief Vector field of the QBCP in EC SEM inertial coordinates
+ **/
+int qbcp_vf_ecisem_var(double t, const double y[], double f[], void* params_void);
+
+//----------------------------------------------------------------------------------------
+// Continuation between ECISEM and NECI (JPL)
+//----------------------------------------------------------------------------------------
+/**
+ *  \brief Vector field for continuation procedure. The result is f = (1.0 - epsilon)*f1 + espilon*f2. Variational equations included.
+ **/
+int qbcp_ecisem_cont_necijpl(double t, const double y[], double f[], void *params_void);
+
+//----------------------------------------------------------------------------------------
+// Continuation between INSEM and ECISEM
+//----------------------------------------------------------------------------------------
+/**
+ *  \brief Vector field for continuation procedure. The result is f = (1.0 - epsilon)*f1 + espilon*f2. Variational equations included.
+ **/
+int qbcp_insem_cont_ecisem(double t, const double y[], double f[], void *params_void);
+
+//----------------------------------------------------------------------------------------
+// Inertial EM coordinates, (X, V)
+//----------------------------------------------------------------------------------------
 /**
  * \brief Vector field of the QBCP in EM inertial coordinates
  **/
 int qbcp_vf_inem(double t, const double y[], double f[], void* params_void);
 
-//----------------------------------------------------------------
+/**
+ * \brief Vector field of the QBCP in EM inertial coordinates
+ **/
+int qbcp_vf_inem_var(double t, const double y[], double f[], void* params_void);
+;
+
+//----------------------------------------------------------------------------------------
 // NC coordinates, (X, P)
-//----------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 //Vector field of the QBCP with EM units and Normalized-Li centered coordinates (no variationnal equations)
-int qbfbp_vfn_novar(double t, const double y[], double f[], void *params_void);
+int qbcp_vfn(double t, const double y[], double f[], void* params_void);
 
 //Update the normalized vector field of the state. Note that alpha[14] (alpha15) is zero for the QBCP
 int vfn_state(const double y[], double f[], double alpha[],
@@ -81,26 +208,28 @@ int vfn_state(const double y[], double f[], double alpha[],
               double ms, double me, double mm,
               double gamma);
 
-//----------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 // NC coordinates, (X, V)
-//----------------------------------------------------------------
-//Update the normalized vector field of the state. The state is here (x, xdot), and not (x, px)
+//----------------------------------------------------------------------------------------
+// Vector field of the QBCP with EM units and Normalized-Li centered coordinates
+// (no variationnal equations). The state is here (x, xdot), and not (x, px)
+int qbcp_vfn_xv(double t, const double y[], double f[], void* params_void);
+
+// Update the normalized vector field of the state. The state is here (x, xdot),
+// and not (x, px)
 int vfn_state_xv(const double y[], double f[], double alpha[], double alphad[],
                  double ps[], double pe[], double pm[],
                  double qps2, double qpe2, double qpm2,
                  double ms, double me, double mm,
                  double gamma);
 
-//Vector field of the QBCP with EM units and Normalized-Li centered coordinates (no variationnal equations). The state is here (x, xdot), and not (x, px)
-int qbfbp_vfn_novar_xv(double t, const double y[], double f[], void *params_void);
-
-//----------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 // SYS coordinates, (X, P)
-//----------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  *  \brief Vector field of the QBCP with EM units and EM reference frame.
  **/
-int qbfbp_vf(double t, const double y[], double f[], void *params_void);
+int qbcp_vf(double t, const double y[], double f[], void* params_void);
 
 /**
  *  \brief Update the vector field of the state in system coordinates (non-normalized). Note that alpha[14] (alpha15) is zero for the QBCP
@@ -110,111 +239,102 @@ int vf_state( const double y[], double f[], double alpha[],
               double qps2, double qpe2, double qpm2,
               double ms, double me, double mm );
 
-//=============================================================================================
-//
-// Integration with STM
-//
-//=============================================================================================
+//----------------------------------------------------------------------------------------
+// SYS coordinates, (X, V)
+//----------------------------------------------------------------------------------------
 /**
- *  \brief Computes the second-order derivatives of the potential of one given primary
+ *  \brief Vector field of the QBCP with EM units and EM coordinates. The state is here (x, xdot), and not (x, px)
  **/
-double Uij(const double y[], double pc[], double qpc2, double mc, double factor, int i, int j);
+int qbcp_vf_varnonlin_xv(double t, const double y[], double f[], void* params_void);
 
-//----------------------------------------------------------------
-// Ecliptic coordinates, (X, X')
-//----------------------------------------------------------------
-/**
- * \brief Vector field of the solar system (JPL ephemerides) in ecliptic coordinates. Included:
- *        SUN, MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE, PLUTO
- **/
-int jpl_vf_var(double et, const double y[], double f[], void *params_void);
-/**
- * \brief Vector field of the solar system (JPL ephemerides) in ecliptic_normalized coordinates. Included:
- *        SUN, MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE, PLUTO
- **/
-int jpl_vfn_var(double et, const double y[], double f[], void *params_void);
+// Vector field of the QBCP with EM units and system units centered coordinates
+// (no variationnal equations). The state is here (x, xdot), and not (x, px)
+int qbcp_vf_xv(double t, const double y[], double f[], void* params_void);
 
-//----------------------------------------------------------------
-// Synodic coordinates for JPL ephemerides (x, x')
-//----------------------------------------------------------------
-/**
- * \brief Vector field of the solar system (JPL ephemerides) in synodical coordinates. Included:
- *        SUN, MERCURY, VENUS, EARTH, MOON, MARS, JUPITER, SATURN, URANUS, NEPTUNE, PLUTO (11 bodies)
- **/
-int jpl_vf_syn_var(double t, const double y[], double f[], void* params_void);
 
-//----------------------------------------------------------------
-// Inertial SEM coordinates, (X, V)
-//----------------------------------------------------------------
-/**
- * \brief Vector field of the QBCP in SEM inertial coordinates
- **/
-int qbcp_vf_insem_var(double t, const double y[], double f[], void* params_void);
-//----------------------------------------------------------------
-// Inertial EM coordinates, (X, V)
-//----------------------------------------------------------------
-/**
- * \brief Vector field of the QBCP in EM inertial coordinates
- **/
-int qbcp_vf_inem_var(double t, const double y[], double f[], void* params_void);
+// Update the vector field of the state. The state is here (x, xdot),
+// and not (x, px)
+int vf_state_xv(const double y[], double f[], double alpha[], double alphad[],
+                 double ps[], double pe[], double pm[],
+                 double qps2, double qpe2, double qpm2,
+                 double ms, double me, double mm);
 
-//----------------------------------------------------------------
+/**
+ *  \brief Update the system variational equation matrix
+ **/
+int vf_stm_xv(const double y[], gsl_matrix* Q, double alpha[], double alphad[],
+               double ps[], double pe[], double pm[],
+               double qps2, double qpe2, double qpm2,
+               double ms, double me, double mm);
+
+//----------------------------------------------------------------------------------------
 // NC coordinates, (X, P)
-//----------------------------------------------------------------
+//----------------------------------------------------------------------------------------
+/**
+ *  \brief Vector field of the QBCP with EM units and Normalized-Centered coordinates.
+ **/
+int qbcp_vfn_varnonlin(double t, const double y[], double f[], void* params_void);
+
 /**
  *  \brief Build the Variational Equation Matrix Q from the arrays b and alpha. Note that alpha[14] (alpha15) is zero for the QBCP
  **/
-void set_vareq_matrix(gsl_matrix *Q, double b[], double alpha[]);
-
+void set_vareq_matrix(gsl_matrix* Q, double b[], double alpha[]);
 /**
  *  \brief Update the Normalized-Centered variational equation matrix
  **/
-int vfn_stm(const double y[], gsl_matrix *Q, double alpha[],
+int vfn_stm(const double y[], gsl_matrix* Q, double alpha[],
             double ps[], double pe[], double pm[],
             double qps2, double qpe2, double qpm2,
             double ms, double me, double mm,
             double gamma);
 
-/**
- *  \brief Vector field of the QBCP with EM units and Normalized-Centered coordinates.
- **/
-int qbfbp_vfn_varnonlin(double t, const double y[], double f[], void *params_void);
-
-//----------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 // NC coordinates, (X, V)
-//----------------------------------------------------------------
+//----------------------------------------------------------------------------------------
+/**
+ *  \brief Vector field of the QBCP with EM units and Normalized-Centered coordinates. The state is here (x, xdot), and not (x, px)
+ **/
+int qbcp_vfn_varnonlin_xv(double t, const double y[], double f[], void* params_void);
+
 /**
  *  \brief Build the Variational Equation Matrix Q from the arrays b and alpha
  **/
-void set_vareq_matrix_xv(gsl_matrix *Q, double b[], double alpha[], double alphad[]);
+void set_vareq_matrix_xv(gsl_matrix* Q, double b[], double alpha[], double alphad[]);
 
 /**
  *  \brief Update the Normalized-Centered variational equation matrix
  **/
-int vfn_stm_xv(const double y[], gsl_matrix *Q, double alpha[], double alphad[],
+int vfn_stm_xv(const double y[], gsl_matrix* Q, double alpha[], double alphad[],
                double ps[], double pe[], double pm[],
                double qps2, double qpe2, double qpm2,
                double ms, double me, double mm,
                double gamma);
-/**
- *  \brief Vector field of the QBCP with EM units and Normalized-Centered coordinates. The state is here (x, xdot), and not (x, px)
- **/
-int qbfbp_vfn_varnonlin_xv(double t, const double y[], double f[], void *params_void);
 
-//----------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 // SYS coordinates, (X, P)
-//----------------------------------------------------------------
-/**
- *  \brief Update the variational equation matrix in system coordinates (non-normalized)
- **/
-int vf_stm(const double y[], gsl_matrix *Q, double alpha[],
-           double ps[], double pe[], double pm[],
-           double qps2, double qpe2, double qpm2,
-           double ms, double me, double mm);
+//----------------------------------------------------------------------------------------
 /**
  *  \brief Vector field of the QBCP with EM units and EM reference frame. Variational equations included.
  **/
-int qbfbp_vf_varnonlin(double t, const double y[], double f[], void *params_void);
+int qbcp_vf_varnonlin(double t, const double y[], double f[], void* params_void);
+
+/**
+ *  \brief Update the variational equation matrix in system coordinates (non-normalized)
+ **/
+int vf_stm(const double y[], gsl_matrix* Q, double alpha[],
+           double ps[], double pe[], double pm[],
+           double qps2, double qpe2, double qpm2,
+           double ms, double me, double mm);
+
+//========================================================================================
+//
+// SUBROUTINES
+//
+//========================================================================================
+/**
+ *  \brief Computes the second-order derivatives of the potential of one given primary
+ **/
+double Uij(const double y[], double pc[], double qpc2, double mc, double factor, int i, int j);
 
 //========================================================================================
 //
@@ -252,6 +372,11 @@ double qbfbp_H(double t, const double y[], void *params_void);
  *  \brief Hamiltonian of the QBCP with SEM units and SEM coordinates
  **/
 double qbfbp_H_SEM(double t, const double y[], void *params_void);
+
+/**
+ *  \brief Hamiltonian of the QBCP with EM units and Normalized-Centered coordinates. Note that alpha[14] (alpha15) is zero for the QBCP
+ **/
+double qbfbp_Hn(double t, const double y[], void *params_void);
 
 //========================================================================================
 //

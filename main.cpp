@@ -19,6 +19,7 @@
 #include "ephemerides.h"
 #include "Invman.h"
 #include "Orbit.h"
+#include "Config.h"
 //C
 extern "C" {
 #include "gnuplot_i.h"
@@ -50,26 +51,29 @@ using namespace std;
 /************* NOTES *********************************************************************
  Notes from Reunion with Josep (15/12/2015)
 
- Step 1: Find some solution "by hand"
- Step 2: Refine to get a final heteroclinic connection
-         Look @ collocation methods (Doedel) or Simo methods
  Step 3: Fix a given Pk section and fix the phase @ this section
++ what about refinment in the JPL eph?
++ Book I for an example of continuation.
 
-    + what about refinment in the JPL eph?
-    + Book I for an example of continuation.
++ @TODO: see if we can fasten the JPL and QBCP vf codes! Started to be sloooow. Can we also fasten ode78?
 
-Look at the domain of validity of the (un)stable manifolds of EML1,2
-Can we use it at its limit?
-Is it close to the Moon?
++ @TODO: in ooconteml2seml, try to move around the et0. Is there a connection with the size of the final refined EML2 orbit?
++ @TODO: in ooconteml2seml, what happens if we search for et0 in more than 3 month span? we can probably find a month for which the size is roughly equivalent
+
++ @TODO: do NOT use function that select pointers to function (does not work in C/C++)
+but pass the desired function as argument. Should replace ftc_select_vf that does
+NOT work!!! Ou alors dans le return?? Yes, by creating a typedef
+
++ @TODO: look for the other kinds of switch... typically in oosrefeml2seml (call to mft3d...)
+
+
 *****************************************************************************************/
-
-
 int main()
 {
     //====================================================================================
     // Type of computation
     //====================================================================================
-    int COMPTYPE = COMP_REF_JPL;//COMP_CM_EML2_TO_CM_SEML_3D;//COMP_CM_EML2_TO_CMS_SEML;
+    int COMPTYPE = COMP_CM_EML2_TO_CMS_SEML;//COMP_CM_EML2_TO_CM_SEML_3D;//COMP_CM_EML2_TO_CMS_SEML;
 
     //====================================================================================
     // General settings
@@ -91,7 +95,7 @@ int main()
     //====================================================================================
     // Configuration parameters
     //====================================================================================
-    int model = 0, coordsys = 0, isNorm = 0, li_EM = 0, li_SEM = 0;
+    int model = 0, fwrk = 0, isNorm = 0, li_EM = 0, li_SEM = 0;
     int pms_EM = 0, pms_SEM = 0, mType_EM = 0, mType_SEM = 0, reduced_nv = 0;
     switch(COMPTYPE)
     {
@@ -100,7 +104,7 @@ int main()
         //================================================================================
     case COMP_test_INVMAN:
         model     = MODEL_TYPE;
-        coordsys  = F_EM;
+        fwrk      = F_EM;
         isNorm    = 1;
         li_EM     = 2;
         li_SEM    = 1;
@@ -112,7 +116,7 @@ int main()
     case COMP_EPHEMERIDES_TEST:
     case COMP_VOFTS_TO_VOFTS:
         model     = MODEL_TYPE;
-        coordsys  = F_SEM;
+        fwrk      = F_SEM;
         isNorm    = 1;
         li_EM     = 2;
         li_SEM    = 2;
@@ -129,10 +133,10 @@ int main()
     case COMP_CM_EML2_TO_CM_SEML_3D:
     case COMP_CM_EML2_TO_CM_SEML_REFINE:
         model     = MODEL_TYPE;
-        coordsys  = F_EM;
+        fwrk      = F_EM;
         isNorm    = 1;
         li_EM     = 2;
-        li_SEM    = 1;
+        li_SEM    = 2;
         pms_EM    = PMS_GRAPH;
         pms_SEM   = PMS_GRAPH;
         mType_EM  = MAN_CENTER_U;
@@ -146,10 +150,10 @@ int main()
     case COMP_CM_EML2_TO_CMS_SEML_READ:
     case COMP_REF_JPL:
         model     = MODEL_TYPE;
-        coordsys  = F_EM;
+        fwrk      = F_EM;
         isNorm    = 1;
         li_EM     = 2;
-        li_SEM    = 1;
+        li_SEM    = 2;
         pms_EM    = PMS_GRAPH;
         pms_SEM   = PMS_GRAPH;
         mType_EM  = MAN_CENTER_U;
@@ -161,9 +165,9 @@ int main()
         //================================================================================
     case COMP_SINGLE_ORBIT:
         model     = MODEL_TYPE;
-        coordsys  = F_EM;
+        fwrk      = F_EM;
         isNorm    = 1;
-        li_EM     = 2;
+        li_EM     = 1;
         li_SEM    = 2;
         pms_EM    = PMS_GRAPH;
         pms_SEM   = PMS_GRAPH;
@@ -176,7 +180,7 @@ int main()
         //================================================================================
     case COMP_VF_TEST:
         model     = MODEL_TYPE;
-        coordsys  = F_EM;
+        fwrk      = F_EM;
         isNorm    = 1;
         li_EM     = 2;
         li_SEM    = 2;
@@ -194,7 +198,7 @@ int main()
     // Initialization of the environnement
     // Mandatory to perform any computation
     //====================================================================================
-    initialize_environment(li_EM, li_SEM, isNorm, model, coordsys,
+    initialize_environment(li_EM, li_SEM, isNorm, model, fwrk,
                            pms_EM, pms_SEM, mType_EM, mType_SEM);
 
 
@@ -235,14 +239,14 @@ int main()
     //====================================================================================
     // Second init, with new implementation!!
     //====================================================================================
-    Invman invman(OFTS_ORDER, OFS_ORDER, SEML.cs);
+    //Invman invman(OFTS_ORDER, OFS_ORDER, SEML.cs);
 
     //====================================================================================
     // Computation parameters: Projection CMU EML2 to CM SEMLi
     //====================================================================================
     //TIME
     double TM      = 12*SEML.us.T;
-    double TMIN    = 0.5*SEML.us.T;
+    double TMIN    = 0.53*SEML.us.T;
     double TMAX    = 1.0*SEML.us.T;
     int    TSIZE   = 0;
     double TLIM[2] = {TMIN, TMAX};
@@ -250,11 +254,11 @@ int main()
     //UNSTABLE MANIFOLD AT EML2
     double GMIN_S1  = -30;
     double GMAX_S1  = +30;
-    int    GSIZE_S1 = 80;
+    int    GSIZE_S1 = 60;
 
     double GMIN_S3  = -30;
     double GMAX_S3  = +30;
-    int    GSIZE_S3 = 80;
+    int    GSIZE_S3 = 60;
 
     //In the form of a matrix & a vector
     double  GMIN_SI[4][2] = {{-20, 20} , {0, 10} , {-20, 20} , {0, 10} };
@@ -273,38 +277,59 @@ int main()
     int ISPAR = 1;
 
     //PLANAR CASE?
-    int ISPLANAR = 1;
+    //int ISPLANAR = 1;
 
     //Store?
-    int ISSAVED = 1;
+    //int ISSAVED = 1;
 
     //User-defined direction?
-    int ISUSERDEFINED = 1;
+    //int ISUSERDEFINED = 1;
 
     //Number of dimensions on which we compute the norm of the projection error
     int NOD = 6;
 
     //Refinement structure
     RefSt refst;
-    refst.type          = REF_COMP;
+
+    refst.type          = REF_CONT_D;
     refst.dim           = REF_PLANAR;
     refst.time          = REF_FIXED_TIME;
     refst.grid          = REF_FIXED_GRID;
+
+    refst.coord_type    = NCSEM;
+    refst.gridSize      = 20;
+
+    refst.t0_des        = 0.07*SEML.us_em.T;
+
+    refst.isLimUD          = 1;
+    refst.s1_CMU_EM_MIN    =  -20;//-2; //4;
+    refst.s1_CMU_EM_MAX    =  +0;//6;  //8;
+    refst.s3_CMU_EM_MIN    =  +0;
+    refst.s3_CMU_EM_MAX    =  +20;
+    refst.cont_step_max    = +300;
+    refst.cont_step_max_vt = +30;
+
+    refst.xps              = -0.6; //NCSEM coordinates
+
+    //Sampling frequencies (days)
+    refst.sf_eml2  = 2;
+    refst.sf_man   = 5;
+    refst.sf_seml2 = 10;
+
+    refst.djplcoord     = -1; //NJ2000 by default
+
     refst.isDirUD       = 1;
-    refst.isLimUD       = 1;
+    refst.isFlagOn      = 1;
     refst.isPlotted     = 1;
     refst.isSaved       = 1;
     refst.isJPL         = 1;
     refst.isDebug       = 0;
-    refst.isFromServer  = 0;
-    refst.s1_CMU_EM_MIN = -35;
-    refst.s1_CMU_EM_MAX = +35;
-    refst.s3_CMU_EM_MIN = -35;
-    refst.s3_CMU_EM_MAX = +35;
-    refst.cont_step_max = +150;
-    refst.tspan_EM      = +5*SEML.us_em.T;
-    refst.tspan_SEM     = +1*SEML.us_sem.T;
+    refst.isFromServer  = 1;
 
+    refst.tspan_EM      = +10*SEML.us_em.T;
+    refst.tspan_SEM     = +10*SEML.us_sem.T;
+
+    cout << "SEML.us_sem.T = " << SEML.us_sem.T << endl;
     //====================================================================================
     // Switch
     //====================================================================================
@@ -320,7 +345,7 @@ int main()
         //--------------------------------------------------------------------------------
         // Compute initial conditions in CMU EML2 on a given grid
         tic();
-        oo_compute_grid_CMU_EM_3D(PROJ_EPSILON, TLIM, TSIZE, GMIN_SI, GSIZE_SI, invman, ISPAR);
+        oo_compute_grid_CMU_EM_3D(PROJ_EPSILON, TLIM, TSIZE, GMIN_SI, GSIZE_SI, ISPAR);
         cout << "End of in oo_compute_grid_CMU_EM_3D in " << toc() << endl;
 
 
@@ -360,9 +385,8 @@ int main()
         //--------------------------------------------------------------------------------
         // Compute initial conditions in CMU EML2 on a given grid
         tic();
-        oo_compute_grid_CMU_EM(PROJ_EPSILON, TMIN, TMAX, TSIZE,
-                               GMIN_S1, GMAX_S1, GMIN_S3, GMAX_S3, GSIZE_S1, GSIZE_S3,
-                               invman, ISPAR);
+        oo_compute_grid_CMU_EM(PROJ_EPSILON, TMIN, TMAX, TSIZE, GMIN_S1, GMAX_S1,
+                               GMIN_S3, GMAX_S3, GSIZE_S1, GSIZE_S3, ISPAR);
         cout << "End of in oo_compute_grid_CMU_EM in " << toc() << endl;
 
 
@@ -409,8 +433,9 @@ int main()
     {
         //--------------------------------------------------------------------------------
         // Complete routine: new version
-        //--------------------------------------------------------------------------------;
-        oorefeml2seml(20, NCSEM, invman, refst);
+        //--------------------------------------------------------------------------------
+        oorefeml2seml(refst);
+        //ooconteml2seml(refst);
         break;
 
         //--------------------------------------------------------------------------------
@@ -442,7 +467,9 @@ int main()
         //================================================================================
     case COMP_REF_JPL:
     {
-        oojplrefft3d(NCSEM);
+        //oojplrefft3d(refst.coord_type, refst);
+        oointojplrefft3d(refst.coord_type, refst);
+        //oocomprefft3d_test_eml2seml_synjpl(refst.coord_type);
         break;
     }
         //================================================================================
@@ -569,54 +596,77 @@ int main()
         // Just some examples of solutions
         //================================================================================
     case COMP_SINGLE_ORBIT:
-    {
-
-        // Initial conditions
-        double st0[reduced_nv];
-        switch(coordsys)
         {
-        case F_EM:
-
-            switch(li_EM)
+            //----------------------------------------------------------------------------
+            // Initial conditions
+            //----------------------------------------------------------------------------
+            double st0[reduced_nv];
+            switch(MODEL_TYPE)
             {
-            case 1:
-                st0[0] = -0.145454545454546;
-                st0[1] =  0.194601266014795;
-                st0[2] = -1.309090909090909;
-                st0[3] =  0.194601266014795;
-                if(reduced_nv == 5) st0[4] = 0.0;
-                break;
-            case 2:
-                st0[0] = 5.901025202644599e+00;//-20 ;
-                st0[1] = -6.316522019280152e-03;
-                st0[2] = -3.240398486261306e+01;//-36;
-                st0[3] = -1.681003648125090e-03;
-                if(reduced_nv == 5) st0[4] = 0.0;
+            case M_QBCP:
+            {
+                switch(fwrk)
+                {
+                case F_EM:
 
-                break;
+                    switch(li_EM)
+                    {
+                    case 1:
+                        st0[0] = -0.145454545454546;
+                        st0[1] =  0.194601266014795;
+                        st0[2] = -1.309090909090909;
+                        st0[3] =  0.194601266014795;
+                        if(reduced_nv == 5) st0[4] = 0.0;
+                        break;
+                    case 2:
+                        st0[0] =  5.901025202644599e+00;//-20 ;
+                        st0[1] = -6.316522019280152e-03;
+                        st0[2] = -3.240398486261306e+01;//-36;
+                        st0[3] = -1.681003648125090e-03;
+                        if(reduced_nv == 5) st0[4] = 0.0;
+
+                        break;
+                    }
+                    break;
+
+                case F_SEM:
+                    //Values for Earth capture via Moon slingshot
+                    st0[0] =  0.1;
+                    st0[1] =  0.2;
+                    st0[2] = -0.1;
+                    st0[3] =  0.0;
+                    if(reduced_nv == 5) st0[4] =  0.0;
+                    break;
+                }
             }
             break;
+            case M_RTBP:
+            {
+                    st0[0] =  0.17;
+                    st0[1] =  0.17;
+                    st0[2] =  0.17;
+                    st0[3] =  0.17;
+                    if(reduced_nv == 5) st0[4] =  0.0;
+                    break;
+            }
+            }
 
-        case F_SEM:
-            //Values for Earth capture via Moon slingshot
-            st0[0] =  0.1;
-            st0[1] =  0.2;
-            st0[2] = -0.1;
-            st0[3] =  0.0;
-            if(reduced_nv == 5) st0[4] =  0.0;
+            //----------------------------------------------------------------------------
+            // Computation
+            //----------------------------------------------------------------------------
+            //oo_gridOrbit(st0, +6.016997770510415e+00, -2.793897158902917e+01, 1e-2);
+            oo_gridOrbit(st0, 0.0, 11.498575205454037, 1e-2);
+            //gridOrbit(st0, +6.016997770510415e+00, -2.793897158902917e+01, 1e-2, CM_NC, CM_TFC, Mcoc, MIcoc, Vcoc);
+
             break;
         }
-        //gridOrbit(st0, +6.016997770510415e+00, -2.793897158902917e+01, 1e-2, CM_NC, CM_TFC, Mcoc, MIcoc, Vcoc);
-        oo_gridOrbit(st0, +6.016997770510415e+00, -2.793897158902917e+01, 1e-2, invman);
-        break;
-    }
         //================================================================================
         // Test of the vector fields. Better in OOFTDA??
         // @todo set this routine (qbtbp_test) in OOFTDA
         //================================================================================
     case COMP_VF_TEST:
     {
-        qbtbp_test(0.25*SEML.us.T, SEML);
+        qbtbp_test(SEML.us.T, SEML);
         break;
     }
 
@@ -669,5 +719,5 @@ int main()
     }
 
 
-    return 0;
+    return FTC_SUCCESS;
 }

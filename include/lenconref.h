@@ -4,6 +4,7 @@
 #include "lencon_io.h"
 #include "ephemerides.h"
 #include "Orbit.h"
+#include "ftc_errno.h"
 
 #define SI_NORM_EM_MAX  56.0
 #define SI_NORM_SEM_MAX 1.0
@@ -24,7 +25,7 @@
 #define REF_VAR_GRID   8
 
 //Precision
-#define PREC_GSM    1e-12
+#define PREC_GSM    5e-12
 
 /**
  *  \struct RefSt
@@ -38,13 +39,25 @@ struct RefSt
     int time;             //variable or fixed time
     int type;             //single solution or continuation procedure
     int cont_step_max;    //maximum number of steps in cont procedure, if necessary
+    int cont_step_max_vt; //maximum number of steps in cont procedure with variable time
     int isDirUD;          //the direction of refinement is fixed by the user if true
+    int isFlagOn;         //are the "press enter to go on" active
     int isLimUD;          //the domain of search for first guess fixed by the user if true
     int isPlotted;        //some additionnal plots are made if true
     int isSaved;          //some additionnal storage is made if true
     int isJPL;            //refinement to JPL ephemerides
     int isDebug;          //debugging flag
     int isFromServer;     //data are from server
+    int coord_type;       //desired type of coordinates for certain applications
+    int gridSize;         //desired grid size, for certain applications
+
+
+    //Sampling frequencies
+    int sf_eml2;
+    int sf_man;
+    int sf_seml2;
+
+    int djplcoord; //Default JPL coordinates
 
     //Limits for domain of research of the first guess
     double s1_CMU_EM_MIN;
@@ -52,12 +65,41 @@ struct RefSt
     double s3_CMU_EM_MIN;
     double s3_CMU_EM_MAX;
 
+    //Poincaré section x = cst
+    double xps;
+
+    //Desired time
+    double t0_des;
+
     //Limits for integration time
     double tspan_EM;
     double tspan_SEM;
 };
 
+//========================================================================================
+//
+//          SUBROUTINES:
+//
+//========================================================================================
+/**
+ *  \brief Solve a definite-positive linear system:
+ *         - Decompose a ncs x ncs matrix M that is definite-positive, using GSL routines.
+ *         - Then inverse the system Fv = M*K3.
+ **/
+int ftc_inv_dfls(gsl_matrix* M, gsl_vector*Fv, gsl_vector* K3, int ncs);
 
+
+/**
+ *  \brief Computes the correction vector associated to the minimum norm solution.
+ *         Given:
+ *              - an ncs x 1   error vector Fv
+ *              - an nfv x ncs Jacobian DF,
+ *         This routine computes the correction vector associated to
+ *         the minimum norm solution:
+ *
+ *              DQv = DF^T x (DF x DF^T) Fv.
+ **/
+int ftc_corrvec_mn(gsl_vector* DQv, gsl_vector *Fv, gsl_matrix* DF, int nfv, int ncs);
 
 
 //========================================================================================
@@ -77,7 +119,7 @@ int multiple_shooting_gomez(double **ymd, double *tmd, double **ymdn, double *tm
  * \brief Multiple shooting scheme with no boundary conditions.
  *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
  **/
-int multiple_shooting_direct(double **ymd, double *tmd, double **ymdn, double *tmdn, double **yma,
+int multiple_shooting_direct(double **ymd, double *tmd, double **ymdn, double *tmdn,
                              int N, int man_grid_size, int coord_type,
                              int isPlotted, gnuplot_ctrl *h1);
 /**
@@ -85,9 +127,21 @@ int multiple_shooting_direct(double **ymd, double *tmd, double **ymdn, double *t
  *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
  *        Note that, contrary to the Gomez et al. article, the times are free to vary, leading to additionnal free variables and constraints.
  **/
-int multiple_shooting_direct_variable_time(double **ymd, double *tmd, double **ymdn, double *tmdn, double **yma,
-        int N, int man_grid_size, int coord_type,
-        int isPlotted, gnuplot_ctrl *h1);
+int multiple_shooting_direct_variable_time(double **ymd, double *tmd, double **ymdn, double *tmdn,
+                                           int N, int man_grid_size, int coord_type, double prec,
+                                           int isPlotted, gnuplot_ctrl *h1);
+
+/**
+ * \brief Multiple shooting scheme with no boundary conditions.
+ *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
+ *        An additionnal free variable epsilon is added to the state, for continuation.
+ **/
+int multiple_shooting_direct_deps(double **ymd, double *tmd,
+                                  double **ymdn, double *tmdn,
+                                  double *nullvector, int isFirst,
+                                  int N, int mgs, int coord_type,
+                                  int isPlotted, gnuplot_ctrl *h1);
+
 //========================================================================================
 //
 //          DIFFCORR CUSTOM: CMU to CM
@@ -157,65 +211,6 @@ int ufvarvtplan(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
                 SingleOrbit &orbit_EM, SingleOrbit &orbit_SEM,
                 int man_grid_size, int coord_type);
 
-//========================================================================================
-//
-//          DIFFCORR CUSTOM: CMU to CMS with new implementation
-//
-//========================================================================================
-/**
- * \brief Multiple shooting scheme with no boundary conditions.
- *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
- *        - The initial conditions z0 vary in the center-unstable manifold of EML2.
- *        - The final state zN vary in the center-stable manifold of SEML2.
- *        - The times t0,..., tN are fixed.
- *        - The null vector associated to the solution is computed.
- **/
-int msft3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
-           int number_of_variables, int man_grid_size, int coord_type,
-           double precision, int isFirst,
-           Orbit &orbit_EM, Orbit &orbit_SEM,
-           gnuplot_ctrl *h1, RefSt &refst);
-
-int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
-           int number_of_variables, int man_grid_size, int coord_type,
-           double precision, int isFirst,
-           Orbit &orbit_EM, Orbit &orbit_SEM,
-           gnuplot_ctrl *h1, RefSt &refst);
-
-int msftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
-             int number_of_variables, int man_grid_size,
-             int coord_type, double precision, int isFirst,
-             Orbit &orbit_EM, Orbit &orbit_SEM,
-             gnuplot_ctrl *h1, RefSt &refst);
-
-int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
-             int number_of_variables, int man_grid_size,
-             int coord_type, double precision, int isFirst,
-             Orbit &orbit_EM, Orbit &orbit_SEM,
-             gnuplot_ctrl *h1, RefSt &refst);
-
-//========================================================================================
-//
-//          DIFFCORR CUSTOM: CMU to CMS: UPDATE FREE VARIABLES with NEW IMPLEMENTATION
-//
-//========================================================================================
-
-int ufvarft3d(double **y_traj_n, double *t_traj_n, double ds, double *nullvector,
-              Orbit &orbit_EM, Orbit &orbit_SEM,
-              int man_grid_size, int coord_type);
-
-int ufvarvt3d(double **y_traj_n, double *t_traj_n, double ds, double *nullvector,
-              Orbit &orbit_EM, Orbit &orbit_SEM,
-              int man_grid_size, int coord_type);
-
-int ufvarftplan(double **y_traj_n, double *t_traj_n, double ds, double *nullvector,
-                Orbit &orbit_EM, Orbit &orbit_SEM,
-                int man_grid_size, int coord_type);
-
-int ufvarvtplan(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
-                double *nullvector,
-                Orbit &orbit_EM, Orbit &orbit_SEM,
-                int man_grid_size, int coord_type);
 
 //========================================================================================
 //

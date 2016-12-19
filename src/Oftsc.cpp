@@ -339,7 +339,7 @@ int readOFTS_txt(Oftsc &x, string filename)
     {
         cout << "readOFTS_txt. Cannot open file " << filename << endl;
         cout << "Check the text data exist." << endl;
-        return -1;
+        return FTC_FAILURE;
     }
     else
     {
@@ -356,7 +356,7 @@ int readOFTS_txt(Oftsc &x, string filename)
             }
         }
         readStream.close();
-        return 0;
+        return FTC_SUCCESS;
     }
 }
 
@@ -413,7 +413,7 @@ int readOFTS_bin(Oftsc &W, string filename)
     {
         cout << "readOFTS_bin. Cannot open file " << filename << endl;
         cout << "readOFTS_bin. Check the binary data exist." << endl;
-        return -1;
+        return FTC_FAILURE;
     }
     else
     {
@@ -429,7 +429,7 @@ int readOFTS_bin(Oftsc &W, string filename)
         }
 
         myfile.close();
-        return 0;
+        return FTC_SUCCESS;
     }
 }
 
@@ -449,7 +449,7 @@ int readOFTS_bin(Oftsc &W, string filename, int n)
     {
         cout << "readOFTS_bin. Cannot open file " << filename << endl;
         cout << "readOFTS_bin. Check the binary data exist." << endl;
-        return -1;
+        return FTC_FAILURE;
     }
     else
     {
@@ -464,7 +464,7 @@ int readOFTS_bin(Oftsc &W, string filename, int n)
             }
         }
         myfile.close();
-        return 0;
+        return FTC_SUCCESS;
     }
 }
 
@@ -624,7 +624,7 @@ int fromOFTStoOFTS_bin(Oftsc &W, Oftsc &W1, int dim)
     if(dim > nv-1)
     {
         cout << "fromOFTStoOFTS_bin. dim is greater than the number of dimensions." << endl;
-        return -1;
+        return FTC_FAILURE;
     }
 
     //====================================================================================
@@ -657,5 +657,5 @@ int fromOFTStoOFTS_bin(Oftsc &W, Oftsc &W1, int dim)
 
     }
 
-    return 0;
+    return FTC_SUCCESS;
 }

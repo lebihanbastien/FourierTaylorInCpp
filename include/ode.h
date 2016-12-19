@@ -9,12 +9,10 @@
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_roots.h>
 
-//Precision
-#define PREC_ABS    1e-14
-#define PREC_REL    1e-14
-#define PREC_ROOT   1e-13
-#define PREC_DIFF   1e-12
-#define PREC_HSTART 1e-8
+//Custom
+#include "Config.h"
+
+#define MAX_EVENTS 1000
 
 using namespace std;
 
@@ -82,5 +80,63 @@ void init_ode_structure(OdeStruct *ode_s,
 void reset_ode_structure(OdeStruct *ode_s);
 void free_ode_structure(OdeStruct *ode_s);
 
+
+
+
+//========================================================================================
+// ODEZERO functions & structures
+//========================================================================================
+//Set the parameters to trigger an event
+typedef struct value_params value_params;
+struct value_params
+{
+    int max_events;
+    int direction;
+    int dim;
+    double value;
+    double *center;
+    int type;
+};
+
+//Structure of the output of a value function for event procedure
+typedef struct value_output value_output;
+struct value_output
+{
+    double val;
+    //int max_events;
+    //int direction;
+};
+
+//Structure of a value function for event procedure
+typedef struct value_function value_function;
+struct value_function
+{
+    struct value_params *val_par;
+    double (*value)(double, double [], void *);
+};
+
+//Structure dedicated to ode parameters
+typedef struct ode_params ode_params;
+struct ode_params
+{
+    int nvar;
+    double t0;
+    double* y0;
+    gsl_odeiv2_driver *d;
+    struct value_function fvalue;
+};
+
+int custom_odezero_2(double y[],
+                     double** ye,
+                     double *tcross,
+                     double t0,
+                     double t1,
+                     OdeStruct *ode_s,
+                     struct value_function fvalue);
+
+double linear_intersection(double t, double yv[], void *params);
+double angle_intersection(double t, double yv[], void *params);
+double null_flight_path_angle(double t, double yv[], void *params);
+double cr3bp_event (double t, void *params);
 
 #endif // CUSTOM_ODE_H_INCLUDED
