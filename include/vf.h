@@ -366,17 +366,17 @@ int qbfbp_fh(double t, const double y[], double f[], void *params_void);
 /**
  *  \brief Hamiltonian of the QBCP with SYS units and SYS coordinates. Note that alpha[14] (alpha15) is zero for the QBCP
  **/
-double qbfbp_H(double t, const double y[], void *params_void);
+double qbcp_H(double t, const double y[], void *params_void);
 
 /**
  *  \brief Hamiltonian of the QBCP with SEM units and SEM coordinates
  **/
-double qbfbp_H_SEM(double t, const double y[], void *params_void);
+double qbcp_H_SEM(double t, const double y[], void *params_void);
 
 /**
  *  \brief Hamiltonian of the QBCP with EM units and Normalized-Centered coordinates. Note that alpha[14] (alpha15) is zero for the QBCP
  **/
-double qbfbp_Hn(double t, const double y[], void *params_void);
+double qbcp_Hn(double t, const double y[], void *params_void);
 
 //========================================================================================
 //

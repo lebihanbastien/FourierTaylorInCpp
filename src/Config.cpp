@@ -14,6 +14,11 @@ Config::Config()
     PREC_DIFF   = 1e-12;
     PREC_HSTART = 1e-8;
     DC_ITERMAX  = 20;
+
+    PREC_ABS_BACKUP = PREC_ABS;
+    PREC_REL_BACKUP = PREC_REL;
+
+    //C_PREC_HARD(); force hard precision?
 }
 
 
@@ -25,6 +30,11 @@ Config::Config()
  **/
 void Config::C_PREC_HARD()
 {
+    //Backup
+    PREC_ABS_BACKUP = PREC_ABS;
+    PREC_REL_BACKUP = PREC_REL;
+
+    //New values
     PREC_ABS = 1e-14;
     PREC_REL = 1e-14;
     cout << "Config manager: the integration precisions (absolute and relative)";
@@ -37,10 +47,27 @@ void Config::C_PREC_HARD()
  **/
 void Config::C_PREC_SOFT()
 {
+    //Backup
+    PREC_ABS_BACKUP = PREC_ABS;
+    PREC_REL_BACKUP = PREC_REL;
+
+    //New values
     PREC_ABS = 1e-10;
     PREC_REL = 1e-10;
     cout << "Config manager: the integration precisions (absolute and relative)";
     cout << "have been set to 1e-10" << endl;
+}
+
+/**
+ *  \brief Use backup values for integration precision.
+ **/
+void Config::C_PREC_BACK()
+{
+    //New values
+    PREC_ABS = PREC_ABS_BACKUP;
+    PREC_REL = PREC_REL_BACKUP;
+    cout << "Config manager: the integration precisions (absolute and relative)";
+    cout << "have been set to their backup values" << endl;
 }
 
 //----------------------------------------------------------------------------------------

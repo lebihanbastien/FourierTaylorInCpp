@@ -14,15 +14,25 @@
 #define REF_3D         1
 
 #define REF_SINGLE     2
-#define REF_CONT       3
-#define REF_CONT_D     31
+
+//CAREFUL: because of the routine isCont(), we cannot create a continuation procedure
+//that has a number above 39. We're good for now (only 30, 31, and 32 are taken)
+#define REF_CONT             30
+#define REF_CONT_D           31
+#define REF_CONT_D_HARD_CASE 32
+
 #define REF_COMP       4
 
 #define REF_FIXED_TIME 5
-#define REF_VAR_TIME   6
+#define REF_VAR_TN     6
+#define REF_VAR_TIME   7
 
-#define REF_FIXED_GRID 7
-#define REF_VAR_GRID   8
+#define REF_FIXED_GRID 8
+#define REF_VAR_GRID   9
+#define REF_GIVEN_GRID 10
+
+#define REF_COND_S5    11
+#define REF_COND_T     12
 
 //Precision
 #define PREC_GSM    5e-12
@@ -41,6 +51,7 @@ struct RefSt
     int cont_step_max;    //maximum number of steps in cont procedure, if necessary
     int cont_step_max_vt; //maximum number of steps in cont procedure with variable time
     int isDirUD;          //the direction of refinement is fixed by the user if true
+    int Dir;              //the direction of refinement if isDirUD = false
     int isFlagOn;         //are the "press enter to go on" active
     int isLimUD;          //the domain of search for first guess fixed by the user if true
     int isPlotted;        //some additionnal plots are made if true
@@ -51,6 +62,7 @@ struct RefSt
     int coord_type;       //desired type of coordinates for certain applications
     int gridSize;         //desired grid size, for certain applications
 
+    int termination;      //type of termination for time varying continuation
 
     //Sampling frequencies
     int sf_eml2;
@@ -74,6 +86,10 @@ struct RefSt
     //Limits for integration time
     double tspan_EM;
     double tspan_SEM;
+
+    //Check if the type is of continuation type
+    // We check that the type is between 30 (REF_CONT) and 39 (maximum allowed)
+    bool isCont(){return (type/10*10 == REF_CONT);}
 };
 
 //========================================================================================

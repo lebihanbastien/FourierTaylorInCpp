@@ -548,7 +548,9 @@ int jpl_vf(double et, const double y[], double f[], void* params_void)
     // Misc parameters
     //------------------------------------------------------------------------------------
     //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
+    //QBCP_L* qbp = (QBCP_L*) params_void;
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
 
     //------------------------------------------------------------------------------------
     //Phase space derivatives: x', y', z', x", y", z"
@@ -615,7 +617,9 @@ int jpl_vf_var(double et, const double y[], double f[], void* params_void)
     // Misc parameters
     //------------------------------------------------------------------------------------
     //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
+    //QBCP_L* qbp = (QBCP_L*) params_void;
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
 
     //------------------------------------------------------------------------------------
     //Phase space derivatives: x', y', z', x", y", z"
@@ -709,7 +713,9 @@ int jpl_vf_eci(double t, const double y[], double f[], void* params_void)
     //------------------------------------------------------------------------------------
     double rb[6], et, rbe2;
     //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
+    //QBCP_L* qbp = (QBCP_L*) params_void;
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
 
     //------------------------------------------------------------------------------------
     //Phase space derivatives: x', y', z', x", y", z"
@@ -815,7 +821,9 @@ int jpl_vf_eci_var(double t, const double y[], double f[], void* params_void)
     // Misc parameters
     //------------------------------------------------------------------------------------
     //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
+    //QBCP_L* qbp = (QBCP_L*) params_void;
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
 
     //------------------------------------------------------------------------------------
     //Phase space derivatives: x', y', z', x", y", z"
@@ -941,7 +949,9 @@ int jpl_vf_neci(double t, const double y[], double f[], void* params_void)
     //------------------------------------------------------------------------------------
     double rb[6], et, rbe2;
     //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
+    //QBCP_L* qbp = (QBCP_L*) params_void;
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
 
     //------------------------------------------------------------------------------------
     //Phase space derivatives: x', y', z', x", y", z"
@@ -1051,7 +1061,9 @@ int jpl_vf_neci_var(double t, const double y[], double f[], void* params_void)
     // Misc parameters
     //------------------------------------------------------------------------------------
     //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
+    //QBCP_L* qbp = (QBCP_L*) params_void;
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
 
     //------------------------------------------------------------------------------------
     //Phase space derivatives: x', y', z', x", y", z"
@@ -1184,7 +1196,9 @@ int jpl_vf_neci_var(double t, const double y[], double f[], gsl_matrix *Q, void*
     // Misc parameters
     //------------------------------------------------------------------------------------
     //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
+    //QBCP_L* qbp = (QBCP_L*) params_void;
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
 
     //------------------------------------------------------------------------------------
     //Phase space derivatives: x', y', z', x", y", z"
@@ -1312,7 +1326,9 @@ int jpl_vf_syn(double t, const double y[], double f[], void* params_void)
     // Misc parameters
     //------------------------------------------------------------------------------------
     //Retrieving the parameters
-    QBCP_L* qbp   = (QBCP_L*) params_void;
+    //QBCP_L* qbp = (QBCP_L*) params_void;
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
     int coord_eph = qbp->ss.coord_eph;        //Current coord_eph
     double a      = qbp->ss.a;                //mean semi-major axis (in km)
     double et0    = qbp->ss.et0;              //starting epoch
@@ -1564,7 +1580,9 @@ int jpl_vf_syn_var(double t, const double y[], double f[], void* params_void)
     // Misc parameters
     //------------------------------------------------------------------------------------
     //Retrieving the parameters
-    QBCP_L* qbp   = (QBCP_L*) params_void;
+    //QBCP_L* qbp = (QBCP_L*) params_void;
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
     int coord_eph = qbp->ss.coord_eph;        //Current coord_eph
     double a      = qbp->ss.a;                //mean semi-major axis (in km)
     double et0    = qbp->ss.et0;              //starting epoch
@@ -1845,7 +1863,9 @@ int qbcp_vf_insem(double t, const double y[], double f[], void* params_void)
     // Misc parameters
     //------------------------------------------------------------------------------------
     //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
+    //QBCP_L* qbp = (QBCP_L*) params_void;
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
     double ms = qbp->us_sem.ms;
     double me = qbp->us_sem.me;
     double mm = qbp->us_sem.mm;
@@ -1936,7 +1956,9 @@ int qbcp_vf_insem_var(double t, const double y[], double f[], void* params_void)
     // Misc parameters
     //------------------------------------------------------------------------------------
     //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
+    //QBCP_L* qbp = (QBCP_L*) params_void;
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
     double ms = qbp->us_sem.ms;
     double me = qbp->us_sem.me;
     double mm = qbp->us_sem.mm;
@@ -2069,7 +2091,9 @@ int qbcp_Df_insem_var(double t, const double y[], gsl_matrix* Q, void* params_vo
     // Misc parameters
     //------------------------------------------------------------------------------------
     //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
+    //QBCP_L* qbp = (QBCP_L*) params_void;
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
     double ms = qbp->us_sem.ms;
     double me = qbp->us_sem.me;
     double mm = qbp->us_sem.mm;
@@ -2152,7 +2176,9 @@ int qbcp_vf_ecisem(double t, const double y[], double f[], void* params_void)
     // Misc parameters
     //------------------------------------------------------------------------------------
     //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
+    //QBCP_L* qbp = (QBCP_L*) params_void;
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
     double ms = qbp->us_sem.ms;
     double me = qbp->us_sem.me;
     double mm = qbp->us_sem.mm;
@@ -2267,7 +2293,9 @@ int qbcp_vf_ecisem_var(double t, const double y[], double f[], void* params_void
     // Misc parameters
     //------------------------------------------------------------------------------------
     //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
+    //QBCP_L* qbp = (QBCP_L*) params_void;
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
     double ms = qbp->us_sem.ms;
     double me = qbp->us_sem.me;
     double mm = qbp->us_sem.mm;
@@ -2423,7 +2451,9 @@ int qbcp_vf_ecisem_var(double t, const double y[], double f[], gsl_matrix* Q, vo
     // Misc parameters
     //------------------------------------------------------------------------------------
     //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
+    //QBCP_L* qbp = (QBCP_L*) params_void;
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
     double ms = qbp->us_sem.ms;
     double me = qbp->us_sem.me;
     double mm = qbp->us_sem.mm;
@@ -2577,7 +2607,9 @@ int qbcp_Df_ecisem_var(double t, const double y[], gsl_matrix* Q, void* params_v
     // Misc parameters
     //------------------------------------------------------------------------------------
     //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
+    //QBCP_L* qbp = (QBCP_L*) params_void;
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
     double ms = qbp->us_sem.ms;
     double me = qbp->us_sem.me;
     double mm = qbp->us_sem.mm;
@@ -2665,7 +2697,10 @@ int qbcp_ecisem_cont_necijpl(double t, const double y[], double f[], void *param
     //------------------------------------------------------------------------------------
     //Retrieving the parameters
     //------------------------------------------------------------------------------------
-    QBCP_L* qbp = (QBCP_L*) params_void;
+    //Retrieving the parameters
+    //QBCP_L* qbp = (QBCP_L*) params_void;
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
 
     //------------------------------------------------------------------------------------
     // Vector field: vf = epsilon * vf1 + (1 - epsilon) * vf2
@@ -2713,7 +2748,10 @@ int qbcp_insem_cont_ecisem(double t, const double y[], double f[], void *params_
     //------------------------------------------------------------------------------------
     //Retrieving the parameters
     //------------------------------------------------------------------------------------
-    QBCP_L* qbp = (QBCP_L*) params_void;
+    //Retrieving the parameters
+    //QBCP_L* qbp = (QBCP_L*) params_void;
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
 
     //------------------------------------------------------------------------------------
     // Vector field: vf = epsilon * vf1 + (1 - epsilon) * vf2
@@ -2765,7 +2803,9 @@ int qbcp_vf_inem(double t, const double y[], double f[], void* params_void)
     // Misc parameters
     //------------------------------------------------------------------------------------
     //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
+    //QBCP_L* qbp = (QBCP_L*) params_void;
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
     double ms = qbp->us_em.ms;
     double me = qbp->us_em.me;
     double mm = qbp->us_em.mm;
@@ -2851,7 +2891,9 @@ int qbcp_vf_inem_var(double t, const double y[], double f[], void* params_void)
     // Misc parameters
     //------------------------------------------------------------------------------------
     //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
+    //QBCP_L* qbp = (QBCP_L*) params_void;
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
     double ms = qbp->us_em.ms;
     double me = qbp->us_em.me;
     double mm = qbp->us_em.mm;
@@ -2979,7 +3021,12 @@ int qbcp_vfn(double t, const double y[], double f[], void* params_void)
     // Misc parameters
     //------------------------------------------------------------------------------------
     //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
+    //QBCP_L* qbp = (QBCP_L*) params_void;
+
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
+
+
     int noc      = qbp->numberOfCoefs;
     int nf       = qbp->nf;
     double ms    = qbp->us.ms;
@@ -3015,6 +3062,27 @@ int qbcp_vfn(double t, const double y[], double f[], void* params_void)
     //Phase space derivatives: x', y', z', px', py', pz'
     //------------------------------------------------------------------------------------
     vfn_state(y, f, alpha, ps, pe, pm, qps2, qpe2, qpm2, ms, me, mm, gamma);
+
+
+    //------------------------------------------------------------------------------------
+    //Check collision with primaries (not necessary with the Sun...)
+    //------------------------------------------------------------------------------------
+    double re = SEML.cs_em.cr3bp.R1/(gamma*SEML.cs.cr3bp.L);
+    double rm = SEML.cs_em.cr3bp.R2/(gamma*SEML.cs.cr3bp.L);
+
+    //Collision with the Earth
+    if(sqrt(qpe2) < re)
+    {
+        *odeParams->coll = EARTH;
+        //cout << "Earth collision!" << endl;
+    }
+
+    //Collision with the Moon
+    if(sqrt(qpm2) < rm)
+    {
+        *odeParams->coll = MOON;
+        //cout << "Moon collision!" << endl;
+    }
 
     return FTC_SUCCESS;
 }
@@ -3086,7 +3154,9 @@ int qbcp_vfn_xv(double t, const double y[], double f[], void* params_void)
     // Misc parameters
     //------------------------------------------------------------------------------------
     //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
+    //QBCP_L* qbp = (QBCP_L*) params_void;
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
     int noc      = qbp->numberOfCoefs;
     int nf       = qbp->nf;
     double ms    = qbp->us.ms;
@@ -3207,7 +3277,9 @@ int qbcp_vf(double t, const double y[], double f[], void* params_void)
     // Misc parameters
     //------------------------------------------------------------------------------------
     //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
+    //QBCP_L* qbp = (QBCP_L*) params_void;
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
     int noc   = qbp->numberOfCoefs;
     double ms = qbp->us.ms;
     double me = qbp->us.me;
@@ -3324,7 +3396,9 @@ int qbcp_vf_varnonlin_xv(double t, const double y[], double f[], void* params_vo
     // Misc parameters
     //------------------------------------------------------------------------------------
     //Retrieving the parameters
-    QBCP_L* qbp  = (QBCP_L*) params_void;
+    //QBCP_L* qbp = (QBCP_L*) params_void;
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
     int noc      = qbp->numberOfCoefs;
     double ms    = qbp->us.ms;
     double me    = qbp->us.me;
@@ -3398,7 +3472,9 @@ int qbcp_vf_xv(double t, const double y[], double f[], void* params_void)
     // Misc parameters
     //------------------------------------------------------------------------------------
     //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
+    //QBCP_L* qbp = (QBCP_L*) params_void;
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
     int noc      = qbp->numberOfCoefs;
     int nf       = qbp->nf;
     double ms    = qbp->us.ms;
@@ -3584,7 +3660,9 @@ int qbcp_vfn_varnonlin(double t, const double y[], double f[], void* params_void
     // Misc parameters
     //------------------------------------------------------------------------------------
     //Retrieving the parameters
-    QBCP_L* qbp  = (QBCP_L*) params_void;
+    //QBCP_L* qbp = (QBCP_L*) params_void;
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
     int noc      = qbp->numberOfCoefs;
     double ms    = qbp->us.ms;
     double me    = qbp->us.me;
@@ -3757,7 +3835,9 @@ int qbcp_vfn_varnonlin_xv(double t, const double y[], double f[], void* params_v
     // Misc parameters
     //------------------------------------------------------------------------------------
     //Retrieving the parameters
-    QBCP_L* qbp  = (QBCP_L*) params_void;
+    //QBCP_L* qbp = (QBCP_L*) params_void;
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
     int noc      = qbp->numberOfCoefs;
     double ms    = qbp->us.ms;
     double me    = qbp->us.me;
@@ -3937,7 +4017,9 @@ int qbcp_vf_varnonlin(double t, const double y[], double f[], void* params_void)
     // Misc parameters
     //------------------------------------------------------------------------------------
     //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
+    //QBCP_L* qbp = (QBCP_L*) params_void;
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
     double ms = qbp->us.ms;
     double me = qbp->us.me;
     double mm = qbp->us.mm;
@@ -4119,13 +4201,15 @@ int qbfbp_fh(double t, const double y[], double f[], void* params_void)
 /**
  *  \brief Hamiltonian of the QBCP with SYS units and SYS coordinates. Note that alpha[14] (alpha15) is zero for the QBCP
  **/
-double qbfbp_H(double t, const double y[], void* params_void)
+double qbcp_H(double t, const double y[], void* params_void)
 {
     //------------------------------------------------------------------------------------
     // Misc parameters
     //------------------------------------------------------------------------------------
     //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
+    //QBCP_L* qbp = (QBCP_L*) params_void;
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
     int noc   = qbp->numberOfCoefs;
     double ms = qbp->us.ms;
     double me = qbp->us.me;
@@ -4175,13 +4259,16 @@ double qbfbp_H(double t, const double y[], void* params_void)
 /**
  *  \brief Hamiltonian of the QBCP with SEM units and SEM coordinates
  **/
-double qbfbp_H_SEM(double t, const double y[], void* params_void)
+double qbcp_H_SEM(double t, const double y[], void* params_void)
 {
     //------------------------------------------------------------------------------------
     // Misc parameters
     //------------------------------------------------------------------------------------
     //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L*) params_void;
+    //Retrieving the parameters
+    //QBCP_L* qbp = (QBCP_L*) params_void;
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
     int noc   = qbp->numberOfCoefs;
     double ms = qbp->us_sem.ms;
     double me = qbp->us_sem.me;
@@ -4230,7 +4317,7 @@ double qbfbp_H_SEM(double t, const double y[], void* params_void)
 /**
  *  \brief Hamiltonian of the QBCP with EM units and Normalized-Centered coordinates. Note that alpha[14] (alpha15) is zero for the QBCP
  **/
-double qbfbp_Hn(double t, const double y[], void *params_void)
+double qbcp_Hn(double t, const double y[], void *params_void)
 {
     //-------------------------------------------------------------------------------
     // Misc parameters
@@ -4283,13 +4370,14 @@ double qbfbp_Hn(double t, const double y[], void *params_void)
              + alpha[2]*(y[3]*y[1] - y[4]*y[0])
              - y[0]*alpha[12]
              - y[1]*alpha[13]
-             + (alpha[3]*c1/gamma - c1*c1/(2*alpha[0])*(alpha[1]*alpha[1] + alpha[2]*alpha[2])) //only necessary for Elliptic case...
              - 0.5*alpha[14]*(y[0]*y[0] + y[1]*y[1] + y[2]*y[2])
              - alpha[5]/pow(gamma,3.0)*( me/pow(qpe2, 1.0/2) + mm/pow(qpm2, 1.0/2) + ms/pow(qps2, 1.0/2) );
 
-    H += +(alpha[3]*c1/gamma - c1*c1/(2*alpha[0])*(alpha[1]*alpha[1] + alpha[2]*alpha[2]));
-    H += -alpha21d*c1*y[0] + alpha31d*c1*y[1];
-    H *= gamma*gamma;
+    //Uncomment the next lines to get the Hamiltonian in non-normalized coordinates!
+    //(should match the results with qbcp_H)
+    //    H += +(alpha[3]*c1/gamma - c1*c1/(2*alpha[0])*(alpha[1]*alpha[1] + alpha[2]*alpha[2]));
+    //    H += -alpha21d*c1*y[0] + alpha31d*c1*y[1];
+    //    H *= gamma*gamma;
     return H;
 }
 

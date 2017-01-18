@@ -741,12 +741,12 @@ int getLengthIntSortedCU_bin(int* number_of_sol, int ofts_order,
  **/
 void writeIntProjCU_bin(string filename,
                         double* init_time_grid_EM,            //time grid in NCEM units
-                        double**** init_state_CMU_NCEM,      //initial state in NCEM coordinates
-                        double**** init_state_CMU_SEM,       //initial state in SEM coordinates
-                        double**** init_state_CMU_RCM,       //initial state in RCM coordinates
-                        double**** final_state_CMU_SEM,      //final state in SEM coordinates
-                        double**** projected_state_CMU_SEM,  //projected state in SEM coordinates
-                        double**** projected_state_CMU_RCM,  //projected state in RCM coordinates
+                        double**** init_state_CMU_NCEM,       //initial state in NCEM coordinates
+                        double**** init_state_CMU_SEM,        //initial state in SEM coordinates
+                        double**** init_state_CMU_RCM,        //initial state in RCM coordinates
+                        double**** final_state_CMU_SEM,       //final state in SEM coordinates
+                        double**** projected_state_CMU_SEM,   //projected state in SEM coordinates
+                        double**** projected_state_CMU_RCM,   //projected state in RCM coordinates
                         double min_proj_dist_SEM,             //minimum distance of projection in SEM units
                         double dv_at_projection_SEM,          //associated dv
                         double* t_man_SEM,                    //time grid on manifold leg in SEM units

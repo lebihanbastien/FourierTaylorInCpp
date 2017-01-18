@@ -226,6 +226,7 @@ int multiple_shooting_gomez(double **ymd, double *tmd,
     // Loop correction
     //--------------------------------------------------------------------------
     int iter = 0;
+    int ode78coll;
     while(iter < 20)
     {
         //----------------------------------------------------------------------
@@ -243,7 +244,7 @@ int multiple_shooting_gomez(double **ymd, double *tmd,
             // Integration between tmdn[k] and tmdn[k+1]
             //------------------------------------------------------------------
             for(int i = 0; i < N; i++) yv[i] = ymdn[i][k];
-            ode78(ym, tm, tmdn[k], tmdn[k+1], yv, 42, 1, I_VNCSEM, VNCSEM, VNCSEM);
+            ode78(ym, tm, &ode78coll, tmdn[k], tmdn[k+1], yv, 42, 1, I_VNCSEM, VNCSEM, VNCSEM);
 
             //------------------------------------------------------------------
             // Final position is at the end of ym
@@ -474,7 +475,7 @@ int multiple_shooting_direct(double **ymd, double *tmd,
     // Get the correct integration routine
     //------------------------------------------------------------------------------------
     //by default, to avoid gcc warning
-    int (*ode78_int)(double**, double*, double, double, const double*y, int, int, int, int, int) = ode78;
+    int (*ode78_int)(double**, double*, int*, double, double, const double*y, int, int, int, int, int) = ode78;
 
     //------------------------------------------------------------------------------------
     // GSL matrices and vectors
@@ -513,6 +514,7 @@ int multiple_shooting_direct(double **ymd, double *tmd,
     //Maximum number of iterations is retrieved from config manager
     int itermax = Config::configManager().G_DC_ITERMAX();
     int iter = 0;
+    int  ode78coll;
     while(iter < itermax)
     {
 
@@ -530,7 +532,7 @@ int multiple_shooting_direct(double **ymd, double *tmd,
             // Integration
             //----------------------------------------------------------------------------
             for(int i = 0; i < N; i++) yv[i] = ymdn[i][k];
-            ode78_int(ym, tm, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
+            ode78_int(ym, tm, &ode78coll, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
 
             //----------------------------------------------------------------------------
             // Final position is at the end of ym
@@ -590,10 +592,10 @@ int multiple_shooting_direct(double **ymd, double *tmd,
             return FTC_FAILURE;
         }
 
-        if(iter == 0)
-        {
-            for(int k = 0; k < DQv->size; k++) cout << gsl_vector_get(DQv, k) << endl;
-        }
+        //        if(iter == 0)
+        //        {
+        //            for(int k = 0; k < DQv->size; k++) cout << gsl_vector_get(DQv, k) << endl;
+        //        }
 
         //================================================================================
         // Update the free variables
@@ -687,7 +689,7 @@ int multiple_shooting_direct_variable_time(double **ymd, double *tmd,
     // Get the correct integration routine
     //------------------------------------------------------------------------------------
     //by default, to avoid gcc warning
-    int (*ode78_int)(double**, double*, double, double, const double*y, int, int, int, int, int) = ode78;
+    int (*ode78_int)(double**, double*, int*, double, double, const double*y, int, int, int, int, int) = ode78;
 
     //====================================================================================
     // Check that the focus in SEML is in accordance with the dcs.
@@ -734,6 +736,7 @@ int multiple_shooting_direct_variable_time(double **ymd, double *tmd,
     //Maximum number of iterations is retrieved from config manager
     int itermax = Config::configManager().G_DC_ITERMAX();
     int iter = 0;
+    int  ode78coll;
     while(iter <  itermax)
     {
 
@@ -751,7 +754,7 @@ int multiple_shooting_direct_variable_time(double **ymd, double *tmd,
             // Integration
             //----------------------------------------------------------------------------
             for(int i = 0; i < N; i++) yv[i] = ymdn[i][k];
-            ode78_int(ym, tm, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
+            ode78_int(ym, tm, &ode78coll, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
 
             //----------------------------------------------------------------------------
             // Final position is at the end of ym
@@ -779,7 +782,7 @@ int multiple_shooting_direct_variable_time(double **ymd, double *tmd,
             //--------------------------
             //Computing f[Q[k], t[k])
             for(int i = 0; i < 6; i++) yv[i] = ymdn[i][k];
-            vf(tmdn[k], yv, f, &SEML);
+            vf(tmdn[k], yv, f, &ODESEML);
 
             //Kf = -f[Q[k], t[k])
             for(int i = 0; i < 6; i++) gsl_vector_set(Kf, i, -f[i]);
@@ -791,7 +794,7 @@ int multiple_shooting_direct_variable_time(double **ymd, double *tmd,
             //dF[k]/dt[k+1] = +f[Q[k+1], t[k+1])
             //--------------------------
             //Computing f[Q[k+1], t[k+1])
-            vf(tmdn[k+1], ye, f, &SEML);
+            vf(tmdn[k+1], ye, f, &ODESEML);
 
 
             //----------------------------------------------------------------------------
@@ -923,9 +926,11 @@ int multiple_shooting_direct_deps(double **ymd, double *tmd,
     const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
     //Stepper
     const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
+    //Parameters
+    int coll;
+    OdeParams odeParams(&coll, &SEML);
     //Init ode structure
-    init_ode_structure(&driver, T, T_root, 48, qbcp_ecisem_cont_necijpl, &SEML);
-
+    init_ode_structure(&driver, T, T_root, 48, qbcp_ecisem_cont_necijpl, &odeParams);
 
     //------------------------------------------------------------------------------------
     // GSL matrices and vectors
@@ -1544,6 +1549,7 @@ int msdvt_CMS_RCM(double **ymd, double *tmd, double **ymdn, double *tmdn,
     // Loop correction
     //--------------------------------------------------------------------------
     int iter = 0;
+    int  ode78coll;
     while(iter <  20)
     {
         //----------------------------------------------------------------------
@@ -1555,7 +1561,7 @@ int msdvt_CMS_RCM(double **ymd, double *tmd, double **ymdn, double *tmdn,
             // Integration
             //------------------------------------------------------------------
             for(int i = 0; i < number_of_variables; i++) yv[i] = ymdn[i][k];
-            ode78(ym, tm, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
+            ode78(ym, tm, &ode78coll, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
 
             //------------------------------------------------------------------
             // Final position is at the end of ym
@@ -1686,7 +1692,7 @@ int msdvt_CMS_RCM(double **ymd, double *tmd, double **ymdn, double *tmdn,
             //------------------------------------------
             //Computing f[Q[k], t[k])
             for(int i = 0; i < 6; i++) yv[i] = ymdn[i][k];
-            vf(tmdn[k], yv, f, &SEML);
+            vf(tmdn[k], yv, f, &ODESEML);
 
             //Kf = -f[Q[k], t[k])
             for(int i = 0; i < 6; i++) gsl_vector_set(Kf, i, -f[i]);
@@ -1698,7 +1704,7 @@ int msdvt_CMS_RCM(double **ymd, double *tmd, double **ymdn, double *tmdn,
             //dF[k]/dt[k+1] = +f[Q[k+1], t[k+1])
             //------------------------------------------
             //Computing f[Q[k+1], t[k+1])
-            vf(te, ye, f, &SEML);
+            vf(te, ye, f, &ODESEML);
 
             //Special case of the last point: dF[k]/dt[k+1] = +f[Q[k+1], t[k+1]) - dCM_SEM_NC/dt[k+1]
             if(k == mgs-1)
@@ -2182,6 +2188,7 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
     //--------------------------------------------------------------------------
     int iter = 0;
     int itermax = 20;
+    int  ode78coll;
     while(iter <  itermax)
     {
         //----------------------------------------------------------------------
@@ -2193,7 +2200,7 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
             // Integration
             //------------------------------------------------------------------
             for(int i = 0; i < number_of_variables; i++) yv[i] = ymdn[i][k];
-            ode78(ym, tm, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
+            ode78(ym, tm, &ode78coll, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
 
             //------------------------------------------------------------------
             // Final position is at the end of ym
@@ -2324,7 +2331,7 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
             //------------------------------------------
             //Computing f[Q[k], t[k])
             for(int i = 0; i < 6; i++) yv[i] = ymdn[i][k];
-            vf(tmdn[k], yv, f, &SEML);
+            vf(tmdn[k], yv, f, &ODESEML);
 
             //Kf = -f[Q[k], t[k])
             for(int i = 0; i < 6; i++) gsl_vector_set(Kf, i, -f[i]);
@@ -2336,7 +2343,7 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
             //dF[k]/dt[k+1] = +f[Q[k+1], t[k+1])
             //------------------------------------------
             //Computing f[Q[k+1], t[k+1])
-            vf(te, ye, f, &SEML);
+            vf(te, ye, f, &ODESEML);
 
             //Special case of the last point: dF[k]/dt[k+1] = +f[Q[k+1], t[k+1]) - dCM_SEM_NC/dt[k+1]
             if(k == mgs-1)
@@ -2836,6 +2843,7 @@ int msft3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
     //--------------------------------------------------------------------------
     int iter = 0;
     int iterMax = 20;
+    int  ode78coll;
     while(iter <  iterMax)
     {
         //----------------------------------------------------------------------
@@ -2847,7 +2855,7 @@ int msft3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
             // Integration
             //------------------------------------------------------------------
             for(int i = 0; i < number_of_variables; i++) yv[i] = ymdn[i][k];
-            ode78(ym, tm, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
+            ode78(ym, tm, &ode78coll, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
 
             //------------------------------------------------------------------
             // Final position is at the end of ym
@@ -3433,6 +3441,7 @@ int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
     // Loop correction
     //--------------------------------------------------------------------------
     int iter = 0;
+    int  ode78coll;
     while(iter <  20)
     {
         //----------------------------------------------------------------------
@@ -3444,7 +3453,7 @@ int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
             // Integration
             //------------------------------------------------------------------
             for(int i = 0; i < number_of_variables; i++) yv[i] = ymdn[i][k];
-            ode78(ym, tm, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
+            ode78(ym, tm, &ode78coll, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
 
             //------------------------------------------------------------------
             // Final position is at the end of ym
@@ -3573,7 +3582,7 @@ int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
             //------------------------------------------
             //Computing f[Q[k], t[k])
             for(int i = 0; i < 6; i++) yv[i] = ymdn[i][k];
-            vf(tmdn[k], yv, f, &SEML);
+            vf(tmdn[k], yv, f, &ODESEML);
 
             //Kf = -f[Q[k], t[k])
             for(int i = 0; i < 6; i++) gsl_vector_set(Kf, i, -f[i]);
@@ -3585,7 +3594,7 @@ int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
             //dF[k]/dt[k+1] = +f[Q[k+1], t[k+1])
             //------------------------------------------
             //Computing f[Q[k+1], t[k+1])
-            vf(te, ye, f, &SEML);
+            vf(te, ye, f, &ODESEML);
 
             //Special case of the last point: dF[k]/dt[k+1] = +f[Q[k+1], t[k+1]) - dCM_SEM_NC/dt[k+1]
             if(k == mgs-1)
@@ -4140,6 +4149,7 @@ int msftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
     //--------------------------------------------------------------------------
     int iter = 0;
     int iterMax = 20;
+    int  ode78coll;
     while(iter <  iterMax)
     {
         //----------------------------------------------------------------------
@@ -4151,7 +4161,7 @@ int msftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
             // Integration
             //------------------------------------------------------------------
             for(int i = 0; i < number_of_variables; i++) yv[i] = ymdn[i][k];
-            ode78(ym, tm, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
+            ode78(ym, tm, &ode78coll, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
 
             //------------------------------------------------------------------
             // Final position is at the end of ym
@@ -4775,6 +4785,7 @@ int msdvt_CMS_RCM_deps_planar_pac_ATF(double **ymd, double *tmd, double **ymdn, 
     // Loop correction
     //--------------------------------------------------------------------------
     int iter = 0;
+    int  ode78coll;
     while(iter <  20)
     {
         //----------------------------------------------------------------------
@@ -4786,7 +4797,7 @@ int msdvt_CMS_RCM_deps_planar_pac_ATF(double **ymd, double *tmd, double **ymdn, 
             // Integration
             //------------------------------------------------------------------
             for(int i = 0; i < number_of_variables; i++) yv[i] = ymdn[i][k];
-            ode78(ym, tm, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
+            ode78(ym, tm, &ode78coll, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
 
             //------------------------------------------------------------------
             // Final position is at the end of ym
@@ -5427,6 +5438,7 @@ int msdvt_CMS_RCM_deps_planar_pac(double **ymd, double *tmd, double **ymdn, doub
     // Loop correction
     //--------------------------------------------------------------------------
     int iter = 0;
+    int  ode78coll;
     while(iter <  20)
     {
         //----------------------------------------------------------------------
@@ -5438,7 +5450,7 @@ int msdvt_CMS_RCM_deps_planar_pac(double **ymd, double *tmd, double **ymdn, doub
             // Integration
             //------------------------------------------------------------------
             for(int i = 0; i < number_of_variables; i++) yv[i] = ymdn[i][k];
-            ode78(ym, tm, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
+            ode78(ym, tm, &ode78coll, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
 
             //------------------------------------------------------------------
             // Final position is at the end of ym
@@ -5568,7 +5580,7 @@ int msdvt_CMS_RCM_deps_planar_pac(double **ymd, double *tmd, double **ymdn, doub
             //------------------------------------------
             //Computing f[Q[k], t[k])
             for(int i = 0; i < 6; i++) yv[i] = ymdn[i][k];
-            vf(tmdn[k], yv, f, &SEML);
+            vf(tmdn[k], yv, f, &ODESEML);
 
             //Kf = -f[Q[k], t[k])
             for(int i = 0; i < 6; i++) gsl_vector_set(Kf, i, -f[i]);
@@ -5580,7 +5592,7 @@ int msdvt_CMS_RCM_deps_planar_pac(double **ymd, double *tmd, double **ymdn, doub
             //dF[k]/dt[k+1] = +f[Q[k+1], t[k+1])
             //------------------------------------------
             //Computing f[Q[k+1], t[k+1])
-            vf(te, ye, f, &SEML);
+            vf(te, ye, f, &ODESEML);
 
             //Special case of the last point: dF[k]/dt[k+1] = +f[Q[k+1], t[k+1]) - dCM_SEM_NC/dt[k+1]
             if(k == mgs-1)
@@ -6171,6 +6183,7 @@ int nfreevariables(RefSt refst, int mgs)
             break;
 
         case REF_VAR_TIME:
+        case REF_VAR_TN:
                 nfv = 7*mgs+3;
             break;
         default:
@@ -6185,9 +6198,14 @@ int nfreevariables(RefSt refst, int mgs)
                nfv = 4*mgs+1;
             break;
 
+        case REF_VAR_TN:
+               nfv = 4*mgs+2;
+            break;
+
         case REF_VAR_TIME:
                nfv = 5*mgs+1;
             break;
+
         default:
             perror("nfreevariables. Unknown refst.time.");
         break;
@@ -6291,6 +6309,7 @@ int msd_CM_RCM(double **ymd, double *tmd, double **ymdn, double *tmdn, double **
     // Loop correction
     //--------------------------------------------------------------------------
     int iter = 0;
+    int  ode78coll;
     while(iter < 20)
     {
         //----------------------------------------------------------------------
@@ -6302,7 +6321,7 @@ int msd_CM_RCM(double **ymd, double *tmd, double **ymdn, double *tmdn, double **
             // Integration
             //------------------------------------------------------------------
             for(int i = 0; i < N; i++) yv[i] = ymdn[i][k];
-            ode78(ym, tm, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
+            ode78(ym, tm, &ode78coll, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
 
             //------------------------------------------------------------------
             // Final position is at the end of ym
@@ -6624,6 +6643,7 @@ int msdvt_CM_RCM(double **ymd, double *tmd, double **ymdn, double *tmdn, double 
     // Loop correction
     //--------------------------------------------------------------------------
     int iter = 0;
+    int  ode78coll;
     while(iter <  10)
     {
         //----------------------------------------------------------------------
@@ -6635,7 +6655,7 @@ int msdvt_CM_RCM(double **ymd, double *tmd, double **ymdn, double *tmdn, double 
             // Integration
             //------------------------------------------------------------------
             for(int i = 0; i < N; i++) yv[i] = ymdn[i][k];
-            ode78(ym, tm, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
+            ode78(ym, tm, &ode78coll, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
 
             //------------------------------------------------------------------
             // Final position is at the end of ym
@@ -6771,7 +6791,7 @@ int msdvt_CM_RCM(double **ymd, double *tmd, double **ymdn, double *tmdn, double 
             //------------------------------------------
             //Computing f[Q[k], t[k])
             for(int i = 0; i < 6; i++) yv[i] = ymdn[i][k];
-            vf(tmdn[k], yv, f, &SEML);
+            vf(tmdn[k], yv, f, &ODESEML);
 
             //Kf = -f[Q[k], t[k])
             for(int i = 0; i < 6; i++) gsl_vector_set(Kf, i, -f[i]);
@@ -6783,7 +6803,7 @@ int msdvt_CM_RCM(double **ymd, double *tmd, double **ymdn, double *tmdn, double 
             //dF[k]/dt[k+1] = +f[Q[k+1], t[k+1])
             //------------------------------------------
             //Computing f[Q[k+1], t[k+1])
-            vf(te, ye, f, &SEML);
+            vf(te, ye, f, &ODESEML);
 
             //Special case of the last point: dF[k]/dt[k+1] = +f[Q[k+1], t[k+1]) - dCM_SEM_NC/dt[k+1]
             if(k == mgs-1)
@@ -7073,7 +7093,7 @@ int msdvt_CM_RCM(double **ymd, double *tmd, double **ymdn, double *tmdn, double 
     {
 
         for(int i = 0; i < N; i++) yv[i] = ymdn[i][k];
-        ode78(ym, tm, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
+        ode78(ym, tm, &ode78coll, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
         if(isPlotted) gnuplot_plot_xyz(h1, ym[0], ym[1],  ym[2], 2, (char*)"", "lines", "2", "4", 5);
     }
     if(isPlotted) gnuplot_plot_xyz(h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "4", 5);
@@ -7185,6 +7205,7 @@ int differential_correction_level_I(double **ymd, double *tmd, double **ymdn, do
     // Loop correction
     //--------------------------------------------------------------------------
     int iter = 0;
+    int  ode78coll;
     while(iter < 50)
     {
 
@@ -7207,7 +7228,7 @@ int differential_correction_level_I(double **ymd, double *tmd, double **ymdn, do
             // Integration
             //------------------------------------------------------------------
             for(int i = 0; i < N; i++) yv[i] = ymdn[i][k];
-            ode78(ym, tm, tmdn[k], tmdn[k+1], yv, 42, 1, I_VNCSEM, VNCSEM, VNCSEM);
+            ode78(ym, tm, &ode78coll, tmdn[k], tmdn[k+1], yv, 42, 1, I_VNCSEM, VNCSEM, VNCSEM);
 
             //------------------------------------------------------------------
             // Final position is at the end of ym

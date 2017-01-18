@@ -234,7 +234,7 @@ vector<size_t> sort_indexes(const vector<double> &v)
 /**
  * \brief Integrates a generic vector field from any input type to any output type.
  **/
-int ode78(double **yv, double *tv,
+int ode78(double **yv, double *tv, int *ode78coll,
           double t0NC, double tfNC, const double *y0NC,
           int nvar, int nGrid, int dcs,
           int inputType, int outputType)
@@ -309,8 +309,11 @@ int ode78(double **yv, double *tv,
     const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
     //Stepper
     const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
+    //Parameters
+    int coll;
+    OdeParams odeParams(&coll, &SEML);
     //Init ode structure
-    init_ode_structure(&driver, T, T_root, nvar, vf, &SEML);
+    init_ode_structure(&driver, T, T_root, nvar, vf, &odeParams);
 
 
     //====================================================================================
@@ -324,9 +327,9 @@ int ode78(double **yv, double *tv,
     //------------------------------------------------------------------------------------
     switch(dcs)
     {
-        //----------------------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         // If we are dealing with a JPL integration, there is no need for a COC
-        //----------------------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         case  I_ECLI:
         case  I_J2000:
         case  I_NJ2000:
@@ -334,9 +337,9 @@ int ode78(double **yv, double *tv,
             for(int i =  0; i < nvar; i++) y0[i] = y0NC[i];
             break;
         }
-        //----------------------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         // Else, we proceed
-        //----------------------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         default:
         qbcp_coc(t0NC, y0NC, y0, inputType, varType);
     }
@@ -347,9 +350,9 @@ int ode78(double **yv, double *tv,
     //------------------------------------------------------------------------------------
     switch(dcs)
     {
-        //----------------------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         // If I_PSEM/I_VSEM, etc... the system is focused on the SEM system via SEML
-        //----------------------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
     case I_NCSEM:
     case I_VNCSEM:
     case I_PSEM:
@@ -382,9 +385,9 @@ int ode78(double **yv, double *tv,
         }
         break;
     }
-        //----------------------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         // If I_PEM/I_VEM, etc, the system is focused on the EM system via SEML
-        //----------------------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
     case I_NCEM:
     case I_VNCEM:
     case I_PEM:
@@ -416,10 +419,10 @@ int ode78(double **yv, double *tv,
         }
         break;
     }
-        //----------------------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         // The default case will apply on the JPL integration schemes, for which the time
         // is already in the right units (seconds, or normalized time)
-        //----------------------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
     default:
     {
         t0 = t0NC;
@@ -427,9 +430,9 @@ int ode78(double **yv, double *tv,
     }
     }
 
-    //-----------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Add the identity matrix if necessary
-    //-----------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     if(nvar == 42)
     {
         //Identity matrix eye(6)
@@ -448,16 +451,16 @@ int ode78(double **yv, double *tv,
     tvIN  = dvector(0, nGrid);
 
     //Integration in yvIN/tvIN
-    ode78_grid(&driver, t0, tf, y0, yvIN, tvIN, nGrid);
+    int status = ode78_grid(&driver, t0, tf, y0, yvIN, tvIN, nGrid);
 
     //====================================================================================
     // 8. To the right outputs: varType to outputType, if necessary
     //====================================================================================
     switch(dcs)
     {
-        //----------------------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         // If we are dealing with a JPL integration, there is no need for a COC
-        //----------------------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
     case  I_ECLI:
     case  I_J2000:
     case  I_NJ2000:
@@ -469,9 +472,9 @@ int ode78(double **yv, double *tv,
         }
         break;
     }
-        //----------------------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         // Else, we proceed to the COC
-        //----------------------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
     default:
     {
         qbcp_coc_vec(yvIN, tvIN, yv, tv, nGrid, varType, outputType);
@@ -489,6 +492,10 @@ int ode78(double **yv, double *tv,
     //====================================================================================
     if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
 
+    //====================================================================================
+    // Update the collisionner
+    //====================================================================================
+    *ode78coll = *odeParams.coll;
 
     //====================================================================================
     // 10. Free memory
@@ -496,7 +503,10 @@ int ode78(double **yv, double *tv,
     free_dmatrix(yvIN, 0, nvar-1, 0, nGrid);
     free_dvector(tvIN, 0, nGrid);
 
-    return GSL_SUCCESS;
+    //====================================================================================
+    // 11. Something went wrong inside the stepper?
+    //====================================================================================
+    return status;
 }
 
 /**
@@ -504,7 +514,7 @@ int ode78(double **yv, double *tv,
  *        The output are states and time corresponding to a particular event stored
  *        in the structure val_par.
  **/
-int ode78_qbcp_event(double **ye, double *te,
+int ode78_qbcp_event(double **ye, double *te, int *ode78coll,
                      double t0NC, double tfNC, const double *y0NC,
                      int nvar, int dcs,
                      int inputType, int outputType,
@@ -596,9 +606,9 @@ int ode78_qbcp_event(double **ye, double *te,
     int (*vf)(double, const double*, double*, void*) = qbcp_vfn; //by default, to avoid warning from gcc compiler
     switch(nvar)
     {
-        //-----------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         // 6 variables: only the state is integrated
-        //-----------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
     case 6:
         switch(dcs)
         {
@@ -617,9 +627,9 @@ int ode78_qbcp_event(double **ye, double *te,
         }
         break;
 
-        //-----------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         // 42 variables: the state + var. eq. are integrated
-        //-----------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
     case 42:
         switch(dcs)
         {
@@ -641,9 +651,9 @@ int ode78_qbcp_event(double **ye, double *te,
         }
         break;
 
-        //-----------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         // Default case: should NOT be reached
-        //-----------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
     default:
         vf = qbcp_vfn;
         break;
@@ -658,8 +668,11 @@ int ode78_qbcp_event(double **ye, double *te,
     const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
     //Stepper
     const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
+    //Parameters
+    int coll;
+    OdeParams odeParams(&coll, &SEML);
     //Init ode structure
-    init_ode_structure(&driver, T, T_root, nvar, vf, &SEML);
+    init_ode_structure(&driver, T, T_root, nvar, vf, &odeParams);
 
 
     //====================================================================================
@@ -729,9 +742,9 @@ int ode78_qbcp_event(double **ye, double *te,
         break;
     }
 
-    //-----------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Add the identity matrix if necessary
-    //-----------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     if(nvar == 42)
     {
         //Identity matrix eye(6)
@@ -808,6 +821,10 @@ int ode78_qbcp_event(double **ye, double *te,
     //====================================================================================
     if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
 
+    //====================================================================================
+    // Update the collisionner
+    //====================================================================================
+    *ode78coll = *odeParams.coll;
 
     //====================================================================================
     // 10. Free memory
@@ -821,7 +838,7 @@ int ode78_qbcp_event(double **ye, double *te,
 /**
  * \brief Integrates the QBCP vector field from any input type to any output type. Return the last position that is filled on the grid.
  **/
-int ode78_qbcp_vg(double **yv, double *tv,
+int ode78_qbcp_vg(double **yv, double *tv, int *ode78coll,
                   double t0NC, double tfNC, const double *y0NC,
                   int nvar, int nGridmax, int dcs,
                   int inputType, int outputType, int dli)
@@ -912,9 +929,9 @@ int ode78_qbcp_vg(double **yv, double *tv,
     int (*vf)(double, const double*, double*, void*) = qbcp_vfn; //by default, to avoid warning from gcc compiler
     switch(nvar)
     {
-        //-----------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         // 6 variables: only the state is integrated
-        //-----------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
     case 6:
         switch(dcs)
         {
@@ -933,9 +950,9 @@ int ode78_qbcp_vg(double **yv, double *tv,
         }
         break;
 
-        //-----------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         // 42 variables: the state + var. eq. are integrated
-        //-----------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
     case 42:
         switch(dcs)
         {
@@ -974,8 +991,11 @@ int ode78_qbcp_vg(double **yv, double *tv,
     const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
     //Stepper
     const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
+    //Parameters
+    int coll;
+    OdeParams odeParams(&coll, &SEML);
     //Init ode structure
-    init_ode_structure(&driver, T, T_root, nvar, vf, &SEML);
+    init_ode_structure(&driver, T, T_root, nvar, vf, &odeParams);
 
 
     //====================================================================================
@@ -1045,9 +1065,9 @@ int ode78_qbcp_vg(double **yv, double *tv,
         break;
     }
 
-    //-----------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Add the identity matrix if necessary
-    //-----------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     if(nvar == 42)
     {
         //Identity matrix eye(6)
@@ -1120,6 +1140,10 @@ int ode78_qbcp_vg(double **yv, double *tv,
     //====================================================================================
     if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
 
+    //====================================================================================
+    // Update the collisionner
+    //====================================================================================
+    *ode78coll = *odeParams.coll;
 
     //====================================================================================
     // 10. Free memory
@@ -1136,46 +1160,52 @@ int ode78_qbcp_vg(double **yv, double *tv,
  * \brief Integrates the QBCP vector field from any input type to any output type.
  *        The time grid is given in inputs (tvi).
  **/
-int ode78_qbcp_gg(double **yv, double *tvf, const double *tvi,
-                  double *y0NC,
+int ode78_qbcp_gg(double **yv, double *tvf, int *ode78coll,
+                  const double *tvi,
+                  const double *y0NC,
                   int nvar, int nGrid, int dcs,
                   int inputType, int outputType)
 {
     //====================================================================================
     // 1. Do some checks on the inputs
     //====================================================================================
+    string fname = "ode78_qbcp_gg";
+
     //Size of the variable vector
     if(nvar!=6 && nvar!=42)
-        perror("The number of variables (nvar) must be of size 6 or 42.");
+    cerr << fname << ". The number of variables (nvar) must be of size 6 or 42." << endl;
 
     //Type of default coordinate system (dcs) for integration
-    if(dcs > 5)
-        perror("Wrong dcs.");
+    if(dcs > I_NJ2000) cerr << fname << ". Unknown dcs." << endl;
 
-    //Type of inputs.
-    if(inputType > 7)
-        perror("Unknown inputType");
+    //Type of inputs
+    if(inputType > NJ2000) cerr << fname << ". Unknown inputType" << endl;
 
     //Type of outputs
-    if(outputType > 8)
-        perror("Unknown outputType");
+    if(outputType > NJ2000)
+        cerr << fname << ". Unknown outputType" << endl;
 
-    //If nvar == 42, the dcs and the outputType must match, otherwise the variational equations make no sense with the outputs
+    //If nvar == 42, the dcs and the outputType must match,
+    //otherwise the variational equations make no sense with the outputs
     if(nvar == 42)
     {
-        if(dcs == I_PEM && outputType != PEM)
-            perror("If the variational equations are desired, the outputType must match the default coordinate system (dcs).");
-        if(dcs == I_NCEM && outputType != NCEM)
-            perror("If the variational equations are desired, the outputType must match the default coordinate system (dcs).");
-        if(dcs == I_VNCEM && outputType != VNCEM)
-            perror("If the variational equations are desired, the outputType must match the default coordinate system (dcs).");
+        if(dcs != default_coordinate_system(outputType))
+        {
+            cerr << fname << ". If the variational equations are desired, the "  << endl;
+            cerr << "outputType must match the default coordinate system (dcs)." << endl;
+        }
+    }
 
-        if(dcs == I_PSEM && outputType != PSEM)
-            perror("If the variational equations are desired, the outputType must match the default coordinate system (dcs).");
-        if(dcs == I_NCSEM && outputType != NCSEM)
-            perror("If the variational equations are desired, the outputType must match the default coordinate system (dcs).");
-        if(dcs == I_VNCSEM && outputType != VNCSEM)
-            perror("If the variational equations are desired, the outputType must match the default coordinate system (dcs).");
+    //If the JPL integration is required, the dcs, the outputType and the inputType
+    //must match! This is to simplify  the change of coordinates afterwards
+    if(dcs > I_ECISEM)
+    {
+        if(dcs != default_coordinate_system(outputType) ||
+        dcs != default_coordinate_system(inputType))
+        {
+            cerr << fname << ". If a JPL integration is desired, the "  << endl;
+            cerr << "outputType must match the default coordinate system (dcs)." << endl;
+        }
     }
 
 
@@ -1183,35 +1213,8 @@ int ode78_qbcp_gg(double **yv, double *tvf, const double *tvi,
     // 2. Define the framework from the default coordinate system
     //    Define also the default variable type that will be used throughout the computation
     //====================================================================================
-    int fwrk = 0;
-    int varType = 0;
-    switch(dcs)
-    {
-    case I_PSEM:
-        varType = PSEM;
-        fwrk = F_SEM;
-        break;
-    case I_NCSEM:
-        varType = NCSEM;
-        fwrk = F_SEM;
-        break;
-    case I_VNCSEM:
-        varType = VNCSEM;
-        fwrk = F_SEM;
-        break;
-    case I_PEM:
-        varType = PEM;
-        fwrk = F_EM;
-        break;
-    case I_NCEM:
-        varType = NCEM;
-        fwrk = F_EM;
-        break;
-    case I_VNCEM:
-        varType = VNCEM;
-        fwrk = F_EM;
-        break;
-    }
+    int fwrk    = default_framework_dcs(dcs);
+    int varType = default_coordinate_type(dcs);
 
     //====================================================================================
     // 3. Check that the focus in SEML is
@@ -1224,61 +1227,7 @@ int ode78_qbcp_gg(double **yv, double *tvf, const double *tvi,
     //====================================================================================
     // 4. Selection of the vector field
     //====================================================================================
-    int (*vf)(double, const double*, double*, void*) = qbcp_vfn; //by default, to avoid warning from gcc compiler
-    switch(nvar)
-    {
-        //--------------------------------------------------------------------------------
-        // 6 variables: only the state is integrated
-        //--------------------------------------------------------------------------------
-    case 6:
-        switch(dcs)
-        {
-        case I_PSEM:
-        case I_PEM:
-            vf = qbcp_vf; //vector field with a state (X, PX)
-            break;
-        case I_NCSEM:
-        case I_NCEM:
-            vf = qbcp_vfn; //vector field with a state (x, px) (default)
-            break;
-        case I_VNCSEM:
-        case I_VNCEM:
-            vf = qbcp_vfn_xv; //vector field with a state (x, vx)
-            break;
-        }
-        break;
-
-        //--------------------------------------------------------------------------------
-        // 42 variables: the state + var. eq. are integrated
-        //--------------------------------------------------------------------------------
-    case 42:
-        switch(dcs)
-        {
-        case I_PSEM:
-        case I_PEM:
-            vf = qbcp_vf_varnonlin; //vector field with a state (X, PX)
-            break;
-        case I_NCSEM:
-        case I_NCEM:
-            vf = qbcp_vfn_varnonlin; //vector field with a state (x, px) (default)
-            break;
-        case I_VNCEM:
-        case I_VNCSEM:
-            vf = qbcp_vfn_varnonlin_xv; //vector field with a state (x, vx)
-            break;
-        default:
-            perror("Unknown dcs with 42 states (no corresponding vf).");
-            break;
-        }
-        break;
-
-        //--------------------------------------------------------------------------------
-        // Default case: should NOT be reached
-        //--------------------------------------------------------------------------------
-    default:
-        vf = qbcp_vfn;
-        break;
-    }
+    vfptr vf = ftc_select_vf(dcs, nvar);
 
     //====================================================================================
     // 5. ODE system
@@ -1288,71 +1237,119 @@ int ode78_qbcp_gg(double **yv, double *tvf, const double *tvi,
     const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
     //Stepper
     const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
+    //Parameters
+    int coll;
+    OdeParams odeParams(&coll, &SEML);
     //Init ode structure
-    init_ode_structure(&driver, T, T_root, nvar, vf, &SEML);
+    init_ode_structure(&driver, T, T_root, nvar, vf, &odeParams);
 
 
     //====================================================================================
     // 6. to NCFWRK coordinates.
     //====================================================================================
     double y0[nvar];
-    double *tvc = dvector(0, nGrid);
+    double *tvIN = dvector(0, nGrid);
 
-    //From inputType to varType
-    qbcp_coc(tvi[0], y0NC, y0, inputType, varType);
-
-    //For the initial and final time, a switch is necessary
+    //------------------------------------------------------------------------------------
+    //From inputType to varType, if we are using a QBCP integration
+    //------------------------------------------------------------------------------------
     switch(dcs)
     {
         //--------------------------------------------------------------------------------
-        // If I_PSEM/I_VSEM, the system is focused on the SEM system via
-        // SEML
+        // If we are dealing with a JPL integration, there is no need for a COC
         //--------------------------------------------------------------------------------
-    case I_PSEM:
+        case  I_ECLI:
+        case  I_J2000:
+        case  I_NJ2000:
+        {
+            for(int i =  0; i < nvar; i++) y0[i] = y0NC[i];
+            break;
+        }
+        //--------------------------------------------------------------------------------
+        // Else, we proceed
+        //--------------------------------------------------------------------------------
+        default:
+        qbcp_coc(tvIN[0], y0NC, y0, inputType, varType);
+    }
+
+    //------------------------------------------------------------------------------------
+    //For the time vector a switch is necessary
+    //------------------------------------------------------------------------------------
+    switch(dcs)
+    {
+        //--------------------------------------------------------------------------------
+        // If I_PSEM/I_VSEM, etc... the system is focused on the SEM system via SEML
+        //--------------------------------------------------------------------------------
     case I_NCSEM:
     case I_VNCSEM:
+    case I_PSEM:
+    case I_VSEM:
+    case I_INSEM:
+    case I_ECISEM:
+    {
         //Time
         switch(inputType)
         {
         case PSEM:
         case NCSEM:
         case VNCSEM:
+        case VSEM:
+        case INSEM:
+        case ECISEM:
             //Time is already in SEM units
-            for(int i = 0; i <= nGrid; i++) tvc[i] = tvi[i];
+            for(int i = 0; i <= nGrid; i++) tvIN[i] = tvi[i];
             break;
         case PEM:
         case NCEM:
         case VNCEM:
+        case VEM:
+        case INEM:
             //Time is now in SEM units
-            for(int i = 0; i <= nGrid; i++) tvc[i] = tvi[i]*SEML.us_em.ns;
+            for(int i = 0; i <= nGrid; i++) tvIN[i] = tvi[i]*SEML.us_em.ns;
             break;
         }
         break;
-
+    }
         //--------------------------------------------------------------------------------
-        // If I_PEM/I_VEM, the system is focused on the EM system via
-        // SEML
+        // If I_PEM/I_VEM, etc, the system is focused on the EM system via SEML
         //--------------------------------------------------------------------------------
-    case I_PEM:
     case I_NCEM:
     case I_VNCEM:
+    case I_PEM:
+    case I_VEM:
+    case I_INEM:
+    {
         //Time
         switch(inputType)
         {
         case PSEM:
         case NCSEM:
         case VNCSEM:
-            //Time is now in EM units
-            for(int i = 0; i <= nGrid; i++) tvc[i] = tvi[i]/SEML.us_em.ns;
+        case INSEM:
+        case VSEM:
+        case ECISEM:
+            //Time is already in EM units
+            for(int i = 0; i <= nGrid; i++) tvIN[i] = tvi[i];
             break;
         case PEM:
         case NCEM:
         case VNCEM:
+        case VEM:
+        case INEM:
             //Time is already in EM units
-            for(int i = 0; i <= nGrid; i++) tvc[i] = tvi[i];
+            for(int i = 0; i <= nGrid; i++) tvIN[i] = tvi[i];
             break;
         }
         break;
+    }
+        //--------------------------------------------------------------------------------
+        // The default case will apply on the JPL integration schemes, for which the time
+        // is already in the right units (seconds, or normalized time)
+        //--------------------------------------------------------------------------------
+    default:
+    {
+        for(int i = 0; i <= nGrid; i++) tvIN[i] = tvi[i];
+    }
     }
 
     //------------------------------------------------------------------------------------
@@ -1375,19 +1372,42 @@ int ode78_qbcp_gg(double **yv, double *tvf, const double *tvi,
     yvIN  = dmatrix(0, nvar-1, 0, nGrid);
 
     //Integration in yvIN/tvIN
-    ode78_grid_gg(&driver, y0, yvIN, tvc, nGrid);
+
+    vector_printf(tvIN, nGrid);
+    ode78_grid_gg(&driver, y0, yvIN, tvIN, nGrid);
 
     //====================================================================================
-    // 8. To the right outputs: varType to outputType
+    // 8. To the right outputs: varType to outputType, if necessary
     //====================================================================================
-    qbcp_coc_vec(yvIN, tvc, yv, tvf, nGrid, varType, outputType);
-
-    //------------------------------------------------------------------------------------
-    // Add the STM if necessary
-    //------------------------------------------------------------------------------------
-    if(nvar == 42)
+    switch(dcs)
     {
-        for(int p = 0; p <= nGrid; p++) for(int i = 6; i < 42; i++) yv[i][p] = yvIN[i][p];
+        //--------------------------------------------------------------------------------
+        // If we are dealing with a JPL integration, there is no need for a COC
+        //--------------------------------------------------------------------------------
+    case  I_ECLI:
+    case  I_J2000:
+    case  I_NJ2000:
+    {
+        for(int p = 0; p <= nGrid; p++)
+        {
+            for(int i = 0; i < nvar; i++) yv[i][p] = yvIN[i][p];
+            tvf[p] = tvIN[p];
+        }
+        break;
+    }
+        //--------------------------------------------------------------------------------
+        // Else, we proceed to the COC
+        //--------------------------------------------------------------------------------
+    default:
+    {
+        qbcp_coc_vec(yvIN, tvIN, yv, tvf, nGrid, varType, outputType);
+        // Add the STM if necessary
+        if(nvar == 42)
+        {
+            for(int p = 0; p <= nGrid; p++)
+                for(int i = 6; i < 42; i++) yv[i][p] = yvIN[i][p];
+        }
+    }
     }
 
     //====================================================================================
@@ -1395,12 +1415,17 @@ int ode78_qbcp_gg(double **yv, double *tvf, const double *tvi,
     //====================================================================================
     if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
 
+    //====================================================================================
+    // Update the collisionner
+    //====================================================================================
+    *ode78coll = *odeParams.coll;
+
 
     //====================================================================================
     // 10. Free memory
     //====================================================================================
     free_dmatrix(yvIN, 0, nvar-1, 0, nGrid);
-    free_dvector(tvc, 0, nGrid);
+    free_dvector(tvIN, 0, nGrid);
 
     return GSL_SUCCESS;
 }
@@ -1414,7 +1439,7 @@ int ode78_qbcp_gg(double **yv, double *tvf, const double *tvi,
 /**
  * \brief Integrates the Ephemerides vector field. Only VECLI, VSEM and VEM coordinates are used for now.
  **/
-int ode78_jpl(double **yv, double *tv,
+int ode78_jpl(double **yv, double *tv, int *ode78coll,
               double t0NC, double tfNC, const double *y0NC,
               int nvar, int nGrid, int dcs,
               int inputType, int outputType)
@@ -1549,8 +1574,11 @@ int ode78_jpl(double **yv, double *tv,
     const gsl_root_fsolver_type* T_root = gsl_root_fsolver_brent;
     //Stepper
     const gsl_odeiv2_step_type* T = gsl_odeiv2_step_rk8pd;
+    //Parameters
+    int coll;
+    OdeParams odeParams(&coll, &SEML);
     //Init ode structure
-    init_ode_structure(&driver, T, T_root, nvar, vf, &SEML);
+    init_ode_structure(&driver, T, T_root, nvar, vf, &odeParams);
 
     //====================================================================================
     // 6. to FWRK coordinates.
@@ -1558,9 +1586,9 @@ int ode78_jpl(double **yv, double *tv,
     double y0[nvar]; //y0_VSEM[nvar],
     double et0 = 0, etf = 0;
 
-    //-------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //For the initial and final time, a switch is necessary
-    //-------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     switch(dcs)
     {
         //-------------------------------------------------------------------------------------
@@ -1688,9 +1716,9 @@ int ode78_jpl(double **yv, double *tv,
         break;
     }
 
-    //-------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //From inputType to dcs coordinates
-    //-------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     switch(dcs)
     {
         //-------------------------------------------------------------------------------------
@@ -1813,9 +1841,9 @@ int ode78_jpl(double **yv, double *tv,
         break;
     }
 
-    //-----------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Add the identity matrix if necessary
-    //-----------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     if(nvar == 42)
     {
         //Identity matrix eye(6)
@@ -1849,6 +1877,12 @@ int ode78_jpl(double **yv, double *tv,
     // 9. Reset the focus in SEML, if necessary
     //====================================================================================
     if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
+
+
+    //====================================================================================
+    // Update the collisionner
+    //====================================================================================
+    *ode78coll = *odeParams.coll;
 
 
     //====================================================================================
@@ -1889,7 +1923,8 @@ int ode78_grid(OdeStruct *driver, double t0, double tf, double *y0, double **yNC
     //------------------------------------------------------------------------------------
     //Change sign of step if necessary
     if((tf < t0 && driver->d->h>0) || (tf > t0 && driver->d->h<0)) driver->d->h *= -1;
-    if((tf < t0 && driver->h>0) || (tf > t0 && driver->h<0)) driver->h *= -1;
+    if((tf < t0 && driver->h>0)    || (tf > t0 && driver->h<0))    driver->h    *= -1;
+
     //Reset ode structure.
     reset_ode_structure(driver);
 
@@ -1923,9 +1958,11 @@ int ode78_grid(OdeStruct *driver, double t0, double tf, double *y0, double **yNC
     {
         //Evolve up to ti
         ti = tNCE[nt];
-        status = gsl_odeiv2_driver_apply (driver->d, &t , ti, yv);
+        status = gsl_odeiv2_driver_apply(driver->d, &t , ti, yv);
+
         //Update the storage
         for(int k = 0; k < nvar; k++) yNCE[k][nt] = yv[k];
+
         //Advance one step
         nt++;
     }
@@ -1956,7 +1993,7 @@ int ode78_variable_grid(OdeStruct *driver, double t0, double tf, double *y0, dou
     //Initialization of the parameters
     //------------------------------------------------------------------------------------
     int nvar = driver->dim;
-    int status;            //current status
+    int status;               //current status
     double yv[nvar], t;       //current state and time
     int nt;
 
@@ -1965,6 +2002,8 @@ int ode78_variable_grid(OdeStruct *driver, double t0, double tf, double *y0, dou
     //------------------------------------------------------------------------------------
     //Change sign of step if necessary
     if((tf < t0 && driver->d->h>0) || (tf > t0 && driver->d->h<0)) driver->d->h *= -1;
+    if((tf < t0 && driver->h>0) || (tf > t0 && driver->h<0)) driver->h *= -1;
+
     //Reset ode structure.
     reset_ode_structure(driver);
 
@@ -2020,7 +2059,7 @@ int ode78_variable_grid(OdeStruct *driver, double t0, double tf, double *y0, dou
 /**
  *   \brief Integrates a given trajectory up to tf, on a given grid. The time grid is given as input
  **/
-int ode78_grid_gg(OdeStruct *driver, double *y0, double **yNCE, double *tNCEi, int N)
+int ode78_grid_gg(OdeStruct *driver, double *y0, double **yNCE, const double *tNCEi, int N)
 {
     //====================================================================================
     //Initialization
@@ -2030,7 +2069,7 @@ int ode78_grid_gg(OdeStruct *driver, double *y0, double **yNCE, double *tNCEi, i
     //Initialization of the parameters
     //------------------------------------------------------------------------------------
     int nvar = driver->dim;
-    int status;            //current status
+    int status;               //current status
     double yv[nvar], t;       //current state and time
     int nt;
     double ti;
@@ -2040,6 +2079,8 @@ int ode78_grid_gg(OdeStruct *driver, double *y0, double **yNCE, double *tNCEi, i
     //------------------------------------------------------------------------------------
     //Change sign of step if necessary
     if((tNCEi[N] < tNCEi[0] && driver->d->h>0) || (tNCEi[N] > tNCEi[0] && driver->d->h<0)) driver->d->h *= -1;
+    if((tNCEi[N] < tNCEi[0] && driver->h>0)    || (tNCEi[N] > tNCEi[0] && driver->h<0)) driver->h *= -1;
+
     //Reset ode structure.
     reset_ode_structure(driver);
 
@@ -2064,8 +2105,10 @@ int ode78_grid_gg(OdeStruct *driver, double *y0, double **yNCE, double *tNCEi, i
         //Evolve up to ti
         ti = tNCEi[nt];
         status = gsl_odeiv2_driver_apply (driver->d, &t , ti, yv);
+
         //Update the storage
         for(int k = 0; k < nvar; k++) yNCE[k][nt] = yv[k];
+
         //Advance one step
         nt++;
     }
@@ -2076,7 +2119,7 @@ int ode78_grid_gg(OdeStruct *driver, double *y0, double **yNCE, double *tNCEi, i
     //------------------------------------------------------------------------------------
     if(status)
     {
-        cout << "Warning in ode78_grid: the stepper went wrong. No output is produced.";
+        cout << "Warning in ode78_grid_gg: the stepper went wrong. No output is produced.";
         return FTC_FAILURE;
     }
 
@@ -2436,7 +2479,7 @@ void HSEM_vec(double *tSEM, double **ySEM, double *Hvec, int N, QBCP_L *qbcp_l)
     for(int i = 0; i <= N; i++)
     {
         for(int p = 0; p < 6; p++) yv[p] = ySEM[p][i];
-        Hvec[i] = qbfbp_H_SEM(tSEM[i], yv, qbcp_l); //careful: time in SEM units!
+        Hvec[i] = qbcp_H_SEM(tSEM[i], yv, qbcp_l); //careful: time in SEM units!
     }
 }
 
@@ -2450,7 +2493,7 @@ void HSEMLi_vec(double *tSEM, double *Hvec, int N, QBCP_L *qbcp_l)
     for(int i = 0; i <= N; i++)
     {
         NCSEMmtoSEMm(tSEM[i], yv, yvSEM, qbcp_l);
-        Hvec[i] = qbfbp_H_SEM(tSEM[i], yvSEM, qbcp_l);
+        Hvec[i] = qbcp_H_SEM(tSEM[i], yvSEM, qbcp_l);
     }
 }
 
@@ -2464,7 +2507,7 @@ void HEMLi_in_SEM_vec(double *tEM, double *Hvec, int N, QBCP_L *qbcp_l)
     for(int i = 0; i <= N; i++)
     {
         NCEMmtoSEMm(tEM[i], yv, yvSEM, qbcp_l);
-        Hvec[i] = qbfbp_H_SEM(tEM[i]*qbcp_l->us_em.ns, yvSEM, qbcp_l); //careful, time must be in SEM units at this step!
+        Hvec[i] = qbcp_H_SEM(tEM[i]*qbcp_l->us_em.ns, yvSEM, qbcp_l); //careful, time must be in SEM units at this step!
     }
 }
 
@@ -2999,47 +3042,50 @@ void qbcp_test(QBCP_L &qbcp_l)
     //Size of the vectors
     int man_grid_size = 10000;
 
+    //Collisionner (not used here)
+    int ode78coll;
+
     //=======================================================================
     // 2. Integration in NCEM system
     //=======================================================================
     double **ymNCEM_IN  = dmatrix(0, 5, 0, man_grid_size);
     double *tmNCEM_IN   = dvector(0, man_grid_size);
-    ode78(ymNCEM_IN, tmNCEM_IN, t0EM, tfEM, yvNCEM, 6, man_grid_size, I_NCEM, NCEM, INEM);
+    ode78(ymNCEM_IN, tmNCEM_IN, &ode78coll, t0EM, tfEM, yvNCEM, 6, man_grid_size, I_NCEM, NCEM, INEM);
 
     //=======================================================================
     // 2. Integration in EM system
     //=======================================================================
     double **ymEM_IN  = dmatrix(0, 5, 0, man_grid_size);
     double *tmEM_IN   = dvector(0, man_grid_size);
-    ode78(ymEM_IN, tmEM_IN, t0EM, tfEM, yvNCEM, 6, man_grid_size, I_PEM, NCEM, INEM);
+    ode78(ymEM_IN, tmEM_IN, &ode78coll, t0EM, tfEM, yvNCEM, 6, man_grid_size, I_PEM, NCEM, INEM);
 
     //=======================================================================
     // 3. Integration in VNCEM system
     //=======================================================================
     double **ymVNCEM_IN  = dmatrix(0, 5, 0, man_grid_size);
     double *tmVNCEM_IN   = dvector(0, man_grid_size);
-    ode78(ymVNCEM_IN, tmVNCEM_IN, t0EM, tfEM, yvNCEM, 6, man_grid_size, I_VNCEM, NCEM, INEM);
+    ode78(ymVNCEM_IN, tmVNCEM_IN, &ode78coll, t0EM, tfEM, yvNCEM, 6, man_grid_size, I_VNCEM, NCEM, INEM);
 
     //=======================================================================
     // 4. Integration in NCSEM system
     //=======================================================================
     double **ymNCSEM_IN  = dmatrix(0, 5, 0, man_grid_size);
     double *tmNCSEM_IN   = dvector(0, man_grid_size);
-    ode78(ymNCSEM_IN, tmNCSEM_IN, t0EM, tfEM, yvNCEM, 6, man_grid_size, I_NCSEM, NCEM, INEM);
+    ode78(ymNCSEM_IN, tmNCSEM_IN, &ode78coll, t0EM, tfEM, yvNCEM, 6, man_grid_size, I_NCSEM, NCEM, INEM);
 
     //=======================================================================
     // 5. Integration in SEM system
     //=======================================================================
     double **ymSEM_IN  = dmatrix(0, 5, 0, man_grid_size);
     double *tmSEM_IN   = dvector(0, man_grid_size);
-    ode78(ymSEM_IN, tmSEM_IN, t0EM, tfEM, yvNCEM, 6, man_grid_size, F_SEM, NCEM, INEM);
+    ode78(ymSEM_IN, tmSEM_IN, &ode78coll, t0EM, tfEM, yvNCEM, 6, man_grid_size, F_SEM, NCEM, INEM);
 
     //=======================================================================
     // 6. Integration in VNCSEM system
     //=======================================================================
     double **ymVNCSEM_IN  = dmatrix(0, 5, 0, man_grid_size);
     double *tmVNCSEM_IN   = dvector(0, man_grid_size);
-    ode78(ymVNCSEM_IN, tmVNCSEM_IN, t0EM, tfEM, yvNCEM, 6, man_grid_size, I_VNCSEM, NCEM, INEM);
+    ode78(ymVNCSEM_IN, tmVNCSEM_IN, &ode78coll, t0EM, tfEM, yvNCEM, 6, man_grid_size, I_VNCSEM, NCEM, INEM);
 
     //=======================================================================
     // 7. Integration in "true" system
@@ -3061,8 +3107,11 @@ void qbcp_test(QBCP_L &qbcp_l)
     OdeStruct ode_s;
     //Root-finding
     const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent; //Brent-Dekker root finding method
+    //Parameters
+    int coll;
+    OdeParams odeParams(&coll, &SEML);
     //General structures
-    init_ode_structure(&ode_s, T, T_root, 14, qbcp_derivatives_em_in, &SEML);
+    init_ode_structure(&ode_s, T, T_root, 14, qbcp_derivatives_em_in, &odeParams);
 
     //--------------------------------------
     // 7.2. Initital conditions
@@ -3250,8 +3299,11 @@ int gridOrbit(double st0[],
     const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
     //Stepper
     const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
+    //Parameters
+    int coll;
+    OdeParams odeParams(&coll, &SEML);
     //Init ode structure
-    init_ode_structure(&driver, T, T_root, 6, qbcp_vfn, &SEML);
+    init_ode_structure(&driver, T, T_root, 6, qbcp_vfn, &odeParams);
 
     //------------------
     //Orbit structure

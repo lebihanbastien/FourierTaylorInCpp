@@ -45,6 +45,12 @@ int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
              Orbit &orbit_EM, Orbit &orbit_SEM,
              gnuplot_ctrl *h1, RefSt &refst, int *niter);
 
+int msvltplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
+             int number_of_variables, int man_grid_size,
+             int coord_type, double precision, int isFirst,
+             Orbit &orbit_EM, Orbit &orbit_SEM,
+             gnuplot_ctrl *h1, RefSt &refst, int *niter);
+
 //========================================================================================
 //
 //          DIFFCORR CUSTOM: CMU to CMS: UPDATE FREE VARIABLES with NEW IMPLEMENTATION
@@ -66,7 +72,11 @@ int ufvarftplan(double **y_traj_n, double *t_traj_n, double ds, double *nullvect
 int ufvarvtplan(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
                 double *nullvector,
                 Orbit &orbit_EM, Orbit &orbit_SEM,
-                int man_grid_size, int coord_type);
+                int man_grid_size, int coord_type,  RefSt &refst);
 
+int ufvarvltplan(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
+                double *nullvector,
+                Orbit &orbit_EM, Orbit &orbit_SEM,
+                int man_grid_size, int coord_type,  RefSt &refst);
 
 #endif // OOLENCONREF_H_INCLUDED

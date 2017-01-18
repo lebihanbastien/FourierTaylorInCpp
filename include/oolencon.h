@@ -249,8 +249,8 @@ int ooconteml2seml(RefSt& refst);
  *         reasons. In this way, a warning is issued when coord_type is different
  *         from NCSEM.
  **/
-int oosrefeml2seml(Orbit& orbit_EM, Orbit& orbit_SEM,
-                   int dcs, int coord_type, int man_grid_size_t,
+int oosrefeml2seml(Orbit& orbit_EM, Orbit& orbit_SEM, double **y_traj, double *t_traj,
+                   int dcs, int coord_type, int *man_grid_size_t,
                    RefSt& refst, gnuplot_ctrl* h2);
 
 //----------------------------------------------------------------------------------------

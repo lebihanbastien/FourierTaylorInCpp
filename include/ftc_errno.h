@@ -22,7 +22,8 @@ enum {
 
   //For orbit procedures
   ORBIT_EINT     = -4,  //integration failed
-  ORBIT_EPROJ    = -5   //projection procedure failed
+  ORBIT_EPROJ    = -5,  //projection procedure failed
+  ORBIT_ECOLL    = -6   //collision with a primary
 };
 
 

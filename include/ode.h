@@ -11,6 +11,7 @@
 
 //Custom
 #include "Config.h"
+#include "env.h"
 
 #define MAX_EVENTS 1000
 
@@ -69,14 +70,14 @@ void init_ode_structure(OdeStruct *ode_s,
                         double h,
                         int (* func) (double t, const double y[], double dydt[], void *params),
                         int (* jacobian) (double t, const double y[], double * dfdy, double dfdt[], void * params),
-                        void *params);
+                        void *odeParams);
 
 void init_ode_structure(OdeStruct *ode_s,
                         const gsl_odeiv2_step_type *T,
                         const gsl_root_fsolver_type *T_root,
                         size_t dim,
                         int (* func) (double t, const double y[], double dydt[], void *params),
-                        void *params);
+                        void *odeParams);
 void reset_ode_structure(OdeStruct *ode_s);
 void free_ode_structure(OdeStruct *ode_s);
 

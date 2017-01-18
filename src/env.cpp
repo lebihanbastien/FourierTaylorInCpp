@@ -24,6 +24,7 @@
 #include "Oftsc.h"
 #include "env.h"
 
+
 //int MODEL_TYPE;
 
 
@@ -131,6 +132,9 @@ QBCP SEM;              //global structure that describes the Sun-Earth-Moon syst
 QBCP_L SEML;           //global structure that describes the Sun-Earth-Moon system around Li
 QBCP_L SEML_EM;        //global structure that describes the Sun-Earth-Moon system around EMLi
 QBCP_L SEML_SEM;       //global structure that describes the Sun-Earth-Moon system around SEMLi
+
+int coll;
+OdeParams ODESEML(&coll, &SEML);     //global structure: SEML + variable parameters in ODE routines (collisionner...)
 
 /**
  *   \brief Initialization of the environnement (Sun, Earth, Moon, Li...).
@@ -750,8 +754,8 @@ void init_CR3BP(CR3BP* cr3bp, int n1, int n2)
     cr3bp->mu = (*cr3bp).m2.M/( (*cr3bp).m1.M + (*cr3bp).m2.M );    // µ = m2/(m1 + m2)
     cr3bp->L  = (*cr3bp).m2.a;                                      // Distance parameter = semi major axis of m2
     cr3bp->T  = (*cr3bp).m2.T;                                      //Time parameter = sidereal period of m2
-    cr3bp->R1 = (*cr3bp).m1.Req;
-    cr3bp->R2 = (*cr3bp).m2.Req;
+    cr3bp->R1 = (*cr3bp).m1.Req;                                    //Mean radius of m1, in km
+    cr3bp->R2 = (*cr3bp).m2.Req;                                    //Mean radius of m2, in km
     cr3bp->rh = pow((*cr3bp).mu/3.0,1.0/3.0);                       //Hill's radius adim formula
     cr3bp->gprecision = 1e-12;                                      //arbitrary
 

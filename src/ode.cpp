@@ -40,7 +40,7 @@ void init_ode_structure(OdeStruct *ode_s,
                         double h,
                         int (* func) (double t, const double y[], double dydt[], void *params),
                         int (* jacobian) (double t, const double y[], double * dfdy, double dfdt[], void * params),
-                        void *params)
+                        void *odeParams)
 {
     //Precisions and initial step
     ode_s->eps_root = eps_root;
@@ -77,7 +77,7 @@ void init_ode_structure(OdeStruct *ode_s,
     ode_s->sys.function  = func;
     ode_s->sys.jacobian  = jacobian;
     ode_s->sys.dimension = dim;
-    ode_s->sys.params    = params;
+    ode_s->sys.params    = (void *) odeParams;
 
     ode_s->d = gsl_odeiv2_driver_alloc_y_new (&ode_s->sys, ode_s->T, ode_s->h, ode_s->eps_int_abs, ode_s->eps_int_rel);
     if (ode_s->d == NULL)
@@ -98,7 +98,7 @@ void init_ode_structure(OdeStruct *ode_s,
                         const gsl_root_fsolver_type *T_root,
                         size_t dim,
                         int (* func) (double t, const double y[], double dydt[], void *params),
-                        void *params)
+                        void *odeParams)
 {
     init_ode_structure(ode_s, T, T_root,
                        Config::configManager().G_PREC_ABS(),
@@ -107,7 +107,7 @@ void init_ode_structure(OdeStruct *ode_s,
                        Config::configManager().G_PREC_DIFF(),
                        dim,
                        Config::configManager().G_PREC_HSTART(),
-                       func, NULL, params);
+                       func, NULL, odeParams);
 }
 
 

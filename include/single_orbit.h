@@ -39,7 +39,7 @@
 #define TYPE_MAN_PROJ_3D_FROM_SERVER 63
 
 #define GSIZE 50;
-#define ORBIT_SEM_UNSTABLE_MIN 1e-4
+#define ORBIT_SEM_UNSTABLE_MIN 1e-5
 
 extern "C" {
     #include "nrutil.h"
@@ -436,7 +436,7 @@ int semliToseml2(double st0[],
 /**
  * \brief Integrates the Ephemerides vector field. Only VECLI coordinates are used for now.
  **/
-int ode78_jpl(double **yv, double *tv,
+int ode78_jpl(double **yv, double *tv, int *ode78coll,
                   double t0NC, double tfNC, const double *y0NC,
                   int nvar, int nGrid, int dcs,
                   int inputType, int outputType);
@@ -445,17 +445,17 @@ int ode78_jpl(double **yv, double *tv,
 /**
  * \brief Integrates the QBCP vector field from any input type to any output type.
  **/
-int ode78(double **yv, double *tv,
-                  double t0NC, double tfNC, const double *y0NC,
-                  int nvar, int nGrid, int dcs,
-                  int inputType, int outputType);
+int ode78(double **yv, double *tv, int *ode78coll,
+          double t0NC, double tfNC, const double *y0NC,
+          int nvar, int nGrid, int dcs,
+          int inputType, int outputType);
 
 /**
  * \brief Integrates the QBCP vector field from any input type to any output type.
  *        The output are states and time corresponding to a particular event stored
  *        in the structure val_par.
  **/
-int ode78_qbcp_event(double **ye, double *te,
+int ode78_qbcp_event(double **ye, double *te, int *ode78coll,
                      double t0NC, double tfNC, const double *y0NC,
                      int nvar, int dcs,
                      int inputType, int outputType,
@@ -464,7 +464,7 @@ int ode78_qbcp_event(double **ye, double *te,
 /**
  * \brief Integrates the QBCP vector field from any input type to any output type. Return the last position that is filled on the grid.
  **/
-int ode78_qbcp_vg(double **yv, double *tv,
+int ode78_qbcp_vg(double **yv, double *tv, int *ode78coll,
                   double t0NC, double tfNC, const double *y0NC,
                   int nvar, int nGridmax, int dcs,
                   int inputType, int outputType, int dli);
@@ -473,8 +473,9 @@ int ode78_qbcp_vg(double **yv, double *tv,
  * \brief Integrates the QBCP vector field from any input type to any output type.
  *        The time grid is given in inputs (tvi).
  **/
-int ode78_qbcp_gg(double **yv, double *tvf, const double *tvi,
-                  double *y0NC,
+int ode78_qbcp_gg(double **yv, double *tvf, int *ode78coll,
+                  const double *tvi,
+                  const double *y0NC,
                   int nvar, int nGrid, int dcs,
                   int inputType, int outputType);
 
@@ -491,7 +492,7 @@ int ode78_variable_grid(OdeStruct *driver, double t0, double tf, double *y0, dou
 /**
  *   \brief Integrates a given trajectory up to tf, on a given grid. The time grid is given as input
  **/
-int ode78_grid_gg(OdeStruct *driver, double *y0, double **yNCE, double *tNCEi, int N);
+int ode78_grid_gg(OdeStruct *driver, double *y0, double **yNCE, const double *tNCEi, int N);
 
 /**
  *   \brief Integrates a given trajectory up to tf, on a given grid

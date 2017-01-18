@@ -19,6 +19,7 @@
 
 #include "Ofsc.h"
 #include "matrix.h"
+#include "ode.h"
 
 //Type of unit systems
 #define USYS_EM  0 //Earth-Moon      system
@@ -328,6 +329,30 @@ struct QBCP_I
     double epsilon;
 };
 
+/**
+ *  \struct OdeParams
+ *  \brief QBCP_L + some additionnal parameters that can be modified (collisions with primaries...)
+ **/
+typedef struct OdeParams OdeParams;
+struct OdeParams
+{
+    //Collisioner
+    int *coll;
+    //Parameters
+    QBCP_L *qbcp_l;
+
+    /**
+     *  \brief Constructor for OdeParams
+     **/
+     OdeParams(int *coll_, QBCP_L *qbcp_l_)
+     {
+         coll   = coll_;
+         *coll  = FTC_SUCCESS; //at initialisation, no collision so == FTC_SUCCESS
+         qbcp_l = qbcp_l_;
+     }
+};
+
+
 //----------------------------------------------------------------------------------------
 // Initialize the invariant manifolds.
 //----------------------------------------------------------------------------------------
@@ -448,6 +473,7 @@ extern QBCP SEM;               //Sun-Earth-Moon system
 extern QBCP_L SEML;            //Sun-Earth-Moon system around Li
 extern QBCP_L SEML_EM;         //Sun-Earth-Moon system around EMLi
 extern QBCP_L SEML_SEM;        //Sun-Earth-Moon system around SEMLi
+extern OdeParams ODESEML;     //global structure: SEML + variable parameters in ODE routines (collisionner...)
 
 /**
  *   \brief Initialization of the environnement (Sun, Earth, Moon, Li...).

@@ -4,6 +4,15 @@
 #include <iostream>
 using namespace std;
 
+/**
+ * \file Config.h
+ * \brief List of some parameters that are used throughout numerical compuration,
+ *        such as precision in numerical integrators. Defines a Config Manager that allows
+ *        to use common values accross the software.
+ * \author BLB
+ * \date JAN 2017
+ */
+
 class Config
 {
     private:
@@ -16,6 +25,9 @@ class Config
         double PREC_ROOT;
         double PREC_DIFF;
         double PREC_HSTART;
+
+        double PREC_ABS_BACKUP;
+        double PREC_REL_BACKUP;
 
         //--------------------------------------------------------------------------------
         //Constants for differential correction procedures
@@ -53,6 +65,11 @@ class Config
          *         It is the default case.
          **/
         void C_PREC_SOFT();
+
+        /**
+         *  \brief Use backup values for integration precision.
+         **/
+        void C_PREC_BACK();
 
     private:
         Config();

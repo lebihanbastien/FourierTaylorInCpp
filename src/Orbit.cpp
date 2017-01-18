@@ -746,13 +746,20 @@ int oo_gridOrbit(double st0[], double t0, double tf, double dt)
     //------------------------------------------------------------------------------------
     // ODE
     //------------------------------------------------------------------------------------
+    //Hard precision
+    Config::configManager().C_PREC_HARD();
+
+    //Driver
     OdeStruct driver;
     //Root-finding
     const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
     //Stepper
     const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
+    //Parameters
+    int coll;
+    OdeParams odeParams(&coll, &SEML);
     //Init ode structure
-    init_ode_structure(&driver, T, T_root, 6, qbcp_vfn, &SEML);
+    init_ode_structure(&driver, T, T_root, 6, qbcp_vfn, &odeParams);
 
     //------------------------------------------------------------------------------------
     //Orbit
@@ -769,23 +776,53 @@ int oo_gridOrbit(double st0[], double t0, double tf, double dt)
     double **yNCE = dmatrix(0, 5, 0, N);
     double **ySYS = dmatrix(0, 5, 0, N);
     double *tNCE  = dvector(0, N);
+    double *tnSYS = dvector(0, N);
+    double *dHSYS = dvector(0, N);
 
     //====================================================================================
     //Integration
     //====================================================================================
-    int status = orbit.traj_int_grid(yNCE, tNCE, N, true);
+    int status = orbit.traj_int_grid(tf, yNCE, tNCE, N, true);
 
     //To SYS coordinates
     NCtoSYS_vec(yNCE, tNCE, ySYS, N, &SEML);
 
-    //Hamiltonians:
-    double y[6];
-    for(int i = 0; i <6; i++) y[i] = ySYS[i][0];
-    double temp = qbfbp_H(tNCE[0], y, &SEML);
-    cout << "Hsys = " << qbfbp_H(tNCE[0], y, &SEML) << endl;
-    for(int i = 0; i <6; i++) y[i] = yNCE[i][0];
-    cout << "Hn   = " << qbfbp_Hn(tNCE[0], y, &SEML) << endl;
-    cout << "Hn*gamma^2   = " << temp - qbfbp_Hn(t0, y, &SEML) << endl;
+    //====================================================================================
+    //Hamiltonian:
+    //====================================================================================
+    double y[6], H0;
+
+    //Loop on all positions
+    for(int k= 0; k <= N; k++)
+    {
+        for(int i = 0; i <6; i++) y[i] = ySYS[i][k];
+        if(k == 0)
+        {
+             dHSYS[k] = 0.0;
+             H0 = qbcp_H(tNCE[k], y, &SEML);
+        }else{
+            dHSYS[k] = qbcp_H(tNCE[k], y, &SEML) - H0;
+        }
+
+        //Corresponding normalized times
+        tnSYS[k] = tNCE[k]/SEML.us.T;
+    }
+
+
+    //Plotting
+    gnuplot_ctrl  *h3;
+    h3 = gnuplot_init();
+    gnuplot_cmd(h3, "set logscale y");
+    gnuplot_setstyle(h3,   (char*)"lines");
+    gnuplot_set_xlabel(h3, (char*)"t [x T]");
+    gnuplot_set_ylabel(h3, (char*)"H [-]");
+    gnuplot_plot_xy(h3, tnSYS, dHSYS, N+1, (char*)"H(t) - H(0)", "lines", "1", "1", 1);
+
+
+    //====================================================================================
+    //Save in file
+    //====================================================================================
+    writeOrbit(tNCE, yNCE, OFTS_ORDER, floor(fabs(st0[0])), N+1, TYPE_ORBIT);
 
 
     //====================================================================================
@@ -797,13 +834,8 @@ int oo_gridOrbit(double st0[], double t0, double tf, double dt)
     gnuplot_setstyle(h1,   (char*)"lines");
     gnuplot_set_xlabel(h1, (char*)"x [-]");
     gnuplot_set_ylabel(h1, (char*)"y [-]");
-    gnuplot_plot_xyz(h1, ySYS[0], ySYS[1], ySYS[2], N+1, (char*)"NC coordinates", "lines", "1", "1", 1);
+    gnuplot_plot_xyz(h1, yNCE[0], yNCE[1], yNCE[2], N+1, (char*)"NC coordinates", "lines", "1", "1", 1);
 
-
-    //====================================================================================
-    //Save in file
-    //====================================================================================
-    writeOrbit(tNCE, yNCE, OFTS_ORDER, floor(fabs(st0[0])), N+1, TYPE_ORBIT);
 
     //User check
     pressEnter(true);
@@ -825,7 +857,7 @@ int oo_gridOrbit(double st0[], double t0, double tf, double dt)
     // Init
     //------------------------------------------------------------------------------------
     double dtd = 2*86400*2*M_PI/SEML.cs_em.cr3bp.T; //every two days
-    N          = 3; //floor(fabs(tf - t0)/dtd);
+    N          = floor(fabs(tf - t0)/dtd);
 
     //Containers
     double **yt = dmatrix(0, 41, 0, N);
@@ -845,7 +877,7 @@ int oo_gridOrbit(double st0[], double t0, double tf, double dt)
     //------------------------------------------------------------------------------------
     //Trajectory on lines, segment by segment
     //------------------------------------------------------------------------------------
-    int mPlot = 100;
+    int mPlot = 100, ode78coll;
     double** ymc        = dmatrix(0, 5, 0, mPlot);
     double* tmc         = dvector(0, mPlot);
     double** ymc_v      = dmatrix(0, 5, 0, mPlot*N);
@@ -857,9 +889,9 @@ int oo_gridOrbit(double st0[], double t0, double tf, double dt)
         //Integration segment by segment
         //--------------------------------------------------------------------------------
         for(int i = 0; i < 6; i++) yv[i] = yc[i][k];
-        cout << tc[k] << " " << yc[0][k] << endl;
+        //cout << tc[k] << " " << yc[0][k] << endl;
 
-        ode78(ymc, tmc, tc[k], tc[k+1], yv, 6, mPlot, new_dcs, new_ncd, new_ncd);
+        ode78(ymc, tmc, &ode78coll, tc[k], tc[k+1], yv, 6, mPlot, new_dcs, new_ncd, new_ncd);
 
         //--------------------------------------------------------------------------------
         //Store
@@ -894,9 +926,7 @@ int oo_gridOrbit(double st0[], double t0, double tf, double dt)
         //Integration segment by segment
         //--------------------------------------------------------------------------------
         for(int i = 0; i < 6; i++) yv[i] = yc[i][k];
-        ode78(ymc, tmc, tc[k], tc[k+1], yv, 6, mPlot, new_dcs, new_ncd, new_ncd);
-
-
+        ode78(ymc, tmc, &ode78coll, tc[k], tc[k+1], yv, 6, mPlot, new_dcs, new_ncd, new_ncd);
 
         //--------------------------------------------------------------------------------
         //Store
