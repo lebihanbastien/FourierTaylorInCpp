@@ -448,8 +448,6 @@ int multiple_shooting_direct(double **ymd, double *tmd,
     //====================================================================================
     // 1. Initialization
     //====================================================================================
-    //Status along the computation
-    int status = 0;
     //Name of the routine
     string fname = "multiple_shooting_direct";
 
@@ -651,8 +649,6 @@ int multiple_shooting_direct_variable_time(double **ymd, double *tmd,
     //====================================================================================
     // 1. Initialization
     //====================================================================================
-    //Status along the computation
-    int status = 0;
     //Cumulated norm of the error
     double normC;
     //Current state along the trajectory
@@ -909,7 +905,7 @@ int multiple_shooting_direct_deps(double **ymd, double *tmd,
     // 1. Initialization
     //====================================================================================
     //Status along the computation
-    int status = 0;
+    int status;
     //Name of the routine
     string fname = "multiple_shooting_direct_deps";
 
@@ -1069,7 +1065,7 @@ int multiple_shooting_direct_deps(double **ymd, double *tmd,
         //================================================================================
         //Compute the correction vector
         //================================================================================
-        int status = ftc_corrvec_mn(DQv, Fv, DF, nfv, ncs);
+        status = ftc_corrvec_mn(DQv, Fv, DF, nfv, ncs);
         if(status)
         {
             cerr << fname << ". The computation of the correction vector failed."  << endl;
@@ -1123,7 +1119,6 @@ int multiple_shooting_direct_deps(double **ymd, double *tmd,
     //------------------------------------------------------------------------------------
     //Sign of the null vector ?
     int sign = 1, ti = 1;
-    double dti = 1;
     double dotNV = 0.0;
     if(isFirst)
     {
@@ -1418,7 +1413,7 @@ int ufvarvtplan(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
  * \brief Multiple shooting scheme with no boundary conditions.
  *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
  *        - The initial conditions z0 vary in the center-unstable manifold of EML2.
- *        - The final state zN vary in the center-stable manifold of SEML2.
+ *        - The final state zN vary in the center-stable manifold of SEMLi.
  *        - The times t0,..., tN are free to vary.
  **/
 int msdvt_CMS_RCM(double **ymd, double *tmd, double **ymdn, double *tmdn,
@@ -2052,7 +2047,7 @@ int msdvt_CMS_RCM(double **ymd, double *tmd, double **ymdn, double *tmdn,
  * \brief Multiple shooting scheme with no boundary conditions.
  *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
  *        - The initial conditions z0 vary in the center-unstable manifold of EML2.
- *        - The final state zN vary in the center-stable manifold of SEML2.
+ *        - The final state zN vary in the center-stable manifold of SEMLi.
  *        - The times t0,..., tN are free to vary.
  *        - The null vector associated to the solution is computed.
  **/
@@ -2735,7 +2730,7 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
  * \brief Multiple shooting scheme with no boundary conditions.
  *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
  *        - The initial conditions z0 vary in the center-unstable manifold of EML2.
- *        - The final state zN vary in the center-stable manifold of SEML2.
+ *        - The final state zN vary in the center-stable manifold of SEMLi.
  *        - The times t0,..., tN are fixed.
  *        - The null vector associated to the solution is computed.
  **/
@@ -3235,15 +3230,15 @@ int msft3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
         dotNV += gsl_matrix_get(Q, 2, nfv-1)*nullvector[2];                //CMU of  EML2
         dotNV += gsl_matrix_get(Q, 3, nfv-1)*nullvector[3];                //CMU of  EML2
         sign = dotNV > 0? 1:-1;
-        //        dotNV += gsl_matrix_get(Q, nfv-4, nfv-1)*nullvector[nfv-4];                //CMS of  SEML2
-        //        dotNV += gsl_matrix_get(Q, nfv-2, nfv-1)*nullvector[nfv-2];                //CMS of  SEML2
+        //        dotNV += gsl_matrix_get(Q, nfv-4, nfv-1)*nullvector[nfv-4];                //CMS of  SEMLi
+        //        dotNV += gsl_matrix_get(Q, nfv-2, nfv-1)*nullvector[nfv-2];                //CMS of  SEMLi
         //        sign = dotNV > 0? 1:-1;
 
         //OR
         //Here, we want to go "in the same direction for the whole Q vector": no u_turn!
         //for(int i = 0; i < nfv-1; i++) dotNV += gsl_matrix_get(Q, i, nfv-1)*nullvector[i];
 
-        //OR always decrease the stable component at SEML2
+        //OR always decrease the stable component at SEMLi
         //sign = gsl_matrix_get(Q, nfv-2, nfv-1) < 0? 1:-1;
 
         //OR always increase the s1 component at EML2
@@ -3302,7 +3297,7 @@ int msft3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
  *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute
  *        the correction vector.
  *        - The initial conditions z0 vary in the center-unstable manifold of EML2.
- *        - The final state zN vary in the center-stable manifold of SEML2.
+ *        - The final state zN vary in the center-stable manifold of SEMLi.
  *        - The times t0,..., tN are free to vary.
  *        - The null vector associated to the solution is computed.
  *
@@ -4039,7 +4034,7 @@ int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
  * \brief Multiple shooting scheme with no boundary conditions. PLANAR CASE.
  *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
  *        - The initial conditions z0 vary in the center-unstable manifold of EML2.
- *        - The final state zN vary in the center-stable manifold of SEML2.
+ *        - The final state zN vary in the center-stable manifold of SEMLi.
  *        - The times t0,..., tN are fixed.
  *        - The null vector associated to the solution is computed.
  **/
@@ -4596,7 +4591,7 @@ int msftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
         //Here, we want to go "in the same direction for the whole Q vector": no u_turn!
         //for(int i = 0; i < nfv-1; i++) dotNV += gsl_matrix_get(Q, i, nfv-1)*nullvector[i];
 
-        //OR always decrease the stable component at SEML2
+        //OR always decrease the stable component at SEMLi
         //sign = gsl_matrix_get(Q, nfv-2, nfv-1) < 0? 1:-1;
 
         //OR always increase the s1 component at EML2
@@ -4665,7 +4660,7 @@ int msftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
  * \brief Multiple shooting scheme with no boundary conditions. PLANAR CASE.
  *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
  *        - The initial conditions z0 vary in the center-unstable manifold of EML2.
- *        - The final state zN vary in the center-stable manifold of SEML2.
+ *        - The final state zN vary in the center-stable manifold of SEMLi.
  *        - The times t0,..., tN are fixed.
  *        - The null vector associated to the solution is computed.
  *        - The pseudo-arclength constraint is added to the constraints. Therefore, the system is SQUARED.
@@ -5012,7 +5007,7 @@ int msdvt_CMS_RCM_deps_planar_pac_ATF(double **ymd, double *tmd, double **ymdn, 
             fvc[3 + 4*p-2] = ymdn[4][p];
         }
 
-        //CMS of SEML2
+        //CMS of SEMLi
         fvc[4*mgs-2] = orbit_SEM.si[0];
         fvc[4*mgs-1] = orbit_SEM.si[2];
         fvc[4*mgs-0] = orbit_SEM.si[4];
@@ -5239,7 +5234,7 @@ int msdvt_CMS_RCM_deps_planar_pac_ATF(double **ymd, double *tmd, double **ymdn, 
         //Here, we want to go "in the same direction for the whole Q vector": no u_turn!
         //for(int i = 0; i < nfv-1; i++) dotNV += gsl_matrix_get(Q, i, nfv-1)*nullvector[i];
 
-        //OR always decrease the stable component at SEML2
+        //OR always decrease the stable component at SEMLi
         //sign = gsl_matrix_get(Q, nfv-2, nfv-1) < 0? 1:-1;
 
         //OR always increase the s1 component at EML2
@@ -5298,7 +5293,7 @@ int msdvt_CMS_RCM_deps_planar_pac_ATF(double **ymd, double *tmd, double **ymdn, 
  * \brief Multiple shooting scheme with no boundary conditions. PLANAR CASE.
  *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
  *        - The initial conditions z0 vary in the center-unstable manifold of EML2.
- *        - The final state zN vary in the center-stable manifold of SEML2.
+ *        - The final state zN vary in the center-stable manifold of SEMLi.
  *        - The times t0,..., tN are free to vary.
  *        - The null vector associated to the solution is computed.
  *        - The pseudo-arclength constraint is added to the constraints. Therefore, the system is SQUARED.
@@ -5804,7 +5799,7 @@ int msdvt_CMS_RCM_deps_planar_pac(double **ymd, double *tmd, double **ymdn, doub
         //Last time:
         fvc[5*mgs] = tmdn[mgs];
 
-        //CMS of SEML2
+        //CMS of SEMLi
         fvc[5*mgs-3] = orbit_SEM.si[0];
         fvc[5*mgs-2] = orbit_SEM.si[2];
         fvc[5*mgs-1] = orbit_SEM.si[4];
@@ -6040,7 +6035,7 @@ int msdvt_CMS_RCM_deps_planar_pac(double **ymd, double *tmd, double **ymdn, doub
         //OR
         //Here, we want to go "in the same direction for somr components of Q
         for(int i = 0; i < 2; i++) dotNV += gsl_matrix_get(Q, i, nfv-1)*nullvector[i];              //CMU of  EML2
-        for(int i = 1; i < 4; i++) dotNV += gsl_matrix_get(Q, nfv-i-1, nfv-1)*nullvector[nfv-i-1];  //CMS of SEML2
+        for(int i = 1; i < 4; i++) dotNV += gsl_matrix_get(Q, nfv-i-1, nfv-1)*nullvector[nfv-i-1];  //CMS of SEMLi
         dotNV += gsl_matrix_get(Q, nfv-1, nfv-1)*nullvector[nfv-1];                                 //tN
         sign = dotNV > 0? 1:-1;
         //sign = gsl_matrix_get(Q, nfv-2, nfv-1) < 0? 1:-1;
@@ -6110,7 +6105,7 @@ int msdvt_CMS_RCM_deps_planar_pac(double **ymd, double *tmd, double **ymdn, doub
     //    {
     //        //Here, we want to go "in the same direction for somr components of Q
     //        for(int i = 0; i < 2; i++) dotNV += gsl_matrix_get(Q_r, i, nfv_r-1)*nullvector[i];                //CMU of  EML2
-    //        for(int i = 0; i < 3; i++) dotNV += gsl_matrix_get(Q_r, nfv_r-i-1, nfv_r-1)*nullvector[nfv_r-i-1];  //CMS of SEML2
+    //        for(int i = 0; i < 3; i++) dotNV += gsl_matrix_get(Q_r, nfv_r-i-1, nfv_r-1)*nullvector[nfv_r-i-1];  //CMS of SEMLi
     //        sign = dotNV > 0? 1:-1;
     //        //sign = gsl_matrix_get(Q, nfv-2, nfv-1) < 0? 1:-1;
     //    }
@@ -6514,7 +6509,7 @@ int msd_CM_RCM(double **ymd, double *tmd, double **ymdn, double *tmdn, double **
  * \brief Multiple shooting scheme with no boundary conditions.
  *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
  *        - The initial conditions z0 vary in the center-unstable manifold of EML2.
- *        - The final state zN vary in the center-stable manifold of SEML2.
+ *        - The final state zN vary in the center-stable manifold of SEMLi.
  *        - The times t0,..., tN are free to vary.
  **/
 int msdvt_CM_RCM(double **ymd, double *tmd, double **ymdn, double *tmdn, double **yma,

@@ -2550,7 +2550,7 @@ void emPoints(double t, double **emP)
     //Store in emP
     for(int i = 0; i < 3; i++) emP[5][i] = temp2[i];
 
-    //SEML2 position in EM coordinates
+    //SEMLi position in EM coordinates
     for(int i = 0; i < 3; i++) temp1[i] = SEML.cs_sem.cr3bp.l2.position[i];
     for(int i = 4; i < 6; i++) temp1[i] = 0.0;  //arbitrary momenta
     temp1[0] *= -1.0;
@@ -2578,7 +2578,7 @@ void semPoints(double t, double **semP)
     //SEML1 position
     for(int i = 0; i < 3; i++) semP[5][i] = SEML.cs_sem.cr3bp.l1.position[i];
     semP[5][0] *= -1.0;
-    //SEML2 position
+    //SEMLi position
     for(int i = 0; i < 3; i++) semP[6][i] = SEML.cs_sem.cr3bp.l2.position[i];
     semP[6][0] *= -1.0;
 
@@ -2640,7 +2640,7 @@ void emNCPoints(double t, double **emP)
     //Store in emP
     for(int i = 0; i < 3; i++) emP[5][i] = temp2[i];
 
-    //SEML2 position in EM coordinates
+    //SEMLi position in EM coordinates
     for(int i = 0; i < 3; i++) temp1[i] = SEML.cs_sem.cr3bp.l2.position[i];
     for(int i = 4; i < 6; i++) temp1[i] = 0.0;  //arbitrary momenta
     temp1[0] *= -1.0;
@@ -2746,7 +2746,7 @@ void semPlot(gnuplot_ctrl *h2, double **semP)
         gnuplot_plot_xyz(h2, semP[5], semP[5]+1,  semP[5]+2, 1, (char*)"SEML1", "points", "1", "2", 9);
         break;
     case 2:
-        gnuplot_plot_xyz(h2, semP[6], semP[6]+1,  semP[6]+2, 1, (char*)"SEML2", "points", "2", "2", 9);
+        gnuplot_plot_xyz(h2, semP[6], semP[6]+1,  semP[6]+2, 1, (char*)"SEMLi", "points", "2", "2", 9);
         break;
     }
     //EML points

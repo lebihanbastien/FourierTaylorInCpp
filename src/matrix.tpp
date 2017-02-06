@@ -292,6 +292,30 @@ inline void evaluate(double const& theta, matrix<Ofsc> const& a, gsl_matrix_comp
 }
 
 /**
+ *  \brief  Evaluation of the time derivative in a gsl_matrix_complex object, at angle theta = n*t
+ */
+inline void evaluatedot(double const& t, double const& n, matrix<Ofsc> const& a, gsl_matrix_complex *R, Ofsc &ofs_temp)
+{
+    //Check sizes
+    if(a.getSize(1) != (int) R->size1 && a.getSize(2) != (int) R->size2)
+    {
+        cout << "evaluate atrix<Ofsc>. Dimension mismatch. return." << endl;
+        return;
+    }
+
+    cdouble temp = 0+0.0*I;
+    for(int i =0; i < a.getSize(1) ; i++)
+    {
+        for(int j =0; j < a.getSize(2); j++)
+        {
+            ofs_temp.dot(a.getCoef(i,j), n);
+            temp = ofs_temp.evaluate(n*t);
+            gsl_matrix_complex_set(R, i, j, gslc_complex(temp));
+        }
+    }
+}
+
+/**
  *  \brief  Evaluation in a gsl_matrix_complex object, at time, with mean motion n
  */
 inline void evaluate(double const& t, double const& n, matrix<Ofsc> const& a, gsl_matrix_complex *R)

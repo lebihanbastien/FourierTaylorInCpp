@@ -128,14 +128,14 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP(int ofts_order,
                                   vector<Ofsc>  &Vcoc_EM);
 
 /**
- *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the WHOLE trajectory (EML2 orbit + manifold leg + SEML2 orbit).
+ *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the WHOLE trajectory (EML2 orbit + manifold leg + SEMLi orbit).
  **/
 int ref_CMU_EM_to_CM_SEM_MSD_COMP(int man_grid_size,
                                   int coord_type,
                                   SingleOrbit &orbit_EM,
                                   SingleOrbit &orbit_SEM);
 /**
- *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the WHOLE trajectory (EML2 orbit + manifold leg + SEML2 orbit).
+ *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the WHOLE trajectory (EML2 orbit + manifold leg + SEMLi orbit).
  *         It is supposed that orbit_EM and orbit_SEM has been refined with a previous computation, e.g. from ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE.
  **/
 int ref_CMU_EM_to_CM_SEM_MSD_COMP_VARIABLE_GRID(int coord_type,
@@ -143,14 +143,14 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP_VARIABLE_GRID(int coord_type,
                                                 SingleOrbit &orbit_SEM);
 
 /**
- *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the WHOLE trajectory (EML2 orbit + manifold leg + SEML2 orbit).
+ *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the WHOLE trajectory (EML2 orbit + manifold leg + SEMLi orbit).
  *         It is supposed that orbit_EM and orbit_SEM has been refined with a previous computation, e.g. from ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE.
  **/
 int ref_CMU_EM_to_CM_SEM_MSD_COMP_VARIABLE_GRID_TEST(int coord_type,
                                                      SingleOrbit &orbit_SEM);
 
 /**
- *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the WHOLE trajectory (EML2 orbit + manifold leg + SEML2 orbit).
+ *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the WHOLE trajectory (EML2 orbit + manifold leg + SEMLi orbit).
  *         It is supposed that orbit_EM and orbit_SEM has been refined with a previous computation, e.g. from ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE.
  **/
 int comprefft3d(int man_grid_size,
@@ -159,14 +159,14 @@ int comprefft3d(int man_grid_size,
                 SingleOrbit &orbit_SEM,
                 RefSt refst);
 /**
- *  \brief Computes only a SEML2 orbit and test a JPL refinement.
+ *  \brief Computes only a SEMLi orbit and test a JPL refinement.
  **/
 int comprefft3d_test_seml_dimjpl(int man_grid_size_t,
                      int coord_type,
                      SingleOrbit &orbit_SEM,
                      RefSt refst);
 /**
- *  \brief Computes only a SEML2 orbit and test a JPL refinement.
+ *  \brief Computes only a SEMLi orbit and test a JPL refinement.
  **/
 int comprefft3d_test_seml_synjpl(int man_grid_size_t,
                      int coord_type,
@@ -174,7 +174,7 @@ int comprefft3d_test_seml_synjpl(int man_grid_size_t,
                      RefSt refst);
 
 /**
- *  \brief Computes only a SEML2 orbit and test a JPL refinement.
+ *  \brief Computes only a SEMLi orbit and test a JPL refinement.
  **/
 int comprefft3d_test_eml_synjpl(int man_grid_size_t,
                      int coord_type,
@@ -182,7 +182,7 @@ int comprefft3d_test_eml_synjpl(int man_grid_size_t,
                      RefSt refst);
 
 /**
- *  \brief Computes only a SEML2 orbit and test a JPL refinement.
+ *  \brief Computes only a SEMLi orbit and test a JPL refinement.
  **/
 int comprefft3d_test_eml2seml_synjpl(int man_grid_size_t,
                      int coord_type,
@@ -239,7 +239,7 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_3D(SingleOrbit &orbit_EM,
 
 
 /**
- *  \brief Continuation of a single of EML2-to-SEML2 connection, between orbit_EM and orbit_SEM.
+ *  \brief Continuation of a single of EML2-to-SEMLi connection, between orbit_EM and orbit_SEM.
  *         The Jacobian of the parameterization of the manifolds are contained in  DCM_EM_TFC and DCMS_SEM_TFC.
 **/
 void srefeml2seml(SingleOrbit &orbit_EM,
@@ -309,7 +309,7 @@ void srefvtplan(SingleOrbit &orbit_EM,
 
 /**
  *  \brief Computes ONE trajectory from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the MANIFOLD trajectory (manifold leg).
- *         The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CMS of SEML2. The time at each point
+ *         The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CMS of SEMLi. The time at each point
  *         except the first one is allowed to vary. A continuation procedure can be performed to get more than one refined solution.
  **/
 void crefft3d(SingleOrbit &orbit_EM,
@@ -325,7 +325,7 @@ void crefft3d(SingleOrbit &orbit_EM,
 
 /**
  *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the MANIFOLD trajectory (manifold leg).
- *         The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CMS of SEML2. The time at each point
+ *         The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CMS of SEMLi. The time at each point
  *         except the first one is allowed to vary.
  **/
 int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE(int cont_grid_size,
@@ -340,7 +340,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE(int cont_grid_size,
 
 /**
  *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the MANIFOLD trajectory (manifold leg).
- *         The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CMS of SEML2. The time at each point
+ *         The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CMS of SEMLi. The time at each point
  *         except the first one is allowed to vary. A continuation procedure can be performed to get more than one refined solution.
  **/
 int ref_CMU_EM_to_CMS_SEM_MSD_RCM_2(int man_grid_size,
@@ -357,7 +357,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_2(int man_grid_size,
 
 /**
  *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the MANIFOLD trajectory (manifold leg).
- *         The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CMS of SEML2. The time at each point
+ *         The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CMS of SEMLi. The time at each point
  *         except the first one is allowed to vary. A continuation procedure can be performed to get more than one refined solution.
  **/
 int refeml2seml(int man_grid_size,
@@ -372,7 +372,7 @@ int refeml2seml(int man_grid_size,
 
 /**
  *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the MANIFOLD trajectory (manifold leg).
- *         The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CMS of SEML2. The time at each point
+ *         The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CMS of SEMLi. The time at each point
  *         except the first one is allowed to vary. A continuation procedure can be performed to get more than one refined solution.
  **/
 int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ_T(int proj_grid_size,
@@ -393,7 +393,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ_T(int proj_grid_size,
 
 /**
  *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the MANIFOLD trajectory (manifold leg).
- *         The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CMS of SEML2. The time at each point
+ *         The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CMS of SEMLi. The time at each point
  *         except the first one is allowed to vary. A continuation procedure can be performed to get more than one refined solution.
  **/
 int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ_OPT(int proj_grid_size,

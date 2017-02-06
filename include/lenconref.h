@@ -15,8 +15,6 @@
 
 #define REF_SINGLE     2
 
-//CAREFUL: because of the routine isCont(), we cannot create a continuation procedure
-//that has a number above 39. We're good for now (only 30, 31, and 32 are taken)
 #define REF_CONT             30
 #define REF_CONT_D           31
 #define REF_CONT_D_HARD_CASE 32
@@ -64,6 +62,9 @@ struct RefSt
 
     int termination;      //type of termination for time varying continuation
 
+    int sidim;            //direction for predictor-corrector with variable to (s1 or s3)
+                          //hence sidim = 0 or 2.
+
     //Sampling frequencies
     int sf_eml2;
     int sf_man;
@@ -88,8 +89,7 @@ struct RefSt
     double tspan_SEM;
 
     //Check if the type is of continuation type
-    // We check that the type is between 30 (REF_CONT) and 39 (maximum allowed)
-    bool isCont(){return (type/10*10 == REF_CONT);}
+    bool isCont(){return (type == REF_CONT || type == REF_CONT_D || type == REF_CONT_D_HARD_CASE );}
 };
 
 //========================================================================================
@@ -237,7 +237,7 @@ int ufvarvtplan(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
  * \brief Multiple shooting scheme with no boundary conditions.
  *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
  *        - The initial conditions z0 vary in the center-unstable manifold of EML2.
- *        - The final state zN vary in the center-stable manifold of SEML2.
+ *        - The final state zN vary in the center-stable manifold of SEMLi.
  *        - The times t0,..., tN are fixed.
  **/
 int msdvt_CMS_RCM(double **ymd, double *tmd, double **ymdn, double *tmdn,
@@ -250,7 +250,7 @@ int msdvt_CMS_RCM(double **ymd, double *tmd, double **ymdn, double *tmdn,
  * \brief Multiple shooting scheme with no boundary conditions.
  *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
  *        - The initial conditions z0 vary in the center-unstable manifold of EML2.
- *        - The final state zN vary in the center-stable manifold of SEML2.
+ *        - The final state zN vary in the center-stable manifold of SEMLi.
  *        - The times t0,..., tN are free to vary.
  *        - The null vector associated to the solution is computed.
  **/
@@ -264,7 +264,7 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
  * \brief Multiple shooting scheme with no boundary conditions.
  *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
  *        - The initial conditions z0 vary in the center-unstable manifold of EML2.
- *        - The final state zN vary in the center-stable manifold of SEML2.
+ *        - The final state zN vary in the center-stable manifold of SEMLi.
  *        - The times t0,..., tN are fixed.
  *        - The null vector associated to the solution is computed.
  **/
@@ -279,7 +279,7 @@ int msft3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
  * \brief Multiple shooting scheme with no boundary conditions. PLANAR CASE.
  *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
  *        - The initial conditions z0 vary in the center-unstable manifold of EML2.
- *        - The final state zN vary in the center-stable manifold of SEML2.
+ *        - The final state zN vary in the center-stable manifold of SEMLi.
  *        - The times t0,..., tN are free to vary.
  *        - The null vector associated to the solution is computed.
  **/
@@ -293,7 +293,7 @@ int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
  * \brief Multiple shooting scheme with no boundary conditions. PLANAR CASE.
  *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
  *        - The initial conditions z0 vary in the center-unstable manifold of EML2.
- *        - The final state zN vary in the center-stable manifold of SEML2.
+ *        - The final state zN vary in the center-stable manifold of SEMLi.
  *        - The times t0,..., tN are fixed.
  *        - The null vector associated to the solution is computed.
  **/
@@ -313,7 +313,7 @@ int msftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
  * \brief Multiple shooting scheme with no boundary conditions. PLANAR CASE.
  *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
  *        - The initial conditions z0 vary in the center-unstable manifold of EML2.
- *        - The final state zN vary in the center-stable manifold of SEML2.
+ *        - The final state zN vary in the center-stable manifold of SEMLi.
  *        - The times t0,..., tN are fixed.
  *        - The null vector associated to the solution is computed.
  *        - The pseudo-arclength constraint is added to the constraints. Therefore, the system is SQUARED.
@@ -332,7 +332,7 @@ int msdvt_CMS_RCM_deps_planar_pac_ATF(double **ymd, double *tmd, double **ymdn, 
  * \brief Multiple shooting scheme with no boundary conditions. PLANAR CASE.
  *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
  *        - The initial conditions z0 vary in the center-unstable manifold of EML2.
- *        - The final state zN vary in the center-stable manifold of SEML2.
+ *        - The final state zN vary in the center-stable manifold of SEMLi.
  *        - The times t0,..., tN are free to vary.
  *        - The null vector associated to the solution is computed.
  *        - The pseudo-arclength constraint is added to the constraints. Therefore, the system is SQUARED.

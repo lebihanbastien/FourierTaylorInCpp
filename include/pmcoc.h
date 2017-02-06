@@ -322,17 +322,17 @@ double evaluateOddDerivative(double omega, int order, double *coef, double *cR);
 /**
  *  \brief Evaluate z(t), with \f$ z(t) = e^{it} z_r(t) \f$ in Earth-Moon units.
  */
-cdouble evz(Ofsc& zr, double t, double n, double ni, double ai);
+cdouble evz(const Ofsc& zr, double t, double n, double ni, double ai);
 
 /**
  *  \brief Evaluate dz(t)/dt, with \f$ z(t) = e^{it} z_r(t) \f$ in Earth-Moon units.
  */
-cdouble evzdot(Ofsc& zr, Ofsc& ztdot, double t, double n, double ni, double ai);
+cdouble evzdot(const Ofsc& zr, const Ofsc& ztdot, double t, double n, double ni, double ai);
 
 /**
  *  \brief Evaluate d2z(t)/dt2, with \f$ z(t) = e^{it} z_r(t) \f$ in Earth-Moon units.
  */
-cdouble evzddot(Ofsc& zr, Ofsc& ztdot, Ofsc& ztddot, double t, double n, double ni, double ai);
+cdouble evzddot(const Ofsc& zr, const Ofsc& ztdot, const Ofsc& ztddot, double t, double n, double ni, double ai);
 
 
 /**

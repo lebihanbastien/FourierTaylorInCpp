@@ -11,9 +11,9 @@ int OFS_ORDER;
  */
 
 
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 //Create
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  *  \brief Default constructor of the class Ofsc.
  */
@@ -44,9 +44,9 @@ Ofsc::Ofsc(Ofsc const& b)
     for(int i = -order ; i<= order; i++) coef[i+order] = b.coef[i+order];
 }
 
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 //Copy
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  *  \brief  Copy from a given Ofs object (only the coefficients).
  */
@@ -65,9 +65,9 @@ Ofsc& Ofsc::ccopy(Ofsc const& b)
 }
 
 
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 //Delete
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  *  \brief Default destructor of the class Ofsc.
  */
@@ -77,9 +77,9 @@ Ofsc::~Ofsc()
     coef = 0;
 }
 
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 //Setters
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  *  \brief Sets a coefficient at a given position in the serie.
  */
@@ -100,9 +100,9 @@ void Ofsc::addCoef(cdouble const& value, int const& pos)
 }
 
 
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 //Operators (+=, -=, ...)
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  *  \brief  An operator. Constructor from a given Ofsc object (only the coefficients).
  */
@@ -186,9 +186,9 @@ Ofsc& Ofsc::operator /= (cdouble const& c)
     return *this;
 }
 
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 //Getters
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  *  \brief  Gets the order of the serie.
  */
@@ -219,9 +219,9 @@ cdouble Ofsc::getCoef(int pos) const
 }
 
 
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 //Zeroing
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 
 /**
  *  \brief  Sets all coefficients to zero. cdouble case
@@ -244,9 +244,9 @@ bool Ofsc::isnull(const int ofs_order) const
 }
 
 
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 // Functions (evaluate)
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  *  \brief  Evaluates the Ofsc object at angle theta (theta = nt) and at a certain order eff_order.
  *
@@ -321,9 +321,9 @@ cdouble Ofsc::evaluate(double const& theta) const
     return result;
 }
 
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 // Functions (operations)
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  *  \brief  An operation. Adds the product: \c this \f$  += m a \f$ at a certain order eff_order.
  *
@@ -341,6 +341,17 @@ void Ofsc::ofs_smult(Ofsc const& a, cdouble c, int eff_order)
     }
 }
 
+/**
+ *  \brief  An operation. Computes the product: \c this \f$  = this a \f$ at a certain order eff_order.
+ */
+void Ofsc::ofs_mult_inline(cdouble c, int eff_order)
+{
+    //Sum
+    for(int i = -eff_order; i <= eff_order; i++)
+    {
+        coef[i+order] = c*coef[i+order];
+    }
+}
 
 /**
  *  \brief  An operation. Adds the product: \c this \f$ += a \times b \f$.
@@ -378,10 +389,267 @@ void Ofsc::ofs_fsum(Ofsc const& a, cdouble const& ma, Ofsc const& b, cdouble con
     }
 }
 
+//----------------------------------------------------------------------------------------
+// Functions (operations) involving the time domain
+//----------------------------------------------------------------------------------------
+/**
+ *  \brief An operation. Performs the expansion this \f$ = a^{\alpha} \f$ using inverse FFT, the power function in time domain, and finally direct FFT.
+ **/
+void Ofsc::ofs_pows(Ofsc const& a, cdouble const& alpha)
+{
+    this->tfs_from_ofs(a);
+    this->tfs_pows(alpha);
+    this->tfs_to_ofs_inline();
+}
 
-//---------------------------------------------------------------------------
+/**
+ *  \brief An operation. Performs the division this \f$ = a / b \f$ using inverse FFT, the division in time domain, and finally direct FFT.
+ **/
+void Ofsc::ofs_div(Ofsc const& a, Ofsc const& b, Ofsc& temp)
+{
+        //this = a in tfs
+        this->tfs_from_ofs(a);
+
+        //temp = b in tfs
+        temp.tfs_from_ofs(b);
+
+        //this = a/b in tfs
+        this->tfs_div_inline(temp);
+
+        //back in frequency domain (ofs)
+        this->tfs_to_ofs_inline();
+}
+
+//----------------------------------------------------------------------------------------
+// Frequency domain <--> Time domain
+//----------------------------------------------------------------------------------------
+/**
+ *  \brief  From Frequency domain to time domain.
+ */
+void Ofsc::tfs_from_ofs(Ofsc const& a)
+{
+    //---------------------
+    //if wrong orders, stop
+    //---------------------
+    if(order < a.getOrder())
+    {
+        cout << "tfs_from_ofs. Wrong orders. Stop." << endl;
+        return;
+    }
+
+    int N = 2*order+1;
+    //---------------------
+    //Copy the coefficients in coef
+    //---------------------
+    for(int i = 0; i < N; i++) coef[i] = ((Ofsc)a).evaluate(i*2*M_PI/((double)N));
+}
+
+/**
+ *  \brief  Inline from Frequency domain to time domain.
+ */
+ void Ofsc::tfs_from_ofs_inline(Ofsc& temp)
+{
+    //---------------------
+    //if wrong orders, stop
+    //---------------------
+    if(order != temp.getOrder())
+    {
+        cout << "tfs_from_ofs. Wrong orders. Stop." << endl;
+        return;
+    }
+
+    //---------------------
+    //Copy in temp
+    //---------------------
+    temp.ccopy(*this);
+
+    int N = 2*order+1;
+    //---------------------
+    //Copy the coefficients in coef
+    //---------------------
+    for(int i = 0; i < N; i++) coef[i] = temp.evaluate(i*2*M_PI/((double)N));
+}
+
+/**
+ *  \brief  From Time domain to Frequency domain.
+ */
+ void Ofsc::tfs_to_ofs(Ofsc const& a)
+{
+    //---------------------
+    // If wrong orders, stop
+    //---------------------
+    if(order > a.getOrder())
+    {
+        cout << "tfs_to_ofs. Wrong orders. Stop." << endl;
+        return;
+    }
+
+    //---------------------
+    // FFT structures
+    //---------------------
+    int N = 2*a.getOrder()+1;
+    gsl_vector_complex *data_fft          = gsl_vector_complex_calloc(N);
+    gsl_fft_complex_wavetable *wavetable  = gsl_fft_complex_wavetable_alloc (N);
+    gsl_fft_complex_workspace *workspace  = gsl_fft_complex_workspace_alloc (N);
+
+    //---------------------
+    //Copy a in data_fft
+    //---------------------
+    for(int i = 0; i < N; i++) gsl_vector_complex_set(data_fft, i, gslc_complex(creal(a.coef[i]), cimag(a.coef[i])));
+
+    //---------------------
+    //FFT
+    //---------------------
+    gsl_fft_complex_forward (data_fft->data, 1, N, wavetable, workspace);
+
+    //---------------------
+    //Order 0
+    //---------------------
+    this->setCoef(+GSL_REAL(gsl_vector_complex_get(data_fft, 0))/(double)N+I*GSL_IMAG(gsl_vector_complex_get(data_fft, 0))/(double)N,  0);
+    //Version without setCoef
+    //this->coef[order] = +GSL_REAL(gsl_vector_complex_get(data_fft, 0))/(double)N+I*GSL_IMAG(gsl_vector_complex_get(data_fft, 0))/(double)N;
+
+    //---------------------
+    //Order n
+    //---------------------
+    for(int i = 1; i<= order; i++)
+    {
+        //Negative frequecies
+        this->setCoef(+GSL_REAL(gsl_vector_complex_get(data_fft, N-i))/(double)N+I*GSL_IMAG(gsl_vector_complex_get(data_fft, N-i))/(double)N, -i);
+        //Positive frequencies
+        this->setCoef(+GSL_REAL(gsl_vector_complex_get(data_fft, i))/(double)N+I*GSL_IMAG(gsl_vector_complex_get(data_fft, i))/(double)N,  i);
+        //Version without setCoef
+        //this->coef[order-i] = +GSL_REAL(gsl_vector_complex_get(data_fft, N-i))/(double)N+I*GSL_IMAG(gsl_vector_complex_get(data_fft, N-i))/(double)N;
+        //this->coef[order+i] = +GSL_REAL(gsl_vector_complex_get(data_fft, i))/(double)N+I*GSL_IMAG(gsl_vector_complex_get(data_fft, i))/(double)N;
+    }
+
+    //------------------------
+    // Free
+    //------------------------
+    gsl_vector_complex_free(data_fft);
+    gsl_fft_complex_wavetable_free (wavetable);
+    gsl_fft_complex_workspace_free (workspace);
+}
+
+/**
+ *  \brief  Inline from Time domain to Frequency domain.
+ */
+ void Ofsc::tfs_to_ofs_inline()
+{
+    //---------------------
+    // FFT structures
+    //---------------------
+    int N = 2*order+1;
+    gsl_vector_complex *data_fft          = gsl_vector_complex_calloc(N);
+    gsl_fft_complex_wavetable *wavetable  = gsl_fft_complex_wavetable_alloc (N);
+    gsl_fft_complex_workspace *workspace  = gsl_fft_complex_workspace_alloc (N);
+
+    //---------------------
+    //Copy a in data_fft
+    //---------------------
+    for(int i = 0; i < N; i++) gsl_vector_complex_set(data_fft, i, gslc_complex(creal(this->coef[i]), cimag(this->coef[i])));
+
+    //---------------------
+    //FFT
+    //---------------------
+    gsl_fft_complex_forward (data_fft->data, 1, N, wavetable, workspace);
+
+    //---------------------
+    //Order 0
+    //---------------------
+    this->setCoef(+GSL_REAL(gsl_vector_complex_get(data_fft, 0))/(double)N+I*GSL_IMAG(gsl_vector_complex_get(data_fft, 0))/(double)N,  0);
+    //Version without setCoef
+    //this->coef[order] = +GSL_REAL(gsl_vector_complex_get(data_fft, 0))/(double)N+I*GSL_IMAG(gsl_vector_complex_get(data_fft, 0))/(double)N;
+
+    //---------------------
+    //Order n
+    //---------------------
+    for(int i = 1; i<= order; i++)
+    {
+        //Negative frequecies
+        this->setCoef(+GSL_REAL(gsl_vector_complex_get(data_fft, N-i))/(double)N+I*GSL_IMAG(gsl_vector_complex_get(data_fft, N-i))/(double)N, -i);
+        //Positive frequencies
+        this->setCoef(+GSL_REAL(gsl_vector_complex_get(data_fft, i))/(double)N+I*GSL_IMAG(gsl_vector_complex_get(data_fft, i))/(double)N,  i);
+        //Version without setCoef
+        //this->coef[order-i] = +GSL_REAL(gsl_vector_complex_get(data_fft, N-i))/(double)N+I*GSL_IMAG(gsl_vector_complex_get(data_fft, N-i))/(double)N;
+        //this->coef[order+i] = +GSL_REAL(gsl_vector_complex_get(data_fft, i))/(double)N+I*GSL_IMAG(gsl_vector_complex_get(data_fft, i))/(double)N;
+    }
+
+    //------------------------
+    // Free
+    //------------------------
+    gsl_vector_complex_free(data_fft);
+    gsl_fft_complex_wavetable_free (wavetable);
+    gsl_fft_complex_workspace_free (workspace);
+}
+
+
+//----------------------------------------------------------------------------------------
+// TFS operations
+//----------------------------------------------------------------------------------------
+
+// pows
+//----------------------------------------------------------------------------------------
+/**
+ *  \brief  An operation. Performs the power this = a^alpha in time domain.
+ */
+void Ofsc::tfs_pows(Ofsc const& a, cdouble const& alpha)
+{
+    for(int i = 0; i < 2*order+1; i++) coef[i] = cpow(a.coef[i], alpha);
+}
+
+/**
+ *  \brief  An operation. Performs the power this = this^alpha in time domain.
+ */
+void Ofsc::tfs_pows(cdouble const& alpha)
+{
+    for(int i = 0; i < 2*order+1; i++) coef[i] = cpow(coef[i], alpha);
+}
+
+// sprod
+//----------------------------------------------------------------------------------------
+
+/**
+ *  \brief  An operation. Computes the product: \c this \f$ = this \times b \f$ in time domain.
+ */
+void Ofsc::tfs_prod_inline(Ofsc const& b)
+{
+    for(int k=0 ; k< 2*order+1; k++) coef[k] = coef[k]*b.coef[k];
+}
+
+
+/**
+ *  \brief  An operation. Adds the product: \c this \f$ += a \times b \f$ in time domain.
+ */
+void Ofsc::tfs_sprod(Ofsc const& a, Ofsc const& b)
+{
+    for(int k=0 ; k< 2*order+1; k++) coef[k] += a.coef[k]*b.coef[k];
+}
+
+
+// sdiv
+//----------------------------------------------------------------------------------------
+/**
+ *  \brief  An operation. Computes the division: \c this \f$ = this / b \f$ in time domain.
+ */
+void Ofsc::tfs_div_inline(Ofsc const& b)
+{
+    for(int k=0 ; k< 2*order+1; k++) coef[k] = coef[k]/b.coef[k];
+}
+
+/**
+ *  \brief  An operation. Adds the division: \c this \f$ += a / b \f$ in time domain.
+ */
+void Ofsc::tfs_sdiv(Ofsc const& a, Ofsc const& b)
+{
+    for(int k=0 ; k< 2*order+1; k++) coef[k] += a.coef[k]/b.coef[k];
+}
+
+
+
+//----------------------------------------------------------------------------------------
 //Print
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  *  \brief  A stream operator
  */
@@ -399,9 +667,9 @@ std::ostream& operator << (std::ostream& stream, Ofsc const& ofs)
 }
 
 
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 // Reading an OFS from a text file
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  * \fn void inline readOFS_txt(Ofsc& xFFT, string filename, int fftN)
  * \brief Reading an Ofsc object from a text file.
@@ -425,9 +693,9 @@ void readOFS_txt(Ofsc& xFFT, string filename)
     readStream.close();
 }
 
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 //Derivation
-//---------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  *  \brief  An operation. Set the time derivative of object \c a with pulsation \f$ \omega = n \f$, so that \c this \f$ = \dot{a} \f$.
  */

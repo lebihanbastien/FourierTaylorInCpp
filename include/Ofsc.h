@@ -8,6 +8,12 @@
 #include "ftc_errno.h"
 #include <math.h>
 
+//GSL
+#include <gsl/gsl_vector.h>
+#include <gsl/gsl_fft_complex.h>
+#include "gslc.h"
+#include "timec.h"
+
 using namespace std;
 
 /**
@@ -26,9 +32,9 @@ private:
     cdouble *coef;    /// array of coefficients
 
 public:
-    //------------------
+    //------------------------------------------------------------------------------------
     //Create
-    //------------------
+    //------------------------------------------------------------------------------------
     /**
      *  \brief Default constructor of the class Ofsc.
      */
@@ -46,17 +52,17 @@ public:
      */
     Ofsc(Ofsc const& ofs_);
 
-    //------------------
+    //------------------------------------------------------------------------------------
     //Delete
-    //------------------
+    //------------------------------------------------------------------------------------
     /**
      *  \brief Default destructor of the class Ofsc.
      */
     ~Ofsc();
 
-    //------------------
+    //------------------------------------------------------------------------------------
     //Copy
-    //------------------
+    //------------------------------------------------------------------------------------
     /**
      *  \brief  Copy from a given Ofs object (only the coefficients).
      *  \param  ofs_: a reference to the Ofs object to copy
@@ -64,9 +70,9 @@ public:
      */
     Ofsc& ccopy(Ofsc const& ofs_);
 
-    //------------------
+    //------------------------------------------------------------------------------------
     //Setters
-    //------------------
+    //------------------------------------------------------------------------------------
     /**
      *  \brief Sets a coefficient at a given position in the serie.
      *  \param value: the value to set
@@ -82,9 +88,9 @@ public:
     void addCoef(cdouble  const&  value, int const& pos);
 
 
-    //------------------
+    //------------------------------------------------------------------------------------
     //Getters
-    //------------------
+    //------------------------------------------------------------------------------------
     /**
      *  \brief  Gets the order of the serie.
      *  \return the order of the serie as an \c int
@@ -104,9 +110,9 @@ public:
      */
     cdouble getCoef(int pos) const;
 
-    //------------------
+    //------------------------------------------------------------------------------------
     //Operators
-    //------------------
+    //------------------------------------------------------------------------------------
     /**
      *  \brief  An operator. Constructor from a given Ofsc object (only the coefficients).
      *  \param  ofs_: a reference to the Ofsc object to copy
@@ -142,9 +148,9 @@ public:
      */
     Ofsc& operator /= (cdouble const& c);
 
-    //------------------
+    //------------------------------------------------------------------------------------
     //Operations
-    //------------------
+    //------------------------------------------------------------------------------------
     /**
      *  \brief  An operation. Adds the product: \c this \f$  += m a \f$ at order eff_order.
      *  \param  a: a reference to an Ofsc object
@@ -153,6 +159,11 @@ public:
      *  \return a reference to the current object
      */
     void ofs_smult(Ofsc const& a, cdouble c, int eff_order);
+
+    /**
+     *  \brief  An operation. Computes the product: \c this \f$  = this a \f$ at a certain order eff_order.
+     */
+    void ofs_mult_inline(cdouble c, int eff_order);
 
     /**
      *  \brief  An operation. Set the time derivative of object \c a with pulsation \f$ \omega = n \f$, so that \c this \f$ = \dot{a} \f$.
@@ -180,10 +191,82 @@ public:
      */
     void ofs_fsum(Ofsc const& a, cdouble const& ma, Ofsc const& b, cdouble const& mb);
 
+    /**
+     *  \brief An operation. Performs the expansion this \f$ = a^{\alpha} \f$ using inverse FFT, the power function in time domain, and finally direct FFT.
+     **/
+    void ofs_pows(Ofsc const& a, cdouble const& alpha);
 
-    //------------------
+    /**
+     *  \brief An operation. Performs the division this \f$ = a / b \f$ using inverse FFT, the division in time domain, and finally direct FFT.
+     **/
+    void ofs_div(Ofsc const& a, Ofsc const& b, Ofsc& temp);
+
+    //------------------------------------------------------------------------------------
+    // Frequency domain <--> Time domain
+    //------------------------------------------------------------------------------------
+    /**
+     *  \brief  From Frequency domain to time domain.
+     */
+    void tfs_from_ofs(Ofsc const& a);
+
+    /**
+     *  \brief  Inline from Frequency domain to time domain.
+     */
+    void tfs_from_ofs_inline(Ofsc& temp);
+
+    /**
+     *  \brief  From Time domain to Frequency domain.
+     */
+    void tfs_to_ofs(Ofsc const& a);
+
+    /**
+     *  \brief  Inline from Time domain to Frequency domain.
+     */
+    void tfs_to_ofs_inline();
+
+    //------------------------------------------------------------------------------------
+    // TFS operations
+    //------------------------------------------------------------------------------------
+
+    // pows
+    //------------------------------------------------------------------------------------
+    /**
+     *  \brief  An operation. Performs the power this = a^alpha in time domain.
+     */
+    void tfs_pows(Ofsc const& a, cdouble const& alpha);
+
+    /**
+     *  \brief  An operation. Performs the power this = this^alpha in time domain.
+     */
+    void tfs_pows(cdouble const& alpha);
+
+    // sprod
+    //------------------------------------------------------------------------------------
+    /**
+     *  \brief  An operation. Adds the product: \c this \f$ += this \times b \f$ in time domain.
+     */
+    void tfs_prod_inline(Ofsc const& b);
+
+    /**
+     *  \brief  An operation. Adds the product: \c this \f$ += a \times b \f$ in time domain.
+     */
+    void tfs_sprod(Ofsc const& a, Ofsc const& b);
+
+    // sdiv
+    //------------------------------------------------------------------------------------
+    /**
+     *  \brief  An operation. Adds the division: \c this \f$ += this / b \f$ in time domain.
+     */
+    void tfs_div_inline(Ofsc const& b);
+
+    /**
+     *  \brief  An operation. Adds the division: \c this \f$ += a / b \f$ in time domain.
+     */
+    void tfs_sdiv(Ofsc const& a, Ofsc const& b);
+
+    //------------------------------------------------------------------------------------
     //Zeroing
-    //------------------
+    //------------------------------------------------------------------------------------
     /**
      *  \brief  Sets all coefficients to zero.
      */
@@ -194,9 +277,9 @@ public:
      */
     bool isnull(const int ofs_order) const;
 
-    //------------------
+    //------------------------------------------------------------------------------------
     //Evaluate
-    //------------------
+    //------------------------------------------------------------------------------------
     /**
      *  \brief  Evaluates the Ofsc object at time t.
      *  \param  t: a reference to a \c double t
@@ -212,18 +295,18 @@ public:
     cdouble evaluate(double const& t, int eff_order) const;
     cdouble fevaluate(double const cR[], double const sR[], int eff_order) const;
 
-    //------------------
+    //------------------------------------------------------------------------------------
     //Print
-    //------------------
+    //------------------------------------------------------------------------------------
     /**
      *  \brief  A stream operator
      */
     friend std::ostream& operator << (std::ostream& stream, Ofsc const& ofs);
 };
 
-//------------------
+//------------------------------------------------------------------------------------
 //Read
-//------------------
+//------------------------------------------------------------------------------------
 /**
  * \fn void inline readOFS_txt(Ofsc& xFFT, string filename, int fftN)
  * \brief Reading an Ofsc object from a text file.

@@ -289,12 +289,12 @@ int compute_grid_CMU_EM_3D(double dist_to_cm,
 
 //========================================================================================
 //
-//         Projection on the CM/CMS/CMU of SEML2
+//         Projection on the CM/CMS/CMU of SEMLi
 //
 //========================================================================================
 /**
  *  \brief Integrates the central-unstable legs from a discrete set of unstable directions obtained using the routine compute_grid_CMU_EM.
- *         Then, each point on the integration grid is projected on the Center Manifold CM_SEM_NC about SEML2. The best solution (minimum distance of projection)
+ *         Then, each point on the integration grid is projected on the Center Manifold CM_SEM_NC about SEMLi. The best solution (minimum distance of projection)
  *         is stored.
  *
  *  \param tmax_on_manifold_EM: the maximum integration time on each leg, in EM units.
@@ -306,8 +306,8 @@ int compute_grid_CMU_EM_3D(double dist_to_cm,
  *  \param nod:                 the number of dimensions on which the distance of projection is computed (usually either 3 (the physical distance) or 6 (the whole phase space)).
  *  \param isPar:               if TRUE, the computation is parallelized.
  *  \param ynormMax:            the maximum norm in NCSEM coordinates for which a given state on the integration grid is projected on CM_SEM_NC More precisely: for a given state
- *                              y along the manifold leg, iv norm(y, 3) < ynormMax, the state is projected. Otherwise, it is considered too far away from SEML2 to be a good candidate for projection.
- *  \param snormMax:            the maximum norm in RCM SEM coordinates for which a given projection state on the CM of SEML2 (CM_SEM_NC) is computed back in NCSEM coordinates.
+ *                              y along the manifold leg, iv norm(y, 3) < ynormMax, the state is projected. Otherwise, it is considered too far away from SEMLi to be a good candidate for projection.
+ *  \param snormMax:            the maximum norm in RCM SEM coordinates for which a given projection state on the CM of SEMLi (CM_SEM_NC) is computed back in NCSEM coordinates.
  *                              More precisely, for a given state y in NCSEM coordinates, the result of the projection on CM_SEM_NC gives a state sproj in RCM SEM coordinates.
  *                              if norm(sproj, 4) < snormMax, the computation yproj = CM_SEM_NC(sproj, t) is performed. Otherwise, the state sproj is considered too far away from the RCM origin to be a
  *                              good candidate - it is out of the domain of practical convergence of CM_SEM_NC.
@@ -372,7 +372,7 @@ int int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM,
     //====================================================================================
 
     //--------------------------------------
-    // Center-manifold around SEML2
+    // Center-manifold around SEMLi
     //--------------------------------------
     vector<Oftsc>  CM_SEM_NC;     //center manifold in NC coordinates
     vector<Oftsc>  CM_SEM_TFC;    //center manifold in TFC coordinates
@@ -472,7 +472,7 @@ int int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM,
                 int status = ode78(y_man_NCSEM, t_man_SEM, &ode78coll, tv, tv+tmax_on_manifold_EM, yv, 6, man_grid_size, I_NCEM, NCEM, NCSEM);
 
                 //====================================================================================
-                // 3.2. Projection on the center manifold of SEML2. No use of SEML_EM or SEML after this point!
+                // 3.2. Projection on the center manifold of SEMLi. No use of SEML_EM or SEML after this point!
                 // We need first to check that the integration went well
                 //====================================================================================
                 //----------------------------------------------------------
@@ -663,7 +663,7 @@ int int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM,
 /**
  *  \brief Integrates the central-unstable legs from a discrete set of unstable directions
  *         obtained using the routine compute_grid_CMU_EM. Then, each point on the
- *         integration grid is projected on the Center Manifold CM_SEM_NC about SEML2.
+ *         integration grid is projected on the Center Manifold CM_SEM_NC about SEMLi.
  *         The best solution (minimum distance of projection) is stored.
  *
  *  \param tmax_on_manifold_EM: the maximum integration time on each leg, in EM units.
@@ -680,11 +680,11 @@ int int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM,
  *                              state on the integration grid is projected on CM_SEM_NC
  *                              More precisely: for a given state y along the manifold leg,
  *                              if norm(y, 3) < ynormMax, the state is projected.
- *                              Otherwise, it is considered too far away from SEML2 to be
+ *                              Otherwise, it is considered too far away from SEMLi to be
  *                              a good candidate for projection.
  *
  *  \param snormMax:            the maximum norm in RCM SEM coordinates for which a given
- *                              projection state on the CM of SEML2 (CM_SEM_NC) is
+ *                              projection state on the CM of SEMLi (CM_SEM_NC) is
  *                              computed back in NCSEM coordinates. More precisely, for a
  *                              given state y in NCSEM coordinates, the result of the
  *                              projection on CM_SEM_NC gives a state sproj in RCM SEM
@@ -730,7 +730,7 @@ int int_proj_CMU_EM_on_CM_SEM_3D(double tmax_on_manifold_EM,
     //====================================================================================
 
     //--------------------------------------
-    // Center-manifold around SEML2
+    // Center-manifold around SEMLi
     //--------------------------------------
     vector<Oftsc>  CM_SEM_NC;     //center manifold in NC coordinates
     vector<Oftsc>  CM_SEM_TFC;    //center manifold in TFC coordinates
@@ -852,7 +852,7 @@ int int_proj_CMU_EM_on_CM_SEM_3D(double tmax_on_manifold_EM,
                         int status = ode78(y_man_NCSEM, t_man_SEM, &ode78coll, tv, tv+tmax_on_manifold_EM, yv, 6, man_grid_size, I_NCEM, NCEM, NCSEM);
 
                         //====================================================================================
-                        // 3.2. Projection on the center manifold of SEML2. No use of SEML_EM or SEML after this point!
+                        // 3.2. Projection on the center manifold of SEMLi. No use of SEML_EM or SEML after this point!
                         // We need first to check that the integration went well
                         //====================================================================================
                         //----------------------------------------------------------
@@ -989,7 +989,7 @@ int int_proj_CMU_EM_on_CM_SEM_3D(double tmax_on_manifold_EM,
 
 
 /**
- *  \brief Same int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM, but using the Center-Stable Manifold about SEML2 as a target.
+ *  \brief Same int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM, but using the Center-Stable Manifold about SEMLi as a target.
  *         Note that, for now, the coordinates along the stable direction is fixed to a small arbitrary value.
  *         Since this routine does not yield substantially better results thant int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM, it is not currently used.
  *
@@ -1052,7 +1052,7 @@ int int_proj_CMU_EM_on_CMS_SEM(double tmax_on_manifold_EM,
     //====================================================================================
 
     //--------------------------------------
-    // Center-stable manifold around SEML2
+    // Center-stable manifold around SEMLi
     //--------------------------------------
     vector<Oftsc>  CMS_SEM_NC;     //center-stable manifold in NC coordinates
     vector<Oftsc>  CMS_SEM_TFC;    //center-stable manifold in TFC coordinates
@@ -1150,7 +1150,7 @@ int int_proj_CMU_EM_on_CMS_SEM(double tmax_on_manifold_EM,
                 int status = ode78(y_man_NCSEM, t_man_SEM, &ode78coll, tv, tv+tmax_on_manifold_EM, yv, 6, man_grid_size, I_NCEM, NCEM, NCSEM);
 
                 //====================================================================================
-                // 3.2. Projection on the center manifold of SEML2. No use of SEML_EM or SEML after this point!
+                // 3.2. Projection on the center manifold of SEMLi. No use of SEML_EM or SEML after this point!
                 // We need first to check that the integration went well
                 //====================================================================================
                 //----------------------------------------------------------
@@ -1353,7 +1353,7 @@ int int_proj_CMU_EM_on_CMS_SEM(double tmax_on_manifold_EM,
 //========================================================================================
 /**
  *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the MANIFOLD trajectory (manifold leg).
- *         The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CMS of SEML2. The time at each point
+ *         The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CMS of SEMLi. The time at each point
  *         except the first one is allowed to vary.
  **/
 int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE(int cont_grid_size,
@@ -1376,7 +1376,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE(int cont_grid_size,
     //====================================================================================
     // 2. Time on the orbits
     //====================================================================================
-    double tof_seml_SEM = 5*SEML.us_sem.T;   //TOF on SEML2 orbit
+    double tof_seml_SEM = 5*SEML.us_sem.T;   //TOF on SEMLi orbit
 
     //====================================================================================
     // 3. Init the gnuplot windows
@@ -1453,7 +1453,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE(int cont_grid_size,
     vector<size_t> sortId_R;
 
     //====================================================================================
-    // 5. Structures to compute the final orbit about SEML2
+    // 5. Structures to compute the final orbit about SEMLi
     //====================================================================================
     //--------------------------------------
     // Center-manifold
@@ -1551,7 +1551,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE(int cont_grid_size,
 
 
     cout << "-------------------------------------------"  << endl;
-    cout << "  Refinement of EML2-SEML2 arc             "  << endl;
+    cout << "  Refinement of EML2-SEMLi arc             "  << endl;
     cout << "-------------------------------------------"  << endl;
     cout << "Estimated error at patch point (km):       "  << endl;
     cout <<  pmin_dist_SEM_R[kpos]*SEML.cs_sem.cr3bp.L << endl;
@@ -1663,9 +1663,9 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE(int cont_grid_size,
     if(isPlanar)
     {
         //====================================================================================
-        // 8.4.1 First step: continuation with free final time, to decrease the stable component at SEML2
+        // 8.4.1 First step: continuation with free final time, to decrease the stable component at SEMLi
         //====================================================================================
-        cout << "First step: continuation with free final time, to decrease the stable component at SEML2" << endl;
+        cout << "First step: continuation with free final time, to decrease the stable component at SEMLi" << endl;
         crefvtplan(orbit_EM, orbit_SEM, DCM_EM_TFC, DCMS_SEM_TFC, dcs, coord_type, cont_grid_size, h2);
 
         //====================================================================================
@@ -1717,7 +1717,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE(int cont_grid_size,
 
 /**
  *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the MANIFOLD trajectory (manifold leg).
- *         The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CMS of SEML2. The time at each point
+ *         The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CMS of SEMLi. The time at each point
  *         except the first one is allowed to vary. A continuation procedure can be performed to get more than one refined solution.
  **/
 int ref_CMU_EM_to_CMS_SEM_MSD_RCM_2(int man_grid_size,
@@ -1741,7 +1741,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_2(int man_grid_size,
     //====================================================================================
     // 2. Time on the orbits
     //====================================================================================
-    double tof_seml_SEM = 5*SEML.us_sem.T;   //TOF on SEML2 orbit
+    double tof_seml_SEM = 5*SEML.us_sem.T;   //TOF on SEMLi orbit
 
     //====================================================================================
     // 3. Init the gnuplot windows
@@ -1818,7 +1818,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_2(int man_grid_size,
     vector<size_t> sortId_R;
 
     //====================================================================================
-    // 5. Structures to compute the final orbit about SEML2
+    // 5. Structures to compute the final orbit about SEMLi
     //====================================================================================
     //--------------------------------------
     // Center-manifold
@@ -1925,7 +1925,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_2(int man_grid_size,
 
 
     cout << "-------------------------------------------"  << endl;
-    cout << "  Refinement of EML2-SEML2 arc             "  << endl;
+    cout << "  Refinement of EML2-SEMLi arc             "  << endl;
     cout << "-------------------------------------------"  << endl;
     cout << "Estimated error at patch point (km):       "  << endl;
     cout <<  pmin_dist_SEM_R[kpos]*SEML.cs_sem.cr3bp.L << endl;
@@ -2020,7 +2020,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_2(int man_grid_size,
     {
 
         //====================================================================================
-        // 8.3.1 First step: continuation with free final time, to decrease the stable component at SEML2
+        // 8.3.1 First step: continuation with free final time, to decrease the stable component at SEMLi
         //====================================================================================
         crefvtplan(orbit_EM, orbit_SEM, DCM_EM_TFC, DCMS_SEM_TFC, dcs, coord_type, man_grid_size, h2);
 
@@ -2059,7 +2059,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_2(int man_grid_size,
  *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM.
  *         A multiple_shooting_direct is applied on the MANIFOLD trajectory (manifold leg).
  *         The initial conditions vary in the paramerization of the CMU of EML2.
- *         The final conditions vary in the paramerization of the CMS of SEML2.
+ *         The final conditions vary in the paramerization of the CMS of SEMLi.
  *         The time at each point except the first one is allowed to vary.
  *         A continuation procedure can be performed to get more than one refined solution.
  **/
@@ -2080,7 +2080,7 @@ int refeml2seml(int man_grid_size,
 
 
     //====================================================================================
-    // 2. Structures to compute the final orbit about SEML2
+    // 2. Structures to compute the final orbit about SEMLi
     //====================================================================================
     //--------------------------------------
     // Center-manifold
@@ -2243,7 +2243,7 @@ int refeml2seml(int man_grid_size,
     int kpos = sortId_R[0];
 
     cout << "-----------------------------------------------------" << endl;
-    cout << "   refeml2seml. Refinement of EML2-SEML2 arc         " << endl;
+    cout << "   refeml2seml. Refinement of EML2-SEMLi arc         " << endl;
     cout << "-----------------------------------------------------" << endl;
     cout << "Estimated error at patch point (km):       "  << endl;
     cout <<  pmin_dist_SEM_R[kpos]*SEML.cs_sem.cr3bp.L << endl;
@@ -2315,7 +2315,7 @@ int refeml2seml(int man_grid_size,
     SingleOrbit orbit_SEM;
     //Parameters
     int coll_SEM;
-    OdeParams odeParams_SEM(&coll, &SEML_SEM);
+    OdeParams odeParams_SEM(&coll_SEM, &SEML_SEM);
     //Init ode structure
     init_ode_structure(&driver_SEM, T, T_root, 6, qbcp_vfn,&odeParams_SEM);
     //Init routine
@@ -2414,7 +2414,7 @@ int refeml2seml(int man_grid_size,
 //
 //========================================================================================
 /**
- *  \brief Continuation of a single of EML2-to-SEML2 connection, between orbit_EM and orbit_SEM.
+ *  \brief Continuation of a single of EML2-to-SEMLi connection, between orbit_EM and orbit_SEM.
  *         The Jacobian of the parameterization of the manifolds are contained in  DCM_EM_TFC and DCMS_SEM_TFC.
 **/
 void srefeml2seml(SingleOrbit &orbit_EM,
@@ -2482,7 +2482,7 @@ void srefeml2seml(SingleOrbit &orbit_EM,
     gsl_matrix_complex *CCM_R_RCM_EM  = gsl_matrix_complex_calloc(4, 4);
     rotmat_CC_R_RCM_CENTER(CCM_R_RCM_EM);
 
-    //CCM_R_RCM_SEM: RCM to CCM in R(5,5), about SEML2
+    //CCM_R_RCM_SEM: RCM to CCM in R(5,5), about SEMLi
     gsl_matrix_complex *CCM_R_RCM_SEM  = gsl_matrix_complex_calloc(5, 5);
     rotmat_CC_R_RCM_CENTER_HYP(CCM_R_RCM_SEM);
 
@@ -2524,9 +2524,9 @@ void srefeml2seml(SingleOrbit &orbit_EM,
     gnuplot_plot_xyz(h2, y_traj[0], y_traj[1],  y_traj[2], man_index, (char*)"", "lines", "1", "1", 4);
 
     //====================================================================================
-    // 5. Compute the first point of the final SEML2 orbit and add it to the manifold leg
+    // 5. Compute the first point of the final SEMLi orbit and add it to the manifold leg
     //====================================================================================
-    cout << " srefeml2seml. Compute the first point of the final SEML2 orbit..."  << endl;
+    cout << " srefeml2seml. Compute the first point of the final SEMLi orbit..."  << endl;
     //---------------------------------------------------------------------
     // Save the last point at position man_index
     //---------------------------------------------------------------------
@@ -3018,7 +3018,7 @@ void srefeml2seml(SingleOrbit &orbit_EM,
         //=============================================================
         //TOF on EML2 orbit
         double tof_eml_EM   = 5*SEML.us.T;
-        //TOF on SEML2 orbit
+        //TOF on SEMLi orbit
         //double tof_seml_SEM = 30*SEML.us_sem.T;
         cout << "---------------------------------------------------------"  << endl;
         cout << " srefeml2seml. Computation of the initial EML2 orbit     "  << endl;
@@ -3101,7 +3101,7 @@ void srefeml2seml(SingleOrbit &orbit_EM,
         orbit_update_ic(orbit_EM, orbit_EM.si, orbit_EM.t0);
 
         //====================================
-        // At SEML2. The first 5 RCM components are good.
+        // At SEMLi. The first 5 RCM components are good.
         // Hence, we need to update:
         // 1. The initial time.
         //====================================
@@ -3174,10 +3174,10 @@ void srefeml2seml(SingleOrbit &orbit_EM,
 // Continuation
 //====================================
 /**
- *  \brief Continuation of a single of EML2-to-SEML2 connection, between orbit_EM and orbit_SEM.
+ *  \brief Continuation of a single of EML2-to-SEMLi connection, between orbit_EM and orbit_SEM.
  *         The Jacobian of the parameterization of the manifolds are contained in  DCM_EM_TFC and DCMS_SEM_TFC.
  *         The patch and final times are free to vary. Hence, the continuation takes
- *         place along a given connection, rather than an entire family. The continuation is forced to make the stable component at SEML2 decrease.
+ *         place along a given connection, rather than an entire family. The continuation is forced to make the stable component at SEMLi decrease.
  **/
 void crefvtplan(SingleOrbit &orbit_EM,
         SingleOrbit &orbit_SEM,
@@ -3231,7 +3231,7 @@ void crefvtplan(SingleOrbit &orbit_EM,
     gsl_matrix_complex *CCM_R_RCM_EM  = gsl_matrix_complex_calloc(4, 4);
     rotmat_CC_R_RCM_CENTER(CCM_R_RCM_EM);
 
-    //CCM_R_RCM_SEM: RCM to CCM in R(5,5), about SEML2
+    //CCM_R_RCM_SEM: RCM to CCM in R(5,5), about SEMLi
     gsl_matrix_complex *CCM_R_RCM_SEM  = gsl_matrix_complex_calloc(5, 5);
     rotmat_CC_R_RCM_CENTER_HYP(CCM_R_RCM_SEM);
 
@@ -3256,7 +3256,7 @@ void crefvtplan(SingleOrbit &orbit_EM,
 
 
     //====================================================================================
-    // 3. Compute the first point of the final SEML2 orbit and add it to the manifold leg
+    // 3. Compute the first point of the final SEMLi orbit and add it to the manifold leg
     //====================================================================================
     //---------------------------------------------------------------------
     // Save the last point at position man_grid_size
@@ -3519,7 +3519,7 @@ void crefvtplan(SingleOrbit &orbit_EM,
         orbit_update_ic(orbit_EM, orbit_EM.si, orbit_EM.t0);
 
         //====================================
-        // At SEML2. The first 5 RCM components are good.
+        // At SEMLi. The first 5 RCM components are good.
         // Hence, we need to update:
         // 1. The initial time.
         //====================================
@@ -3561,7 +3561,7 @@ void crefvtplan(SingleOrbit &orbit_EM,
 }
 
 /**
- *  \brief Continuation of a single of EML2-to-SEML2 connection, between orbit_EM and orbit_SEM.
+ *  \brief Continuation of a single of EML2-to-SEMLi connection, between orbit_EM and orbit_SEM.
  *         The Jacobian of the parameterization of the manifolds are contained in  DCM_EM_TFC and DCMS_SEM_TFC.
  *         The patch and final times are fixed. Hence, the continuation procedure is "forced" to go transversally to the original solution, producing a family of connections.
  **/
@@ -3617,7 +3617,7 @@ void crefftplan(SingleOrbit &orbit_EM,
     gsl_matrix_complex *CCM_R_RCM_EM  = gsl_matrix_complex_calloc(4, 4);
     rotmat_CC_R_RCM_CENTER(CCM_R_RCM_EM);
 
-    //CCM_R_RCM_SEM: RCM to CCM in R(5,5), about SEML2
+    //CCM_R_RCM_SEM: RCM to CCM in R(5,5), about SEMLi
     gsl_matrix_complex *CCM_R_RCM_SEM  = gsl_matrix_complex_calloc(5, 5);
     rotmat_CC_R_RCM_CENTER_HYP(CCM_R_RCM_SEM);
 
@@ -3625,7 +3625,7 @@ void crefftplan(SingleOrbit &orbit_EM,
     // Time on each orbit
     //---------------------------------------------------------------------
     double tof_eml_EM   = 5*SEML.us.T;        //TOF on EML2 orbit
-    double tof_seml_SEM = 30*SEML.us_sem.T;   //TOF on SEML2 orbit
+    double tof_seml_SEM = 30*SEML.us_sem.T;   //TOF on SEMLi orbit
 
 
     //====================================================================================
@@ -3644,7 +3644,7 @@ void crefftplan(SingleOrbit &orbit_EM,
 
 
     //====================================================================================
-    // 3. Compute the first point of the final SEML2 orbit and add it to the manifold leg
+    // 3. Compute the first point of the final SEMLi orbit and add it to the manifold leg
     //====================================================================================
     //---------------------------------------------------------------------
     // Save the last point at position man_grid_size
@@ -3996,10 +3996,10 @@ void crefftplan(SingleOrbit &orbit_EM,
         gnuplot_plot_xyz(h6, y_man_coord_plot[0], y_man_coord_plot[1],  y_man_coord_plot[2], mPlot+1, (char*)"EML2 orbit", "lines", "1", "2", 2);
 
         //================================================================================
-        // 6. Compute the final SEML2 orbit, via integration in the reduced coordinates
+        // 6. Compute the final SEMLi orbit, via integration in the reduced coordinates
         //================================================================================
         cout << "-------------------------------------------"  << endl;
-        cout << "Compute the initial SEML2 orbit            "  << endl;
+        cout << "Compute the initial SEMLi orbit            "  << endl;
         cout << "-------------------------------------------"  << endl;
         printf("Press ENTER to go on\n");
         scanf("%c",&ch);
@@ -4078,7 +4078,7 @@ void crefftplan(SingleOrbit &orbit_EM,
         //Plot
         //---------------------------------------------------------------------
         gnuplot_plot_xyz(h2, y_man_coord_plot[0], y_man_coord_plot[1],  y_man_coord_plot[2], max(k, 1), (char*)"", "lines", "1", "1", 6);
-        gnuplot_plot_xyz(h6, y_man_coord_plot[0], y_man_coord_plot[1],  y_man_coord_plot[2], max(k, 1), (char*)"SEML2 orbit", "lines", "1", "2", 3);
+        gnuplot_plot_xyz(h6, y_man_coord_plot[0], y_man_coord_plot[1],  y_man_coord_plot[2], max(k, 1), (char*)"SEMLi orbit", "lines", "1", "2", 3);
 
         //---------------------------------------------------------------------
         //Old version using classic integrator
@@ -4203,7 +4203,7 @@ void crefft3d(SingleOrbit &orbit_EM,
     gsl_matrix_complex *CCM_R_RCM_EM  = gsl_matrix_complex_calloc(4, 4);
     rotmat_CC_R_RCM_CENTER(CCM_R_RCM_EM);
 
-    //CCM_R_RCM_SEM: RCM to CCM in R(5,5), about SEML2
+    //CCM_R_RCM_SEM: RCM to CCM in R(5,5), about SEMLi
     gsl_matrix_complex *CCM_R_RCM_SEM  = gsl_matrix_complex_calloc(5, 5);
     rotmat_CC_R_RCM_CENTER_HYP(CCM_R_RCM_SEM);
 
@@ -4211,7 +4211,7 @@ void crefft3d(SingleOrbit &orbit_EM,
     // Time on each orbit
     //---------------------------------------------------------------------
     double tof_eml_EM   = 5*SEML.us.T;        //TOF on EML2 orbit
-    double tof_seml_SEM = 30*SEML.us_sem.T;   //TOF on SEML2 orbit
+    double tof_seml_SEM = 30*SEML.us_sem.T;   //TOF on SEMLi orbit
 
 
     //====================================================================================
@@ -4234,7 +4234,7 @@ void crefft3d(SingleOrbit &orbit_EM,
 
 
     //====================================================================================
-    // 3. Compute the first point of the final SEML2 orbit and add it to the manifold leg
+    // 3. Compute the first point of the final SEMLi orbit and add it to the manifold leg
     //====================================================================================
     //---------------------------------------------------------------------
     // Save the last point at position man_grid_size
@@ -4456,10 +4456,10 @@ void crefft3d(SingleOrbit &orbit_EM,
 
 
         //====================================================================================
-        // 6. Compute the final SEML2 orbit, via integration in the reduced coordinates
+        // 6. Compute the final SEMLi orbit, via integration in the reduced coordinates
         //====================================================================================
         cout << "-------------------------------------------"  << endl;
-        cout << "Compute the initial SEML2 orbit            "  << endl;
+        cout << "Compute the initial SEMLi orbit            "  << endl;
         cout << "-------------------------------------------"  << endl;
         printf("Press ENTER to go on\n");
         scanf("%c",&ch);
@@ -4668,7 +4668,7 @@ void srefvtplan(SingleOrbit &orbit_EM,
     gsl_matrix_complex *CCM_R_RCM_EM  = gsl_matrix_complex_calloc(4, 4);
     rotmat_CC_R_RCM_CENTER(CCM_R_RCM_EM);
 
-    //CCM_R_RCM_SEM: RCM to CCM in R(5,5), about SEML2
+    //CCM_R_RCM_SEM: RCM to CCM in R(5,5), about SEMLi
     gsl_matrix_complex *CCM_R_RCM_SEM  = gsl_matrix_complex_calloc(5, 5);
     rotmat_CC_R_RCM_CENTER_HYP(CCM_R_RCM_SEM);
 
@@ -4676,7 +4676,7 @@ void srefvtplan(SingleOrbit &orbit_EM,
     // Time on each orbit
     //---------------------------------------------------------------------
     double tof_eml_EM   = 5*SEML.us.T;       //TOF on EML2 orbit
-    double tof_seml_SEM = 20*SEML.us_sem.T;   //TOF on SEML2 orbit
+    double tof_seml_SEM = 20*SEML.us_sem.T;   //TOF on SEMLi orbit
 
 
     //====================================================================================
@@ -4699,7 +4699,7 @@ void srefvtplan(SingleOrbit &orbit_EM,
 
 
     //====================================================================================
-    // 3. Compute the first point of the final SEML2 orbit and add it to the manifold leg
+    // 3. Compute the first point of the final SEMLi orbit and add it to the manifold leg
     //====================================================================================
     //---------------------------------------------------------------------
     // Save the last point at position man_grid_size
@@ -4817,10 +4817,10 @@ void srefvtplan(SingleOrbit &orbit_EM,
 
 
     //====================================================================================
-    // 6. Compute the final SEML2 orbit, via integration in the reduced coordinates
+    // 6. Compute the final SEMLi orbit, via integration in the reduced coordinates
     //====================================================================================
     cout << "-------------------------------------------"  << endl;
-    cout << "Compute the initial SEML2 orbit            "  << endl;
+    cout << "Compute the initial SEMLi orbit            "  << endl;
     cout << "-------------------------------------------"  << endl;
     printf("Press ENTER to go on\n");
     scanf("%c",&ch);
@@ -4982,7 +4982,7 @@ void srefvtplan(SingleOrbit &orbit_EM,
 //========================================================================================
 /**
  *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the MANIFOLD trajectory (manifold leg).
- *         The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CMS of SEML2. The time at each point
+ *         The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CMS of SEMLi. The time at each point
  *         except the first one is allowed to vary. A continuation procedure can be performed to get more than one refined solution. DEPRECATED
  **/
 int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ_T(int proj_grid_size,
@@ -5009,7 +5009,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ_T(int proj_grid_size,
     //====================================================================================
     // 1. Time on each orbit
     //====================================================================================
-    double tof_seml_SEM = 5*SEML.us_sem.T;   //TOF on SEML2 orbit
+    double tof_seml_SEM = 5*SEML.us_sem.T;   //TOF on SEMLi orbit
 
     //====================================================================================
     // 3. Init the gnuplot
@@ -5049,7 +5049,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ_T(int proj_grid_size,
 
 
     //====================================================================================
-    // 5. Structures to compute the final orbit about SEML2
+    // 5. Structures to compute the final orbit about SEMLi
     //====================================================================================
     //--------------------------------------
     // Center-manifold
@@ -5088,7 +5088,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ_T(int proj_grid_size,
     //====================================================================================
 
     cout << "-------------------------------------------"  << endl;
-    cout << "  Refinement of EML2-SEML2 arc             "  << endl;
+    cout << "  Refinement of EML2-SEMLi arc             "  << endl;
     cout << "-------------------------------------------"  << endl;
     cout << "Begin the search for the min distance of projection..." << endl;
     char ch;
@@ -5248,7 +5248,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ_T(int proj_grid_size,
     SingleOrbit orbit_SEM;
     //Parameters
     int coll_SEM;
-    OdeParams odeParams_SEM(&coll, &SEML_SEM);
+    OdeParams odeParams_SEM(&coll_SEM, &SEML_SEM);
     //Init ode structure
     init_ode_structure(&driver_SEM, T, T_root, 6, qbcp_vfn, &odeParams_SEM);
     //Init routine
@@ -5259,7 +5259,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ_T(int proj_grid_size,
 
     //====================================================================================
     // @todo: ADD AN ESTIMATE OF THE DISTANCE OF PROJECTION + by reproducing the PROJECTION METHOD
-    // THIS TIME ON THE CMS of SEML2! (set s5 of SEML2 to zero, or maybe a rough search...)
+    // THIS TIME ON THE CMS of SEMLi! (set s5 of SEMLi to zero, or maybe a rough search...)
     // In this way, only 3 inputs: s1, s3 and t0.
     //====================================================================================
 
@@ -5295,7 +5295,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ_T(int proj_grid_size,
 
 /**
  *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the MANIFOLD trajectory (manifold leg).
- *         The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CMS of SEML2. The time at each point
+ *         The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CMS of SEMLi. The time at each point
  *         except the first one is allowed to vary. A continuation procedure can be performed to get more than one refined solution. DEPRECATED
  **/
 int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ_OPT(int proj_grid_size,
@@ -5326,7 +5326,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ_OPT(int proj_grid_size,
     //====================================================================================
     // 1. Time on each orbit
     //====================================================================================
-    double tof_seml_SEM = 5*SEML.us_sem.T;   //TOF on SEML2 orbit
+    double tof_seml_SEM = 5*SEML.us_sem.T;   //TOF on SEMLi orbit
 
     //====================================================================================
     // 3. Init the gnuplot
@@ -5366,7 +5366,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ_OPT(int proj_grid_size,
 
 
     //====================================================================================
-    // 5. Structures to compute the final orbit about SEML2
+    // 5. Structures to compute the final orbit about SEMLi
     //====================================================================================
     //--------------------------------------
     // Center-manifold
@@ -5405,7 +5405,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ_OPT(int proj_grid_size,
     //====================================================================================
 
     cout << "-------------------------------------------"  << endl;
-    cout << "  Refinement of EML2-SEML2 arc             "  << endl;
+    cout << "  Refinement of EML2-SEMLi arc             "  << endl;
     cout << "-------------------------------------------"  << endl;
     cout << "Begin the search for the min distance of projection..." << endl;
     char ch;
@@ -5657,7 +5657,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ_OPT(int proj_grid_size,
 
     //====================================================================================
     // @todo: ADD AN ESTIMATE OF THE DISTANCE OF PROJECTION + by reproducing the PROJECTION METHOD
-    // THIS TIME ON THE CMS of SEML2! (set s5 of SEML2 to zero, or maybe a rough search...)
+    // THIS TIME ON THE CMS of SEMLi! (set s5 of SEMLi to zero, or maybe a rough search...)
     // In this way, only 3 inputs: s1, s3 and t0.
     //====================================================================================
 
@@ -5693,7 +5693,7 @@ int ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE_PROJ_OPT(int proj_grid_size,
 
 /**
  *  \brief Computes ONE trajectory from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the MANIFOLD trajectory (manifold leg).
- *         The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CMS of SEML2. The time at each point
+ *         The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CMS of SEMLi. The time at each point
  *         except the first one is allowed to vary. A continuation procedure can be performed to get more than one refined solution.
  **/
 void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_3D(SingleOrbit &orbit_EM,
@@ -5745,7 +5745,7 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_3D(SingleOrbit &orbit_EM,
     gsl_matrix_complex *CCM_R_RCM_EM  = gsl_matrix_complex_calloc(4, 4);
     rotmat_CC_R_RCM_CENTER(CCM_R_RCM_EM);
 
-    //CCM_R_RCM_SEM: RCM to CCM in R(5,5), about SEML2
+    //CCM_R_RCM_SEM: RCM to CCM in R(5,5), about SEMLi
     gsl_matrix_complex *CCM_R_RCM_SEM  = gsl_matrix_complex_calloc(5, 5);
     rotmat_CC_R_RCM_CENTER_HYP(CCM_R_RCM_SEM);
 
@@ -5753,7 +5753,7 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_3D(SingleOrbit &orbit_EM,
     // Time on each orbit
     //---------------------------------------------------------------------
     double tof_eml_EM   = 5*SEML.us.T;       //TOF on EML2 orbit
-    double tof_seml_SEM = 20*SEML.us_sem.T;   //TOF on SEML2 orbit
+    double tof_seml_SEM = 20*SEML.us_sem.T;   //TOF on SEMLi orbit
 
 
     //====================================================================================
@@ -5776,7 +5776,7 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_3D(SingleOrbit &orbit_EM,
 
 
     //====================================================================================
-    // 3. Compute the first point of the final SEML2 orbit and add it to the manifold leg
+    // 3. Compute the first point of the final SEMLi orbit and add it to the manifold leg
     //====================================================================================
     //---------------------------------------------------------------------
     // Save the last point at position man_grid_size
@@ -5970,10 +5970,10 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_3D(SingleOrbit &orbit_EM,
 
 
     //====================================================================================
-    // 6. Compute the final SEML2 orbit, via integration in the reduced coordinates
+    // 6. Compute the final SEMLi orbit, via integration in the reduced coordinates
     //====================================================================================
     cout << "-------------------------------------------"  << endl;
-    cout << "Compute the initial SEML2 orbit            "  << endl;
+    cout << "Compute the initial SEMLi orbit            "  << endl;
     cout << "-------------------------------------------"  << endl;
     printf("Press ENTER to go on\n");
     scanf("%c",&ch);
@@ -6191,7 +6191,7 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR_CONT_PAC_AFT(SingleOrbit &orbit_EM,
     gsl_matrix_complex *CCM_R_RCM_EM  = gsl_matrix_complex_calloc(4, 4);
     rotmat_CC_R_RCM_CENTER(CCM_R_RCM_EM);
 
-    //CCM_R_RCM_SEM: RCM to CCM in R(5,5), about SEML2
+    //CCM_R_RCM_SEM: RCM to CCM in R(5,5), about SEMLi
     gsl_matrix_complex *CCM_R_RCM_SEM  = gsl_matrix_complex_calloc(5, 5);
     rotmat_CC_R_RCM_CENTER_HYP(CCM_R_RCM_SEM);
 
@@ -6199,7 +6199,7 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR_CONT_PAC_AFT(SingleOrbit &orbit_EM,
     // Time on each orbit
     //---------------------------------------------------------------------
     double tof_eml_EM   = 5*SEML.us.T;       //TOF on EML2 orbit
-    double tof_seml_SEM = 20*SEML.us_sem.T;   //TOF on SEML2 orbit
+    double tof_seml_SEM = 20*SEML.us_sem.T;   //TOF on SEMLi orbit
 
 
     //====================================================================================
@@ -6222,7 +6222,7 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR_CONT_PAC_AFT(SingleOrbit &orbit_EM,
 
 
     //====================================================================================
-    // 3. Compute the first point of the final SEML2 orbit and add it to the manifold leg
+    // 3. Compute the first point of the final SEMLi orbit and add it to the manifold leg
     //====================================================================================
     //---------------------------------------------------------------------
     // Save the last point at position man_grid_size
@@ -6345,7 +6345,7 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR_CONT_PAC_AFT(SingleOrbit &orbit_EM,
             conv_free_var[3 + 4*p-2] = y_traj_n[4][p];
         }
 
-        //CMS of SEML2
+        //CMS of SEMLi
         conv_free_var[4*man_grid_size-2] = orbit_SEM.si[0];
         conv_free_var[4*man_grid_size-1] = orbit_SEM.si[2];
         conv_free_var[4*man_grid_size-0] = orbit_SEM.si[4];
@@ -6467,10 +6467,10 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR_CONT_PAC_AFT(SingleOrbit &orbit_EM,
 
 
     //====================================================================================
-    // 6. Compute the final SEML2 orbit, via integration in the reduced coordinates
+    // 6. Compute the final SEMLi orbit, via integration in the reduced coordinates
     //====================================================================================
     cout << "-------------------------------------------"  << endl;
-    cout << "Compute the initial SEML2 orbit            "  << endl;
+    cout << "Compute the initial SEMLi orbit            "  << endl;
     cout << "-------------------------------------------"  << endl;
     printf("Press ENTER to go on\n");
     scanf("%c",&ch);
@@ -6551,7 +6551,7 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR_CONT_PAC_AFT(SingleOrbit &orbit_EM,
     //Plot
     //---------------------------------------------------------------------
     gnuplot_plot_xyz(h2, y_man_coord_plot[0], y_man_coord_plot[1],  y_man_coord_plot[2], max(k, 1), (char*)"", "lines", "1", "1", 6);
-    gnuplot_plot_xyz(h6, y_man_coord_plot[0], y_man_coord_plot[1],  y_man_coord_plot[2], max(k, 1), (char*)"SEML2 orbit", "lines", "1", "2", 3);
+    gnuplot_plot_xyz(h6, y_man_coord_plot[0], y_man_coord_plot[1],  y_man_coord_plot[2], max(k, 1), (char*)"SEMLi orbit", "lines", "1", "2", 3);
 
     //---------------------------------------------------------------------
     //Old version using classic integrator
@@ -6695,7 +6695,7 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR_CONT_PAC(SingleOrbit &orbit_EM,
     gsl_matrix_complex_set(CCM_R_RCM_EM, 2, 0, gslc_complex(0.0, -1.0/sqrt(2)));
     gsl_matrix_complex_set(CCM_R_RCM_EM, 3, 1, gslc_complex(0.0, -1.0/sqrt(2)));
 
-    //CCM_R_RCM_SEM: RCM to CCM in R(5,5), about SEML2
+    //CCM_R_RCM_SEM: RCM to CCM in R(5,5), about SEMLi
     gsl_matrix_complex *CCM_R_RCM_SEM  = gsl_matrix_complex_calloc(5, 5);
     for(int i = 0; i < 4; i++) gsl_matrix_complex_set(CCM_R_RCM_SEM, i, i, gslc_complex(1.0/sqrt(2), 0.0));
     gsl_matrix_complex_set(CCM_R_RCM_SEM, 4, 4, gslc_complex(1.0, 0.0));
@@ -6708,7 +6708,7 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR_CONT_PAC(SingleOrbit &orbit_EM,
     // Time on each orbit
     //---------------------------------------------------------------------
     double tof_eml_EM   = 5*SEML.us.T;       //TOF on EML2 orbit
-    double tof_seml_SEM = 20*SEML.us_sem.T;   //TOF on SEML2 orbit
+    double tof_seml_SEM = 20*SEML.us_sem.T;   //TOF on SEMLi orbit
 
 
     //====================================================================================
@@ -6731,7 +6731,7 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR_CONT_PAC(SingleOrbit &orbit_EM,
 
 
     //====================================================================================
-    // 3. Compute the first point of the final SEML2 orbit and add it to the manifold leg
+    // 3. Compute the first point of the final SEMLi orbit and add it to the manifold leg
     //====================================================================================
     //---------------------------------------------------------------------
     // Save the last point at position man_grid_size
@@ -6836,7 +6836,7 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR_CONT_PAC(SingleOrbit &orbit_EM,
         //Last time:
         conv_free_var[5*man_grid_size] = t_traj_n[man_grid_size];
 
-        //CMS of SEML2
+        //CMS of SEMLi
         conv_free_var[5*man_grid_size-3] = orbit_SEM.si[0];
         conv_free_var[5*man_grid_size-2] = orbit_SEM.si[2];
         conv_free_var[5*man_grid_size-1] = orbit_SEM.si[4];
@@ -6977,10 +6977,10 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR_CONT_PAC(SingleOrbit &orbit_EM,
 
 
     //====================================================================================
-    // 6. Compute the final SEML2 orbit, via integration in the reduced coordinates
+    // 6. Compute the final SEMLi orbit, via integration in the reduced coordinates
     //====================================================================================
     cout << "-------------------------------------------"  << endl;
-    cout << "Compute the initial SEML2 orbit            "  << endl;
+    cout << "Compute the initial SEMLi orbit            "  << endl;
     cout << "-------------------------------------------"  << endl;
     printf("Press ENTER to go on\n");
     scanf("%c",&ch);
@@ -7144,7 +7144,7 @@ void ref1_CMU_EM_to_CMS_SEM_MSD_RCM_PLANAR_CONT_PAC(SingleOrbit &orbit_EM,
 //
 //========================================================================================
 /**
- *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the WHOLE trajectory (EML2 orbit + manifold leg + SEML2 orbit).
+ *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the WHOLE trajectory (EML2 orbit + manifold leg + SEMLi orbit).
  **/
 int ref_CMU_EM_to_CM_SEM_MSD_COMP(int ofts_order,
                                   int man_grid_size,
@@ -7165,7 +7165,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP(int ofts_order,
     // 0 . Define the time of flight on each orbit
     //====================================================================================
     double tof_eml_EM   = 5*SEML.us.T;        //TOF on EML2 orbit
-    double tof_seml_SEM = 10*SEML.us_sem.T;   //TOF on SEML2 orbit
+    double tof_seml_SEM = 10*SEML.us_sem.T;   //TOF on SEMLi orbit
 
     //====================================================================================
     // 1. Get the size of the data from the sorted solutions
@@ -7288,7 +7288,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP(int ofts_order,
     double **yma        = dmatrix(0, 41, 0, traj_grid_size);
 
     //====================================================================================
-    // 4. Structures to compute the final orbit about SEML2
+    // 4. Structures to compute the final orbit about SEMLi
     //====================================================================================
     //--------------------------------------
     // Center-manifold
@@ -7335,7 +7335,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP(int ofts_order,
     {
 
         cout << "-------------------------------------------"  << endl;
-        cout << "  Refinement of EML2-SEML2 arc             "  << endl;
+        cout << "  Refinement of EML2-SEMLi arc             "  << endl;
         cout << "-------------------------------------------"  << endl;
         cout << "Estimated error at patch point (km):       "  << endl;
         cout <<  min_proj_dist_SEM_1[kpos]*SEML.cs_sem.cr3bp.L << endl;
@@ -7455,7 +7455,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP(int ofts_order,
 
 
         //====================================================================================
-        // 6.4 Compute the final SEML2 orbit
+        // 6.4 Compute the final SEMLi orbit
         //====================================================================================
         //---------------------------------------------------------------------
         //Initialize the initial conditions (both NC and RCM coordinates)
@@ -7628,7 +7628,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP(int ofts_order,
 }
 
 /**
- *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the WHOLE trajectory (EML2 orbit + manifold leg + SEML2 orbit).
+ *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the WHOLE trajectory (EML2 orbit + manifold leg + SEMLi orbit).
  *         It is supposed that orbit_EM and orbit_SEM has been refined with a previous computation, e.g. from ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE.
  **/
 int ref_CMU_EM_to_CM_SEM_MSD_COMP(int man_grid_size,
@@ -7645,7 +7645,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP(int man_grid_size,
     // 1 . Define the time of flight on each orbit
     //====================================================================================
     double tof_eml_EM   = 0.1*SEML.us.T;       //TOF on EML2 orbit
-    double tof_seml_SEM = 0.1*SEML.us_sem.T;   //TOF on SEML2 orbit
+    double tof_seml_SEM = 0.1*SEML.us_sem.T;   //TOF on SEMLi orbit
 
 
     //====================================================================================
@@ -7778,7 +7778,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP(int man_grid_size,
     // 6. Loop. Only one solution for now!
     //====================================================================================
     cout << "-------------------------------------------"  << endl;
-    cout << "  Refinement of EML2-SEML2 arc             "  << endl;
+    cout << "  Refinement of EML2-SEMLi arc             "  << endl;
     cout << "-------------------------------------------"  << endl;
 
     //====================================================================================
@@ -7880,7 +7880,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP(int man_grid_size,
     gnuplot_plot_xyz(h3, y_man_comp[0], y_man_comp[1],  y_man_comp[2], man_grid_size+1, (char*)"", "points", "1", "1", 4);
 
     //====================================================================================
-    // 6.4 Compute the final SEML2 orbit
+    // 6.4 Compute the final SEMLi orbit
     //====================================================================================
     //---------------------------------------------------------------------
     // Initialize the initial conditions (both NC and RCM coordinates)
@@ -8178,7 +8178,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP(int man_grid_size,
 }
 
 /**
- *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the WHOLE trajectory (EML2 orbit + manifold leg + SEML2 orbit).
+ *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the WHOLE trajectory (EML2 orbit + manifold leg + SEMLi orbit).
  *         It is supposed that orbit_EM and orbit_SEM has been refined with a previous computation, e.g. from ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE.
  **/
 int ref_CMU_EM_to_CM_SEM_MSD_COMP_VARIABLE_GRID(int coord_type,
@@ -8194,7 +8194,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP_VARIABLE_GRID(int coord_type,
     // 1 . Define the time of flight on each orbit
     //====================================================================================
     double tof_eml_EM   =  1*SEML.us.T;       //TOF on EML2 orbit
-    double tof_seml_SEM = 10*SEML.us_sem.T;   //TOF on SEML2 orbit
+    double tof_seml_SEM = 10*SEML.us_sem.T;   //TOF on SEMLi orbit
 
     //====================================================================================
     // 2. Init the gnuplot
@@ -8323,7 +8323,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP_VARIABLE_GRID(int coord_type,
 
 
     cout << "-------------------------------------------"  << endl;
-    cout << "  Refinement of EML2-SEML2 arc             "  << endl;
+    cout << "  Refinement of EML2-SEMLi arc             "  << endl;
     cout << "-------------------------------------------"  << endl;
 
     //====================================================================================
@@ -8427,7 +8427,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP_VARIABLE_GRID(int coord_type,
     gnuplot_plot_xyz(h3, y_man_comp[0], y_man_comp[1],  y_man_comp[2], man_index+1, (char*)"", "points", "1", "1", 4);
 
     //====================================================================================
-    // 6.4 Compute the final SEML2 orbit
+    // 6.4 Compute the final SEMLi orbit
     //====================================================================================
     //---------------------------------------------------------------------
     // Initialize the initial conditions (both NC and RCM coordinates)
@@ -8788,7 +8788,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP_VARIABLE_GRID(int coord_type,
 }
 
 /**
- *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the WHOLE trajectory (EML2 orbit + manifold leg + SEML2 orbit).
+ *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the WHOLE trajectory (EML2 orbit + manifold leg + SEMLi orbit).
  *         It is supposed that orbit_EM and orbit_SEM has been refined with a previous computation, e.g. from ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE.
  **/
 int ref_CMU_EM_to_CM_SEM_MSD_COMP_VARIABLE_GRID_TEST(int coord_type, SingleOrbit &orbit_SEM)
@@ -8801,7 +8801,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP_VARIABLE_GRID_TEST(int coord_type, SingleOrbit
     //====================================================================================
     // 1 . Define the time of flight on each orbit
     //====================================================================================
-    double tof_seml_SEM = 10*SEML.us_sem.T;   //TOF on SEML2 orbit
+    double tof_seml_SEM = 10*SEML.us_sem.T;   //TOF on SEMLi orbit
 
     //====================================================================================
     // 2. Init the gnuplot
@@ -8928,7 +8928,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP_VARIABLE_GRID_TEST(int coord_type, SingleOrbit
 
 
     cout << "-------------------------------------------"  << endl;
-    cout << "  Refinement of SEML2 orbit                "  << endl;
+    cout << "  Refinement of SEMLi orbit                "  << endl;
     cout << "-------------------------------------------"  << endl;
 
     //====================================================================================
@@ -8948,7 +8948,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP_VARIABLE_GRID_TEST(int coord_type, SingleOrbit
 
 
     //====================================================================================
-    // 6.4 Compute the final SEML2 orbit
+    // 6.4 Compute the final SEMLi orbit
     //====================================================================================
     //---------------------------------------------------------------------
     // Initialize the initial conditions (both NC and RCM coordinates)
@@ -9249,7 +9249,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_COMP_VARIABLE_GRID_TEST(int coord_type, SingleOrbit
 }
 
 /**
- *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the WHOLE trajectory (EML2 orbit + manifold leg + SEML2 orbit).
+ *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the WHOLE trajectory (EML2 orbit + manifold leg + SEMLi orbit).
  *         It is supposed that orbit_EM and orbit_SEM has been refined with a previous computation, e.g. from ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE.
  **/
 int comprefft3d(int man_grid_size_t,
@@ -9273,7 +9273,7 @@ int comprefft3d(int man_grid_size_t,
     // Define the time of flight on each orbit
     //----------------------------------------------------------
     double tof_eml_EM   = refst.tspan_EM;       //TOF on EML2 orbit
-    double tof_seml_SEM = refst.tspan_SEM;   //TOF on SEML2 orbit
+    double tof_seml_SEM = refst.tspan_SEM;   //TOF on SEMLi orbit
 
 
     //====================================================================================
@@ -9534,9 +9534,9 @@ int comprefft3d(int man_grid_size_t,
     gnuplot_plot_xyz(h3, y_man_comp[0], y_man_comp[1],  y_man_comp[2], man_index+1, (char*)"", "points", "1", "3", 4);
 
     //====================================================================================
-    // 6.4 Compute the final SEML2 orbit
+    // 6.4 Compute the final SEMLi orbit
     //====================================================================================
-    cout << " comprefft3d. Compute the final SEML2 orbit..."  << endl;
+    cout << " comprefft3d. Compute the final SEMLi orbit..."  << endl;
     //---------------------------------------------------------------------
     // Initialize the initial conditions (both NC and RCM coordinates)
     // We also need to kill the stable part.
@@ -9573,7 +9573,7 @@ int comprefft3d(int man_grid_size_t,
     //---------------------------------------------------------------------
     //Plot
     //---------------------------------------------------------------------
-    gnuplot_plot_xyz(h2, y_man_coord[0], y_man_coord[1],  y_man_coord[2], sem_index+1, (char*)"SEML2", "points", "1", "3", 6);
+    gnuplot_plot_xyz(h2, y_man_coord[0], y_man_coord[1],  y_man_coord[2], sem_index+1, (char*)"SEMLi", "points", "1", "3", 6);
     gnuplot_plot_xyz(h3, y_man_comp[0], y_man_comp[1],  y_man_comp[2], sem_index+1, (char*)"", "points", "1", "3", 6);
 
     //====================================================================================
@@ -9870,7 +9870,7 @@ int comprefft3d(int man_grid_size_t,
         gnuplot_plot_xyz(h2, y_jpl_temp[0], y_jpl_temp[1],  y_jpl_temp[2], final_index+1, (char*) "MOON", "points", "4", "2", 8);
 
         ecl2coordstate_vec(y_l2_spice, et_traj_jpl, y_jpl_temp, t_jpl_temp, final_index, coord_type, et0, tsys0, eph_coord(coord_type));
-        gnuplot_plot_xyz(h2, y_jpl_temp[0], y_jpl_temp[1], y_jpl_temp[2], final_index+1, (char*) "SEML2", "points", "5", "2", 8);
+        gnuplot_plot_xyz(h2, y_jpl_temp[0], y_jpl_temp[1], y_jpl_temp[2], final_index+1, (char*) "SEMLi", "points", "5", "2", 8);
 
 
         //================================================================================
@@ -10040,7 +10040,7 @@ int comprefft3d(int man_grid_size_t,
 }
 
 /**
- *  \brief Computes only a SEML2 orbit and test a JPL refinement.
+ *  \brief Computes only a SEMLi orbit and test a JPL refinement.
  **/
 int comprefft3d_test_seml_dimjpl(int man_grid_size_t,
                      int coord_type,
@@ -10061,7 +10061,7 @@ int comprefft3d_test_seml_dimjpl(int man_grid_size_t,
     //----------------------------------------------------------
     // Define the time of flight on each orbit
     //----------------------------------------------------------
-    double tof_seml_SEM = refst.tspan_SEM;   //TOF on SEML2 orbit
+    double tof_seml_SEM = refst.tspan_SEM;   //TOF on SEMLi orbit
 
     //====================================================================================
     // 2. Init the gnuplot
@@ -10227,9 +10227,9 @@ int comprefft3d_test_seml_dimjpl(int man_grid_size_t,
     double *t_man_comp    = dvector(0, man_grid_2);
 
     //====================================================================================
-    // 6.4 Compute the final SEML2 orbit
+    // 6.4 Compute the final SEMLi orbit
     //====================================================================================
-    cout << " comprefft3d. Compute the final SEML2 orbit..."  << endl;
+    cout << " comprefft3d. Compute the final SEMLi orbit..."  << endl;
     //---------------------------------------------------------------------
     // Initialize the initial conditions (both NC and RCM coordinates)
     // We also need to kill the stable part.
@@ -10266,7 +10266,7 @@ int comprefft3d_test_seml_dimjpl(int man_grid_size_t,
     //---------------------------------------------------------------------
     //Plot
     //---------------------------------------------------------------------
-    gnuplot_plot_xyz(h2, y_man_coord[0], y_man_coord[1],  y_man_coord[2], sem_index+1, (char*)"SEML2", "lines", "1", "3", 6);
+    gnuplot_plot_xyz(h2, y_man_coord[0], y_man_coord[1],  y_man_coord[2], sem_index+1, (char*)"SEMLi", "lines", "1", "3", 6);
     //gnuplot_plot_xyz(h2, y_man_coord[0], y_man_coord[1],  y_man_coord[2], sem_index+1, (char*)"", "points", "1", "3", 6);
     gnuplot_plot_xyz(h3, y_man_comp[0], y_man_comp[1],  y_man_comp[2], sem_index+1, (char*)"", "lines", "1", "3", 6);
 
@@ -10495,7 +10495,7 @@ int comprefft3d_test_seml_dimjpl(int man_grid_size_t,
         gnuplot_plot_xyz(h2, y_jpl_temp[0], y_jpl_temp[1],  y_jpl_temp[2], final_index+1, (char*) "MOON", "points", "4", "2", 8);
 
         ecl2coordstate_vec(y_l2_spice, et_traj_jpl, y_jpl_temp, t_jpl_temp, final_index, coord_type, et0, tsys0, eph_coord(coord_type));
-        gnuplot_plot_xyz(h2, y_jpl_temp[0], y_jpl_temp[1], y_jpl_temp[2], final_index+1, (char*) "SEML2", "points", "5", "2", 8);
+        gnuplot_plot_xyz(h2, y_jpl_temp[0], y_jpl_temp[1], y_jpl_temp[2], final_index+1, (char*) "SEMLi", "points", "5", "2", 8);
 
 
         //================================================================================
@@ -10619,7 +10619,7 @@ int comprefft3d_test_seml_dimjpl(int man_grid_size_t,
 }
 
 /**
- *  \brief Computes only a SEML2 orbit and test a JPL refinement.
+ *  \brief Computes only a SEMLi orbit and test a JPL refinement.
  **/
 int comprefft3d_test_seml_synjpl(int man_grid_size_t,
                      int coord_type,
@@ -10640,7 +10640,7 @@ int comprefft3d_test_seml_synjpl(int man_grid_size_t,
     //----------------------------------------------------------
     // Define the time of flight on each orbit
     //----------------------------------------------------------
-    double tof_seml_SEM = refst.tspan_SEM;   //TOF on SEML2 orbit
+    double tof_seml_SEM = refst.tspan_SEM;   //TOF on SEMLi orbit
 
     //====================================================================================
     // 2. Init the gnuplot
@@ -10806,9 +10806,9 @@ int comprefft3d_test_seml_synjpl(int man_grid_size_t,
     double *t_man_comp    = dvector(0, man_grid_2);
 
     //====================================================================================
-    // 6.4 Compute the final SEML2 orbit
+    // 6.4 Compute the final SEMLi orbit
     //====================================================================================
-    cout << " comprefft3d. Compute the final SEML2 orbit..."  << endl;
+    cout << " comprefft3d. Compute the final SEMLi orbit..."  << endl;
     //---------------------------------------------------------------------
     // Initialize the initial conditions (both NC and RCM coordinates)
     // We also need to kill the stable part.
@@ -10845,7 +10845,7 @@ int comprefft3d_test_seml_synjpl(int man_grid_size_t,
     //---------------------------------------------------------------------
     //Plot
     //---------------------------------------------------------------------
-    gnuplot_plot_xyz(h2, y_man_coord[0], y_man_coord[1],  y_man_coord[2], sem_index+1, (char*)"SEML2", "points", "1", "3", 6);
+    gnuplot_plot_xyz(h2, y_man_coord[0], y_man_coord[1],  y_man_coord[2], sem_index+1, (char*)"SEMLi", "points", "1", "3", 6);
     gnuplot_plot_xyz(h3, y_man_comp[0], y_man_comp[1],  y_man_comp[2], sem_index+1, (char*)"", "points", "1", "3", 6);
 
     //====================================================================================
@@ -11221,7 +11221,7 @@ int comprefft3d_test_eml_synjpl(int man_grid_size_t,
     // Define the time of flight on each orbit
     //----------------------------------------------------------
     double tof_eml_EM = refst.tspan_EM;   //TOF on EML2 orbit
-    //    double tof_seml_SEM = refst.tspan_SEM;   //TOF on SEML2 orbit
+    //    double tof_seml_SEM = refst.tspan_SEM;   //TOF on SEMLi orbit
 
     //====================================================================================
     // 2. Init the gnuplot
@@ -11784,7 +11784,7 @@ int comprefft3d_test_eml_synjpl(int man_grid_size_t,
 
 
 /**
- *  \brief Computes only a SEML2 orbit and test a JPL refinement.
+ *  \brief Computes only a SEMLi orbit and test a JPL refinement.
  **/
 int comprefft3d_test_eml2seml_synjpl(int man_grid_size_t,
                      int coord_type,
@@ -11808,7 +11808,7 @@ int comprefft3d_test_eml2seml_synjpl(int man_grid_size_t,
     // Define the time of flight on each orbit
     //----------------------------------------------------------
     double tof_eml_EM = refst.tspan_EM;      //TOF on EML2 orbit
-    double tof_seml_SEM = refst.tspan_SEM;   //TOF on SEML2 orbit
+    double tof_seml_SEM = refst.tspan_SEM;   //TOF on SEMLi orbit
 
     //====================================================================================
     // 2. Init the gnuplot
@@ -12069,9 +12069,9 @@ int comprefft3d_test_eml2seml_synjpl(int man_grid_size_t,
 
 
     //====================================================================================
-    // 6.4 Compute the final SEML2 orbit
+    // 6.4 Compute the final SEMLi orbit
     //====================================================================================
-    cout << " comprefft3d. Compute the final SEML2 orbit..."  << endl;
+    cout << " comprefft3d. Compute the final SEMLi orbit..."  << endl;
     //---------------------------------------------------------------------
     // Initialize the initial conditions (both NC and RCM coordinates)
     // We also need to kill the stable part.
@@ -12108,7 +12108,7 @@ int comprefft3d_test_eml2seml_synjpl(int man_grid_size_t,
     //---------------------------------------------------------------------
     //Plot
     //---------------------------------------------------------------------
-    gnuplot_plot_xyz(h2, y_man_coord[0], y_man_coord[1],  y_man_coord[2], sem_index+1, (char*)"SEML2", "points", "1", "3", 6);
+    gnuplot_plot_xyz(h2, y_man_coord[0], y_man_coord[1],  y_man_coord[2], sem_index+1, (char*)"SEMLi", "points", "1", "3", 6);
     gnuplot_plot_xyz(h3, y_man_comp[0], y_man_comp[1],  y_man_comp[2], sem_index+1, (char*)"", "points", "1", "3", 6);
 
     //====================================================================================
@@ -12510,7 +12510,7 @@ int comprefft3d_test_eml2seml_insem(int man_grid_size_t,
     // Define the time of flight on each orbit
     //----------------------------------------------------------
     double tof_eml_EM = refst.tspan_EM;      //TOF on EML2 orbit
-    double tof_seml_SEM = refst.tspan_SEM;   //TOF on SEML2 orbit
+    double tof_seml_SEM = refst.tspan_SEM;   //TOF on SEMLi orbit
 
     //====================================================================================
     // 2. Init the gnuplot
@@ -12767,9 +12767,9 @@ int comprefft3d_test_eml2seml_insem(int man_grid_size_t,
 
 
     //====================================================================================
-    // 6.4 Compute the final SEML2 orbit
+    // 6.4 Compute the final SEMLi orbit
     //====================================================================================
-    cout << " comprefft3d. Compute the final SEML2 orbit..."  << endl;
+    cout << " comprefft3d. Compute the final SEMLi orbit..."  << endl;
     //---------------------------------------------------------------------
     // Initialize the initial conditions (both NC and RCM coordinates)
     // We also need to kill the stable part.
@@ -12806,7 +12806,7 @@ int comprefft3d_test_eml2seml_insem(int man_grid_size_t,
     //---------------------------------------------------------------------
     //Plot
     //---------------------------------------------------------------------
-    gnuplot_plot_xyz(h2, y_man_coord[0], y_man_coord[1],  y_man_coord[2], sem_index+1, (char*)"SEML2", "points", "1", "3", 6);
+    gnuplot_plot_xyz(h2, y_man_coord[0], y_man_coord[1],  y_man_coord[2], sem_index+1, (char*)"SEMLi", "points", "1", "3", 6);
     gnuplot_plot_xyz(h3, y_man_comp[0], y_man_comp[1],  y_man_comp[2], sem_index+1, (char*)"", "points", "1", "3", 6);
 
     //====================================================================================
@@ -13094,7 +13094,7 @@ int comprefft3d_test_eml2seml_insem(int man_grid_size_t,
 //
 //========================================================================================
 /**
- *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the PARTIAL trajectory (manifold leg + SEML2 orbit).
+ *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the PARTIAL trajectory (manifold leg + SEMLi orbit).
  *         The initial conditions are EML2 are allowed to move in the CMU of EML2, via its Fourier-Taylor parameterization. Note that the time at each point is NOT allowed to vary.
  **/
 int ref_CMU_EM_to_CM_SEM_MSD_PART(int ofts_order,
@@ -13117,7 +13117,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_PART(int ofts_order,
     // 0. Time on each orbit
     //====================================================================================
     double tof_eml_EM   = 5*SEML.us.T;        //TOF on EML2 orbit
-    double tof_seml_SEM = 50*SEML.us_sem.T;   //TOF on SEML2 orbit
+    double tof_seml_SEM = 50*SEML.us_sem.T;   //TOF on SEMLi orbit
 
 
     //====================================================================================
@@ -13252,7 +13252,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_PART(int ofts_order,
     double **yma        = dmatrix(0, 41, 0, traj_grid_size); //TBC: useful?
 
     //====================================================================================
-    // 4. Structures to compute the final orbit about SEML2
+    // 4. Structures to compute the final orbit about SEMLi
     //====================================================================================
     //--------------------------------------
     // Center-manifold
@@ -13304,7 +13304,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_PART(int ofts_order,
     {
 
         cout << "-------------------------------------------"  << endl;
-        cout << "  Refinement of EML2-SEML2 arc             "  << endl;
+        cout << "  Refinement of EML2-SEMLi arc             "  << endl;
         cout << "-------------------------------------------"  << endl;
         cout << "Estimated error at patch point (km):       "  << endl;
         cout <<  min_proj_dist_SEM_1[kpos]*SEML.cs_sem.cr3bp.L << endl;
@@ -13399,7 +13399,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_PART(int ofts_order,
         gnuplot_plot_xyz(h2, y_man_coord[0], y_man_coord[1],  y_man_coord[2], man_grid_size+1, (char*)"", "lines", "1", "1", 4);
 
         //====================================================================================
-        // 6.4 Compute the final SEML2 orbit
+        // 6.4 Compute the final SEMLi orbit
         //====================================================================================
         //---------------------------------------------------------------------
         //Initialize the initial conditions (both NC and RCM coordinates)
@@ -13531,7 +13531,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_PART(int ofts_order,
         //====================================================================================
 
         //====================================================================================
-        // 6.4 Compute the final SEML2 orbit
+        // 6.4 Compute the final SEMLi orbit
         //====================================================================================
         int ind_projection = floor(1.5*man_grid_size);
         //---------------------------------------------------------------------
@@ -13572,7 +13572,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_PART(int ofts_order,
         //---------------------------------------------------------------------
         //Plot
         //---------------------------------------------------------------------
-        gnuplot_plot_xyz(h2, y_man_coord_plot[0], y_man_coord_plot[1],  y_man_coord_plot[2], mPlot+1, (char*)"Initial SEML2 orbit", "lines", "1", "2", 7);
+        gnuplot_plot_xyz(h2, y_man_coord_plot[0], y_man_coord_plot[1],  y_man_coord_plot[2], mPlot+1, (char*)"Initial SEMLi orbit", "lines", "1", "2", 7);
 
         cout << "si prior to diffcorr = " << endl;
         for(int i = 0; i <4; i++) cout << st_SEM[i] << endl;
@@ -13954,8 +13954,8 @@ int ref_CMU_EM_to_CM_SEM_MSD(int ofts_order,
 
 /**
  *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the MANIFOLD trajectory (manifold leg).
- *         DEPRECATED. The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CM of SEML2.
- *         The fact that the CM (and NOT the CMS of SEML2 is used) prevents this routine from converging. Abandoned for now.
+ *         DEPRECATED. The initial conditions vary in the paramerization of the CMU of EML2. The final conditions vary in the paramerization of the CM of SEMLi.
+ *         The fact that the CM (and NOT the CMS of SEMLi is used) prevents this routine from converging. Abandoned for now.
  **/
 int ref_CMU_EM_to_CM_SEM_MSD_DEP(int ofts_order,
                                  int man_grid_size,
@@ -13978,7 +13978,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_DEP(int ofts_order,
     // 0. Time on each orbit
     //====================================================================================
     double tof_eml_EM   = 5*SEML.us.T;        //TOF on EML2 orbit
-    double tof_seml_SEM = 10*SEML.us_sem.T;   //TOF on SEML2 orbit
+    double tof_seml_SEM = 10*SEML.us_sem.T;   //TOF on SEMLi orbit
 
 
     //====================================================================================
@@ -14113,7 +14113,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_DEP(int ofts_order,
     double **yma        = dmatrix(0, 41, 0, traj_grid_size); //TBC: useful?
 
     //====================================================================================
-    // 4. Structures to compute the final orbit about SEML2
+    // 4. Structures to compute the final orbit about SEMLi
     //====================================================================================
     //--------------------------------------
     // Center-manifold
@@ -14165,7 +14165,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_DEP(int ofts_order,
     {
 
         cout << "-------------------------------------------"  << endl;
-        cout << "  Refinement of EML2-SEML2 arc             "  << endl;
+        cout << "  Refinement of EML2-SEMLi arc             "  << endl;
         cout << "-------------------------------------------"  << endl;
         cout << "Estimated error at patch point (km):       "  << endl;
         cout <<  min_proj_dist_SEM_1[kpos]*SEML.cs_sem.cr3bp.L << endl;
@@ -14255,7 +14255,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_DEP(int ofts_order,
         }
 
         //====================================================================================
-        // 6.4 Compute the final SEML2 orbit
+        // 6.4 Compute the final SEMLi orbit
         //====================================================================================
         //---------------------------------------------------------------------
         //Initialize the initial conditions (both NC and RCM coordinates)
@@ -14364,7 +14364,7 @@ int ref_CMU_EM_to_CM_SEM_MSD_DEP(int ofts_order,
         //====================================================================================
 
         //====================================================================================
-        // 6.4 Compute the final SEML2 orbit
+        // 6.4 Compute the final SEMLi orbit
         //====================================================================================
         //---------------------------------------------------------------------
         // Projection on the center manifold
@@ -14791,7 +14791,7 @@ int int_sorted_sol_CMU_EM_to_CM_SEM(int ofts_order,
 
 
     //====================================================================================
-    // 5. Compute the final orbit about SEML2
+    // 5. Compute the final orbit about SEMLi
     //====================================================================================
     //--------------------------------------
     // Center-manifold

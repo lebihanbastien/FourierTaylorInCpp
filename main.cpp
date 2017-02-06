@@ -33,14 +33,14 @@ using namespace std;
 // Constants
 //========================================================================================
 // TYPE OF COMPUTATIONS
-#define COMP_CM_EML2_TO_CM_SEML        0    //EML2 Center Manifold to SEML2 Center Manifold
-#define COMP_CM_EML2_TO_CMS_SEML       1    //EML2 Center Manifold to SEML2 Center-Stable Manifold
+#define COMP_CM_EML2_TO_CM_SEML        0    //EML2 Center Manifold to SEMLi Center Manifold
+#define COMP_CM_EML2_TO_CMS_SEML       1    //EML2 Center Manifold to SEMLi Center-Stable Manifold
 #define COMP_SINGLE_ORBIT              2    //just some example of solutions
 #define COMP_CM_EML2_TO_CMS_SEML_READ  3    //Read
 #define COMP_VF_TEST                   4    //Test of the QBCP vector field. Should probably be put in OOFTDA
-#define COMP_CM_EML2_TO_CM_SEML_REFINE 5    //EML2 Center Manifold to SEML2 Center Manifold
+#define COMP_CM_EML2_TO_CM_SEML_REFINE 5    //EML2 Center Manifold to SEMLi Center Manifold
 #define COMP_EPHEMERIDES_TEST          6    //Ephemerides test
-#define COMP_CM_EML2_TO_CM_SEML_3D     7    //EML2 Center Manifold to SEML2 Center Manifold in 3D
+#define COMP_CM_EML2_TO_CM_SEML_3D     7    //EML2 Center Manifold to SEMLi Center Manifold in 3D
 #define COMP_VOFTS_TO_VOFTS            8    //Store CS/CU into one-dimensionnal series to gain memory
 #define COMP_test_INVMAN               9    //Test of the new invariant manifold implementation
 #define COMP_REF_JPL                   10   //Refine to JPL ephemerides
@@ -100,7 +100,7 @@ int main()
     // Selecting the libration points
     //------------------------------------------------------------------------------------
     li_EM     = 2;
-    li_SEM    = 1;
+    li_SEM    = 2;
 
     //------------------------------------------------------------------------------------
     // The other parameters depend on the type of computation
@@ -207,7 +207,7 @@ int main()
     //====================================================================================
     //TIME
     double TM      = 12*SEML.us.T;
-    double TMIN    = 0.08*SEML.us.T; //0.08*T for SEML2 by SEML1!
+    double TMIN    = 0.88*SEML.us.T; //0.08*T for SEMLi by SEML1!
     double TMAX    = 1.0*SEML.us.T;
     int    TSIZE   = 0;
     double TLIM[2] = {TMIN, TMAX};
@@ -243,7 +243,7 @@ int main()
     //Refinement structure
     RefSt refst;
     {
-        refst.type          = REF_CONT_D;  //rk: set REF_CONT_D_HARD_CASE for difficult cases with REF_CONT_D (ex: EML2-SEML2 via SEML1...)
+        refst.type          = REF_CONT_D;  //rk: set REF_CONT_D_HARD_CASE for difficult cases with REF_CONT_D (ex: EML2-SEMLi via SEML1...)
         refst.dim           = REF_PLANAR;
         refst.time          = REF_VAR_TN;
         refst.grid          = REF_FIXED_GRID;
@@ -252,21 +252,23 @@ int main()
         refst.coord_type    = NCSEM;
         refst.gridSize      = 20;
 
+        refst.sidim         = 0;
+
         refst.t0_des        = TMIN; //0.07*SEML.us_em.T;
 
         refst.isLimUD          =  0;
-        refst.s1_CMU_EM_MIN    =  -35;
-        refst.s1_CMU_EM_MAX    =  +35;
-        refst.s3_CMU_EM_MIN    =  -35;
-        refst.s3_CMU_EM_MAX    =  +35;
+        refst.s1_CMU_EM_MIN    = -2;
+        refst.s1_CMU_EM_MAX    = +10;
+        refst.s3_CMU_EM_MIN    = -35;
+        refst.s3_CMU_EM_MAX    = -30;
         refst.cont_step_max    = +450;
-        refst.cont_step_max_vt = +100;
+        refst.cont_step_max_vt = +5;
 
         refst.isDirUD       = 0;
         refst.Dir           = -1;
         refst.isFlagOn      = 1;
 
-        refst.xps           = li_SEM == 1? +0.6:-0.6; //NCSEM coordinates
+        refst.xps           = (li_SEM == 1)? +0.6:-0.6; //NCSEM coordinates
 
         //Sampling frequencies (days)
         refst.sf_eml2  = 2;
@@ -279,7 +281,7 @@ int main()
         refst.isSaved       = 1;
         refst.isJPL         = 1;
         refst.isDebug       = 0;
-        refst.isFromServer  = 0;
+        refst.isFromServer  = 1;
 
         refst.tspan_EM      = +10*SEML.us_em.T;
         refst.tspan_SEM     = +10*SEML.us_sem.T;
@@ -323,7 +325,7 @@ int main()
 
 
 
-        // Integrate those initial conditions and project them on the CM SEML2
+        // Integrate those initial conditions and project them on the CM SEMLi
         tic();
         //int_proj_CMU_EM_on_CM_SEM_3D(TM, MSIZE , NOD, ISPAR, YNMAX, SNMAX);
         cout << "End of in int_proj_CMU_EM_on_CM_SEM_3D in " << toc() << endl;
@@ -376,7 +378,7 @@ int main()
 
 
 
-        // Integrate those initial conditions and project them on the CM SEML2
+        // Integrate those initial conditions and project them on the CM SEMLi
 
         tic();
         //int_proj_CMU_EM_on_CM_SEM(TM, TSIZE, GSIZE_S1, GSIZE_S3, MSIZE, NSMIN, NOD,
@@ -457,7 +459,7 @@ int main()
         //ref_CMU_EM_to_CM_SEM_MSD(OFTS_ORDER, 10, 1, CM_NC, CM_TFC, Mcoc, Pcoc, MIcoc, PIcoc, Vcoc);
 
         //----------------------
-        // Multiple shooting: CMU to free boundary (SEML2 orbit included)
+        // Multiple shooting: CMU to free boundary (SEMLi orbit included)
         //ref_CMU_EM_to_CM_SEM_MSD_PART(OFTS_ORDER, 60, NCSEM, CM_NC, CM_TFC, DCM_TFC, Mcoc, Pcoc, MIcoc, PIcoc, Vcoc);
 
         //----------------------
@@ -582,14 +584,10 @@ int main()
                 switch(li_EM)
                 {
                 case 1:
-                    st0[0] = 0.0;
-                    -0.145454545454546;
-                    st0[1] = 0.5;
-                    0.194601266014795;
-                    st0[2] = 0.0;
-                    -1.309090909090909;
-                    st0[3] = 0.0;
-                    0.194601266014795;
+                    st0[0] = 0.0;//-0.145454545454546;
+                    st0[1] = 0.5;//0.194601266014795;
+                    st0[2] = 0.0;//-1.309090909090909;
+                    st0[3] = 0.0;//0.194601266014795;
                     if(reduced_nv == 5) st0[4] = 0.0;
                     break;
                 case 2:

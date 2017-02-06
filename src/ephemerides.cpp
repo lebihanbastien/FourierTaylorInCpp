@@ -522,7 +522,7 @@ void qbcp2jpl_inertial(double tSYS, double *et, int coord_type)
     //Compute the positions of primaries in ECISEM coordinates
     //====================================================================================
     double Pe[3], Pm[3], Ps[3];
-    double Pnorm = 0.0;
+    //double Pnorm = 0.0;
     switch(coord_eph)
     {
         case VEM:

@@ -58,10 +58,21 @@ class Invman
         //--------------------------------------------------------------------------------
         double omega1;
         double omega3;
+
         //--------------------------------------------------------------------------------
         //Temporary objects (see constructor for details)
         //--------------------------------------------------------------------------------
         matrix<Ofsc> mIn;
+
+        //--------------------------------------------------------------------------------
+        //For COC: NCEM <-> NCSEM
+        //--------------------------------------------------------------------------------
+        vector<Ofsc> nc_B_SYS;
+        matrix<Ofsc> nc_R_SYS;
+        matrix<Ofsc> SYS_R_nc;
+
+        matrix<Ofsc> VSYS_R_SYS;
+        matrix<Ofsc> SYS_R_VSYS;
 
     public:
         Invman(int ofts_order_, int ofs_order_, CSYS& csys);
@@ -99,6 +110,17 @@ class Invman
         void evalDRCMtoNC(double const  st0[], double const t, gsl_matrix *m1, const int ofts_order, const int ofs_order) const;
         void evalDRCMtoCOORD(double const  st0[], double const t, gsl_matrix *m1, const int ofts_order, const int ofs_order, const int coord_type) const;
         void evaldotRCMtoNC(double const st0[], double const t, double z1[], const int ofts_order, const int ofs_order) const;
+        void evaldotRCMEMtoNCSEM(double const st0[], double const t, gsl_vector *z1, const int ofts_order, const int ofs_order, const Invman &invman_SEM) const;
+
+        void eval_IN_B_SYS(double const t,
+                           gsl_vector_complex *IN_B_SYS,
+                           gsl_vector_complex *dIN_B_SYS,
+                           gsl_matrix_complex *IN_R_SYS,
+                           gsl_matrix_complex *dIN_R_SYS,
+                           gsl_matrix_complex *SYS_R_IN,
+                           gsl_matrix_complex *dSYS_R_IN,
+                           const int ofts_order,
+                           const int ofs_order) const;
 
         //--------------------------------------------------------------------------------
         //          Projection on (un)stable manifold

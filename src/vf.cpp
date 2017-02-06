@@ -4330,7 +4330,7 @@ double qbcp_Hn(double t, const double y[], void *params_void)
     double mm    = qbp->us.mm;
     double n     = qbp->us.n;
     double gamma = qbp->cs.gamma;
-    double c1    = qbp->cs.c1;
+    //double c1    = qbp->cs.c1;
 
     //-------------------------------------------------------------------------------
     //Evaluate the alphas @ t
@@ -4356,11 +4356,10 @@ double qbcp_Hn(double t, const double y[], void *params_void)
     double qps2 = (y[0]-ps[0])*(y[0]-ps[0]) + (y[1]-ps[1])*(y[1]-ps[1]) + (y[2]-ps[2])*(y[2]-ps[2]);
     double qpm2 = (y[0]-pm[0])*(y[0]-pm[0]) + (y[1]-pm[1])*(y[1]-pm[1]) + (y[2]-pm[2])*(y[2]-pm[2]);
 
-    double alpha13 = alpha[3]/gamma - c1*(alpha[1]*alpha[1] + alpha[2]*alpha[2])/alpha[0];
-    double alpha14 = alpha[4]/gamma;
-
-    double alpha21d = (alphad[1]*alpha[0] - alphad[0]*alpha[1])/(alpha[0]*alpha[0]);
-    double alpha31d = (alphad[2]*alpha[0] - alphad[0]*alpha[2])/(alpha[0]*alpha[0]);
+    //double alpha13 = alpha[3]/gamma - c1*(alpha[1]*alpha[1] + alpha[2]*alpha[2])/alpha[0];
+    //double alpha14 = alpha[4]/gamma;
+    //double alpha21d = (alphad[1]*alpha[0] - alphad[0]*alpha[1])/(alpha[0]*alpha[0]);
+    //double alpha31d = (alphad[2]*alpha[0] - alphad[0]*alpha[2])/(alpha[0]*alpha[0]);
 
     //-------------------------------------------------------------------------------
     // Hamiltonian

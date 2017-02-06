@@ -39,7 +39,12 @@ Invman::Invman(int ofts_order_, int ofs_order_, CSYS& csys):
     Wh(),
     W(),
     Hy(),
-    mIn(6, reduced_nv, ofs_order)
+    mIn(6, reduced_nv, ofs_order),
+    nc_B_SYS(6, Ofsc(ofs_order_)),
+    nc_R_SYS(6, 6, ofs_order_),
+    SYS_R_nc(6, 6, ofs_order_),
+    VSYS_R_SYS(6, 6, ofs_order_),
+    SYS_R_VSYS(6, 6, ofs_order_)
 //----------------------------------------------------------------------------------------
 // Body of the constructor
 //----------------------------------------------------------------------------------------
@@ -184,9 +189,9 @@ Invman::Invman(int ofts_order_, int ofs_order_, CSYS& csys):
             //then update Hy[2]
             //----------------------------------------------------------------------------
             if(csys.manType == MAN_CENTER_U)
-                    readOFTS_bin(Hy[0], csys.F_PMS+"W/Wh[1].bin", 1);
+                readOFTS_bin(Hy[0], csys.F_PMS+"W/Wh[1].bin", 1);
             else
-                    readOFTS_bin(Hy[0], csys.F_PMS+"W/Wh[4].bin", 1);
+                readOFTS_bin(Hy[0], csys.F_PMS+"W/Wh[4].bin", 1);
             //Updating Hy[1]
             Hy[2].getCA(1,0)->ccopy(*Hy[0].getCA(1, 4));
 
@@ -255,15 +260,15 @@ Invman::Invman(int ofts_order_, int ofs_order_, CSYS& csys):
     CCM_R_RCM = gsl_matrix_complex_calloc(reduced_nv, reduced_nv);
     switch(csys.manType)
     {
-        case MAN_CENTER:
-            rotmat_CC_R_RCM_CENTER(CCM_R_RCM);
+    case MAN_CENTER:
+        rotmat_CC_R_RCM_CENTER(CCM_R_RCM);
         break;
-        case MAN_CENTER_S:
-        case MAN_CENTER_U:
-            rotmat_CC_R_RCM_CENTER_HYP(CCM_R_RCM);
+    case MAN_CENTER_S:
+    case MAN_CENTER_U:
+        rotmat_CC_R_RCM_CENTER_HYP(CCM_R_RCM);
         break;
-        case MAN_CENTER_US: //nothing is done here
-            rotmat_CC_R_RCM_CENTER_6(CCM_R_RCM);
+    case MAN_CENTER_US: //nothing is done here
+        rotmat_CC_R_RCM_CENTER_6(CCM_R_RCM);
         break;
     }
 
@@ -305,27 +310,27 @@ Invman::Invman(int ofts_order_, int ofs_order_, CSYS& csys):
             //----------------------------------------------------------------------------
             //First line is of order 0
             for(int j = 0; j <reduced_nv; j++)
-                    DWh.mpush_back(Oftsc(reduced_nv, 0, OFS_NV, ofs_order));
+                DWh.mpush_back(Oftsc(reduced_nv, 0, OFS_NV, ofs_order));
 
             //Second line is of full order
             for(int j = 0; j <reduced_nv; j++)
-                    DWh.mpush_back(Oftsc(reduced_nv, ofts_order-1, OFS_NV, ofs_order));
+                DWh.mpush_back(Oftsc(reduced_nv, ofts_order-1, OFS_NV, ofs_order));
 
             //Third line is of order 0
             for(int j = 0; j <reduced_nv; j++)
-                    DWh.mpush_back(Oftsc(reduced_nv, 0, OFS_NV, ofs_order));
+                DWh.mpush_back(Oftsc(reduced_nv, 0, OFS_NV, ofs_order));
 
             //Fourth line is of order 0
             for(int j = 0; j <reduced_nv; j++)
-                    DWh.mpush_back(Oftsc(reduced_nv, 0, OFS_NV, ofs_order));
+                DWh.mpush_back(Oftsc(reduced_nv, 0, OFS_NV, ofs_order));
 
             //Fifth line is of full order
             for(int j = 0; j <reduced_nv; j++)
-                    DWh.mpush_back(Oftsc(reduced_nv, ofts_order-1, OFS_NV, ofs_order));
+                DWh.mpush_back(Oftsc(reduced_nv, ofts_order-1, OFS_NV, ofs_order));
 
             //Sixth line is of order 0
             for(int j = 0; j <reduced_nv; j++)
-                    DWh.mpush_back(Oftsc(reduced_nv, 0, OFS_NV, ofs_order));
+                DWh.mpush_back(Oftsc(reduced_nv, 0, OFS_NV, ofs_order));
 
             //----------------------------------------------------------------------------
             //Read from file
@@ -502,6 +507,109 @@ Invman::Invman(int ofts_order_, int ofs_order_, CSYS& csys):
     //====================================================================================
     omega1 = cimag(Wh[0].getCA(1,0)->getCoef(0));
     omega3 = cimag(Wh[2].getCA(1,1)->getCoef(0));
+
+
+    //====================================================================================
+    // For COC: NCEM <-> NCSEM
+    //====================================================================================
+    Ofsc a1, a2, a3, ma3, ma2da1, a3da1, ma3da1, oda1, temp;
+
+    //Read the vector field
+    readOFS_txt(a1, cs->F_COEF+"alpha1_fft");
+    readOFS_txt(a2, cs->F_COEF+"alpha2_fft");
+    readOFS_txt(a3, cs->F_COEF+"alpha3_fft");
+
+    //------------------------------------------------------------------------------------
+    // nc_B_SYS = c1 * (1  0  0 -alpha_2/alpha_1  +alpha_3/alpha_1 0)^T
+    //------------------------------------------------------------------------------------
+    // nc_B_SYS[0] = c1
+    nc_B_SYS[0].setCoef(cs->c1, 0);
+
+    // nc_B_SYS[3] = -c1*alpha_2/alpha_1
+    ma2da1.ofs_div(a2, a1, temp);
+    ma2da1 *= -1.0;
+    nc_B_SYS[3].ofs_smult(ma2da1, +cs->c1, ofs_order);
+
+    // nc_B_SYS[4] = +c1*alpha_3/alpha_1
+    a3da1.ofs_div(a3, a1, temp);
+
+    nc_B_SYS[4].ofs_smult(a3da1, +cs->c1, ofs_order);
+
+    //------------------------------------------------------------------------------------
+    // nc_R_SYS = 1/gamma * diag(-1 -1 1 -1 -1 1)
+    // SYS_R_nc = + gamma * diag(-1 -1 1 -1 -1 1)
+    //------------------------------------------------------------------------------------
+    nc_R_SYS.setCoef(-1.0/cs->gamma, 0, 0);
+    nc_R_SYS.setCoef(-1.0/cs->gamma, 1, 1);
+    nc_R_SYS.setCoef(+1.0/cs->gamma, 2, 2);
+
+    nc_R_SYS.setCoef(-1.0/cs->gamma, 3, 3);
+    nc_R_SYS.setCoef(-1.0/cs->gamma, 4, 4);
+    nc_R_SYS.setCoef(+1.0/cs->gamma, 5, 5);
+
+
+    SYS_R_nc.setCoef(-1.0*cs->gamma, 0, 0);
+    SYS_R_nc.setCoef(-1.0*cs->gamma, 1, 1);
+    SYS_R_nc.setCoef(+1.0*cs->gamma, 2, 2);
+
+    SYS_R_nc.setCoef(-1.0*cs->gamma, 3, 3);
+    SYS_R_nc.setCoef(-1.0*cs->gamma, 4, 4);
+    SYS_R_nc.setCoef(+1.0*cs->gamma, 5, 5);
+
+
+    //------------------------------------------------------------------------------------
+    //                 |  1       0       0       0    0     0    |
+    //                 |  0       1       0       0    0     0    |
+    //                 |  0       0       1       0    0     0    |
+    //  SYS_R_VSYS =   | -a2/a1  -a3/a1   0       1/a1   0   0    |
+    //                 | +a3/a1  -a2/a1   0       0    1/a1  0    |
+    //                 |  0       0      -a2/a1   0    0     1/a1 |
+    //------------------------------------------------------------------------------------
+    //oda1 = 1/a1;
+    oda1.ofs_pows(a1, -1.0);
+    //ma3da1 = -a3/a1
+    ma3da1.ofs_smult(a3da1, -1.0, ofs_order);
+
+    SYS_R_VSYS.setCoef(1.0, 0, 0);
+    SYS_R_VSYS.setCoef(1.0, 1, 1);
+    SYS_R_VSYS.setCoef(1.0, 2, 2);
+
+    SYS_R_VSYS.setCoef(ma2da1, 3, 0);
+    SYS_R_VSYS.setCoef(ma2da1, 4, 1);
+    SYS_R_VSYS.setCoef(ma2da1, 5, 2);
+
+    SYS_R_VSYS.setCoef(ma3da1, 3, 1);
+    SYS_R_VSYS.setCoef(a3da1,  4, 0);
+
+    SYS_R_VSYS.setCoef(oda1, 3, 3);
+    SYS_R_VSYS.setCoef(oda1, 4, 4);
+    SYS_R_VSYS.setCoef(oda1, 5, 5);
+
+    //------------------------------------------------------------------------------------
+    //                 |  1    0    0    0    0   0  |
+    //                 |  0    1    0    0    0   0  |
+    //                 |  0    0    1    0    0   0  |
+    //  VSYS_R_SYS =   | +a2  +a3   0    a1   0   0  |
+    //                 | -a3  +a2   0    0    a1  0  |
+    //                 |  0    0   +a2   0    0   a1 |
+    //------------------------------------------------------------------------------------
+    //ma3 = -a3
+    ma3.ofs_smult(a3, -1.0, ofs_order);
+
+    VSYS_R_SYS.setCoef(1.0, 0, 0);
+    VSYS_R_SYS.setCoef(1.0, 1, 1);
+    VSYS_R_SYS.setCoef(1.0, 2, 2);
+
+    VSYS_R_SYS.setCoef(a2, 3, 0);
+    VSYS_R_SYS.setCoef(a2, 4, 1);
+    VSYS_R_SYS.setCoef(a2, 5, 2);
+
+    VSYS_R_SYS.setCoef(a3,  3, 1);
+    VSYS_R_SYS.setCoef(ma3, 4, 0);
+
+    VSYS_R_SYS.setCoef(a1, 3, 3);
+    VSYS_R_SYS.setCoef(a1, 4, 4);
+    VSYS_R_SYS.setCoef(a1, 5, 5);
 }
 
 //========================================================================================
@@ -716,7 +824,7 @@ void Invman::evalDCCMtoTFC(cdouble const s0[], matrix<Ofsc>& mIn, const int ofts
  *         partial computation, the real jacobian from RCM to TFC includes another matrix
  *         product. See evalDRCMtoNC for details.
  **/
-void Invman::evalDRCMtoTFC_partial(double const st0[], double const t, gsl_matrix_complex *m1, const int ofts_order, const int ofs_order) const
+void Invman::evalDRCMtoTFC_partial(double const st0[], double const t, gsl_matrix_complex* m1, const int ofts_order, const int ofs_order) const
 {
     //------------------------------------------
     // Inner variables (CCM)
@@ -755,7 +863,7 @@ void Invman::evalDRCMtoTFC_partial(double const st0[], double const t, gsl_matri
  *         Although most of the computation is in complex form, the end result is real.
  *
  **/
-void Invman::evalDRCMtoNC(double const st0[], double const t, gsl_matrix *m1, const int ofts_order, const int ofs_order) const
+void Invman::evalDRCMtoNC(double const st0[], double const t, gsl_matrix* m1, const int ofts_order, const int ofs_order) const
 {
     //------------------------------------------------------------------------------------
     // Check sizes
@@ -771,10 +879,10 @@ void Invman::evalDRCMtoNC(double const st0[], double const t, gsl_matrix *m1, co
     //------------------------------------------------------------------------------------
     // Inner variables
     //------------------------------------------------------------------------------------
-    gsl_matrix_complex *m1c = gsl_matrix_complex_calloc(6, reduced_nv);
-    gsl_matrix_complex *PC  = gsl_matrix_complex_calloc(6, 6);
-    gsl_matrix_complex *K1c = gsl_matrix_complex_calloc(6, reduced_nv);
-    gsl_matrix_complex *K2c = gsl_matrix_complex_calloc(6, reduced_nv);
+    gsl_matrix_complex* m1c = gsl_matrix_complex_calloc(6, reduced_nv);
+    gsl_matrix_complex* PC  = gsl_matrix_complex_calloc(6, 6);
+    gsl_matrix_complex* K1c = gsl_matrix_complex_calloc(6, reduced_nv);
+    gsl_matrix_complex* K2c = gsl_matrix_complex_calloc(6, reduced_nv);
 
     //------------------------------------------------------------------------------------
     // RCM to TFC
@@ -878,32 +986,30 @@ void Invman::evalDRCMtoCOORD(double const st0[], double const t, gsl_matrix* m1,
     }
 }
 
-
-
 /**
  *  \brief Evaluate the time derivative of the invariant manifold from RCM coordinates
  *         (double[]), to NC coordinates (double[]).
  **/
 void Invman::evaldotRCMtoNC(double const st0[], double const t, double z1[], const int ofts_order, const int ofs_order) const
 {
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     // Inner variables (CCM, TFC, NC)
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     vector<Ofsc> zIn(6), zOut(6);
 
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     // RCM to TFC
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     this->evalRCMtoTFC(st0, zIn, ofts_order, ofs_order);
 
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     // TFC to NC
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     applyCOC(Mcoc, Vcoc, zIn, zOut);
 
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     // zIn = dot(zOut)
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     for(int i = 0; i < 6; i++)
     {
         zIn[i].zero();
@@ -917,6 +1023,533 @@ void Invman::evaldotRCMtoNC(double const st0[], double const t, double z1[], con
 }
 
 
+/**
+ *  \brief Evaluate the time derivative of an EM invariant manifold in NCSEM coordinates.
+ *
+ *         CAREFUL: this routine has not been properly checked, because it is not used for
+ *         now.
+ **/
+void Invman::evaldotRCMEMtoNCSEM(double const st0[], double const t, gsl_vector *dzNCSEM,
+                                 const int ofts_order, const int ofs_order,
+                                 const Invman &invman_SEM) const
+{
+    //====================================================================================
+    // Check that fwrk == F_EM, otherwise, no sense!
+    //====================================================================================
+    if(fwrk != F_EM)
+    {
+        cout << "Warning in Invman::evaldotRCMEMtoNCSEM.        " << endl;
+        cout << "This routine should be used only on a invariant" << endl;
+        cout << "manifold in the EM system (F_EM framework.     " << endl;
+        cout << "The routine will be stopped.                   " << endl;
+        cout << "Use evaldotRCMtoNC if you are in the F_SEM.    " << endl;
+        return;
+    }
+
+    //====================================================================================
+    // Inner variables (CCM, TFC, NC)
+    //====================================================================================
+    vector<Ofsc> zTFC(6), zEM(6), zVEM(6), dzVEM(6);
+
+    //====================================================================================
+    // First step: we compute d zINEM / dt, all in EM units
+    //====================================================================================
+    //------------------------------------------------------------------------------------
+    // RCM to TFC
+    //------------------------------------------------------------------------------------
+    this->evalRCMtoTFC(st0, zTFC, ofts_order, ofs_order);
+
+    //------------------------------------------------------------------------------------
+    // TFC to NCEM
+    //------------------------------------------------------------------------------------
+    applyCOC(Mcoc, Vcoc, zTFC, zEM);
+
+    //------------------------------------------------------------------------------------
+    // NCEM to EM
+    //------------------------------------------------------------------------------------
+    //Step 1: translation
+    for(int i = 0; i < 6; i++) zEM[i] -= nc_B_SYS[i];
+
+    //Step 2: scaling
+    zEM[0] *= -cs->gamma;
+    zEM[1] *= -cs->gamma;
+    zEM[2] *= +cs->gamma;
+    zEM[3] *= -cs->gamma;
+    zEM[4] *= -cs->gamma;
+    zEM[5] *= +cs->gamma;
+
+    //------------------------------------------------------------------------------------
+    // PEM to VEM: zVEM = VSYS_R_SYS*zEM, in Fourier space
+    //------------------------------------------------------------------------------------
+    smvprod_ofs(VSYS_R_SYS, zEM, zVEM);
+
+    //------------------------------------------------------------------------------------
+    // dzVEM = dot(zVEM)
+    //------------------------------------------------------------------------------------
+    for(int i = 0; i < 6; i++)
+    {
+        dzVEM[i].zero();
+        dzVEM[i].dot(zVEM[i], n);
+    }
+
+    //------------------------------------------------------------------------------------
+    // Then, evaluation
+    //------------------------------------------------------------------------------------
+    gsl_vector_complex *zVEMg  = gsl_vector_complex_alloc(6);
+    gsl_vector_complex *dzVEMg = gsl_vector_complex_alloc(6);
+
+    for(int p = 0; p < 6; p++)
+    {
+        gsl_vector_complex_set(zVEMg,  p, gslc_complex(zVEM[p].evaluate(n*t, ofs_order)));
+        gsl_vector_complex_set(dzVEMg, p, gslc_complex(dzVEM[p].evaluate(n*t, ofs_order)));
+    }
+
+
+    //------------------------------------------------------------------------------------
+    // Then, evaluation of the matrices INEM_R_VEM, dINEM_R_VEM and so on
+    //------------------------------------------------------------------------------------
+    gsl_matrix_complex* INEM_R_VEM  = gsl_matrix_complex_alloc(6,6);
+    gsl_matrix_complex* dINEM_R_VEM = gsl_matrix_complex_alloc(6,6);
+    gsl_matrix_complex* EM_R_INEM   = gsl_matrix_complex_alloc(6,6);
+    gsl_matrix_complex* dEM_R_INEM  = gsl_matrix_complex_alloc(6,6);
+
+    gsl_vector_complex *INEM_B_EM   = gsl_vector_complex_alloc(6);
+    gsl_vector_complex *dINEM_B_EM  = gsl_vector_complex_alloc(6);
+
+    eval_IN_B_SYS(t, INEM_B_EM, dINEM_B_EM, INEM_R_VEM, dINEM_R_VEM,
+                     EM_R_INEM, dEM_R_INEM, ofts_order, ofs_order);
+
+    //------------------------------------------------------------------------------------
+    // Then, we evaluate zINEM and dzINEM/dt
+    //------------------------------------------------------------------------------------
+    gsl_vector_complex *zINEM   = gsl_vector_complex_alloc(6);
+    gsl_vector_complex *dzINEM  = gsl_vector_complex_alloc(6);
+    gsl_vector_complex *temp1   = gsl_vector_complex_alloc(6);
+    gsl_vector_complex *temp2   = gsl_vector_complex_alloc(6);
+
+    // zINEM = INEM_R_VEM * zVEMg - INEM_B_EM
+    gsl_blas_zgemv(CblasNoTrans, gslc_complex(1.0,0.0), INEM_R_VEM, zVEMg, gslc_complex(0.0,0.0), zINEM);
+    gsl_vector_complex_sub(zINEM, INEM_B_EM);
+
+    //temp1 = dINEM_R_VEM * zVEMg
+    gsl_blas_zgemv(CblasNoTrans, gslc_complex(1.0,0.0), dINEM_R_VEM, zVEMg, gslc_complex(0.0,0.0), temp1);
+
+    //temp2 = INEM_R_VEM * dzVEMg
+    gsl_blas_zgemv(CblasNoTrans, gslc_complex(1.0,0.0), INEM_R_VEM, dzVEMg, gslc_complex(0.0,0.0), temp2);
+
+    //Then dzINEM = temp1 + temp2 - dINEM_B_EM
+    gsl_vector_complex_memcpy(dzINEM, temp1);
+    gsl_vector_complex_add(dzINEM, temp2);
+    gsl_vector_complex_sub(dzINEM, dINEM_B_EM);
+
+    //====================================================================================
+    // Second step: we use the invariant manifold from SEM to finish the change of coordinates
+    //====================================================================================
+
+    //------------------------------------------------------------------------------------
+    // First, we need to take into account the change of units
+    //------------------------------------------------------------------------------------
+    double tsem = t*SEML.us_em.ns; //now the time is in SEM units
+
+    //------------------------------------------------------------------------------------
+    // Then, INEM -> INSEM
+    //------------------------------------------------------------------------------------
+    gsl_vector_complex *zINSEM   = gsl_vector_complex_alloc(6);
+    gsl_vector_complex *dzINSEM  = gsl_vector_complex_alloc(6);
+
+    cdouble ctemp = 0.0;
+    for(int i = 0; i < 6; i++)
+    {
+        //--------------------------------------------------------------------------------
+        // zINEM
+        //--------------------------------------------------------------------------------
+        //Take the complex value
+        ctemp = gslc_complex(gsl_vector_complex_get(zINEM, i));
+
+        //Change of units
+        if(i < 3) ctemp *= 1.0/SEML.us_em.as;
+        else ctemp *= 1.0/(SEML.us_em.as*SEML.us_em.ns);
+
+        //Update dzINSEM
+        gsl_vector_complex_set(zINSEM, i, gslc_complex(ctemp));
+
+        //--------------------------------------------------------------------------------
+        // dzINEM
+        //--------------------------------------------------------------------------------
+        //Take the complex value
+        ctemp = gslc_complex(gsl_vector_complex_get(dzINEM, i));
+
+        //Change of units
+        if(i < 3) ctemp *= 1.0/(SEML.us_em.as*SEML.us_em.ns);
+        else ctemp *= 1.0/(SEML.us_em.as*SEML.us_em.ns*SEML.us_em.ns);
+
+        //Update dzINSEM
+        gsl_vector_complex_set(dzINSEM, i, gslc_complex(ctemp));
+    }
+
+
+    //------------------------------------------------------------------------------------
+    // @TODO: once we have it, we are not done! we need to follow the instructions in msvftplan
+    //------------------------------------------------------------------------------------
+
+    //------------------------------------------------------------------------------------
+    // Then, we use the invariant manifold at SEML
+    //------------------------------------------------------------------------------------
+    gsl_matrix_complex* INSEM_R_VSEM  = gsl_matrix_complex_alloc(6,6);
+    gsl_matrix_complex* dINSEM_R_VSEM = gsl_matrix_complex_alloc(6,6);
+    gsl_matrix_complex* SEM_R_INSEM   = gsl_matrix_complex_alloc(6,6);
+    gsl_matrix_complex* dSEM_R_INSEM  = gsl_matrix_complex_alloc(6,6);
+    gsl_vector_complex *INSEM_B_SEM   = gsl_vector_complex_alloc(6);
+    gsl_vector_complex *dINSEM_B_SEM  = gsl_vector_complex_alloc(6);
+
+    invman_SEM.eval_IN_B_SYS(tsem, INSEM_B_SEM, dINSEM_B_SEM, INSEM_R_VSEM,
+                                  dINSEM_R_VSEM, SEM_R_INSEM, dSEM_R_INSEM,
+                                  ofts_order, ofs_order);
+
+
+    //------------------------------------------------------------------------------------
+    // Finally:
+    //
+    //  dzncsem = sem_R_SEM * ( dSEM_R_INSEM * zINSEM + SEM_R_INSEM * dzINSEM ) +  dSEM_B_sem
+    //------------------------------------------------------------------------------------
+    cdouble dzNCSEMc[6];
+
+    //------------------------------------------------------------------------------------
+    // SEM to NCSEM
+    //------------------------------------------------------------------------------------
+    gsl_vector_complex *dzSEMg  = gsl_vector_complex_alloc(6);
+
+    // dzSEMg = dSEM_R_INSEM * zINSEM
+    gsl_blas_zgemv(CblasNoTrans, gslc_complex(1.0,0.0), dSEM_R_INSEM, zINSEM, gslc_complex(0.0,0.0), dzSEMg);
+
+    // dzSEMg += SEM_R_INSEM * dzINSEM
+    gsl_blas_zgemv(CblasNoTrans, gslc_complex(1.0,0.0), SEM_R_INSEM, dzINSEM, gslc_complex(1.0,0.0), dzSEMg);
+
+    //Copy into dzNCSEMc
+    for(int i = 0; i < 6; i++) dzNCSEMc[i] = gslc_complex(gsl_vector_complex_get(dzSEMg, i));
+
+    //------------------------------------------------------------------------------------
+    // SEM to NCSEM: sem_R_SEM * dzSEM +  dSEM_B_sem
+    //------------------------------------------------------------------------------------
+    //Step 1: scaling
+    dzNCSEMc[0] *= -invman_SEM.cs->gamma;
+    dzNCSEMc[1] *= -invman_SEM.cs->gamma;
+    dzNCSEMc[2] *= +invman_SEM.cs->gamma;
+    dzNCSEMc[3] *= -invman_SEM.cs->gamma;
+    dzNCSEMc[4] *= -invman_SEM.cs->gamma;
+    dzNCSEMc[5] *= +invman_SEM.cs->gamma;
+
+    //Step 2: translation (zTFC[0] is used as a temporary object)
+    // dzNCSEM is finally computed.
+    for(int i = 0; i < 6; i++)
+    {
+        zTFC[0].dot(invman_SEM.nc_B_SYS[i], invman_SEM.cs->us.n);
+        dzNCSEMc[i] +=  zTFC[0].evaluate(n*t);
+        gsl_vector_set(dzNCSEM, i, creal(dzNCSEMc[i]));
+    }
+
+
+    //------------------------------------------------------------------------------------
+    // Free
+    //------------------------------------------------------------------------------------
+    gsl_vector_complex_free(zVEMg);
+    gsl_vector_complex_free(dzVEMg);
+
+    gsl_matrix_complex_free(INEM_R_VEM);
+    gsl_matrix_complex_free(dINEM_R_VEM);
+    gsl_matrix_complex_free(EM_R_INEM );
+    gsl_matrix_complex_free(dEM_R_INEM);
+
+    gsl_vector_complex_free(INEM_B_EM );
+    gsl_vector_complex_free(dINEM_B_EM);
+
+    gsl_vector_complex_free(zINEM );
+    gsl_vector_complex_free(dzINEM);
+    gsl_vector_complex_free(temp1 );
+    gsl_vector_complex_free(temp2 );
+
+    gsl_vector_complex_free(zINSEM );
+    gsl_vector_complex_free(dzINSEM);
+
+    gsl_matrix_complex_free(INSEM_R_VSEM);
+    gsl_matrix_complex_free(dINSEM_R_VSEM);
+    gsl_matrix_complex_free(SEM_R_INSEM );
+    gsl_matrix_complex_free(dSEM_R_INSEM);
+    gsl_vector_complex_free(INSEM_B_SEM );
+    gsl_vector_complex_free(dINSEM_B_SEM);
+
+    gsl_vector_complex_free(dzSEMg);
+}
+
+//========================================================================================
+// Evaluate other matrices & vectors
+//========================================================================================
+/**
+ *  \brief Evalute the vector & matrices IN_B_SYS that appears in the COC between the
+ *         system coordinates and the inertial coordinates, in native units.
+ *         IN_B_SYS is non null only in the F_EM (Earth-Moon framework).
+ *         The time derivative of this matrix is also evaluated.
+ **/
+void Invman::eval_IN_B_SYS(double const t,
+                           gsl_vector_complex* IN_B_SYS,
+                           gsl_vector_complex* dIN_B_SYS,
+                           gsl_matrix_complex* IN_R_VSYS,
+                           gsl_matrix_complex* dIN_R_VSYS,
+                           gsl_matrix_complex* SYS_R_IN,
+                           gsl_matrix_complex* dSYS_R_IN,
+                           const int ofts_order,
+                           const int ofs_order) const
+{
+    gsl_matrix_complex* VSYS_R_IN  = gsl_matrix_complex_alloc(6,6);
+    gsl_matrix_complex* dVSYS_R_IN = gsl_matrix_complex_alloc(6,6);
+
+
+    //------------------------------------------------------------------------------------
+    // Initialisation and computing z & Z
+    //------------------------------------------------------------------------------------
+    double n  = cs->us.n;
+    double ms = cs->us.ms;
+    double mm = cs->us.mm;
+    double me = cs->us.me;
+    double ns = cs->us.ns;
+    double as = cs->us.as;
+    double ni = cs->us.ni;
+    double ai = cs->us.ai;
+
+    //z
+    cdouble z    = evz(cs->zt, t, n, ni, ai);
+    cdouble zd   = evzdot(cs->zt, cs->ztdot, t, n, ni, ai);
+    cdouble zdd  = evzddot(cs->zt, cs->ztdot, cs->ztddot, t, n, ni, ai);
+
+    //Z
+    cdouble Z    = evz(cs->Zt, t, n, ns, as);
+    cdouble Zd   = evzdot(cs->Zt, cs->Ztdot, t, n, ns, as);
+    cdouble Zdd  = evzddot(cs->Zt, cs->Ztdot, cs->Ztddot, t, n, ns, as);
+
+    //Inner variables
+    double r1, r2, dr1, dr2, ddr1, ddr2;
+
+    //------------------------------------------------------------------------------------
+    // Switch between the framework
+    //------------------------------------------------------------------------------------
+    switch(fwrk)
+    {
+    case F_EM:
+    {
+        //--------------------------------------------------------------------------------
+        //z is selected for the rest of the computation
+        //--------------------------------------------------------------------------------
+        r1 = creal(z);
+        r2 = cimag(z);
+
+        dr1 = creal(zd);
+        dr2 = cimag(zd);
+
+        ddr1 = creal(zdd);
+        ddr2 = cimag(zdd);
+
+        //--------------------------------------------------------------------------------
+        //IN_B_SYS = ms/(mm + me + ms) * (R1 R2 0 dot(R1) dot(R2) 0)^T
+        //--------------------------------------------------------------------------------
+        double factor = ms/(ms + mm + me);
+        gsl_vector_complex_set(IN_B_SYS, 0, gslc_complex(factor*creal(Z), 0.0));
+        gsl_vector_complex_set(IN_B_SYS, 1, gslc_complex(factor*cimag(Z), 0.0));
+
+        gsl_vector_complex_set(IN_B_SYS, 3, gslc_complex(factor*creal(Zd), 0.0));
+        gsl_vector_complex_set(IN_B_SYS, 4, gslc_complex(factor*cimag(Zd), 0.0));
+
+        //--------------------------------------------------------------------------------
+        //dIN_B_SYS = ms/(mm + me + ms) * (dot(R1) dot(R2) 0 ddot(R1) ddot(R2) 0)^T
+        //--------------------------------------------------------------------------------
+        gsl_vector_complex_set(dIN_B_SYS, 0, gslc_complex(factor*creal(Zd), 0.0));
+        gsl_vector_complex_set(dIN_B_SYS, 1, gslc_complex(factor*cimag(Zd), 0.0));
+
+        gsl_vector_complex_set(dIN_B_SYS, 3, gslc_complex(factor*creal(Zdd), 0.0));
+        gsl_vector_complex_set(dIN_B_SYS, 4, gslc_complex(factor*cimag(Zdd), 0.0));
+
+        break;
+    }
+
+    case F_SEM:
+    default:
+    {
+        //--------------------------------------------------------------------------------
+        //Z is selected for the rest of the computation
+        //--------------------------------------------------------------------------------
+        r1 = creal(Z);
+        r2 = cimag(Z);
+
+        dr1 = creal(Zd);
+        dr2 = cimag(Zd);
+
+        ddr1 = creal(Zdd);
+        ddr2 = cimag(Zdd);
+        break;
+    }
+
+
+    }
+
+
+    //------------------------------------------------------------------------------------
+    //                 |  +b1   +b2   0    0    0   0  |
+    //                 |  -b2   +b1   0    0    0   0  |
+    //                 |   0     0    a6   0    0   0  |
+    //  VSYS_R_IN  =   | +db1  +db2   0    b1  +b2  0  |
+    //                 | -db2  +db1   0   -b2  +b1  0  |
+    //                 |   0     0  +da6   0    0  +b1 |
+    //
+    // with
+    //          b1 = r1/r^2
+    //          b2 = r2/r^2
+    //          a6 = 1/r  = alpha6 (or delta6)
+    //
+    //  and db1 = dot(b1)
+    //------------------------------------------------------------------------------------
+    double r  = sqrt(r1*r1+r2*r2);
+    double dr = 1.0/r*(r1*dr1 + r2*dr2);
+
+    double b1 = r1/(r*r);
+    double b2 = r2/(r*r);
+
+    double db1 = (dr1 * r - 2 * dr * r1)/(r*r*r);
+    double db2 = (dr2 * r - 2 * dr * r2)/(r*r*r);
+
+    double a6  = 1.0/r;
+    double da6 = -dr/(r*r);
+
+    gsl_matrix_complex_set(VSYS_R_IN, 0, 0, gslc_complex( b1, 0.0));
+    gsl_matrix_complex_set(VSYS_R_IN, 0, 1, gslc_complex( b2, 0.0));
+    gsl_matrix_complex_set(VSYS_R_IN, 1, 0, gslc_complex(-b2, 0.0));
+    gsl_matrix_complex_set(VSYS_R_IN, 1, 1, gslc_complex( b1, 0.0));
+    gsl_matrix_complex_set(VSYS_R_IN, 2, 2, gslc_complex( a6, 0.0));
+
+    gsl_matrix_complex_set(VSYS_R_IN, 3, 0, gslc_complex( db1, 0.0));
+    gsl_matrix_complex_set(VSYS_R_IN, 3, 1, gslc_complex( db2, 0.0));
+    gsl_matrix_complex_set(VSYS_R_IN, 4, 0, gslc_complex(-db2, 0.0));
+    gsl_matrix_complex_set(VSYS_R_IN, 4, 1, gslc_complex( db1, 0.0));
+    gsl_matrix_complex_set(VSYS_R_IN, 5, 2, gslc_complex( da6, 0.0));
+
+    gsl_matrix_complex_set(VSYS_R_IN, 3, 3, gslc_complex( b1, 0.0));
+    gsl_matrix_complex_set(VSYS_R_IN, 3, 4, gslc_complex( b2, 0.0));
+    gsl_matrix_complex_set(VSYS_R_IN, 4, 3, gslc_complex(-b2, 0.0));
+    gsl_matrix_complex_set(VSYS_R_IN, 4, 4, gslc_complex( b1, 0.0));
+    gsl_matrix_complex_set(VSYS_R_IN, 5, 5, gslc_complex( a6, 0.0));
+
+
+    //------------------------------------------------------------------------------------
+    //                 |  +db1   +db2   0     0    0    0  |
+    //                 |  -db2   +db1   0     0    0    0  |
+    //                 |   0      0    da6    0    0    0  |
+    //  dVSYS_R_IN =   | +ddb1  +ddb2   0    db1  +db2  0  |
+    //                 | -ddb2  +ddb1   0   -db2  +db1  0  |
+    //                 |   0      0   +dda6   0    0  +db1 |
+    //------------------------------------------------------------------------------------
+    double ddr  = 1.0/(r*r)*( (dr1*dr1 + r1 *ddr1 + dr2*dr2 + r2*ddr2)*r - dr*(r1*dr1 + r2*dr2 ));
+    double ddb1 = (r* r*ddr1 - 2*r*( 2*dr1*dr + r1*ddr ) + 6*r1* dr*dr)/(r* r* r*r);
+    double ddb2 = (r* r*ddr2 - 2*r*( 2*dr2*dr + r2*ddr ) + 6*r2* dr*dr)/(r* r* r*r);
+    double dda6 = (2*dr*dr - r*ddr)/(r* r*r);
+
+    gsl_matrix_complex_set(dVSYS_R_IN, 0, 0, gslc_complex( db1, 0.0));
+    gsl_matrix_complex_set(dVSYS_R_IN, 0, 1, gslc_complex( db2, 0.0));
+    gsl_matrix_complex_set(dVSYS_R_IN, 1, 0, gslc_complex(-db2, 0.0));
+    gsl_matrix_complex_set(dVSYS_R_IN, 1, 1, gslc_complex( db1, 0.0));
+    gsl_matrix_complex_set(dVSYS_R_IN, 2, 2, gslc_complex( da6, 0.0));
+
+    gsl_matrix_complex_set(dVSYS_R_IN, 3, 0, gslc_complex( ddb1, 0.0));
+    gsl_matrix_complex_set(dVSYS_R_IN, 3, 1, gslc_complex( ddb2, 0.0));
+    gsl_matrix_complex_set(dVSYS_R_IN, 4, 0, gslc_complex(-ddb2, 0.0));
+    gsl_matrix_complex_set(dVSYS_R_IN, 4, 1, gslc_complex( ddb1, 0.0));
+    gsl_matrix_complex_set(dVSYS_R_IN, 5, 2, gslc_complex( dda6, 0.0));
+
+    gsl_matrix_complex_set(VSYS_R_IN, 3, 3, gslc_complex( db1, 0.0));
+    gsl_matrix_complex_set(VSYS_R_IN, 3, 4, gslc_complex( db2, 0.0));
+    gsl_matrix_complex_set(VSYS_R_IN, 4, 3, gslc_complex(-db2, 0.0));
+    gsl_matrix_complex_set(VSYS_R_IN, 4, 4, gslc_complex( db1, 0.0));
+    gsl_matrix_complex_set(VSYS_R_IN, 5, 5, gslc_complex( da6, 0.0));
+
+
+    //------------------------------------------------------------------------------------
+    //                 |  +r1   -r2   0    0    0   0  |
+    //                 |  +r2   +r1   0    0    0   0  |
+    //                 |   0     0    r    0    0   0  |
+    //  IN_R_VSYS  =   | +dr1  -dr2   0    r1  -r2  0  |
+    //                 | +dr2  +dr1   0   +r2  +r1  0  |
+    //                 |   0     0  +dr    0    0  +r  |
+    //------------------------------------------------------------------------------------
+    gsl_matrix_complex_set(IN_R_VSYS, 0, 0, gslc_complex( r1, 0.0));
+    gsl_matrix_complex_set(IN_R_VSYS, 0, 1, gslc_complex(-r2, 0.0));
+    gsl_matrix_complex_set(IN_R_VSYS, 1, 0, gslc_complex( r2, 0.0));
+    gsl_matrix_complex_set(IN_R_VSYS, 1, 1, gslc_complex( r1, 0.0));
+    gsl_matrix_complex_set(IN_R_VSYS, 2, 2, gslc_complex( r , 0.0));
+
+    gsl_matrix_complex_set(IN_R_VSYS, 3, 0, gslc_complex( dr1, 0.0));
+    gsl_matrix_complex_set(IN_R_VSYS, 3, 1, gslc_complex(-dr2, 0.0));
+    gsl_matrix_complex_set(IN_R_VSYS, 4, 0, gslc_complex( dr2, 0.0));
+    gsl_matrix_complex_set(IN_R_VSYS, 4, 1, gslc_complex( dr1, 0.0));
+    gsl_matrix_complex_set(IN_R_VSYS, 5, 2, gslc_complex( dr , 0.0));
+
+    gsl_matrix_complex_set(IN_R_VSYS, 3, 3, gslc_complex( r1, 0.0));
+    gsl_matrix_complex_set(IN_R_VSYS, 3, 4, gslc_complex(-r2, 0.0));
+    gsl_matrix_complex_set(IN_R_VSYS, 4, 3, gslc_complex( r2, 0.0));
+    gsl_matrix_complex_set(IN_R_VSYS, 4, 4, gslc_complex( r1, 0.0));
+    gsl_matrix_complex_set(IN_R_VSYS, 5, 5, gslc_complex( r , 0.0));
+
+    //------------------------------------------------------------------------------------
+    //                 |  +dr1   -dr2   0     0     0    0  |
+    //                 |  +dr2   +dr1   0     0     0    0  |
+    //                 |   0      0     dr    0     0    0  |
+    //  dIN_R_VSYS =   | +ddr1  -ddr2   0     dr1  -dr2  0  |
+    //                 | +ddr2  +ddr1   0    +dr2  +dr1  0  |
+    //                 |   0      0    +ddr   0     0   +dr |
+    //------------------------------------------------------------------------------------
+    gsl_matrix_complex_set(dIN_R_VSYS, 0, 0, gslc_complex( dr1, 0.0));
+    gsl_matrix_complex_set(dIN_R_VSYS, 0, 1, gslc_complex(-dr2, 0.0));
+    gsl_matrix_complex_set(dIN_R_VSYS, 1, 0, gslc_complex( dr2, 0.0));
+    gsl_matrix_complex_set(dIN_R_VSYS, 1, 1, gslc_complex( dr1, 0.0));
+    gsl_matrix_complex_set(dIN_R_VSYS, 2, 2, gslc_complex( dr , 0.0));
+
+    gsl_matrix_complex_set(dIN_R_VSYS, 3, 0, gslc_complex( ddr1, 0.0));
+    gsl_matrix_complex_set(dIN_R_VSYS, 3, 1, gslc_complex(-ddr2, 0.0));
+    gsl_matrix_complex_set(dIN_R_VSYS, 4, 0, gslc_complex( ddr2, 0.0));
+    gsl_matrix_complex_set(dIN_R_VSYS, 4, 1, gslc_complex( ddr1, 0.0));
+    gsl_matrix_complex_set(dIN_R_VSYS, 5, 2, gslc_complex( ddr , 0.0));
+
+    gsl_matrix_complex_set(dIN_R_VSYS, 3, 3, gslc_complex( dr1, 0.0));
+    gsl_matrix_complex_set(dIN_R_VSYS, 3, 4, gslc_complex(-dr2, 0.0));
+    gsl_matrix_complex_set(dIN_R_VSYS, 4, 3, gslc_complex( dr2, 0.0));
+    gsl_matrix_complex_set(dIN_R_VSYS, 4, 4, gslc_complex( dr1, 0.0));
+    gsl_matrix_complex_set(dIN_R_VSYS, 5, 5, gslc_complex( dr , 0.0));
+
+
+    //------------------------------------------------------------------------------------
+    //  SYS_R_IN  = SYS_R_VSYS * VSYS_R_IN
+    //------------------------------------------------------------------------------------
+    // SYS_R_VSYSg = SYS_R_VSYS in GSL format
+    gsl_matrix_complex* SYS_R_VSYSg = gsl_matrix_complex_alloc(6,6);
+    evaluate(n*t, SYS_R_VSYS, SYS_R_VSYSg);
+
+    //SYS_R_IN  = SYS_R_VSYS * VSYS_R_IN
+    gsl_blas_zgemm (CblasNoTrans, CblasNoTrans, gslc_complex(1.0,0.0), SYS_R_VSYSg, VSYS_R_IN, gslc_complex(0.0,0.0), SYS_R_IN);
+
+    //------------------------------------------------------------------------------------
+    //  dSYS_R_IN  = dSYS_R_VSYS * VSYS_R_IN + SYS_R_VSYS * dVSYS_R_IN
+    //------------------------------------------------------------------------------------
+    Ofsc ofs_temp(ofs_order);
+    gsl_matrix_complex* dSYS_R_VSYSg = gsl_matrix_complex_alloc(6,6);
+    evaluatedot(t, n, SYS_R_VSYS, dSYS_R_VSYSg, ofs_temp);
+
+    //dSYS_R_IN  = dSYS_R_VSYS * VSYS_R_IN
+    gsl_blas_zgemm (CblasNoTrans, CblasNoTrans, gslc_complex(1.0,0.0), dSYS_R_VSYSg, VSYS_R_IN, gslc_complex(0.0,0.0), dSYS_R_IN);
+
+    //dSYS_R_IN  += SYS_R_VSYS * dVSYS_R_IN
+    gsl_blas_zgemm (CblasNoTrans, CblasNoTrans, gslc_complex(1.0,0.0), SYS_R_VSYSg, dVSYS_R_IN, gslc_complex(1.0,0.0), dSYS_R_IN);
+
+    gsl_matrix_complex_free( SYS_R_VSYSg  );
+    gsl_matrix_complex_free( dSYS_R_VSYSg );
+    gsl_matrix_complex_free( VSYS_R_IN    );
+    gsl_matrix_complex_free( dVSYS_R_IN    );
+}
 
 //========================================================================================
 //          Projection on (un)stable manifold
@@ -926,7 +1559,7 @@ void Invman::evaldotRCMtoNC(double const st0[], double const t, double z1[], con
  *        by this, seen as a center manifold in graph style. If the graph style
  *        is not detected, a warning message is displayed and nothing is done.
  **/
-void Invman::NCprojCCMtoCM(double *yv, double tv, double sti[5])
+void Invman::NCprojCCMtoCM(double* yv, double tv, double sti[5])
 {
     //------------------------------------------------------------------------------------
     //Check that the graph style is used in this->invman
@@ -988,7 +1621,6 @@ const vector<Oftsc>& Invman::getHy() const
 {
     return Hy;
 }
-
 
 const CSYS* Invman::getCS() const
 {
@@ -1076,7 +1708,7 @@ int Invman::compRNV(CSYS& csys)
  *  \brief Set the matrix CCM_R_RCM_C  as the rotation matrix between CCM and RCM
  *         coordinates in a center manifold (4 dimensions).
  **/
-void rotmat_CC_R_RCM_CENTER(gsl_matrix_complex *CCM_R_RCM_C)
+void rotmat_CC_R_RCM_CENTER(gsl_matrix_complex* CCM_R_RCM_C)
 {
     //------------------------------------------------------------------------------------
     // Check that the dimensions are okay
@@ -1105,7 +1737,7 @@ void rotmat_CC_R_RCM_CENTER(gsl_matrix_complex *CCM_R_RCM_C)
  *  \brief Set the matrix CCM_R_RCM_CH  as the rotation matrix between CCM and RCM
  *         coordinates in a center-hyperbolic manifold (5 dimensions).
  **/
-void rotmat_CC_R_RCM_CENTER_HYP(gsl_matrix_complex *CCM_R_RCM_CH)
+void rotmat_CC_R_RCM_CENTER_HYP(gsl_matrix_complex* CCM_R_RCM_CH)
 {
     //------------------------------------------------------------------------------------
     // Check that the dimensions are okay
@@ -1134,7 +1766,7 @@ void rotmat_CC_R_RCM_CENTER_HYP(gsl_matrix_complex *CCM_R_RCM_CH)
  *  \brief Set the matrix CCM_R_RCM_CH  as the rotation matrix between CCM and RCM
  *         coordinates in the complete phase space manifold (6 dimensions).
  **/
-void rotmat_CC_R_RCM_CENTER_6(gsl_matrix_complex *CCM_R_RCM_CH)
+void rotmat_CC_R_RCM_CENTER_6(gsl_matrix_complex* CCM_R_RCM_CH)
 {
     //------------------------------------------------------------------------------------
     // Check that the dimensions are okay
@@ -1265,9 +1897,9 @@ void test_evalDCCMtoTFC()
     //Comparison
     //------------------------------------------------------------------------------------
     matrix<Ofsc> mIn(6, reduced_nv, OFS_ORDER);
-    cdouble **zOld1 = dcmatrix(0, 6, 0, reduced_nv-1);
-    cdouble **zOld0 = dcmatrix(0, 6, 0, reduced_nv-1);
-    cdouble **zNew  = dcmatrix(0, 6, 0, reduced_nv-1);
+    cdouble** zOld1 = dcmatrix(0, 6, 0, reduced_nv-1);
+    cdouble** zOld0 = dcmatrix(0, 6, 0, reduced_nv-1);
+    cdouble** zNew  = dcmatrix(0, 6, 0, reduced_nv-1);
 
     cout << "---------------------------------------------------" << endl;
     cout << "   Comparison of old and new version of DCCMtoTFC  " << endl;
@@ -1292,7 +1924,7 @@ void test_evalDCCMtoTFC()
         for(int j = 0; j < reduced_nv; j++)  zOld1[i][j] = mIn.getCoef(i,j).evaluate(SEML.cs.us.n);
     }
     //matrix_complex_printf((cdouble **)zOld1, 6, reduced_nv);
-    cout << "Delta with the reference = " << DENorm((const cdouble **)zOld0, (const cdouble **)zOld1, 6, reduced_nv) << endl;
+    cout << "Delta with the reference = " << DENorm((const cdouble**)zOld0, (const cdouble**)zOld1, 6, reduced_nv) << endl;
     cout << endl;
 
     tic();
@@ -1303,7 +1935,7 @@ void test_evalDCCMtoTFC()
         for(int j = 0; j < reduced_nv; j++)  zNew[i][j] = mIn.getCoef(i,j).evaluate(SEML.cs.us.n);
     }
     //matrix_complex_printf((cdouble **)zNew, 6, reduced_nv);
-    cout << "Delta with the reference = " << DENorm((const cdouble **)zOld0, (const cdouble **)zNew, 6, reduced_nv) << endl;
+    cout << "Delta with the reference = " << DENorm((const cdouble**)zOld0, (const cdouble**)zNew, 6, reduced_nv) << endl;
     cout << endl;
 }
 
@@ -1426,9 +2058,9 @@ void test_evalDRCMtoTFC()
     //Comparison
     //------------------------------------------------------------------------------------
     matrix<Ofsc> ofs(6, reduced_nv, OFS_ORDER);
-    gsl_matrix_complex *zOld0 = gsl_matrix_complex_alloc(6, reduced_nv);
-    gsl_matrix_complex *zOld1 = gsl_matrix_complex_alloc(6, reduced_nv);
-    gsl_matrix_complex *zNew  = gsl_matrix_complex_alloc(6, reduced_nv);
+    gsl_matrix_complex* zOld0 = gsl_matrix_complex_alloc(6, reduced_nv);
+    gsl_matrix_complex* zOld1 = gsl_matrix_complex_alloc(6, reduced_nv);
+    gsl_matrix_complex* zNew  = gsl_matrix_complex_alloc(6, reduced_nv);
 
     cout << "---------------------------------------------------" << endl;
     cout << "   Comparison of old and new version of DRCMtoNC   " << endl;

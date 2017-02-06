@@ -99,13 +99,13 @@ int oo_compute_grid_CMU_EM(double dist_to_cm, double tmin_CMU_EM, double tmax_CM
 
 //========================================================================================
 //
-//         Projection on the CM/CMS/CMU of SEML2
+//         Projection on the CM/CMS/CMU of SEMLi
 //
 //========================================================================================
 /**
  *  \brief Integrates the central-unstable legs from a discrete set of unstable directions
  *         obtained using the routine compute_grid_CMU_EM. Then, each point on the
- *         integration grid is projected on the Center Manifold CM_SEM_NC about SEML2.
+ *         integration grid is projected on the Center Manifold CM_SEM_NC about SEMLi.
  *         The best solution (minimum distance of projection) is stored.
  *
  *  \param tmax_on_manifold_EM: the maximum integration time on each leg, in EM units.
@@ -122,11 +122,11 @@ int oo_compute_grid_CMU_EM(double dist_to_cm, double tmin_CMU_EM, double tmax_CM
  *                              state on the integration grid is projected on CM_SEM_NC
  *                              More precisely: for a given state y along the manifold leg,
  *                              if norm(y, 3) < ynormMax, the state is projected.
- *                              Otherwise, it is considered too far away from SEML2 to be
+ *                              Otherwise, it is considered too far away from SEMLi to be
  *                              a good candidate for projection.
  *
  *  \param snormMax:            the maximum norm in RCM SEM coordinates for which a given
- *                              projection state on the CM of SEML2 (CM_SEM_NC) is
+ *                              projection state on the CM of SEMLi (CM_SEM_NC) is
  *                              computed back in NCSEM coordinates. More precisely, for a
  *                              given state y in NCSEM coordinates, the result of the
  *                              projection on CM_SEM_NC gives a state sproj in RCM SEM
@@ -150,7 +150,7 @@ int oo_int_proj_CMU_EM_on_CM_SEM_3D(double tmax_on_manifold_EM,
  *  \brief Integrates the central-unstable legs from a discrete set of unstable directions
  *         obtained using the routine compute_grid_CMU_EM.
  *         Then, each point on the integration grid is projected on the center Manifold
- *         about SEML2 (denoted here CM_SEM_NC).
+ *         about SEMLi (denoted here CM_SEM_NC).
  *         The best solution (minimum distance of projection) is stored.
  *
  *  \param tmax_on_manifold_EM: the maximum integration time on each leg, in EM units.
@@ -170,10 +170,10 @@ int oo_int_proj_CMU_EM_on_CM_SEM_3D(double tmax_on_manifold_EM,
  *                              state on the integration grid is projected on CM_SEM_NC.
  *                              More precisely: for a given state y along the manifold leg,
  *                              if norm(y, 3) < ynormMax, the state is projected.
- *                              Otherwise, it is considered too far away from SEML2 to
+ *                              Otherwise, it is considered too far away from SEMLi to
  *                              be a good candidate for projection.
  *  \param snormMax:............the maximum norm in RCM SEM coordinates for which a given
- *                              projection state on the CM of SEML2 (CM_SEM_NC) is
+ *                              projection state on the CM of SEMLi (CM_SEM_NC) is
  *                              computed back in NCSEM coordinates. More precisely, for a
  *                              given state y in NCSEM coordinates, the result of the
  *                              projection on CM_SEM_NC gives a state sproj in RCM SEM
@@ -219,7 +219,7 @@ int notablePoints(gnuplot_ctrl* h2, gnuplot_ctrl* h3, int coord_type);
  *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM.
  *         A multiple_shooting_direct is applied on the MANIFOLD trajectory (manifold leg).
  *         The initial conditions vary in the paramerization of the CMU of EML2.
- *         The final conditions vary in the paramerization of the CMS of SEML2.
+ *         The final conditions vary in the paramerization of the CMS of SEMLi.
  *         The time at each point except the first one is allowed to vary.
  *         A continuation procedure can be performed to get more than one refined solution.
  *
@@ -237,7 +237,7 @@ int ooconteml2seml(RefSt& refst);
 //
 //========================================================================================
 /**
- *  \brief Continuation of a single of EML2-to-SEML2 connection, between orbit_EM and
+ *  \brief Continuation of a single of EML2-to-SEMLi connection, between orbit_EM and
  *         orbit_SEM.
  *
  *         Because of the possible use of msvt3d and msvtplan inside this routine,the
@@ -303,7 +303,7 @@ int comp_coord_typ(int coord_type);
 /**
  *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM.
  *         A multiple_shooting_direct is applied on the WHOLE trajectory
- *         (EML2 orbit + manifold leg + SEML2 orbit).
+ *         (EML2 orbit + manifold leg + SEMLi orbit).
  **/
 int oocomprefft3d(int grid_freq_days[3], int coord_type,
                   Orbit& orbit_EM, Orbit& orbit_SEM,
@@ -363,7 +363,7 @@ int oojplfg3d_interpolation(double** y_traj_n, double* t_traj_n,
 //         Refinement of solutions: to JPL - Tests
 //----------------------------------------------------------------------------------------
 /**
- *  \brief Computes only a SEML2 orbit and test a JPL refinement.
+ *  \brief Computes only a SEMLi orbit and test a JPL refinement.
  **/
 int oocomprefft3d_test_seml_synjpl(int man_grid_size_t,
                                    int coord_type,
@@ -379,7 +379,7 @@ int oocomprefft3d_test_eml_synjpl(int man_grid_size_t,
                      RefSt refst)
 ;
 /**
- *  \brief Computes only a EML2-SEML2 connection and test a JPL refinement, in synodical coordinates
+ *  \brief Computes only a EML2-SEMLi connection and test a JPL refinement, in synodical coordinates
  **/
 int oocomprefft3d_test_eml2seml_synjpl(int coord_type);
 

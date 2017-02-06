@@ -1647,7 +1647,6 @@ void qbcp_coc_time(double *t0, double *tout, int N, int inputType, int outputTyp
     //------------------------------------------------------------------------------------
     // 3. Updating output
     //------------------------------------------------------------------------------------
-    double yt[6], yt2[6];
     //Loop on all elements in yNCEM
     for(int p = 0; p <= N; p++)
     {
@@ -2072,11 +2071,11 @@ void SEMvtoNCSEMv(const double yEM[], double yNC[], QBCP_L *qbp)
     yNC[5] = +yEM[5]/gamma;
 }
 
-//=============================================================================================
+//========================================================================================
 //
 // COC: Velocities <--> Momenta
 //
-//=============================================================================================
+//========================================================================================
 
 //----------------------------------------------------------------------------------------
 // SEM
@@ -2377,21 +2376,19 @@ void zEarth_INSEM(double t, double zEarth[], QBCP_L *qbcp_l)
     double me = qbcp_l->us_sem.me;
     double ns = qbcp_l->us_sem.ns;
     double as = qbcp_l->us_sem.as;
-    double ni = qbcp_l->us_sem.ni;
-    double ai = qbcp_l->us_sem.ai;
     double M = mm + ms + me;
 
     //------------------------------------------------------------------------------------
     //Retrieve Earth position and velocity in INSEM coordinates
     //------------------------------------------------------------------------------------
     //r
-    double r1 = creal(evz(qbcp_l->cs_sem.zt, t, n, ni, ai));
-    double r2 = cimag(evz(qbcp_l->cs_sem.zt, t, n, ni, ai));
+    //double r1 = creal(evz(qbcp_l->cs_sem.zt, t, n, ni, ai));
+    //double r2 = cimag(evz(qbcp_l->cs_sem.zt, t, n, ni, ai));
     //R
     double R1 = creal(evz(qbcp_l->cs_sem.Zt, t, n, ns, as));
     double R2 = cimag(evz(qbcp_l->cs_sem.Zt, t, n, ns, as));
     //rdot
-    cdouble rdot = evzdot(qbcp_l->cs_sem.zt, qbcp_l->cs_sem.ztdot, t, n, ni, ai);
+    //cdouble rdot = evzdot(qbcp_l->cs_sem.zt, qbcp_l->cs_sem.ztdot, t, n, ni, ai);
     //Rdot
     cdouble Rdot = evzdot(qbcp_l->cs_sem.Zt, qbcp_l->cs_sem.Ztdot, t, n, ns, as);
 
@@ -2438,17 +2435,17 @@ void aEarth_INSEM(double t, double aEarth[], QBCP_L *qbcp_l)
     double me = qbcp_l->us_sem.me;
     double ns = qbcp_l->us_sem.ns;
     double as = qbcp_l->us_sem.as;
-    double ni = qbcp_l->us_sem.ni;
-    double ai = qbcp_l->us_sem.ai;
+    //double ni = qbcp_l->us_sem.ni;
+    //double ai = qbcp_l->us_sem.ai;
     double M  = mm + ms + me;
 
     //------------------------------------------------------------------------------------
     //Retrieve Earth position and velocity in INSEM coordinates
     //------------------------------------------------------------------------------------
     //rddot
-    cdouble rddot = evzddot(qbcp_l->cs_sem.zt, qbcp_l->cs_sem.ztdot, qbcp_l->cs_sem.ztddot, t, n, ni, ai);
-    double r1ddot = creal(rddot);
-    double r2ddot = cimag(rddot);
+    //cdouble rddot = evzddot(qbcp_l->cs_sem.zt, qbcp_l->cs_sem.ztdot, qbcp_l->cs_sem.ztddot, t, n, ni, ai);
+    //double r1ddot = creal(rddot);
+    //double r2ddot = cimag(rddot);
     //Rddot
     cdouble Rddot = evzddot(qbcp_l->cs_sem.Zt, qbcp_l->cs_sem.Ztdot, qbcp_l->cs_sem.Ztddot, t, n, ns, as);
     double R1ddot = creal(Rddot);
@@ -2766,12 +2763,12 @@ void SEMtoECISEM(double t, const double ySE[], double yIN[], QBCP_L *qbcp_l)
     //Param
     double n  = qbcp_l->us_sem.n;
     double ns = qbcp_l->us_sem.ns;
-    double ni = qbcp_l->us_sem.ni;
+    //double ni = qbcp_l->us_sem.ni;
     double as = qbcp_l->us_sem.as;
-    double ai = qbcp_l->us_sem.ai;
-    double ms = qbcp_l->us_sem.ms;
-    double mm = qbcp_l->us_sem.mm;
-    double me = qbcp_l->us_sem.me;
+    //double ai = qbcp_l->us_sem.ai;
+    //double ms = qbcp_l->us_sem.ms;
+    //double mm = qbcp_l->us_sem.mm;
+    //double me = qbcp_l->us_sem.me;
 
     //------------------------------------------------------------------------------------
     //r & R
@@ -2781,8 +2778,8 @@ void SEMtoECISEM(double t, const double ySE[], double yIN[], QBCP_L *qbcp_l)
     double R2 = cimag(evz(qbcp_l->cs_sem.Zt, t, n, ns, as));
     double R  = sqrt(R1*R1 + R2*R2);
     //r
-    double r1 = creal(evz(qbcp_l->cs_sem.zt, t, n, ni, ai));
-    double r2 = cimag(evz(qbcp_l->cs_sem.zt, t, n, ni, ai));
+    //double r1 = creal(evz(qbcp_l->cs_sem.zt, t, n, ni, ai));
+    //double r2 = cimag(evz(qbcp_l->cs_sem.zt, t, n, ni, ai));
 
     //------------------------------------------------------------------------------------
     //Derivatives
@@ -2792,7 +2789,7 @@ void SEMtoECISEM(double t, const double ySE[], double yIN[], QBCP_L *qbcp_l)
     double R2dot = cimag(evzdot(qbcp_l->cs_sem.Zt, qbcp_l->cs_sem.Ztdot, t, n, ns, as));
     double Rdot  = 1.0/R*(R1*R1dot + R2*R2dot);
     //rdot
-    cdouble rdot = evzdot(qbcp_l->cs_sem.zt, qbcp_l->cs_sem.ztdot, t, n, ni, ai);
+    //cdouble rdot = evzdot(qbcp_l->cs_sem.zt, qbcp_l->cs_sem.ztdot, t, n, ni, ai);
 
     //------------------------------------------------------------------------------------
     //Position & Velocity of the SE barycenter in inertial coordinates (in SE units)

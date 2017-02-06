@@ -1332,7 +1332,7 @@ void readAndInterpolateIntProjCU_bin(string filename,
     //==========================================================
     double dmin = fabs(t0_CMU_EM_UNIQUE[0] - t0_des);
     int ti = 0;
-    for(int i = 1; i < t0_CMU_EM_UNIQUE.size(); i++)
+    for(int i = 1; i < (int) t0_CMU_EM_UNIQUE.size(); i++)
     {
         if(fabs(t0_CMU_EM_UNIQUE[i] - t0_des) < dmin)
         {

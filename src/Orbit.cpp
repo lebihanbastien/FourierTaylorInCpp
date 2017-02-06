@@ -95,6 +95,11 @@ void Orbit::update_ic(const double si[], double t0c)
     //------------------------------------------
     //z0 = W(si, t0)
     invman->evalRCMtoNC(si, t0c, z0x, order, ofs_order);
+
+    //------------------------------------------
+    // 5. Update t0
+    //------------------------------------------
+    t0x = t0c;
 }
 
 void Orbit::update_ic(const double si[])
@@ -741,7 +746,7 @@ int oo_gridOrbit(double st0[], double t0, double tf, double dt)
     //------------------------------------------------------------------------------------
     Invman invman(OFTS_ORDER, OFS_ORDER, SEML.cs);
     int ncs = invman.getNCS();
-    int dcs = default_coordinate_system(ncs);
+    //int dcs = default_coordinate_system(ncs);
 
     //------------------------------------------------------------------------------------
     // ODE
@@ -790,7 +795,7 @@ int oo_gridOrbit(double st0[], double t0, double tf, double dt)
     //====================================================================================
     //Hamiltonian:
     //====================================================================================
-    double y[6], H0;
+    double y[6], H0 = 0.0;
 
     //Loop on all positions
     for(int k= 0; k <= N; k++)

@@ -856,7 +856,7 @@ double evaluateOddDerivative(double omega, int order, double *coef, double *cR)
 /**
  *  \brief Evaluate z(t), with \f$ z(t) = e^{it} z_r(t) \f$ in Earth-Moon units.
  */
-cdouble evz(Ofsc& zt, double t, double n, double ni, double ai)
+cdouble evz(const Ofsc& zt, double t, double n, double ni, double ai)
 {
     return ai*(cos(ni*t)+I*sin(ni*t))*zt.evaluate(n*t);
 }
@@ -864,7 +864,7 @@ cdouble evz(Ofsc& zt, double t, double n, double ni, double ai)
 /**
  *  \brief Evaluate dz(t)/dt, with \f$ z(t) = e^{it} z_r(t) \f$ in Earth-Moon units.
  */
-cdouble evzdot(Ofsc& zt, Ofsc& ztdot, double t, double n, double ni, double ai)
+cdouble evzdot(const Ofsc& zt, const Ofsc& ztdot, double t, double n, double ni, double ai)
 {
     return ai*(cos(ni*t)+I*sin(ni*t))*(ztdot.evaluate(n*t) + I*ni*zt.evaluate(n*t));
 }
@@ -872,7 +872,7 @@ cdouble evzdot(Ofsc& zt, Ofsc& ztdot, double t, double n, double ni, double ai)
 /**
  *  \brief Evaluate d2z(t)/dt2, with \f$ z(t) = e^{it} z_r(t) \f$ in Earth-Moon units.
  */
-cdouble evzddot(Ofsc& zt, Ofsc& ztdot, Ofsc& ztddot, double t, double n, double ni, double ai)
+cdouble evzddot(const Ofsc& zt, const Ofsc& ztdot, const Ofsc& ztddot, double t, double n, double ni, double ai)
 {
     return ai*(cos(ni*t)+I*sin(ni*t))*( 2*I*ni*ztdot.evaluate(n*t) - ni*ni*zt.evaluate(n*t) + ztddot.evaluate(n*t));
 }
@@ -891,9 +891,9 @@ cdouble evzddot(Ofsc& zt, Ofsc& ztdot, Ofsc& ztddot, double t, double n, double 
  **/
 void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
 {
-    //=====================================================================
+    //====================================================================================
     // 1. Do some checks on the inputs
-    //=====================================================================
+    //====================================================================================
     //Type of inputs
     if(inputType > INSEM)
         perror("rot_mat_coc. Unknown inputType");
@@ -902,22 +902,22 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
     if(outputType > INSEM)
         perror("rot_mat_coc. Unknown outputType");
 
-    //=====================================================================
+    //====================================================================================
     // 2. Define the default framework wrt the inputType
-    //=====================================================================
+    //====================================================================================
     int fwrk = default_framework(inputType);
 
-    //=====================================================================
+    //====================================================================================
     // 2. Check that the focus in SEML is
     // in accordance with the inputType.
-    //=====================================================================
+    //====================================================================================
     int fwrk0 = SEML.fwrk;
     if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
 
 
-    //=====================================================================
+    //====================================================================================
     // 3. Updating output
-    //=====================================================================
+    //====================================================================================
 
     //-----------------------------------
     // 3.1 Parameters in coordsys units
