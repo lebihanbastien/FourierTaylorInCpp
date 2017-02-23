@@ -53,6 +53,8 @@ string filenameCUM(int ofts_order, int type, int destination, double t0)
     {
     case TYPE_CU:
         return SEML.cs_em.F_PLOT+"cu_order_"+numTostring(ofts_order)+"_t0_"+numTostring(t0)+".bin";
+    case TYPE_CU_3D:
+        return SEML.cs_em.F_PLOT+"cu_3d_order_"+numTostring(ofts_order)+"_t0_"+numTostring(t0)+".bin";
     case TYPE_MAN:
         return SEML.cs_em.F_PLOT+"intcu_order_"+numTostring(ofts_order)+"_t0_"+numTostring(t0)+".bin";
     case TYPE_MAN_PROJ:
@@ -65,8 +67,6 @@ string filenameCUM(int ofts_order, int type, int destination, double t0)
         return SEML.cs_em.F_PLOT+"cont_atf_order_"+numTostring(ofts_order)+"_dest_L"+numTostring(destination)+"_t0_"+numTostring(t0)+".txt";
     case TYPE_CONT_ATF_TRAJ:
         return SEML.cs_em.F_PLOT+"cont_atf_traj_order_"+numTostring(ofts_order)+"_dest_L"+numTostring(destination)+"_t0_"+numTostring(t0)+".bin";
-    case TYPE_CU_3D:
-        return SEML.cs_em.F_PLOT+"cu_3d_order_"+numTostring(ofts_order)+"_dest_L"+numTostring(destination)+"_t0_"+numTostring(t0)+".bin";
     default:
         cout << "filenameOrbit: unknown type." << endl;
         return "";

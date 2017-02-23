@@ -1,0 +1,76 @@
+# Configuration file for FourierTaylorInCpp
+#
+# BLB 2017
+
+#-----------------------------------------------------
+# Source the parameters
+#-----------------------------------------------------
+source config/constants.sh
+
+#=====================================================
+#  ---- General parameters ----
+#=====================================================
+
+#-----------------------------------------------------
+# TYPE OF COMPUTATION (COMP_TYPE)
+#-----------------------------------------------------
+COMP_TYPE=$COMP_CM_EML2_TO_CM_SEML_3D
+
+#-----------------------------------------------------
+# MODEL
+# RTBP = 0; QBCP = 1; BCP = 2
+#-----------------------------------------------------
+MODEL=$M_QBCP 
+
+#-----------------------------------------------------
+# DEFAULT LIBRATION POINT FOR EM & SEM SYSTEM
+#-----------------------------------------------------
+LI_EM=2
+LI_SEM=2
+
+#-----------------------------------------------------
+# Orders for the semi-numerical expansions
+#-----------------------------------------------------
+OFS_ORDER=30
+OFTS_ORDER=16
+
+#-----------------------------------------------------
+# Parameters for parallel computation
+#-----------------------------------------------------
+NUM_THREADS=4   #number of parallel threads
+ISPAR=1		#parallel computation is on by default
+
+#-----------------------------------------------------
+# NOHUP condition
+#-----------------------------------------------------
+ISNOHUP=0
+
+#=====================================================
+#  ---- Projection parameters ----
+#=====================================================
+
+#-----------------------------------------------------
+# Parameters that change often
+#-----------------------------------------------------
+# Time grid: min, max and number of points on the grid
+TMIN=0.00     # (given as %T, with T the SEM period)
+TMAX=0.25     # (given as %T, with T the SEM period)
+TSIZE=0	  
+
+# Configuration (s1, s2, s3, s4) grid
+GLIM_S1=(-35 +35)
+GLIM_S2=(+0  +10)
+GLIM_S3=(-35 +35)
+GLIM_S4=(+0  +10)
+GSIZE_SI=(+50 +5 +50 +5)
+
+#-----------------------------------------------------
+# Parameters that are stable
+#-----------------------------------------------------
+TM=12 	      # Maximum integration time (given as %T, with T the SEM period)
+MSIZE=500     # Number of points on each trajectory
+NSMIN=20      # Number of sorted solutions
+YNMAX=0.6     # The maximum norm (in SEM normalized units) for a projection to occur on the CM_NC of SEMLi
+SNMAX=0.6     # The maximum norm (in RCM normalized units) for a projection to occur on the CM_NC of SEMLi
+NOD=6         # Number of dimensions on which we compute the norm of the projection error
+

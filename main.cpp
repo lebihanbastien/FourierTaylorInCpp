@@ -45,6 +45,96 @@ using namespace std;
 #define COMP_test_INVMAN               9    //Test of the new invariant manifold implementation
 #define COMP_REF_JPL                   10   //Refine to JPL ephemerides
 
+/*
+
+    (i) Make initialize_environment routine that takes only COMP_TYPE as argument
+    (ii) Use argc/argv for all parameters below. List of the routine where they are used as of 02/2017.
+
+
+    //=================================================================
+    What do we need?
+    //=================================================================
+
+    --------------- General ---------------
+
+    ---- COMP_TYPE
+    ---- MODEL_TYPE
+    ---- NUM_THREADS
+    ---- OFTS_ORDER
+    ---- LI_EM
+    ---- LI_SEM
+
+    --------------- for PROJECTION ---------------
+
+    ---- TMIN (given in ratio T)
+    ---- TMAX (given in ratio T)
+    ---- TSIZE
+    ---- GLIM_SI[4][2]
+
+    --------------- for REF ---------------
+
+    ---- refst.type          = REF_CONT_D;  //rk: set REF_CONT_D_HARD_CASE for difficult cases with REF_CONT_D (ex: EML2-SEMLi via SEML1...)
+    ---- refst.dim           = REF_PLANAR;
+    ---- refst.gridSize      = 20;
+    ---- refst.t0_des        = TMIN; //0.07*SEML.us_em.T;
+
+    ---- refst.s1_CMU_EM_MIN    = -2;
+    ---- refst.s1_CMU_EM_MAX    = +10;
+    ---- refst.s3_CMU_EM_MIN    = -35;
+    ---- refst.s3_CMU_EM_MAX    = -30;
+    ---- refst.isLimUD          =  0;
+
+    ---- refst.cont_step_max    = +450;
+    ---- refst.cont_step_max_vt = +5;
+
+    ---- refst.isDirUD       = 0;
+    ---- refst.Dir           = -1;
+    ---- refst.isFlagOn      = 1;
+    ---- refst.isPlotted     = 1;
+    ---- refst.isSaved       = 1;
+    ---- refst.isFromServer  = 1;
+
+    //=================================================================
+    What will not change?
+    //=================================================================
+
+    --------------- General ---------------
+
+    ---- ISPAR = 1
+    ---- OFS_ORDER = 30
+
+    --------------- for PROJECTION ---------------
+
+    ---- TM = 12*SEML.us.T;
+    ---- MSIZE = 500;    //number of points on each trajectory
+    ---- NSMIN = 20;     //number of sorted solutions
+    ---- YNMAX = 0.6;    //The maximum norm (in SEM normalized units) for a projection to occur on the CM_NC of SEMLi
+    ---- SNMAX = 0.6;    //The maximum norm (in RCM normalized units) for a projection to occur on the CM_NC of SEMLi
+    ---- NOD = 6;        //Number of dimensions on which we compute the norm of the projection error
+
+    --------------- for REF ---------------
+
+    refst.time          = REF_VAR_TN;
+    refst.grid          = REF_FIXED_GRID;
+    refst.termination   = REF_COND_T;
+    refst.coord_type    = NCSEM;
+    refst.sidim         = 0;
+    refst.xps           = (LI_SEM == 1)? +0.6:-0.6; //NCSEM coordinates
+    //Sampling frequencies (days)
+    refst.sf_eml2  = 2;
+    refst.sf_man   = 5;
+    refst.sf_seml2 = 10;
+    refst.isJPL         = 1;
+    refst.isDebug       = 0;
+    refst.tspan_EM      = +10*SEML.us_em.T;
+    refst.tspan_SEM     = +10*SEML.us_sem.T;
+
+    //////// A REVOIR ////////
+    refst.djplcoord     = -1; //NJ2000 by default
+
+*/
+
+
 
 
 
@@ -68,44 +158,100 @@ NOT work!!! Ou alors dans le return?? Yes, by creating a typedef
 
 
 *****************************************************************************************/
-int main()
+int main(int argc, char** argv)
 {
     //====================================================================================
-    // Type of computation
+    //Declare configuration parameters
     //====================================================================================
-    int COMPTYPE = COMP_CM_EML2_TO_CMS_SEML;//COMP_CM_EML2_TO_CM_SEML_3D;//COMP_CM_EML2_TO_CMS_SEML;
+    // General parameters (orders, etc)
+    int COMP_TYPE, NUM_THREADS, MODEL_TYPE, LI_EM, LI_SEM, ISPAR;
+    // Projection parameters (in structure)
+    ProjSt projSt;
+    // Refinement parameters (in structure)
+    RefSt refst;
+
+    //------------------------------------------------------------------------------------
+    // The variable index contains the index of the current argument of
+    // the main routine. First index is 1 because index 0 is the application path
+    //------------------------------------------------------------------------------------
+    int index = 1;
+
+    //====================================================================================
+    //Update the general parameters
+    //====================================================================================
+    //------------------------------------------------------------------------------------
+    //Check if arguments have been passed
+    //------------------------------------------------------------------------------------
+    if(argc == 1) //no argument were passed
+    {
+        //--------------------------------------------------------------------------------
+        // Type of computation
+        //--------------------------------------------------------------------------------
+        COMP_TYPE   = COMP_CM_EML2_TO_CM_SEML;
+
+        //--------------------------------------------------------------------------------
+        // Model and libration points
+        //--------------------------------------------------------------------------------
+        MODEL_TYPE  = M_QBCP;
+        LI_EM       = 2;
+        LI_SEM      = 2;
+
+        //--------------------------------------------------------------------------------
+        //Orders
+        //--------------------------------------------------------------------------------
+        OFTS_ORDER  = 16;
+        if(MODEL_TYPE == M_RTBP) OFS_ORDER  = 0;
+        else OFS_ORDER  = 30;
+
+        //--------------------------------------------------------------------------------
+        // Parallel computation parameters
+        //--------------------------------------------------------------------------------
+        ISPAR       = 1;
+        NUM_THREADS = 4;
+    }
+    else  //arguments were passed
+    {
+        //--------------------------------------------------------------------------------
+        //Orders
+        //--------------------------------------------------------------------------------
+        OFTS_ORDER  = atoi(argv[index++]);
+        OFS_ORDER   = atoi(argv[index++]);
+
+        //--------------------------------------------------------------------------------
+        // Type of computation
+        //--------------------------------------------------------------------------------
+        COMP_TYPE   = atoi(argv[index++]);
+
+        //--------------------------------------------------------------------------------
+        // Model and libration points
+        //--------------------------------------------------------------------------------
+        MODEL_TYPE  = atoi(argv[index++]);
+        LI_EM       = atoi(argv[index++]);
+        LI_SEM      = atoi(argv[index++]);
+
+        //--------------------------------------------------------------------------------
+        // Parallel computation parameters
+        //--------------------------------------------------------------------------------
+        ISPAR       = atoi(argv[index++]);
+        NUM_THREADS = atoi(argv[index++]);
+    }
+
+    cout << "COMP_TYPE = " << COMP_TYPE << endl;
 
     //====================================================================================
     // General settings
     //====================================================================================
     cout << setiosflags(ios::scientific) << setprecision(15);
+    omp_set_num_threads(NUM_THREADS);
 
-    // openMP settings
-    int num_threads = 4;
-    omp_set_num_threads(num_threads);
-
-    // Define the global parameters
-    int MODEL_TYPE = M_QBCP;
-    OFTS_ORDER = 16;
-    if(MODEL_TYPE == M_RTBP) OFS_ORDER  = 0;
-    else OFS_ORDER  = 30;
 
     //====================================================================================
-    // Configuration parameters
+    // Some other parameters depend on the type of computation
     //====================================================================================
-    int model = 0, fwrk = 0, isNorm = 0, li_EM = 0, li_SEM = 0;
+    int model = 0, fwrk = 0, isNorm = 0;
     int pms_EM = 0, pms_SEM = 0, mType_EM = 0, mType_SEM = 0, reduced_nv = 0;
 
-    //------------------------------------------------------------------------------------
-    // Selecting the libration points
-    //------------------------------------------------------------------------------------
-    li_EM     = 2;
-    li_SEM    = 2;
-
-    //------------------------------------------------------------------------------------
-    // The other parameters depend on the type of computation
-    //------------------------------------------------------------------------------------
-    switch(COMPTYPE)
+    switch(COMP_TYPE)
     {
         //================================================================================
         // Test and additionnal computations
@@ -188,110 +334,279 @@ int main()
         break;
 
     default:
-        cout << "main. Warning: unknown COMPTYPE!" << endl;
+        cout << "main. Warning: unknown COMP_TYPE!" << endl;
     }
 
     //====================================================================================
     // Initialization of the environnement
     // Mandatory to perform any computation
     //====================================================================================
-    initialize_environment(li_EM, li_SEM, isNorm, model, fwrk,
+    initialize_environment(LI_EM, LI_SEM, isNorm, model, fwrk,
                            pms_EM, pms_SEM, mType_EM, mType_SEM);
 
 
-    //Reduced number of variables in the default invariant manifolds
-    reduced_nv = Invman::compRNV(SEML.cs);
-
     //====================================================================================
-    // Computation parameters: Projection CMU EML2 to CM SEMLi
+    //Update the parameters specific to the type of computation (COMP_TYPE)
     //====================================================================================
-    //TIME
-    double TM      = 12*SEML.us.T;
-    double TMIN    = 0.88*SEML.us.T; //0.08*T for SEMLi by SEML1!
-    double TMAX    = 1.0*SEML.us.T;
-    int    TSIZE   = 0;
-    double TLIM[2] = {TMIN, TMAX};
-
-    //INITIAL CONDITIONS IN THE EML2 MANIFOLD
-    double  GMIN_SI[4][2] =
-    {   {-30, +30} ,
-        {+0,  +10}   ,
-        {-30, +30} ,
-        {+0,  +10}
-    };
-
-    //NUMBER OF POINTS AT EML2
-    int  GSIZE_SI[4]   = {50, 5, 50, 5};
-
-    //TRAJECTORTY REFINMENT
-    int MSIZE = 500;    //number of points on each trajectory
-    int NSMIN = 20;     //number of sorted solutions
-
-    //LIMITS OF DETECTION
-    double YNMAX = 0.6;  //The maximum norm (in SEM normalized units) for a projection to occur on the CM_NC of SEMLi
-    double SNMAX = 0.6;  //The maximum norm (in RCM normalized units) for a projection to occur on the CM_NC of SEMLi
-
-    //PARALLEL CPU
-    int ISPAR = 1;
-
-    //Number of dimensions on which we compute the norm of the projection error
-    int NOD = 6;
-
-    //====================================================================================
-    // Computation parameters: refinement CMU EML2 to CMS SEMLi
-    //====================================================================================
-    //Refinement structure
-    RefSt refst;
+    //------------------------------------------------------------------------------------
+    //Check if arguments have been passed
+    //------------------------------------------------------------------------------------
+    if(argc == 1) //no argument were passed
     {
-        refst.type          = REF_CONT_D;  //rk: set REF_CONT_D_HARD_CASE for difficult cases with REF_CONT_D (ex: EML2-SEMLi via SEML1...)
-        refst.dim           = REF_PLANAR;
-        refst.time          = REF_VAR_TN;
-        refst.grid          = REF_FIXED_GRID;
-        refst.termination   = REF_COND_T;
+        //================================================================================
+        // Projection parameters
+        //================================================================================
+        //--------------------------------------------------------------------------------
+        //Time grid: min, max and number of points on the grid
+        //--------------------------------------------------------------------------------
+        projSt.TMIN  = 0.88*SEML.us.T;
+        projSt.TMAX  = 1.00*SEML.us.T;
 
-        refst.coord_type    = NCSEM;
-        refst.gridSize      = 20;
+        projSt.TSIZE    = 0;
+        projSt.TLIM[0]  = projSt.TMIN;
+        projSt.TLIM[1]  = projSt.TMAX;
 
-        refst.sidim         = 0;
+        //--------------------------------------------------------------------------------
+        // Configuration (s1, s2, s3, s4) grid
+        //--------------------------------------------------------------------------------
+        projSt.GLIM_SI[0][0] = -30;
+        projSt.GLIM_SI[0][1] = +30;
 
-        refst.t0_des        = TMIN; //0.07*SEML.us_em.T;
+        projSt.GLIM_SI[1][0] = +0;
+        projSt.GLIM_SI[1][1] = +10;
 
-        refst.isLimUD          =  0;
-        refst.s1_CMU_EM_MIN    = -2;
-        refst.s1_CMU_EM_MAX    = +10;
-        refst.s3_CMU_EM_MIN    = -35;
-        refst.s3_CMU_EM_MAX    = -30;
-        refst.cont_step_max    = +450;
-        refst.cont_step_max_vt = +5;
+        projSt.GLIM_SI[2][0] = -30;
+        projSt.GLIM_SI[2][1] = +30;
 
-        refst.isDirUD       = 0;
-        refst.Dir           = -1;
-        refst.isFlagOn      = 1;
+        projSt.GLIM_SI[3][0] = +0;
+        projSt.GLIM_SI[3][1] = +10;
 
-        refst.xps           = (li_SEM == 1)? +0.6:-0.6; //NCSEM coordinates
+        projSt.GSIZE_SI[0]   = 50;
+        projSt.GSIZE_SI[1]   = 5;
+        projSt.GSIZE_SI[2]   = 50;
+        projSt.GSIZE_SI[3]   = 5;
 
-        //Sampling frequencies (days)
-        refst.sf_eml2  = 2;
-        refst.sf_man   = 5;
-        refst.sf_seml2 = 10;
+        //--------------------------------------------------------------------------------
+        //Stable parameters (are not supposed to change)
+        //--------------------------------------------------------------------------------
+        projSt.TM    = 12.0*SEML.us.T; // Maximum integration time
+        projSt.MSIZE = 500;            // Number of points on each trajectory
+        projSt.NSMIN = 20;             // Number of sorted solutions
+        projSt.YNMAX = 0.6;            // The maximum norm (in SEM normalized units) for a projection to occur on the CM_NC of SEMLi
+        projSt.SNMAX = 0.6;            // The maximum norm (in RCM normalized units) for a projection to occur on the CM_NC of SEMLi
+        projSt.NOD   = 6;              // Number of dimensions on which we compute the norm of the projection
+        projSt.ISPAR = ISPAR;          // Boolean for parallel computation
 
-        refst.djplcoord     = -1; //NJ2000 by default
+        //================================================================================
+        // Refinement parameters
+        //================================================================================
 
-        refst.isPlotted     = 1;
-        refst.isSaved       = 1;
-        refst.isJPL         = 1;
-        refst.isDebug       = 0;
-        refst.isFromServer  = 1;
+        //--------------------------------------------------------------------------------
+        // Parameters that change often
+        //--------------------------------------------------------------------------------
+        //rk: set REF_CONT_D_HARD_CASE for difficult cases
+        //with REF_CONT_D (ex: EML2-SEMLi via SEML1...)
+        refst.type          = REF_CONT_D;         // Type of refinement
+        refst.dim           = REF_PLANAR;         // Type of dimensions planar or 3d?
+        refst.t0_des        = 0.07*SEML.us_em.T;  // Initial time
 
+        // Direction of the continuation procedure
+        refst.isDirUD       = 0;                  // is it user defined?
+        refst.Dir           = -1;                 // if not, +1 or -1
+
+        // Domain of search for the first guess
+        refst.s1_CMU_EM_MIN = -2;
+        refst.s1_CMU_EM_MAX = +10;
+        refst.s3_CMU_EM_MIN = -35;
+        refst.s3_CMU_EM_MAX = -30;
+        // Or, if we want the user to define such domain:
+        refst.isLimUD       =  0;
+
+        // Number of steps in the continuation procedure
+        refst.cont_step_max    = +450;            // with fixed times
+        refst.cont_step_max_vt = +5;              // with variable times
+
+        //User parameters
+        refst.isFlagOn      = 1;                  // do we have steps in the procedure - asking the user to press enter to go on?
+        refst.isPlotted     = 1;                  // do we plot the results during the computation?
+        refst.isSaved       = 1;                  // do we save the results in data files?
+        refst.isFromServer  = 1;                  // does the raw data comes from server files?
+
+        //--------------------------------------------------------------------------------
+        // Parameters that are stable
+        //--------------------------------------------------------------------------------
+        refst.isDebug       = 0;                        // if yes, additionnal tests are performed
+        refst.gridSize      = 20;                       // number of points on the refinement grid. 20 is taken by heuristics.
+
+        refst.time          = REF_VAR_TN;               // type of constraints on the times in REF_CONT
+        refst.grid          = REF_FIXED_GRID;           // type of grid
+        refst.termination   = REF_COND_T;               // termination condition in the continuation with variable final time (either REF_VAR_TN/REF_VAR_TIME)
+        refst.coord_type    = NCSEM;                    // coordinates system in the refinement procedure
+
+        refst.xps           = (LI_SEM == 1)? +0.6:-0.6; // position of the poincaré section in NCSEM coordinates
+        refst.isJPL         = 1;                        // is the JPL refinement performed when possible?
+        refst.djplcoord     = -1;                       // coordinate system used during the JPL refinement (if -1, it is user defined) Best results obtained with NJ2000
+        refst.sidim         = 0;                        // 0 or 2 - component of s0 that stays constant when t0 is free
+
+        // Sampling frequencies in REF_COMP (complete trajectory) in days
+        refst.sf_eml2  = 2;                             // orbit at EML2
+        refst.sf_man   = 5;                             // transfer leg
+        refst.sf_seml2 = 10;                            // orbit at SEML2
+
+        // Integration window for each orbit
         refst.tspan_EM      = +10*SEML.us_em.T;
         refst.tspan_SEM     = +10*SEML.us_sem.T;
+
     }
+    else  //arguments were passed
+    {
+        //================================================================================
+        // Parameters that depends on the type of computation
+        //================================================================================
+        switch(COMP_TYPE)
+        {
+
+        //================================================================================
+        // 3D Projection CMU EML2 to CM SEMLi
+        //================================================================================
+        case COMP_CM_EML2_TO_CM_SEML_3D:
+        case COMP_CM_EML2_TO_CM_SEML:
+        {
+            //----------------------------------------------------------------------------
+            //Time grid: min, max and number of points on the grid
+            //----------------------------------------------------------------------------
+            projSt.TMIN  = atof(argv[index++])*SEML.us.T;
+            projSt.TMAX  = atof(argv[index++])*SEML.us.T;
+            projSt.TM    = atof(argv[index++])*SEML.us.T;
+
+            projSt.TSIZE   = atoi(argv[index++]);
+            projSt.TLIM[0] = projSt.TMIN;
+            projSt.TLIM[1] = projSt.TMAX;
+
+            //----------------------------------------------------------------------------
+            // Configuration (s1, s2, s3, s4) grid
+            //----------------------------------------------------------------------------
+            projSt.GLIM_SI[0][0] = atof(argv[index++]);
+            projSt.GLIM_SI[0][1] = atof(argv[index++]);
+
+            projSt.GLIM_SI[1][0] = atof(argv[index++]);
+            projSt.GLIM_SI[1][1] = atof(argv[index++]);
+
+            projSt.GLIM_SI[2][0] = atof(argv[index++]);
+            projSt.GLIM_SI[2][1] = atof(argv[index++]);
+
+            projSt.GLIM_SI[3][0] = atof(argv[index++]);
+            projSt.GLIM_SI[3][1] = atof(argv[index++]);
+
+            projSt.GSIZE_SI[0]   = atoi(argv[index++]);
+            projSt.GSIZE_SI[1]   = atoi(argv[index++]);
+            projSt.GSIZE_SI[2]   = atoi(argv[index++]);
+            projSt.GSIZE_SI[3]   = atoi(argv[index++]);
+
+            //----------------------------------------------------------------------------
+            //Stable parameters (are not supposed to change)
+            //----------------------------------------------------------------------------
+            projSt.MSIZE = atoi(argv[index++]);
+            projSt.NSMIN = atoi(argv[index++]);
+            projSt.YNMAX = atof(argv[index++]);
+            projSt.SNMAX = atof(argv[index++]);
+            projSt.NOD   = atoi(argv[index++]);
+            projSt.ISPAR = ISPAR;
+
+            break;
+        }
+
+
+        //================================================================================
+        // Refinement CMU EML2 to CMS SEMLi
+        //================================================================================
+        case COMP_CM_EML2_TO_CMS_SEML:
+        case COMP_REF_JPL:
+            {
+                //------------------------------------------------------------------------
+                // Parameters that change often
+                //------------------------------------------------------------------------
+                //rk: set REF_CONT_D_HARD_CASE for difficult cases
+                //with REF_CONT_D (ex: EML2-SEMLi via SEML1...)
+                refst.type          = atoi(argv[index++]);            // Type of refinement
+                refst.dim           = atoi(argv[index++]);            // Type of dimensions planar or 3d?
+                refst.t0_des        = atof(argv[index++])*SEML.us.T;  // Initial time
+
+                // Direction of the continuation procedure
+                refst.isDirUD       = atoi(argv[index++]);    // is it user defined?
+                refst.Dir           = atoi(argv[index++]);    // if not, +1 or -1
+
+                // Domain of search for the first guess
+                refst.s1_CMU_EM_MIN = atof(argv[index++]);
+                refst.s1_CMU_EM_MAX = atof(argv[index++]);
+                refst.s3_CMU_EM_MIN = atof(argv[index++]);
+                refst.s3_CMU_EM_MAX = atof(argv[index++]);
+                // Or, if we want the user to define such domain:
+                refst.isLimUD       =  atoi(argv[index++]);
+
+                // Number of steps in the continuation procedure
+                refst.cont_step_max    = atoi(argv[index++]);  // with fixed times
+                refst.cont_step_max_vt = atoi(argv[index++]);  // with variable times
+
+                //User parameters
+                refst.isFlagOn      = atoi(argv[index++]);     // do we have steps in the procedure - asking the user to press enter to go on?
+                refst.isPlotted     = atoi(argv[index++]);     // do we plot the results during the computation?
+                refst.isSaved       = atoi(argv[index++]);     // do we save the results in data files?
+                refst.isFromServer  = atoi(argv[index++]);     // does the raw data comes from server files?
+
+                //------------------------------------------------------------------------
+                // Parameters that are stable
+                //------------------------------------------------------------------------
+                refst.isDebug       = atoi(argv[index++]);  // if yes, additionnal tests are performed
+                refst.gridSize      = atoi(argv[index++]);  // number of points on the refinement grid. 20 is taken by heuristics.
+
+                refst.time          = atoi(argv[index++]);  // type of constraints on the times in REF_CONT
+                refst.grid          = atoi(argv[index++]);  // type of grid
+                refst.termination   = atoi(argv[index++]);  // termination condition in the continuation with variable final time (either REF_VAR_TN/REF_VAR_TIME)
+                refst.coord_type    = atoi(argv[index++]);  // coordinates system in the refinement procedure
+
+                refst.xps           = atof(argv[index++]);  // position of the poincaré section in NCSEM coordinates
+                refst.xps *= (LI_SEM == 1)? +1:-1;
+                refst.isJPL         = atoi(argv[index++]);  // is the JPL refinement performed when possible?
+                refst.djplcoord     = atoi(argv[index++]);  // coordinate system used during the JPL refinement (if -1, it is user defined) Best results obtained with NJ2000
+                refst.sidim         = atoi(argv[index++]);  // 0 or 2 - component of s0 that stays constant when t0 is free
+
+                // Sampling frequencies in REF_COMP (complete trajectory) in days
+                refst.sf_eml2  = atof(argv[index++]);       // orbit at EML2
+                refst.sf_man   = atof(argv[index++]);       // transfer leg
+                refst.sf_seml2 = atof(argv[index++]);       // orbit at SEML2
+
+                // Integration window for each orbit
+                refst.tspan_EM      = atof(argv[index++])*SEML.us_em.T;
+                refst.tspan_SEM     = atof(argv[index++])*SEML.us_sem.T;
+                break;
+            }
+
+
+        //================================================================================
+        // Refinement of the whole trajectory CMU EML2 to CM SEMLi
+        //================================================================================
+        case COMP_CM_EML2_TO_CM_SEML_REFINE:
+        case COMP_EPHEMERIDES_TEST:
+        case COMP_CM_EML2_TO_CMS_SEML_READ:
+        case COMP_SINGLE_ORBIT:
+        case COMP_VF_TEST:
+        case COMP_test_INVMAN:
+        case COMP_VOFTS_TO_VOFTS:
+        {
+            // Nothing for now, no additionnal parameters are needed!
+            break;
+        }
+
+    }
+    }
+
 
 
     //====================================================================================
     // Switch
     //====================================================================================
-    switch(COMPTYPE)
+    switch(COMP_TYPE)
     {
         //================================================================================
         // 3D Projection CMU EML2 to CM SEMLi
@@ -303,14 +618,14 @@ int main()
         //--------------------------------------------------------------------------------
         // Compute initial conditions in CMU EML2 on a given grid
         tic();
-        oo_compute_grid_CMU_EM_3D(PROJ_EPSILON, TLIM, TSIZE, GMIN_SI, GSIZE_SI, ISPAR);
+        oo_compute_grid_CMU_EM_3D(PROJ_EPSILON, projSt);
         cout << "End of in oo_compute_grid_CMU_EM_3D in " << toc() << endl;
 
 
 
         // Integrate those initial conditions and project them on the CM SEMLi
         tic();
-        oo_int_proj_CMU_EM_on_CM_SEM_3D(TM, MSIZE, NOD, ISPAR, YNMAX, SNMAX);
+        oo_int_proj_CMU_EM_on_CM_SEM_3D(projSt);
         cout << "End of in oo_int_proj_CMU_EM_on_CM_SEM_3D in " << toc() << endl;
         break;
 
@@ -320,7 +635,7 @@ int main()
         // Compute initial conditions in CMU EML2 on a given grid
 
         tic();
-        //compute_grid_CMU_EM_3D(PROJ_EPSILON, TLIM, TSIZE, GMIN_SI, GSIZE_SI, CM_TFC, Mcoc, Vcoc, ISPAR);
+        //compute_grid_CMU_EM_3D(PROJ_EPSILON, TLIM, TSIZE, GLIM_SI, GSIZE_SI, CM_TFC, Mcoc, Vcoc, ISPAR);
         cout << "End of in compute_grid_CMU_EM_3D in " << toc() << endl;
 
 
@@ -341,28 +656,26 @@ int main()
         //--------------------------------------------------------------------------------
         //UNSTABLE MANIFOLD AT EML2
         //--------------------------------------------------------------------------------
-        double GMIN_S1  = GMIN_SI[0][0];
-        double GMAX_S1  = GMIN_SI[0][1];
-        int    GSIZE_S1 = GSIZE_SI[0];
+        double GMIN_S1  = projSt.GLIM_SI[0][0];
+        double GMAX_S1  = projSt.GLIM_SI[0][1];
+        int    GSIZE_S1 = projSt.GSIZE_SI[0];
 
-        double GMIN_S3  = GMIN_SI[2][0];
-        double GMAX_S3  = GMIN_SI[2][1];
-        int    GSIZE_S3 = GSIZE_SI[2];
+        double GMIN_S3  = projSt.GLIM_SI[2][0];
+        double GMAX_S3  = projSt.GLIM_SI[2][1];
+        int    GSIZE_S3 = projSt.GSIZE_SI[2];
 
         //--------------------------------------------------------------------------------
         // New version
         //--------------------------------------------------------------------------------
         // Compute initial conditions in CMU EML2 on a given grid
         tic();
-        oo_compute_grid_CMU_EM(PROJ_EPSILON, TMIN, TMAX, TSIZE, GMIN_S1, GMAX_S1,
-                               GMIN_S3, GMAX_S3, GSIZE_S1, GSIZE_S3, ISPAR);
+        oo_compute_grid_CMU_EM(PROJ_EPSILON, projSt);
         cout << "End of in oo_compute_grid_CMU_EM in " << toc() << endl;
 
 
         // Integrate those initial conditions and project them on the CM SEMLi
         tic();
-        oo_int_proj_CMU_EM_on_CM_SEM(TM, TSIZE, GSIZE_S1, GSIZE_S3, MSIZE, NSMIN, NOD,
-                                     ISPAR, YNMAX, SNMAX);
+        oo_int_proj_CMU_EM_on_CM_SEM(projSt);
         cout << "End of in oo_int_proj_CMU_EM_on_CM_SEM in " << toc() << endl;
         break;
 
@@ -569,6 +882,8 @@ int main()
     //================================================================================
     case COMP_SINGLE_ORBIT:
     {
+        //Reduced number of variables in the default invariant manifolds
+        reduced_nv = Invman::compRNV(SEML.cs);
         //----------------------------------------------------------------------------
         // Initial conditions
         //----------------------------------------------------------------------------
@@ -581,7 +896,7 @@ int main()
             {
             case F_EM:
 
-                switch(li_EM)
+                switch(LI_EM)
                 {
                 case 1:
                     st0[0] = 0.0;//-0.145454545454546;

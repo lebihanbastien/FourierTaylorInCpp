@@ -6,6 +6,18 @@
 #include "oolencon.h"
 
 
+/**
+ *  \struct ProjSt
+ *  \brief  Define a given projection structure, with a set of parameters
+ **/
+typedef struct ProjSt ProjSt;
+struct ProjSt
+{
+    double TM, TMIN, TMAX, TLIM[2], GLIM_SI[4][2];
+    int    TSIZE, GSIZE_SI[4], MSIZE, NSMIN, NOD, ISPAR;
+    double YNMAX, SNMAX;
+};
+
 //========================================================================================
 //
 //          I/O (to set in oolencon_io.cpp)
@@ -46,25 +58,20 @@ int readCONT_txt(double  *t0_CMU_EM, double   *tf_CMU_EM,
  *         parameterization of the Center Manifold (s1 to s4 coordinates). The RCM
  *         coordinate s5 along the unstable direction is fixed to dist_to_cm.
  *
- *  \param dist_to_cm:     the value in RCM coordinates on the unstable direction s5.
- *  \param tlim_CMU_EM:    the min/max starting time (in EM units) in the IC box.
- *  \param t_grid_size:    the number of points on the time grid in the IC box.
- *  \param si_LIM_CMU_RCM: the min/max of s1, s2, s3, s4 values (in RCM coordinates)
- *                         in the IC box.
- *  \param si_grid_size:   the number of points on the  s1, s2, s3, s4 values  grids
- *                         in the IC box.
- *  \param invman:         the center-unstable manifold, if the type of manifold provided
- *                         is not center-unstable, a warning message is displayed and
- *                         nothing is done.
- *  \param isPar:          if TRUE, the computation is parallelized.
+ *  \param dist_to_cm:      the value in RCM coordinates on the unstable direction s5.
+ *  \param projSt.TLIM:     the min/max starting time (in EM units) in the IC box.
+ *  \param projSt.TSIZE:    the number of points on the time grid in the IC box.
+ *  \param projSt.GLIM_SI:  the min/max of s1, s2, s3, s4 values (in RCM coordinates)
+ *                          in the IC box.
+ *  \param projSt.GSIZE_SI: the number of points on the  s1, s2, s3, s4 values  grids
+ *                          in the IC box.
+ *  \param projSt.ISPAR;    if TRUE, the computation is parallelized.
  *
  *
  * The output data are saved in a binary file of the form:
  *                   "plot/QBCP/EM/L2/cu_3d_order_16.bin"
  **/
-int oo_compute_grid_CMU_EM_3D(double dist_to_cm, double* tlim_CMU_EM,
-                              int t_grid_size, double si_LIM_CMU_RCM[4][2],
-                              int* si_grid_size, bool isPar);
+int oo_compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt &projSt);
 
 /**
  *  \brief Computes initial conditions in the Planar Center-Unstable Manifold about EML2,
@@ -73,29 +80,23 @@ int oo_compute_grid_CMU_EM_3D(double dist_to_cm, double* tlim_CMU_EM,
  *         the parameterization of the Center Manifold (s1 and s3 coordinates).
  *         The RCM coordinate s5 along the unstable direction is fixed to dist_to_cm.
  *
- *  \param dist_to_cm:     the value in RCM coordinates on the unstable direction s5.
- *  \param tmin_CMU_EM:    the minimum starting time (in EM units) in the IC box.
- *  \param tmax_CMU_EM:    the maximum starting time (in EM units) in the IC box.
- *  \param t_grid_size:    the number of points on the time grid in the IC box.
- *  \param s1_MIN_CMU_RCM: the minimum s1 value (in RCM coordinates) in the IC box.
- *  \param s1_MAX_CMU_RCM: the maximum s1 value (in RCM coordinates) in the IC box.
- *  \param s3_MIN_CMU_RCM: the minimum s3 value (in RCM coordinates) in the IC box.
- *  \param s3_MAX_CMU_RCM: the maximum s3 value (in RCM coordinates) in the IC box.
- *  \param s1_grid_size:   the number of points on the s1 grid in the IC box.
- *  \param s3_grid_size:   the number of points on the s3 grid in the IC box.
- *  \param invman:         the center-unstable manifold, if the type of manifold provided
- *                         is not center-unstable, a warning message is displayed and
- *                         nothing is done.
- *  \param isPar:          if TRUE, the computation is parallelized.
+ *  \param dist_to_cm:           the value in RCM coordinates on the unst. direction s5.
+ *  \param projSt.TLIM[0]:       the minimum starting time (in EM units) in the IC box.
+ *  \param projSt.TLIM[1]:       the maximum starting time (in EM units) in the IC box.
+ *  \param projSt.TSIZE:         the number of points on the time grid in the IC box.
+ *  \param projSt.GLIM_SI[0][0]: the minimum s1 value (in RCM coordinates) in the IC box.
+ *  \param projSt.GLIM_SI[0][1]: the maximum s1 value (in RCM coordinates) in the IC box.
+ *  \param projSt.GLIM_SI[2][0]: the minimum s3 value (in RCM coordinates) in the IC box.
+ *  \param projSt.GLIM_SI[2][1]: the maximum s3 value (in RCM coordinates) in the IC box.
+ *  \param projSt.GSIZE_SI[0]:   the number of points on the s1 grid in the IC box.
+ *  \param projSt.GSIZE_SI[2]:   the number of points on the s3 grid in the IC box.
+ *  \param projSt.ISPAR:         if TRUE, the computation is parallelized.
  *
  *
  * The output data are saved in a binary file of the form:
  *               "plot/QBCP/EM/L2/cu_order_16.bin"
  **/
-int oo_compute_grid_CMU_EM(double dist_to_cm, double tmin_CMU_EM, double tmax_CMU_EM,
-                           int t_grid_size, double s1_MIN_CMU_RCM, double s1_MAX_CMU_RCM,
-                           double s3_MIN_CMU_RCM, double s3_MAX_CMU_RCM,
-                           int s1_grid_size, int s3_grid_size, bool isPar);
+int oo_compute_grid_CMU_EM(double dist_to_cm, ProjSt &projSt);
 
 //========================================================================================
 //
@@ -108,42 +109,39 @@ int oo_compute_grid_CMU_EM(double dist_to_cm, double tmin_CMU_EM, double tmax_CM
  *         integration grid is projected on the Center Manifold CM_SEM_NC about SEMLi.
  *         The best solution (minimum distance of projection) is stored.
  *
- *  \param tmax_on_manifold_EM: the maximum integration time on each leg, in EM units.
+ *  \param projSt.TM: the maximum integration time on each leg, in EM units.
  *
- *  \param man_grid_size:       the number of points on each manifold leg.
+ *  \param projSt.MSIZE:       the number of points on each manifold leg.
  *
- *  \param nod:                 the number of dimensions on which the distance of
- *                              projection is computed (usually either 3 (the physical
- *                              distance) or 6 (the whole phase space)).
+ *  \param projSt.NOD:         the number of dimensions on which the distance of
+ *                             projection is computed (usually either 3 (the physical
+ *                             distance) or 6 (the whole phase space)).
  *
- *  \param isPar:               if TRUE, the computation is parallelized.
+ *  \param projSt.ISPAR:       if TRUE, the computation is parallelized.
  *
- *  \param ynormMax:            the maximum norm in NCSEM coordinates for which a given
- *                              state on the integration grid is projected on CM_SEM_NC
- *                              More precisely: for a given state y along the manifold leg,
- *                              if norm(y, 3) < ynormMax, the state is projected.
- *                              Otherwise, it is considered too far away from SEMLi to be
- *                              a good candidate for projection.
+ *  \param projSt.YNMAX:       the maximum norm in NCSEM coordinates for which a given
+ *                             state on the integration grid is projected on CM_SEM_NC
+ *                             More precisely: for a given state y along the manifold leg,
+ *                             if norm(y, 3) < projSt.YNMAX, the state is projected.
+ *                             Otherwise, it is considered too far away from SEMLi to be
+ *                             a good candidate for projection.
  *
- *  \param snormMax:            the maximum norm in RCM SEM coordinates for which a given
- *                              projection state on the CM of SEMLi (CM_SEM_NC) is
- *                              computed back in NCSEM coordinates. More precisely, for a
- *                              given state y in NCSEM coordinates, the result of the
- *                              projection on CM_SEM_NC gives a state sproj in RCM SEM
- *                              coordinates.
- *                              if norm(sproj, 4) < snormMax, the computation
- *                              yproj = CM_SEM_NC(sproj, t) is performed. Otherwise, the
- *                              state sproj is considered too far away from the RCM origin
- *                              to be a good candidate - it is out of the domain of
- *                              practical convergence of CM_SEM_NC.
+ *  \param projSt.SNMAX:       the maximum norm in RCM SEM coordinates for which a given
+ *                             projection state on the CM of SEMLi (CM_SEM_NC) is
+ *                             computed back in NCSEM coordinates. More precisely, for a
+ *                             given state y in NCSEM coordinates, the result of the
+ *                             projection on CM_SEM_NC gives a state sproj in RCM SEM
+ *                             coordinates.
+ *                             if norm(sproj, 4) < projSt.SNMAX, the computation
+ *                             yproj = CM_SEM_NC(sproj, t) is performed. Otherwise, the
+ *                             state sproj is considered too far away from the RCM origin
+ *                             to be a good candidate - it is out of the domain of
+ *                             practical convergence of CM_SEM_NC.
  *
  * The output data are saved in a binary file of the form:
  *          "plot/QBCP/EM/L2/projcu_3d_order_16.bin".
  **/
-int oo_int_proj_CMU_EM_on_CM_SEM_3D(double tmax_on_manifold_EM,
-                                    int man_grid_size, int nod,
-                                    int isPar, double ynormMax,
-                                    double snormMax);
+int oo_int_proj_CMU_EM_on_CM_SEM_3D(ProjSt &projSt);
 
 
 /**
@@ -153,42 +151,35 @@ int oo_int_proj_CMU_EM_on_CM_SEM_3D(double tmax_on_manifold_EM,
  *         about SEMLi (denoted here CM_SEM_NC).
  *         The best solution (minimum distance of projection) is stored.
  *
- *  \param tmax_on_manifold_EM: the maximum integration time on each leg, in EM units.
- *  \param t_grid_size_x:.......the number of points on the time grid in the IC box.
- *                              If -1, the value used in compute_grid_CMU_EM is used.
- *  \param s1_grid_size_x:......the number of points on the s1 grid in the IC box.
- *                              If -1, the value used in compute_grid_CMU_EM is used.
- *  \param s3_grid_size_x:......the number of points on the s3 grid in the IC box.
- *                              If -1, the value used in compute_grid_CMU_EM is used.
- *  \param man_grid_size:.......the number of points on each manifold leg.
- *  \param NsortMin:............the number of best solutions that are kept
- *  \param nod:.................the number of dimensions on which the distance of
- *                              projection is computed - usually either 3
- *                              (the physical distance) or 6 (the whole phase space).
- *  \param isPar:...............if TRUE, the computation is parallelized.
- *  \param ynormMax:............the maximum norm in NCSEM coordinates for which a given
- *                              state on the integration grid is projected on CM_SEM_NC.
- *                              More precisely: for a given state y along the manifold leg,
- *                              if norm(y, 3) < ynormMax, the state is projected.
- *                              Otherwise, it is considered too far away from SEMLi to
- *                              be a good candidate for projection.
- *  \param snormMax:............the maximum norm in RCM SEM coordinates for which a given
- *                              projection state on the CM of SEMLi (CM_SEM_NC) is
- *                              computed back in NCSEM coordinates. More precisely, for a
- *                              given state y in NCSEM coordinates, the result of the
- *                              projection on CM_SEM_NC gives a state sproj in RCM SEM
- *                              coordinates. If norm(sproj, 4) < snormMax, the computation
- *                              yproj = CM_SEM_NC(sproj, t) is performed. Otherwise,
- *                              the state sproj is considered too far away from the RCM
- *                              origin to be a good candidate - it is out of the domain of
- *                              practical convergence of CM_SEM_NC.
+ *  \param projSt.TM:......the maximum integration time on each leg, in EM units.
+ *  \param projSt.MSIZE:...the number of points on each manifold leg.
+ *  \param projSt.NSMIN:...the number of best solutions that are kept
+ *  \param projSt.NOD:.....the number of dimensions on which the distance of
+ *                         projection is computed - usually either 3
+ *                         (the physical distance) or 6 (the whole phase space).
+ *  \param projSt.ISPAR:...if TRUE, the computation is parallelized.
+ *  \param projSt.YNMAX:...the maximum norm in NCSEM coordinates for which a given
+ *                         state on the integration grid is projected on CM_SEM_NC.
+ *                         More precisely: for a given state y along the manifold leg,
+ *                         if norm(y, 3) < projSt.YNMAX, the state is projected.
+ *                         Otherwise, it is considered too far away from SEMLi to
+ *                         be a good candidate for projection.
+ *  \param projSt.SNMAX:...the maximum norm in RCM SEM coordinates for which a given
+ *                         projection state on the CM of SEMLi (CM_SEM_NC) is
+ *                         computed back in NCSEM coordinates. More precisely, for a
+ *                         given state y in NCSEM coordinates, the result of the
+ *                         projection on CM_SEM_NC gives a state sproj in RCM SEM
+ *                         coordinates. If norm(sproj, 4) < projSt.SNMAX, the computation
+ *                         yproj = CM_SEM_NC(sproj, t) is performed. Otherwise,
+ *                         the state sproj is considered too far away from the RCM
+ *                         origin to be a good candidate - it is out of the domain of
+ *                         practical convergence of CM_SEM_NC.
  *
- * The output data are saved in a binary file of the form "plot/QBCP/EM/L2/projcu_order_16.bin", and "plot/QBCP/EM/L2/sortprojcu_order_16.bin" for the NsortMin best solutions.
+ * The output data are saved in a binary file of the form
+ * "plot/QBCP/EM/L2/projcu_order_16.bin", and
+ * "plot/QBCP/EM/L2/sortprojcu_order_16.bin" for the projSt.NSMIN best solutions.
  **/
-int oo_int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM, int t_grid_size_x,
-                                 int s1_grid_size_x, int s3_grid_size_x,
-                                 int man_grid_size, int NsortMin, int nod, int isPar,
-                                 double ynormMax, double snormMax);
+int oo_int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt);
 
 //========================================================================================
 //

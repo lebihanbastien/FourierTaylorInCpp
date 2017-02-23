@@ -1,0 +1,488 @@
+# main script file for FourierTaylorInCpp
+# RECALL: make it executable with "$ chmod +x main.sh"
+
+#--------------------------------------------------------------
+# Source the configuration file passed as argument
+#--------------------------------------------------------------
+source $1
+
+#--------------------------------------------------------------
+# Title
+#--------------------------------------------------------------
+echo
+echo "#------------------------------------------#"
+echo "#     FourierTaylorInCpp configuration     #"
+echo "#------------------------------------------#"
+echo "Source file: " "$1"
+echo ''
+
+#=====================================================
+#  ---- General parameters ----
+#=====================================================
+
+#-----------------------------------------------------
+# TYPE OF COMPUTATION (COMP_TYPE)
+#-----------------------------------------------------
+echo "#------------------------------------------#"
+#Check that the variable $COMP_TYPE exist
+if [ -z ${COMP_TYPE+x} ]; then
+	echo 'WARNING: the variable COMP_TYPE is not set.'
+	echo 'No computation.'
+	return
+else
+	echo 'Type of computation:'
+	case $COMP_TYPE in
+		$COMP_CM_EML2_TO_CM_SEML)        echo 'COMP_TYPE    = COMP_CM_EML2_TO_CM_SEML'
+		;;
+		$COMP_CM_EML2_TO_CMS_SEML) 	 echo 'COMP_TYPE    = COMP_CM_EML2_TO_CMS_SEML'
+		;;
+		$COMP_SINGLE_ORBIT)              echo 'COMP_TYPE    = COMP_SINGLE_ORBIT'
+		;;
+		$COMP_CM_EML2_TO_CMS_SEML_READ)  echo 'COMP_TYPE    = COMP_CM_EML2_TO_CMS_SEML_READ'
+		;;
+		$COMP_VF_TEST)                   echo 'COMP_TYPE    = COMP_VF_TEST'
+		;;
+		$COMP_CM_EML2_TO_CM_SEML_REFINE) echo 'COMP_TYPE    = COMP_CM_EML2_TO_CM_SEML_REFINE'
+		;;
+		$COMP_EPHEMERIDES_TEST)          echo 'COMP_TYPE    = COMP_EPHEMERIDES_TEST'
+		;;
+		$COMP_CM_EML2_TO_CM_SEML_3D)     echo 'COMP_TYPE    = COMP_CM_EML2_TO_CM_SEML_3D'
+		;;
+		$COMP_VOFTS_TO_VOFTS)            echo 'COMP_TYPE    = COMP_VOFTS_TO_VOFTS'
+		;;
+		$COMP_test_INVMAN) 		 echo 'COMP_TYPE    = COMP_test_INVMAN'
+		;;
+		$COMP_REF_JPL) 			 echo 'COMP_TYPE    = COMP_REF_JPL'
+		;;
+		*)     				 echo "COMP_TYPE    = "$COMP_TYPE". Unknown type."
+	esac
+	echo ''
+fi
+
+#=====================================================
+#  ---- General parameters ----
+#=====================================================
+echo "#------------------------------------------#"
+echo 'Current set of general parameters:'
+echo ''
+
+#-----------------------------------------------------
+# MODEL
+# RTBP = 0; QBCP = 1; BCP = 2
+#-----------------------------------------------------
+#Check that the variable $MODEL exist
+if [ -z ${MODEL+x} ]; then
+	#If not, default values to QBCP
+	echo 'WARNING: the variable MODEL is not set.'
+	echo 'QBCP is used by default.'
+	MODEL=$QBCP
+else
+	if [ "$MODEL" == "$RTBP" ]; then
+		OFS_ORDER=0
+	else  
+		OFS_ORDER=30
+	fi
+fi
+
+# display MODEL
+case $MODEL in
+	$M_RTBP)  echo 'MODEL                  = M_RTBP'
+	;;
+	$M_QBCP)  echo 'MODEL                  = M_QBCP'
+	;;
+	$M_BCP)   echo 'MODEL                  = M_BCP'
+	;;
+	$M_ERTBP) echo 'MODEL                  = M_ERTBP'
+	;;
+	*)        echo "MODEL                  = "$MODEL". Unknown type."
+esac
+
+#-----------------------------------------------------
+# DEFAULT LIBRATION POINT FOR EM & SEM SYSTEM
+#-----------------------------------------------------
+echo "LI_EM  		       =" $LI_EM
+echo "LI_SEM 		       =" $LI_SEM
+
+#-----------------------------------------------------
+# Orders for the semi-numerical expansions
+#-----------------------------------------------------
+echo "OFS_ORDER  	       =" $OFS_ORDER
+echo "OFTS_ORDER 	       =" $OFTS_ORDER
+
+#-----------------------------------------------------
+# Parameters for parallel computation
+#-----------------------------------------------------
+echo "ISPAR                  =" $ISPAR
+echo "NUM_THREADS            =" $NUM_THREADS
+echo ''
+
+#=====================================================
+#  ---- Projection parameters ----
+#=====================================================
+# We check that TMIN, the first projection parameter
+# is set or not. If not, we set default values for 
+# each projection parameters
+
+echo "#------------------------------------------#"
+if [ -z ${TMIN+x} ]; then
+	
+	#-----------------------------------------------------
+	# Warn the user
+	#-----------------------------------------------------
+	echo 'The projection parameters are not set.'
+	echo 'Default values are used.'
+	echo ''
+
+	#-----------------------------------------------------
+	# Parameters that change often
+	#-----------------------------------------------------
+	# Time grid: min, max and number of points on the grid
+	TMIN=0.00     # (given as %T, with T the SEM period)
+	TMAX=0.25     # (given as %T, with T the SEM period)
+	TSIZE=0	  
+
+	# Configuration (s1, s2, s3, s4) grid
+	GLIM_S1=(-35 +35)
+	GLIM_S2=(+0  +10)
+	GLIM_S3=(-35 +35)
+	GLIM_S4=(+0  +10)
+	GSIZE_SI=(+50 +5 +50 +5)
+	
+	#-----------------------------------------------------
+	# Parameters that are stable
+	#-----------------------------------------------------
+	TM=12 	      # Maximum integration time (given as %T, with T the SEM period)
+	MSIZE=500     # Number of points on each trajectory
+	NSMIN=20      # Number of sorted solutions
+	YNMAX=0.6     # The maximum norm (in SEM normalized units) for a projection to occur on the CM_NC of SEMLi
+	SNMAX=0.6     # The maximum norm (in RCM normalized units) for a projection to occur on the CM_NC of SEMLi
+	NOD=6         # Number of dimensions on which we compute the norm of the projection error
+else
+	#-----------------------------------------------------
+	# Display current set of parameters
+	#-----------------------------------------------------
+	echo 'Current set of projection parameters:'
+	echo ''
+	echo "TMIN     =" $TMIN
+	echo "TMAX     =" $TMAX
+	echo "TSIZE    =" $TSIZE
+	echo ''
+	echo "GLIM_S1  = ["${GLIM_S1[*]}"]"
+	echo "GLIM_S2  = ["${GLIM_S2[*]}"]"
+	echo "GLIM_S3  = ["${GLIM_S3[*]}"]"
+	echo "GLIM_S4  = ["${GLIM_S4[*]}"]"
+	echo "GSIZE_SI = ["${GSIZE_SI[*]}"]"
+	echo ''
+	echo "TM       =" $TM
+	echo "MSIZE    =" $MSIZE
+	echo "NSMIN    =" $NSMIN
+	echo "YNMAX    =" $YNMAX
+	echo "SNMAX    =" $SNMAX
+	echo "NOD      =" $NOD
+	echo ''
+fi
+
+#=====================================================
+#  ---- Refinement parameters ----
+#=====================================================
+# We check that REFST_TYPE, the first refinement parameter
+# is set or not. If not, we set default values for 
+# each refinement parameters
+
+echo "#------------------------------------------#"
+if [ -z ${REFST_TYPE+x} ]; then
+	
+	#-----------------------------------------------------
+	# Warn the user
+	#-----------------------------------------------------
+	echo 'The refinement parameters are not set.'
+	echo 'Default values are used.'
+	echo ''
+
+	#-----------------------------------------------------
+	# Parameters that change often
+	#-----------------------------------------------------
+	REFST_TYPE=$REF_CONT_D           # Type of refinement - rk: set REF_CONT_D_HARD_CASE for difficult cases with REF_CONT_D (ex: EML2-SEMLi via SEML1...)
+	REFST_DIM=$REF_PLANAR            # Type of dimensions planar or 3d?
+	REFST_T0_DES=0.00                # Initial time - given as %T, with T the SEM period   
+
+	# Domain of search (min s1, max s1, min s3, max s3) for the first guess
+	REFST_SI_CMU_EM_LIM=(-35 +35 -35 +35)
+	# Or, if we want the user to define such domain:
+	REFST_ISLIMUD=0
+
+	# Number of steps in the continuation procedure
+	REFST_CONT_STEP_MAX=+450;        # with fixed times
+	REFST_CONT_STEP_MAX_VT=+50;      # with variable times
+
+	# Direction of the continuation procedure
+	REFST_ISDIRUD=0			 # is it user defined?
+	REFST_DIR=-1    		 # if not, +1 or -1
+
+	# User parameters
+	REFST_ISFLAGON=1   	         # do we have steps in the procedure - asking the user to press enter to go on?
+	REFST_ISPLOTTED=1   		 # do we plot the results during the computation?
+	REFST_ISSAVED=1     		 # do we save the results in data files?
+	REFST_ISFROMSERVER=1		 # does the raw data comes from server files?
+
+	#-----------------------------------------------------
+	# Parameters that are stable
+	#-----------------------------------------------------
+	REFST_ISDEBUG=0			 # if yes, additionnal tests are performed
+	REFST_GRIDSIZE=20        	 # number of points on the refinement grid
+
+	REFST_TIME=$REF_VAR_TN		 # type of constraints on the times in REF_CONT
+	REFST_GRID=$REF_FIXED_GRID	 # type of grid
+	REFST_TERMINATION=$REF_COND_T    # Termination condition in the continuation with variable final time (either REF_VAR_TN/REF_VAR_TIME)
+	REFST_COORD_TYPE=$NCSEM		 # coordinates system in the refinement procedure
+
+	REFST_XPS=0.6			 # position of the poincaré section in NCSEM coordinates
+	REFST_ISJPL=1		         # is the JPL refinement performed when possible?
+	REFST_DJPLCOORD=-1		 # coordinate system used during the JPL refinement (if -1, it is user defined) Best results obtained with $NJ2000
+	REFST_SIDIM=0		         # 0 or 2 - component of s0 that stays constant when t0 is free
+
+	# Sampling frequencies in REF_COMP (complete trajectory) in days
+	REFST_SF_EML2=2			 # orbit at EML2	
+	REFST_SF_MAN=5			 # transfer leg
+	REFST_SF_SEML2=10		 # orbit at SEML2
+
+	# Integration window for each orbit
+	REFST_TSPAN_EM=10  		 # given as %T, where T is the SEM period, in EM units
+	REFST_TSPAN_SEM=10 		 # given as %T, where T is the SEM period, in SEM units
+else
+	#-----------------------------------------------------
+	# Display current set of parameters
+	#-----------------------------------------------------
+	echo 'Current set of refinement parameters:'
+	echo ''
+
+	#-----------------------------------------------------
+	# Parameters that change often
+	#-----------------------------------------------------
+	#REFST_TYPE
+	case $REFST_TYPE in
+		$REF_SINGLE)            echo 'REFST_TYPE             = REF_SINGLE'
+		;;
+		$REF_CONT) 	        echo 'REFST_TYPE             = REF_CONT'
+		;;
+		$REF_CONT_D)            echo 'REFST_TYPE             = REF_CONT_D'
+		;;
+		$REF_CONT_D_HARD_CASE)  echo 'REFST_TYPE             = REF_CONT_D_HARD_CASE'
+		;;
+		$REF_COMP)  		echo 'REFST_TYPE             = REF_COMP'
+		;;
+		*)     			echo "REFST_TYPE             = "$REFST_TYPE". Unknown type."
+	esac
+
+	#REFST_DIM
+	case $REFST_DIM in
+		$REF_PLANAR) echo 'REFST_DIM              = REF_PLANAR'
+		;;
+		$REF_3D)     echo 'REFST_DIM              = REF_3D'
+		;;
+		*)     	     echo "REFST_DIM              = "$REFST_DIM". Unknown type."
+	esac
+
+	echo "REFST_T0_DES           =" $REFST_T0_DES
+	echo ''
+	echo "REFST_SI_CMU_EM_LIM    = ["${REFST_SI_CMU_EM_LIM[*]}"]"
+	echo "REFST_ISLIMUD          =" $REFST_ISLIMUD
+	echo ''
+	echo "REFST_CONT_STEP_MAX    =" $REFST_CONT_STEP_MAX
+	echo "REFST_CONT_STEP_MAX_VT =" $REFST_CONT_STEP_MAX_VT
+	echo ''
+	echo "REFST_ISDIRUD          =" $REFST_ISDIRUD
+	echo "REFST_DIR              =" $REFST_DIR
+	echo ''
+	echo "REFST_ISFLAGON         =" $REFST_ISFLAGON
+	echo "REFST_ISPLOTTED        =" $REFST_ISPLOTTED
+	echo "REFST_ISSAVED          =" $REFST_ISSAVED
+	echo "REFST_ISFROMSERVER     =" $REFST_ISFROMSERVER
+	echo ''
+
+	#-----------------------------------------------------
+	# Parameters that are stable
+	#-----------------------------------------------------
+	#REFST_TIME
+	case $REFST_TIME in
+		$REF_FIXED_TIME) echo 'REFST_TIME            = REF_FIXED_TIME'
+		;;
+		$REF_VAR_TN) 	 echo 'REFST_TIME            = REF_VAR_TN'
+		;;
+		$REF_VAR_TIME) 	 echo 'REFST_TIME            = REF_VAR_TIME'
+		;;
+		*)     		 echo "REFST_TIME            = "$REFST_TIME". Unknown type."
+	esac
+	
+	#REFST_GRID
+	case $REFST_GRID in
+		$REF_FIXED_GRID) echo 'REFST_GRID            = REF_FIXED_GRID'
+		;;
+		$REF_VAR_GRID) 	 echo 'REFST_GRID            = REF_VAR_GRID'
+		;;
+		$REF_GIVEN_GRID) echo 'REFST_GRID            = REF_GIVEN_GRID'
+		;;
+		*)     		 echo "REFST_GRID            = "$REFST_GRID". Unknown type."
+	esac
+
+	#REFST_TERMINATION
+	case $REFST_TERMINATION in
+		$REF_COND_S5) echo 'REFST_TERMINATION     = REF_COND_S5'
+		;;
+		$REF_COND_T)  echo 'REFST_TERMINATION     = REF_COND_T'
+		;;
+		*)     	      echo "REFST_TERMINATION     = "$REFST_TERMINATION". Unknown type."
+	esac
+	
+	#REFST_COORD_TYPE
+	case $REFST_COORD_TYPE in
+		$NCSEM)  echo 'REFST_COORD_TYPE      = NCSEM'
+		;;
+		$NCEM)   echo 'REFST_COORD_TYPE      = NCEM'
+		;;
+		$VNCSEM) echo 'REFST_COORD_TYPE      = VNCSEM'
+		;;
+		$VNCEM)  echo 'REFST_COORD_TYPE      = VNCEM'
+		;;
+		$PSEM)   echo 'REFST_COORD_TYPE      = PSEM'
+		;;
+		$PEM)    echo 'REFST_COORD_TYPE      = PEM'
+		;;
+		$VSEM)   echo 'REFST_COORD_TYPE      = VSEM'
+		;;
+		$VEM)    echo 'REFST_COORD_TYPE      = VEM'
+		;;
+		*)       echo "REFST_COORD_TYPE      = "$REFST_COORD_TYPE". Unknown type."
+	esac
+	echo ''
+
+	echo "REFST_ISDEBUG         =" $REFST_ISDEBUG
+	echo "REFST_GRIDSIZE        =" $REFST_GRIDSIZE
+
+	echo "REFST_XPS             =" $REFST_XPS
+	echo "REFST_ISJPL           =" $REFST_ISJPL
+	echo "REFST_DJPLCOORD       =" $REFST_DJPLCOORD
+	echo "REFST_SIDIM           =" $REFST_SIDIM
+
+	echo "REFST_SF_EML2         =" $REFST_SF_EML2
+	echo "REFST_SF_MAN          =" $REFST_SF_MAN
+	echo "REFST_SF_SEML2        =" $REFST_SF_SEML2
+
+	echo "REFST_TSPAN_EM        =" $REFST_TSPAN_EM
+	echo "REFST_TSPAN_SEM       =" $REFST_TSPAN_SEM
+	echo ''
+fi
+
+
+#--------------------------------------------------------------
+# Go on with the implementation?
+#--------------------------------------------------------------
+echo -e "Do you want to go on with the computation (y/n)? \c "
+read  ans
+echo $ans
+# bash check the answer
+if [ "$ans" == "y" ]; then
+	
+	# The list of parameters for COMP_CM_EML2_TO_CM_SEML
+	# --COMP_TYPE
+	# --MODEL=$M_QBCP 
+	# --LI_EM=2
+	# --LI_SEM=2
+	# --OFS_ORDER=30
+	# --OFTS_ORDER=16
+	# --ISPAR=1
+	# --NUM_THREADS=4
+	# --TMIN=0.00     
+	# --TMAX=0.25     
+	# --TSIZE=0	  
+	# --GLIM_S1=(-35 +35)
+	# --GLIM_S2=(+0  +10)
+	# --GLIM_S3=(-35 +35)
+	# --GLIM_S4=(+0  +10)
+	# --TM=12 	      
+	# --MSIZE=500     
+	# --NSMIN=20      
+	# --YNMAX=0.6     
+	# --SNMAX=0.6     
+	# --NOD=6  
+	
+
+
+	#-----------------------------------------------------------------------------
+	#Build the array of coefficients
+	#-------------------------------
+
+	# The general parameters are common to all types of computation
+	COEFFS=($OFTS_ORDER $OFS_ORDER $COMP_TYPE $MODEL $LI_EM $LI_SEM $ISPAR $NUM_THREADS)
+
+	# Then, for each type, we add some parameters
+	case $COMP_TYPE in
+		$COMP_CM_EML2_TO_CM_SEML | $COMP_CM_EML2_TO_CM_SEML_3D)        
+			COEFFS=(${COEFFS[*]}  $TMIN $TMAX $TM $TSIZE)
+			COEFFS=(${COEFFS[*]}  ${GLIM_S1[*]} ${GLIM_S2[*]} ${GLIM_S3[*]} ${GLIM_S4[*]} ${GSIZE_SI[*]})
+			COEFFS=(${COEFFS[*]}  $MSIZE $NSMIN $YNMAX $SNMAX $NOD)
+		;;
+		$COMP_CM_EML2_TO_CMS_SEML) 	 
+			COEFFS=(${COEFFS[*]}  $REFST_TYPE $REFST_DIM $REFST_T0_DES)
+		        COEFFS=(${COEFFS[*]}  $REFST_ISDIRUD $REFST_DIR)
+		        COEFFS=(${COEFFS[*]}  ${REFST_SI_CMU_EM_LIM[*]} $REFST_ISLIMUD)
+		  	COEFFS=(${COEFFS[*]}  $REFST_CONT_STEP_MAX $REFST_CONT_STEP_MAX_VT)
+			COEFFS=(${COEFFS[*]}  $REFST_ISFLAGON $REFST_ISPLOTTED $REFST_ISSAVED $REFST_ISFROMSERVER)
+
+			COEFFS=(${COEFFS[*]}  $REFST_ISDEBUG $REFST_GRIDSIZE)
+			COEFFS=(${COEFFS[*]}  $REFST_TIME $REFST_GRID $REFST_TERMINATION $REFST_COORD_TYPE)
+			COEFFS=(${COEFFS[*]}  $REFST_XPS $REFST_ISJPL $REFST_DJPLCOORD $REFST_SIDIM)
+			COEFFS=(${COEFFS[*]}  $REFST_SF_EML2 $REFST_SF_MAN $REFST_SF_SEML2)
+			COEFFS=(${COEFFS[*]}  $REFST_TSPAN_EM $REFST_TSPAN_SEM)
+		;;
+		$COMP_SINGLE_ORBIT)              
+
+		;;
+		$COMP_CM_EML2_TO_CMS_SEML_READ)  
+
+		;;
+		$COMP_VF_TEST)                   
+
+		;;
+		$COMP_CM_EML2_TO_CM_SEML_REFINE) 
+
+		;;
+		$COMP_EPHEMERIDES_TEST)          
+
+		;;
+		$COMP_VOFTS_TO_VOFTS)            
+
+		;;
+		$COMP_test_INVMAN) 		 
+
+		;;
+		$COMP_REF_JPL) 			 
+
+		;;
+		*)  echo "COMP_TYPE    = "$COMP_TYPE". Unknown type."
+	esac
+	 
+
+	#-------------------------------
+	#Call software
+	#-------------------------------
+	#Check the NOHUP condition
+	if [ "$ISNOHUP" == "1" ]; then
+			#If true, check that an output file has been set
+			if [ -z ${OUT+x} ]; then
+				echo 'WARNING: OUT variable has not been set.'
+				echo 'OUT = default.out by default.'
+				OUT='default.out'
+			fi
+			#Call software
+			nohup bin/Release/FourierTaylorInCpp ${COEFFS[*]} > $OUT &
+	else
+			bin/Release/FourierTaylorInCpp ${COEFFS[*]}
+	fi
+
+	
+	
+else  
+	echo "Stop. No computation."
+fi 
+

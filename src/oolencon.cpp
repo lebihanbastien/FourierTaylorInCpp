@@ -188,30 +188,54 @@ int readCONT_txt(double*  t0_CMU_EM, double*   tf_CMU_EM,
  *         parameterization of the Center Manifold (s1 to s4 coordinates). The RCM
  *         coordinate s5 along the unstable direction is fixed to dist_to_cm.
  *
- *  \param dist_to_cm:     the value in RCM coordinates on the unstable direction s5.
- *  \param tlim_CMU_EM:    the min/max starting time (in EM units) in the IC box.
- *  \param t_grid_size:    the number of points on the time grid in the IC box.
- *  \param si_LIM_CMU_RCM: the min/max of s1, s2, s3, s4 values (in RCM coordinates)
- *                         in the IC box.
- *  \param si_grid_size:   the number of points on the  s1, s2, s3, s4 values  grids
- *                         in the IC box.
- *  \param invman:         the center-unstable manifold, if the type of manifold provided
- *                         is not center-unstable, a warning message is displayed and
- *                         nothing is done.
- *  \param isPar:          if TRUE, the computation is parallelized.
+ *  \param dist_to_cm:      the value in RCM coordinates on the unstable direction s5.
+ *  \param projSt.TLIM:     the min/max starting time (in EM units) in the IC box.
+ *  \param projSt.TSIZE:    the number of points on the time grid in the IC box.
+ *  \param projSt.GLIM_SI:  the min/max of s1, s2, s3, s4 values (in RCM coordinates)
+ *                          in the IC box.
+ *  \param projSt.GSIZE_SI: the number of points on the  s1, s2, s3, s4 values  grids
+ *                          in the IC box.
+ *  \param projSt.ISPAR;    if TRUE, the computation is parallelized.
  *
  *
  * The output data are saved in a binary file of the form:
  *                   "plot/QBCP/EM/L2/cu_3d_order_16.bin"
  **/
-int oo_compute_grid_CMU_EM_3D(double dist_to_cm, double* tlim_CMU_EM,
-                              int t_grid_size, double si_LIM_CMU_RCM[4][2],
-                              int* si_grid_size, bool isPar)
+int oo_compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt &projSt)
 {
+    //====================================================================================
+    // Retrieve the parameters in the projection structure
+    //====================================================================================
+    bool isPar = projSt.ISPAR;
+
     //====================================================================================
     // Get the invariant manifold at EML2
     //====================================================================================
     Invman invman(OFTS_ORDER, OFS_ORDER, SEML.cs);
+
+    //====================================================================================
+    // Splash screen
+    //====================================================================================
+    string filename = filenameCUM(OFTS_ORDER, TYPE_CU_3D, SEML.li_SEM);
+    cout << resetiosflags(ios::scientific) << setprecision(15);
+    cout << "===================================================================" << endl;
+    cout << "       Computation of center-unstable 3D IC at EML2            " << endl;
+    cout << "===================================================================" << endl;
+    cout << " The computation domain is the following:                          " << endl;
+    cout << " - OFTS_ORDER = " << OFTS_ORDER << endl;
+    cout << "  - " << projSt.GSIZE_SI[0]+1  << " value(s) of s1 in [" << projSt.GLIM_SI[0][0];
+    cout << ", " << projSt.GLIM_SI[0][1] << "]" << endl;
+    cout << "  - " << projSt.GSIZE_SI[1]+1  << " value(s) of s2 in [" << projSt.GLIM_SI[1][0];
+    cout << ", " << projSt.GLIM_SI[1][1] << "]" << endl;
+    cout << "  - " << projSt.GSIZE_SI[2]+1  << " value(s) of s3 in [" << projSt.GLIM_SI[2][0];
+    cout << ", " << projSt.GLIM_SI[2][1] << "]" << endl;
+    cout << "  - " << projSt.GSIZE_SI[3]+1  << " value(s) of s4 in [" << projSt.GLIM_SI[3][0];
+    cout << ", " << projSt.GLIM_SI[3][1] << "]" << endl;
+    cout << "  - " << projSt.TSIZE+1  << " value(s) of t in [" << projSt.TLIM[0]/SEML.us.T;
+    cout << ", " << projSt.TLIM[1]/SEML.us.T << "] x T" << endl;
+    cout << " The data will be stored in " << filename << endl;
+    cout << setiosflags(ios::scientific) << setprecision(15);
+    cout << "===================================================================" << endl;
 
     //====================================================================================
     // Check that the invman is an unstable-manifold
@@ -231,33 +255,33 @@ int oo_compute_grid_CMU_EM_3D(double dist_to_cm, double* tlim_CMU_EM,
     double** grid_si_CMU_RCM = (double**) calloc(4, sizeof(double*));
     for(int i = 0; i <4; i++)
     {
-        grid_si_CMU_RCM[i] = (double*) calloc(si_grid_size[i]+1, sizeof(double));
-        init_grid(grid_si_CMU_RCM[i], si_LIM_CMU_RCM[i][0], si_LIM_CMU_RCM[i][1], si_grid_size[i]);
+        grid_si_CMU_RCM[i] = (double*) calloc(projSt.GSIZE_SI[i]+1, sizeof(double));
+        init_grid(grid_si_CMU_RCM[i], projSt.GLIM_SI[i][0], projSt.GLIM_SI[i][1], projSt.GSIZE_SI[i]);
     }
 
 
     //------------------------------------------
     //Building the time grid
     //------------------------------------------
-    double* grid_t_EM = dvector(0,  t_grid_size);
-    init_grid(grid_t_EM, tlim_CMU_EM[0], tlim_CMU_EM[1], t_grid_size);
+    double* grid_t_EM = dvector(0,  projSt.TSIZE);
+    init_grid(grid_t_EM, projSt.TLIM[0], projSt.TLIM[1], projSt.TSIZE);
 
     //------------------------------------------
     //Number of elements
     //------------------------------------------
-    int noe = (1+si_grid_size[0])*(1+si_grid_size[1])*(1+si_grid_size[2])*(1+si_grid_size[3])*(1+t_grid_size);
+    int noe = (1+projSt.GSIZE_SI[0])*(1+projSt.GSIZE_SI[1])*(1+projSt.GSIZE_SI[2])*(1+projSt.GSIZE_SI[3])*(1+projSt.TSIZE);
     int iter = 1;
 
     //------------------------------------------
     // Data structures
     //------------------------------------------
-    double** init_state_CMU_NCEM = dmatrix(0, 5, 0, si_grid_size[2]);
-    double** init_state_CMU_RCM  = dmatrix(0, 4, 0, si_grid_size[2]);
+    double** init_state_CMU_NCEM = dmatrix(0, 5, 0, projSt.GSIZE_SI[2]);
+    double** init_state_CMU_RCM  = dmatrix(0, 4, 0, projSt.GSIZE_SI[2]);
 
     //------------------------------------------
     // Reset the data file
     //------------------------------------------
-    initCU_bin_3D(si_grid_size, t_grid_size, OFTS_ORDER, TYPE_CU_3D, SEML.li_SEM);
+    initCU_bin_3D(projSt.GSIZE_SI, projSt.TSIZE, OFTS_ORDER, TYPE_CU_3D, SEML.li_SEM);
 
     //====================================================================================
     // Loop on all elements.
@@ -266,7 +290,7 @@ int oo_compute_grid_CMU_EM_3D(double dist_to_cm, double* tlim_CMU_EM,
     // it is useless to use on nested loops.
     //====================================================================================
     COMPLETION = 0;
-    for(int kt = 0; kt <= t_grid_size; kt++)
+    for(int kt = 0; kt <= projSt.TSIZE; kt++)
     {
         //----------------------
         //Append the time in data file
@@ -274,14 +298,14 @@ int oo_compute_grid_CMU_EM_3D(double dist_to_cm, double* tlim_CMU_EM,
         appTimeCU_bin_3D(grid_t_EM, kt, OFTS_ORDER, TYPE_CU_3D, SEML.li_SEM);
 
 
-        for(int ks2 = 0; ks2 <= si_grid_size[1]; ks2++)
+        for(int ks2 = 0; ks2 <= projSt.GSIZE_SI[1]; ks2++)
         {
-            for(int ks4 = 0; ks4 <= si_grid_size[3]; ks4++)
+            for(int ks4 = 0; ks4 <= projSt.GSIZE_SI[3]; ks4++)
             {
-                for(int ks1 = 0; ks1 <= si_grid_size[0]; ks1++)
+                for(int ks1 = 0; ks1 <= projSt.GSIZE_SI[0]; ks1++)
                 {
                     #pragma omp parallel for if(isPar)  shared(iter)
-                    for(int ks3 = 0; ks3 <= si_grid_size[2]; ks3++)
+                    for(int ks3 = 0; ks3 <= projSt.GSIZE_SI[2]; ks3++)
                     {
                         Ofsc ofs(OFS_ORDER);
                         double* yvu = dvector(0,5);
@@ -317,7 +341,7 @@ int oo_compute_grid_CMU_EM_3D(double dist_to_cm, double* tlim_CMU_EM,
                     //------------------------------------------
                     //Store values
                     //------------------------------------------
-                    writeCU_bin_3D(init_state_CMU_NCEM, init_state_CMU_RCM, si_grid_size,
+                    writeCU_bin_3D(init_state_CMU_NCEM, init_state_CMU_RCM, projSt.GSIZE_SI,
                                    OFTS_ORDER, TYPE_CU_3D, SEML.li_SEM);
                 }
             }
@@ -327,8 +351,8 @@ int oo_compute_grid_CMU_EM_3D(double dist_to_cm, double* tlim_CMU_EM,
     //------------------------------------------
     //Free
     //------------------------------------------
-    free_dmatrix(init_state_CMU_NCEM, 0, 5, 0, si_grid_size[2]);
-    free_dmatrix(init_state_CMU_RCM,  0, 4, 0, si_grid_size[2]);
+    free_dmatrix(init_state_CMU_NCEM, 0, 5, 0, projSt.GSIZE_SI[2]);
+    free_dmatrix(init_state_CMU_RCM,  0, 4, 0, projSt.GSIZE_SI[2]);
 
     return FTC_SUCCESS;
 }
@@ -340,31 +364,29 @@ int oo_compute_grid_CMU_EM_3D(double dist_to_cm, double* tlim_CMU_EM,
  *         the parameterization of the Center Manifold (s1 and s3 coordinates).
  *         The RCM coordinate s5 along the unstable direction is fixed to dist_to_cm.
  *
- *  \param dist_to_cm:     the value in RCM coordinates on the unstable direction s5.
- *  \param tmin_CMU_EM:    the minimum starting time (in EM units) in the IC box.
- *  \param tmax_CMU_EM:    the maximum starting time (in EM units) in the IC box.
- *  \param t_grid_size:    the number of points on the time grid in the IC box.
- *  \param s1_MIN_CMU_RCM: the minimum s1 value (in RCM coordinates) in the IC box.
- *  \param s1_MAX_CMU_RCM: the maximum s1 value (in RCM coordinates) in the IC box.
- *  \param s3_MIN_CMU_RCM: the minimum s3 value (in RCM coordinates) in the IC box.
- *  \param s3_MAX_CMU_RCM: the maximum s3 value (in RCM coordinates) in the IC box.
- *  \param s1_grid_size:   the number of points on the s1 grid in the IC box.
- *  \param s3_grid_size:   the number of points on the s3 grid in the IC box.
- *  \param invman:         the center-unstable manifold, if the type of manifold provided
- *                         is not center-unstable, a warning message is displayed and
- *                         nothing is done.
- *  \param isPar:          if TRUE, the computation is parallelized.
+ *  \param dist_to_cm:           the value in RCM coordinates on the unst. direction s5.
+ *  \param projSt.TLIM[0]:       the minimum starting time (in EM units) in the IC box.
+ *  \param projSt.TLIM[1]:       the maximum starting time (in EM units) in the IC box.
+ *  \param projSt.TSIZE:         the number of points on the time grid in the IC box.
+ *  \param projSt.GLIM_SI[0][0]: the minimum s1 value (in RCM coordinates) in the IC box.
+ *  \param projSt.GLIM_SI[0][1]: the maximum s1 value (in RCM coordinates) in the IC box.
+ *  \param projSt.GLIM_SI[2][0]: the minimum s3 value (in RCM coordinates) in the IC box.
+ *  \param projSt.GLIM_SI[2][1]: the maximum s3 value (in RCM coordinates) in the IC box.
+ *  \param projSt.GSIZE_SI[0]:   the number of points on the s1 grid in the IC box.
+ *  \param projSt.GSIZE_SI[2]:   the number of points on the s3 grid in the IC box.
+ *  \param projSt.ISPAR:         if TRUE, the computation is parallelized.
  *
  *
  * The output data are saved in a binary file of the form:
  *               "plot/QBCP/EM/L2/cu_order_16.bin"
  **/
-int oo_compute_grid_CMU_EM(double dist_to_cm, double tmin_CMU_EM, double tmax_CMU_EM,
-                           int t_grid_size, double s1_MIN_CMU_RCM, double s1_MAX_CMU_RCM,
-                           double s3_MIN_CMU_RCM, double s3_MAX_CMU_RCM,
-                           int s1_grid_size, int s3_grid_size, bool isPar)
-
+int oo_compute_grid_CMU_EM(double dist_to_cm, ProjSt &projSt)
 {
+    //====================================================================================
+    // Retrieve the parameters in the projection structure
+    //====================================================================================
+    bool isPar = projSt.ISPAR;
+
     //====================================================================================
     // Splash screen
     //====================================================================================
@@ -376,12 +398,12 @@ int oo_compute_grid_CMU_EM(double dist_to_cm, double tmin_CMU_EM, double tmax_CM
     cout << "===================================================================" << endl;
     cout << " The computation domain is the following:                          " << endl;
     cout << " - OFTS_ORDER = " << OFTS_ORDER << endl;
-    cout << "  - " << s1_grid_size+1  << " value(s) of s1 in [" << s1_MIN_CMU_RCM;
-    cout << ", " << s1_MAX_CMU_RCM << "]" << endl;
-    cout << "  - " << s3_grid_size+1  << " value(s) of s3 in [" << s3_MIN_CMU_RCM;
-    cout << ", " << s3_MAX_CMU_RCM << "]" << endl;
-    cout << "  - " << t_grid_size+1  << " value(s) of t in [" << tmin_CMU_EM/SEML.us.T;
-    cout << ", " << tmax_CMU_EM/SEML.us.T << "] x T" << endl;
+    cout << "  - " << projSt.GSIZE_SI[0]+1  << " value(s) of s1 in [" << projSt.GLIM_SI[0][0];
+    cout << ", " << projSt.GLIM_SI[0][1] << "]" << endl;
+    cout << "  - " << projSt.GSIZE_SI[2]+1  << " value(s) of s3 in [" << projSt.GLIM_SI[2][0];
+    cout << ", " << projSt.GLIM_SI[2][1] << "]" << endl;
+    cout << "  - " << projSt.TSIZE+1  << " value(s) of t in [" << projSt.TLIM[0]/SEML.us.T;
+    cout << ", " << projSt.TLIM[1]/SEML.us.T << "] x T" << endl;
     cout << " The data will be stored in " << filename << endl;
     cout << setiosflags(ios::scientific) << setprecision(15);
     cout << "===================================================================" << endl;
@@ -397,28 +419,28 @@ int oo_compute_grid_CMU_EM(double dist_to_cm, double tmin_CMU_EM, double tmax_CM
     //------------------------------------------
     //Building the working grids
     //------------------------------------------
-    double* grid_s1_CMU_RCM = dvector(0,  s1_grid_size);
-    double* grid_s3_CMU_RCM = dvector(0,  s3_grid_size);
-    init_grid(grid_s1_CMU_RCM, s1_MIN_CMU_RCM, s1_MAX_CMU_RCM, s1_grid_size);
-    init_grid(grid_s3_CMU_RCM, s3_MIN_CMU_RCM, s3_MAX_CMU_RCM, s3_grid_size);
+    double* grid_s1_CMU_RCM = dvector(0,  projSt.GSIZE_SI[0]);
+    double* grid_s3_CMU_RCM = dvector(0,  projSt.GSIZE_SI[2]);
+    init_grid(grid_s1_CMU_RCM, projSt.GLIM_SI[0][0], projSt.GLIM_SI[0][1], projSt.GSIZE_SI[0]);
+    init_grid(grid_s3_CMU_RCM, projSt.GLIM_SI[2][0], projSt.GLIM_SI[2][1], projSt.GSIZE_SI[2]);
 
     //------------------------------------------
     //Building the time grid
     //------------------------------------------
-    double* grid_t_EM = dvector(0,  t_grid_size);
-    init_grid(grid_t_EM, tmin_CMU_EM, tmax_CMU_EM, t_grid_size);
+    double* grid_t_EM = dvector(0,  projSt.TSIZE);
+    init_grid(grid_t_EM, projSt.TLIM[0], projSt.TLIM[1], projSt.TSIZE);
 
     //------------------------------------------
     //Number of elements
     //------------------------------------------
-    int noe = (1+s1_grid_size)*(1+s3_grid_size)*(1+t_grid_size);
+    int noe = (1+projSt.GSIZE_SI[0])*(1+projSt.GSIZE_SI[2])*(1+projSt.TSIZE);
     int iter = 1;
 
     //------------------------------------------
     // Data structures
     //------------------------------------------
-    double**** init_state_CMU_NCEM = d4tensor(0, 5, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
-    double**** init_state_CMU_RCM  = d4tensor(0, 4, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
+    double**** init_state_CMU_NCEM = d4tensor(0, 5, 0, projSt.TSIZE, 0, projSt.GSIZE_SI[0], 0, projSt.GSIZE_SI[2]);
+    double**** init_state_CMU_RCM  = d4tensor(0, 4, 0, projSt.TSIZE, 0, projSt.GSIZE_SI[0], 0, projSt.GSIZE_SI[2]);
 
     //====================================================================================
     // Loop on all elements.
@@ -427,12 +449,12 @@ int oo_compute_grid_CMU_EM(double dist_to_cm, double tmin_CMU_EM, double tmax_CM
     // it is useless to use on nested loops.
     //====================================================================================
     COMPLETION = 0;
-    for(int kt = 0; kt <= t_grid_size; kt++)
+    for(int kt = 0; kt <= projSt.TSIZE; kt++)
     {
-        for(int ks1 = 0; ks1 <= s1_grid_size; ks1++)
+        for(int ks1 = 0; ks1 <= projSt.GSIZE_SI[0]; ks1++)
         {
             #pragma omp parallel for if(isPar)  shared(iter)
-            for(int ks3 = 0; ks3 <= s3_grid_size; ks3++)
+            for(int ks3 = 0; ks3 <= projSt.GSIZE_SI[2]; ks3++)
             {
                 Ofsc ofs(OFS_ORDER);
                 double* yvu = dvector(0,5);
@@ -471,14 +493,14 @@ int oo_compute_grid_CMU_EM(double dist_to_cm, double tmin_CMU_EM, double tmax_CM
     //Store values
     //------------------------------------------
     writeCU_bin(init_state_CMU_NCEM, init_state_CMU_RCM, grid_t_EM,
-                s1_grid_size, s3_grid_size, t_grid_size, OFTS_ORDER,
+                projSt.GSIZE_SI[0], projSt.GSIZE_SI[2], projSt.TSIZE, OFTS_ORDER,
                 TYPE_CU, SEML.li_SEM);
 
     //------------------------------------------
     //Free
     //------------------------------------------
-    free_d4tensor(init_state_CMU_NCEM, 0, 5, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
-    free_d4tensor(init_state_CMU_RCM,  0, 4, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
+    free_d4tensor(init_state_CMU_NCEM, 0, 5, 0, projSt.TSIZE, 0, projSt.GSIZE_SI[0], 0, projSt.GSIZE_SI[2]);
+    free_d4tensor(init_state_CMU_RCM,  0, 4, 0, projSt.TSIZE, 0, projSt.GSIZE_SI[0], 0, projSt.GSIZE_SI[2]);
 
     return FTC_SUCCESS;
 }
@@ -495,43 +517,45 @@ int oo_compute_grid_CMU_EM(double dist_to_cm, double tmin_CMU_EM, double tmax_CM
  *         integration grid is projected on the Center Manifold CM_SEM_NC about SEMLi.
  *         The best solution (minimum distance of projection) is stored.
  *
- *  \param tmax_on_manifold_EM: the maximum integration time on each leg, in EM units.
+ *  \param projSt.TM: the maximum integration time on each leg, in EM units.
  *
- *  \param man_grid_size:       the number of points on each manifold leg.
+ *  \param projSt.MSIZE:       the number of points on each manifold leg.
  *
- *  \param nod:                 the number of dimensions on which the distance of
- *                              projection is computed (usually either 3 (the physical
- *                              distance) or 6 (the whole phase space)).
+ *  \param projSt.NOD:         the number of dimensions on which the distance of
+ *                             projection is computed (usually either 3 (the physical
+ *                             distance) or 6 (the whole phase space)).
  *
- *  \param isPar:               if TRUE, the computation is parallelized.
+ *  \param projSt.ISPAR:       if TRUE, the computation is parallelized.
  *
- *  \param ynormMax:            the maximum norm in NCSEM coordinates for which a given
- *                              state on the integration grid is projected on CM_SEM_NC
- *                              More precisely: for a given state y along the manifold leg,
- *                              if norm(y, 3) < ynormMax, the state is projected.
- *                              Otherwise, it is considered too far away from SEMLi to be
- *                              a good candidate for projection.
+ *  \param projSt.YNMAX:       the maximum norm in NCSEM coordinates for which a given
+ *                             state on the integration grid is projected on CM_SEM_NC
+ *                             More precisely: for a given state y along the manifold leg,
+ *                             if norm(y, 3) < projSt.YNMAX, the state is projected.
+ *                             Otherwise, it is considered too far away from SEMLi to be
+ *                             a good candidate for projection.
  *
- *  \param snormMax:            the maximum norm in RCM SEM coordinates for which a given
- *                              projection state on the CM of SEMLi (CM_SEM_NC) is
- *                              computed back in NCSEM coordinates. More precisely, for a
- *                              given state y in NCSEM coordinates, the result of the
- *                              projection on CM_SEM_NC gives a state sproj in RCM SEM
- *                              coordinates.
- *                              if norm(sproj, 4) < snormMax, the computation
- *                              yproj = CM_SEM_NC(sproj, t) is performed. Otherwise, the
- *                              state sproj is considered too far away from the RCM origin
- *                              to be a good candidate - it is out of the domain of
- *                              practical convergence of CM_SEM_NC.
+ *  \param projSt.SNMAX:       the maximum norm in RCM SEM coordinates for which a given
+ *                             projection state on the CM of SEMLi (CM_SEM_NC) is
+ *                             computed back in NCSEM coordinates. More precisely, for a
+ *                             given state y in NCSEM coordinates, the result of the
+ *                             projection on CM_SEM_NC gives a state sproj in RCM SEM
+ *                             coordinates.
+ *                             if norm(sproj, 4) < projSt.SNMAX, the computation
+ *                             yproj = CM_SEM_NC(sproj, t) is performed. Otherwise, the
+ *                             state sproj is considered too far away from the RCM origin
+ *                             to be a good candidate - it is out of the domain of
+ *                             practical convergence of CM_SEM_NC.
  *
  * The output data are saved in a binary file of the form:
  *          "plot/QBCP/EM/L2/projcu_3d_order_16.bin".
  **/
-int oo_int_proj_CMU_EM_on_CM_SEM_3D(double tmax_on_manifold_EM,
-                                    int man_grid_size, int nod,
-                                    int isPar, double ynormMax,
-                                    double snormMax)
+int oo_int_proj_CMU_EM_on_CM_SEM_3D(ProjSt &projSt)
 {
+    //====================================================================================
+    // Retrieve the parameters in the projection structure
+    //====================================================================================
+    bool isPar = projSt.ISPAR;
+
     //====================================================================================
     // 1. Get initial condition in the center-unstable manifold from a data file
     //====================================================================================
@@ -660,18 +684,18 @@ int oo_int_proj_CMU_EM_on_CM_SEM_3D(double tmax_on_manifold_EM,
                         //----------------------------------------------------------------
                         //Local variables to store the manifold leg
                         //----------------------------------------------------------------
-                        double** y_man_NCSEM = dmatrix(0, 5, 0, man_grid_size);
-                        double* t_man_SEM    = dvector(0, man_grid_size);
+                        double** y_man_NCSEM = dmatrix(0, 5, 0, projSt.MSIZE);
+                        double* t_man_SEM    = dvector(0, projSt.MSIZE);
 
 
                         //----------------------------------------------------------------
-                        //Integration on man_grid_size+1 fixed grid
+                        //Integration on projSt.MSIZE+1 fixed grid
                         // PB: when Release + I_NCSEM!!
                         //----------------------------------------------------------------
                         int ode78coll;
                         int status = ode78(y_man_NCSEM, t_man_SEM, &ode78coll,
-                                           tv, tv+tmax_on_manifold_EM, yv, 6,
-                                           man_grid_size, I_NCEM, NCEM, NCSEM);
+                                           tv, tv+projSt.TM, yv, 6,
+                                           projSt.MSIZE, I_NCEM, NCEM, NCSEM);
 
                         //================================================================
                         // 3.2. Projection on the center manifold of SEMLi.
@@ -701,7 +725,7 @@ int oo_int_proj_CMU_EM_on_CM_SEM_3D(double tmax_on_manifold_EM,
                             //------------------------------------------------------------
                             //Loop on trajectory
                             //------------------------------------------------------------
-                            for(int kman = 0; kman <= man_grid_size; kman++)
+                            for(int kman = 0; kman <= projSt.MSIZE; kman++)
                             {
                                 //Current state
                                 for(int i = 0; i < 6; i++) yv[i] = y_man_NCSEM[i][kman];
@@ -715,7 +739,7 @@ int oo_int_proj_CMU_EM_on_CM_SEM_3D(double tmax_on_manifold_EM,
                                 //--------------------------------------------------------
                                 //Check 1: the current state is close enough to SEMLi
                                 //--------------------------------------------------------
-                                if(y_man_norm_NCSEM < ynormMax)
+                                if(y_man_norm_NCSEM < projSt.YNMAX)
                                 {
                                     // Projection on the center manifold
                                     invman_SEM.NCprojCCMtoCM(yv, tv, sproj);
@@ -723,7 +747,7 @@ int oo_int_proj_CMU_EM_on_CM_SEM_3D(double tmax_on_manifold_EM,
                                     //----------------------------------------------------
                                     //Check 2: the projection is close enough to SEMLi
                                     //----------------------------------------------------
-                                    if(sqrt(sproj[0]*sproj[0]+sproj[2]*sproj[2])< snormMax)
+                                    if(sqrt(sproj[0]*sproj[0]+sproj[2]*sproj[2])< projSt.SNMAX)
                                     {
                                         //yvproj_NCSEM = W(sproj, tv)
                                         invman_SEM.evalRCMtoNC(sproj, tv, yvproj_NCSEM, OFTS_ORDER, OFS_ORDER);
@@ -738,7 +762,7 @@ int oo_int_proj_CMU_EM_on_CM_SEM_3D(double tmax_on_manifold_EM,
 
                                         //Distance of projection in SEM coordinates
                                         proj_dist_SEM = 0.0;
-                                        for(int i = 0; i < nod; i++) proj_dist_SEM += (yvproj_SEM[i] - yv_SEM[i])*(yvproj_SEM[i] - yv_SEM[i]);
+                                        for(int i = 0; i < projSt.NOD; i++) proj_dist_SEM += (yvproj_SEM[i] - yv_SEM[i])*(yvproj_SEM[i] - yv_SEM[i]);
                                         proj_dist_SEM = sqrt(proj_dist_SEM);
                                     }
                                     else proj_dist_SEM = ePdef;
@@ -816,10 +840,10 @@ int oo_int_proj_CMU_EM_on_CM_SEM_3D(double tmax_on_manifold_EM,
                         //----------------------------------------------------------------
                         //Free
                         //----------------------------------------------------------------
-                        //free_dmatrix(y_man_NCEM, 0, 5, 0, man_grid_size);
-                        free_dmatrix(y_man_NCSEM, 0, 5, 0, man_grid_size);
-                        //free_dvector(t_man_EM, 0, man_grid_size);
-                        free_dvector(t_man_SEM, 0, man_grid_size);
+                        //free_dmatrix(y_man_NCEM, 0, 5, 0, projSt.MSIZE);
+                        free_dmatrix(y_man_NCSEM, 0, 5, 0, projSt.MSIZE);
+                        //free_dvector(t_man_EM, 0, projSt.MSIZE);
+                        free_dvector(t_man_SEM, 0, projSt.MSIZE);
 
 
                     }
@@ -838,43 +862,41 @@ int oo_int_proj_CMU_EM_on_CM_SEM_3D(double tmax_on_manifold_EM,
  *         about SEMLi (denoted here CM_SEM_NC).
  *         The best solution (minimum distance of projection) is stored.
  *
- *  \param tmax_on_manifold_EM: the maximum integration time on each leg, in EM units.
- *  \param t_grid_size_x:.......the number of points on the time grid in the IC box.
- *                              If -1, the value used in compute_grid_CMU_EM is used.
- *  \param s1_grid_size_x:......the number of points on the s1 grid in the IC box.
- *                              If -1, the value used in compute_grid_CMU_EM is used.
- *  \param s3_grid_size_x:......the number of points on the s3 grid in the IC box.
- *                              If -1, the value used in compute_grid_CMU_EM is used.
- *  \param man_grid_size:.......the number of points on each manifold leg.
- *  \param NsortMin:............the number of best solutions that are kept
- *  \param nod:.................the number of dimensions on which the distance of
- *                              projection is computed - usually either 3
- *                              (the physical distance) or 6 (the whole phase space).
- *  \param isPar:...............if TRUE, the computation is parallelized.
- *  \param ynormMax:............the maximum norm in NCSEM coordinates for which a given
- *                              state on the integration grid is projected on CM_SEM_NC.
- *                              More precisely: for a given state y along the manifold leg,
- *                              if norm(y, 3) < ynormMax, the state is projected.
- *                              Otherwise, it is considered too far away from SEMLi to
- *                              be a good candidate for projection.
- *  \param snormMax:............the maximum norm in RCM SEM coordinates for which a given
- *                              projection state on the CM of SEMLi (CM_SEM_NC) is
- *                              computed back in NCSEM coordinates. More precisely, for a
- *                              given state y in NCSEM coordinates, the result of the
- *                              projection on CM_SEM_NC gives a state sproj in RCM SEM
- *                              coordinates. If norm(sproj, 4) < snormMax, the computation
- *                              yproj = CM_SEM_NC(sproj, t) is performed. Otherwise,
- *                              the state sproj is considered too far away from the RCM
- *                              origin to be a good candidate - it is out of the domain of
- *                              practical convergence of CM_SEM_NC.
+ *  \param projSt.TM:......the maximum integration time on each leg, in EM units.
+ *  \param projSt.MSIZE:...the number of points on each manifold leg.
+ *  \param projSt.NSMIN:...the number of best solutions that are kept
+ *  \param projSt.NOD:.....the number of dimensions on which the distance of
+ *                         projection is computed - usually either 3
+ *                         (the physical distance) or 6 (the whole phase space).
+ *  \param projSt.ISPAR:...if TRUE, the computation is parallelized.
+ *  \param projSt.YNMAX:...the maximum norm in NCSEM coordinates for which a given
+ *                         state on the integration grid is projected on CM_SEM_NC.
+ *                         More precisely: for a given state y along the manifold leg,
+ *                         if norm(y, 3) < projSt.YNMAX, the state is projected.
+ *                         Otherwise, it is considered too far away from SEMLi to
+ *                         be a good candidate for projection.
+ *  \param projSt.SNMAX:...the maximum norm in RCM SEM coordinates for which a given
+ *                         projection state on the CM of SEMLi (CM_SEM_NC) is
+ *                         computed back in NCSEM coordinates. More precisely, for a
+ *                         given state y in NCSEM coordinates, the result of the
+ *                         projection on CM_SEM_NC gives a state sproj in RCM SEM
+ *                         coordinates. If norm(sproj, 4) < projSt.SNMAX, the computation
+ *                         yproj = CM_SEM_NC(sproj, t) is performed. Otherwise,
+ *                         the state sproj is considered too far away from the RCM
+ *                         origin to be a good candidate - it is out of the domain of
+ *                         practical convergence of CM_SEM_NC.
  *
- * The output data are saved in a binary file of the form "plot/QBCP/EM/L2/projcu_order_16.bin", and "plot/QBCP/EM/L2/sortprojcu_order_16.bin" for the NsortMin best solutions.
+ * The output data are saved in a binary file of the form
+ * "plot/QBCP/EM/L2/projcu_order_16.bin", and
+ * "plot/QBCP/EM/L2/sortprojcu_order_16.bin" for the projSt.NSMIN best solutions.
  **/
-int oo_int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM, int t_grid_size_x,
-                                 int s1_grid_size_x, int s3_grid_size_x,
-                                 int man_grid_size, int NsortMin, int nod, int isPar,
-                                 double ynormMax, double snormMax)
+int oo_int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt)
 {
+    //====================================================================================
+    // Retrieve the parameters in the projection structure
+    //====================================================================================
+    bool isPar = projSt.ISPAR;
+
     //====================================================================================
     // 1. Get initial condition in the center-unstable manifold from a data file
     //====================================================================================
@@ -884,13 +906,6 @@ int oo_int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM, int t_grid_size_x,
     int t_grid_size, s1_grid_size, s3_grid_size;
     getLenghtCU_bin(&s1_grid_size, &s3_grid_size, &t_grid_size,
                     OFTS_ORDER, TYPE_CU, SEML.li_SEM);
-
-    //----------------------------------------------------------
-    //Initialize the actual sizes comparing t_grid_size/t_grid_size_x
-    //----------------------------------------------------------
-    int t_grid_size_t  = t_grid_size_x  < 0 ? t_grid_size:t_grid_size_x;
-    int s1_grid_size_t = s1_grid_size_x < 0 ? s1_grid_size:s1_grid_size_x;
-    int s3_grid_size_t = s3_grid_size_x < 0 ? s3_grid_size:s3_grid_size_x;
 
     //----------------------------------------------------------
     //To store all data
@@ -949,11 +964,11 @@ int oo_int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM, int t_grid_size_x,
     //----------------------------------------------------------
     //To store
     //----------------------------------------------------------
-    double**** final_state_CMU_SEM      = d4tensor(0, 5, 0, t_grid_size_t, 0, s1_grid_size_t, 0, s3_grid_size_t);
-    double**** projected_state_CMU_SEM  = d4tensor(0, 5, 0, t_grid_size_t, 0, s1_grid_size_t, 0, s3_grid_size_t);
-    double**** projected_state_CMU_RCM  = d4tensor(0, 3, 0, t_grid_size_t, 0, s1_grid_size_t, 0, s3_grid_size_t);
-    double**** init_state_CMU_SEM       = d4tensor(0, 5, 0, t_grid_size_t, 0, s1_grid_size_t, 0, s3_grid_size_t);
-    double**** init_state_CMU_NCEM_0    = d4tensor(0, 5, 0, t_grid_size_t, 0, s1_grid_size_t, 0, s3_grid_size_t);
+    double**** final_state_CMU_SEM      = d4tensor(0, 5, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
+    double**** projected_state_CMU_SEM  = d4tensor(0, 5, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
+    double**** projected_state_CMU_RCM  = d4tensor(0, 3, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
+    double**** init_state_CMU_SEM       = d4tensor(0, 5, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
+    double**** init_state_CMU_NCEM_0    = d4tensor(0, 5, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
     double** *min_proj_dist_tens_SEM    = d3tensor(0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
 
 
@@ -988,12 +1003,12 @@ int oo_int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM, int t_grid_size_x,
     //====================================================================================
     COMPLETION = 0;
     int index  = 0;
-    for(int kt = 0; kt <= t_grid_size_t; kt++)
+    for(int kt = 0; kt <= t_grid_size; kt++)
     {
-        for(int ks1 = 0; ks1 <= s1_grid_size_t; ks1++)
+        for(int ks1 = 0; ks1 <= s1_grid_size; ks1++)
         {
             #pragma omp parallel for if(isPar) shared(index)
-            for(int ks3 = 0; ks3 <= s3_grid_size_t; ks3++)
+            for(int ks3 = 0; ks3 <= s3_grid_size; ks3++)
             {
                 //========================================================================
                 // 3.1. Integration of the manifold leg
@@ -1008,16 +1023,16 @@ int oo_int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM, int t_grid_size_x,
                 //------------------------------------------------------------------------
                 //Local variables to store the manifold leg
                 //------------------------------------------------------------------------
-                double** y_man_NCSEM = dmatrix(0, 5, 0, man_grid_size);
-                double* t_man_SEM    = dvector(0, man_grid_size);
+                double** y_man_NCSEM = dmatrix(0, 5, 0, projSt.MSIZE);
+                double* t_man_SEM    = dvector(0, projSt.MSIZE);
 
 
                 //------------------------------------------------------------------------
-                //Integration on man_grid_size+1 fixed grid
+                //Integration on projSt.MSIZE+1 fixed grid
                 // PB: when Release + I_NCSEM!! not used for now
                 //------------------------------------------------------------------------
                 int ode78coll;
-                int status = ode78(y_man_NCSEM, t_man_SEM, &ode78coll, tv, tv+tmax_on_manifold_EM, yv, 6, man_grid_size, I_NCEM, NCEM, NCSEM);
+                int status = ode78(y_man_NCSEM, t_man_SEM, &ode78coll, tv, tv+projSt.TM, yv, 6, projSt.MSIZE, I_NCEM, NCEM, NCSEM);
 
                 //========================================================================
                 // 3.2. Projection on the center manifold of SEMLi. No use of SEML_EM or SEML after this point!
@@ -1029,7 +1044,7 @@ int oo_int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM, int t_grid_size_x,
                 Ofsc ofs(OFS_ORDER);
                 double yvproj_NCSEM[6], sproj[4], yv_SEM[6], yvproj_SEM[6], yvEM[6], yv_VSEM[6], yvproj_VSEM[6];
                 double proj_dist_SEM, min_proj_dist_SEM = ePdef, dv_at_projection_SEM = 0.0, y_man_norm_NCSEM = 0.0;
-                int ksort = (s1_grid_size_t+1)*(s3_grid_size_t+1)*kt + (s3_grid_size_t+1)*ks1 + ks3;
+                int ksort = (s1_grid_size+1)*(s3_grid_size+1)*kt + (s3_grid_size+1)*ks1 + ks3;
                 int kmin = 0;
 
                 //------------------------------------------------------------------------
@@ -1048,7 +1063,7 @@ int oo_int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM, int t_grid_size_x,
                     //--------------------------------------------------------------------
                     //Loop on trajectory
                     //--------------------------------------------------------------------
-                    for(int kman = 0; kman <= man_grid_size; kman++)
+                    for(int kman = 0; kman <= projSt.MSIZE; kman++)
                     {
                         //Current state
                         for(int i = 0; i < 6; i++) yv[i] = y_man_NCSEM[i][kman];
@@ -1062,7 +1077,7 @@ int oo_int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM, int t_grid_size_x,
                         //----------------------------------------------------------------
                         //Check n°1: the current state is close enough to SEMLi
                         //----------------------------------------------------------------
-                        if(y_man_norm_NCSEM < ynormMax)
+                        if(y_man_norm_NCSEM < projSt.YNMAX)
                         {
                             // Projection on the center manifold
                             invman_SEM.NCprojCCMtoCM(yv, tv, sproj);
@@ -1070,7 +1085,7 @@ int oo_int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM, int t_grid_size_x,
                             //------------------------------------------------------------
                             //Check n°2: the projection is close enough to SEMLi
                             //------------------------------------------------------------
-                            if(sqrt(sproj[0]*sproj[0]+sproj[2]*sproj[2])< snormMax)
+                            if(sqrt(sproj[0]*sproj[0]+sproj[2]*sproj[2])< projSt.SNMAX)
                             {
                                 //yvproj_NCSEM = W(sproj, tv)
                                 invman_SEM.evalRCMtoNC(sproj, tv, yvproj_NCSEM, OFTS_ORDER, OFS_ORDER);
@@ -1085,7 +1100,7 @@ int oo_int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM, int t_grid_size_x,
 
                                 //Distance of projection in SEM coordinates
                                 proj_dist_SEM = 0.0;
-                                for(int i = 0; i < nod; i++) proj_dist_SEM += (yvproj_SEM[i] - yv_SEM[i])*(yvproj_SEM[i] - yv_SEM[i]);
+                                for(int i = 0; i < projSt.NOD; i++) proj_dist_SEM += (yvproj_SEM[i] - yv_SEM[i])*(yvproj_SEM[i] - yv_SEM[i]);
                                 proj_dist_SEM = sqrt(proj_dist_SEM);
                             }
                             else proj_dist_SEM = ePdef;
@@ -1172,14 +1187,14 @@ int oo_int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM, int t_grid_size_x,
                 //----------------------------------------------------------
                 #pragma omp critical
                 {
-                    displayCompletion("int_proj_CMU_EM_on_CM_SEM", 100.0*index++/((1+s1_grid_size_t)*(1+s3_grid_size_t)*(1+t_grid_size_t)));
+                    displayCompletion("int_proj_CMU_EM_on_CM_SEM", 100.0*index++/((1+s1_grid_size)*(1+s3_grid_size)*(1+t_grid_size)));
                 }
 
                 //------------------------------------------------------------------------
                 //Free
                 //------------------------------------------------------------------------
-                free_dmatrix(y_man_NCSEM, 0, 5, 0, man_grid_size);
-                free_dvector(t_man_SEM, 0, man_grid_size);
+                free_dmatrix(y_man_NCSEM, 0, 5, 0, projSt.MSIZE);
+                free_dvector(t_man_SEM, 0, projSt.MSIZE);
             }
         }
     }
@@ -1190,9 +1205,9 @@ int oo_int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM, int t_grid_size_x,
     vector<size_t> sortId = sort_indexes(distMin);
 
     //----------------------------------------------------------
-    //Saving the NsortMin best results or all results if less than 50 have been computed
+    //Saving the projSt.NSMIN best results or all results if less than 50 have been computed
     //----------------------------------------------------------
-    int number_of_sol  = min(NsortMin, Nsort-2);
+    int number_of_sol  = min(projSt.NSMIN, Nsort-2);
 
 
     //---------------------
@@ -1211,11 +1226,11 @@ int oo_int_proj_CMU_EM_on_CM_SEM(double tmax_on_manifold_EM, int t_grid_size_x,
     //----------------------------------------------------------
     //Free
     //----------------------------------------------------------
-    free_d4tensor(final_state_CMU_SEM, 0, 5, 0, t_grid_size_t, 0, s1_grid_size_t, 0, s3_grid_size_t);
-    free_d4tensor(projected_state_CMU_SEM, 0, 5, 0, t_grid_size_t, 0, s1_grid_size_t, 0, s3_grid_size_t);
-    free_d4tensor(projected_state_CMU_RCM, 0, 3, 0, t_grid_size_t, 0, s1_grid_size_t, 0, s3_grid_size_t);
-    free_d4tensor(init_state_CMU_SEM, 0, 5, 0, t_grid_size_t, 0, s1_grid_size_t, 0, s3_grid_size_t);
-    free_d4tensor(init_state_CMU_NCEM_0, 0, 5, 0, t_grid_size_t, 0, s1_grid_size_t, 0, s3_grid_size_t);
+    free_d4tensor(final_state_CMU_SEM, 0, 5, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
+    free_d4tensor(projected_state_CMU_SEM, 0, 5, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
+    free_d4tensor(projected_state_CMU_RCM, 0, 3, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
+    free_d4tensor(init_state_CMU_SEM, 0, 5, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
+    free_d4tensor(init_state_CMU_NCEM_0, 0, 5, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
     free_d3tensor(min_proj_dist_tens_SEM, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
 
 
@@ -1740,6 +1755,9 @@ int oorefeml2seml(RefSt& refst)
     //====================================================================================
     Invman invman_EM(OFTS_ORDER, OFS_ORDER, SEML.cs);
     Invman invman_SEM(OFTS_ORDER, OFS_ORDER, SEML_SEM.cs);
+
+    cout << "SEML_SEM.li_SEM = " << SEML_SEM.li_SEM << endl;
+    cout << "SEML_SEM.li_SEM = " << SEML_SEM.li << endl;
 
     //====================================================================================
     // 3. User-defined number of continuation steps, if necessary
@@ -2348,6 +2366,10 @@ int oosrefeml2seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* t
         double** ymc   = dmatrix(0, 5, 0, mPlot);
         double* tmc    = dvector(0, mPlot);
         string filename_traj = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF_TRAJ, SEML.li_SEM, orbit_EM.getT0()/SEML.us_em.T);
+
+        cout << "filename_traj = " << filename_traj << endl;
+        pressEnter(true);
+
         fstream filestream;
         if(refst.isSaved && refst.isCont())
         {
@@ -3191,7 +3213,8 @@ int ooseleml2seml(RefSt& refst, double st_EM[5], double st_SEM[5], double t_EM[2
 
         if(t0_des_mod >= 0 && t0_des_mod < 0.25)
         {
-            filename += "0T_025T_FINAL.bin";
+            if(SEML.li_SEM == 2) filename += "0T_025T_FINAL.bin";
+            else filename += "0T_025T_FINAL_dest_L1.bin";
         }
         else if(t0_des_mod >= 0.25 && t0_des_mod < 0.5)
         {
