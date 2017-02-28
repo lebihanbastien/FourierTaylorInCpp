@@ -3566,7 +3566,7 @@ void VNCtoNC_vec(double **yVNC, double *tNC, double **yNC, int N, QBCP_L *qbcp_l
  **/
 void coutmp()
 {
-    cout <<  setprecision(2) << std::showpos  <<  setiosflags(ios::scientific);
+    cout <<  setprecision(2) << std::showpos  <<  setiosflags(ios::fixed);
 }
 
 /**
@@ -3574,7 +3574,7 @@ void coutmp()
  **/
 void coutlp()
 {
-    cout <<  setprecision(15) << std::showpos  <<  setiosflags(ios::scientific);
+    cout <<  setprecision(15) << std::showpos  <<  resetiosflags(ios::fixed) << setiosflags(ios::scientific);
 }
 
 /**

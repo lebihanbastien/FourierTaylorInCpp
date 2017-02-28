@@ -45,98 +45,6 @@ using namespace std;
 #define COMP_test_INVMAN               9    //Test of the new invariant manifold implementation
 #define COMP_REF_JPL                   10   //Refine to JPL ephemerides
 
-/*
-
-    (i) Make initialize_environment routine that takes only COMP_TYPE as argument
-    (ii) Use argc/argv for all parameters below. List of the routine where they are used as of 02/2017.
-
-
-    //=================================================================
-    What do we need?
-    //=================================================================
-
-    --------------- General ---------------
-
-    ---- COMP_TYPE
-    ---- MODEL_TYPE
-    ---- NUM_THREADS
-    ---- OFTS_ORDER
-    ---- LI_EM
-    ---- LI_SEM
-
-    --------------- for PROJECTION ---------------
-
-    ---- TMIN (given in ratio T)
-    ---- TMAX (given in ratio T)
-    ---- TSIZE
-    ---- GLIM_SI[4][2]
-
-    --------------- for REF ---------------
-
-    ---- refst.type          = REF_CONT_D;  //rk: set REF_CONT_D_HARD_CASE for difficult cases with REF_CONT_D (ex: EML2-SEMLi via SEML1...)
-    ---- refst.dim           = REF_PLANAR;
-    ---- refst.gridSize      = 20;
-    ---- refst.t0_des        = TMIN; //0.07*SEML.us_em.T;
-
-    ---- refst.s1_CMU_EM_MIN    = -2;
-    ---- refst.s1_CMU_EM_MAX    = +10;
-    ---- refst.s3_CMU_EM_MIN    = -35;
-    ---- refst.s3_CMU_EM_MAX    = -30;
-    ---- refst.isLimUD          =  0;
-
-    ---- refst.cont_step_max    = +450;
-    ---- refst.cont_step_max_vt = +5;
-
-    ---- refst.isDirUD       = 0;
-    ---- refst.Dir           = -1;
-    ---- refst.isFlagOn      = 1;
-    ---- refst.isPlotted     = 1;
-    ---- refst.isSaved       = 1;
-    ---- refst.isFromServer  = 1;
-
-    //=================================================================
-    What will not change?
-    //=================================================================
-
-    --------------- General ---------------
-
-    ---- ISPAR = 1
-    ---- OFS_ORDER = 30
-
-    --------------- for PROJECTION ---------------
-
-    ---- TM = 12*SEML.us.T;
-    ---- MSIZE = 500;    //number of points on each trajectory
-    ---- NSMIN = 20;     //number of sorted solutions
-    ---- YNMAX = 0.6;    //The maximum norm (in SEM normalized units) for a projection to occur on the CM_NC of SEMLi
-    ---- SNMAX = 0.6;    //The maximum norm (in RCM normalized units) for a projection to occur on the CM_NC of SEMLi
-    ---- NOD = 6;        //Number of dimensions on which we compute the norm of the projection error
-
-    --------------- for REF ---------------
-
-    refst.time          = REF_VAR_TN;
-    refst.grid          = REF_FIXED_GRID;
-    refst.termination   = REF_COND_T;
-    refst.coord_type    = NCSEM;
-    refst.sidim         = 0;
-    refst.xps           = (LI_SEM == 1)? +0.6:-0.6; //NCSEM coordinates
-    //Sampling frequencies (days)
-    refst.sf_eml2  = 2;
-    refst.sf_man   = 5;
-    refst.sf_seml2 = 10;
-    refst.isJPL         = 1;
-    refst.isDebug       = 0;
-    refst.tspan_EM      = +10*SEML.us_em.T;
-    refst.tspan_SEM     = +10*SEML.us_sem.T;
-
-    //////// A REVOIR ////////
-    refst.djplcoord     = -1; //NJ2000 by default
-
-*/
-
-
-
-
 
 /************* NOTES *********************************************************************
  Notes from Reunion with Josep (15/12/2015)
@@ -168,7 +76,7 @@ int main(int argc, char** argv)
     // Projection parameters (in structure)
     ProjSt projSt;
     // Refinement parameters (in structure)
-    RefSt refst;
+    RefSt refSt;
 
     //------------------------------------------------------------------------------------
     // The variable index contains the index of the current argument of
@@ -187,7 +95,7 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         // Type of computation
         //--------------------------------------------------------------------------------
-        COMP_TYPE   = COMP_CM_EML2_TO_CM_SEML;
+        COMP_TYPE   = COMP_CM_EML2_TO_CMS_SEML;
 
         //--------------------------------------------------------------------------------
         // Model and libration points
@@ -235,8 +143,6 @@ int main(int argc, char** argv)
         ISPAR       = atoi(argv[index++]);
         NUM_THREADS = atoi(argv[index++]);
     }
-
-    cout << "COMP_TYPE = " << COMP_TYPE << endl;
 
     //====================================================================================
     // General settings
@@ -406,56 +312,63 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         //rk: set REF_CONT_D_HARD_CASE for difficult cases
         //with REF_CONT_D (ex: EML2-SEMLi via SEML1...)
-        refst.type          = REF_CONT_D;         // Type of refinement
-        refst.dim           = REF_PLANAR;         // Type of dimensions planar or 3d?
-        refst.t0_des        = 0.07*SEML.us_em.T;  // Initial time
+        refSt.type          = REF_CONT;         // Type of refinement
+        refSt.dim           = REF_PLANAR;         // Type of dimensions planar or 3d?
+        refSt.t0_des        = 0.99*SEML.us_em.T;  // Initial time
 
         // Direction of the continuation procedure
-        refst.isDirUD       = 0;                  // is it user defined?
-        refst.Dir           = -1;                 // if not, +1 or -1
+        refSt.isDirUD       = 0;                  // is it user defined?
+        refSt.Dir           = -1;                 // if not, +1 or -1
 
         // Domain of search for the first guess
-        refst.s1_CMU_EM_MIN = -2;
-        refst.s1_CMU_EM_MAX = +10;
-        refst.s3_CMU_EM_MIN = -35;
-        refst.s3_CMU_EM_MAX = -30;
+        refSt.s1_CMU_EM_MIN = -35;
+        refSt.s1_CMU_EM_MAX = +35;
+        refSt.s3_CMU_EM_MIN = -35;
+        refSt.s3_CMU_EM_MAX = +35;
         // Or, if we want the user to define such domain:
-        refst.isLimUD       =  0;
+        refSt.isLimUD       =  0;
+
+        //Limits for the time of flight during transfers - not used if -1
+        refSt.tof_MIN       = -1;
+        refSt.tof_MAX       = -1;
 
         // Number of steps in the continuation procedure
-        refst.cont_step_max    = +450;            // with fixed times
-        refst.cont_step_max_vt = +5;              // with variable times
+        refSt.cont_step_max    = +450;            // with fixed times
+        refSt.cont_step_max_vt = +150;            // with variable times
 
         //User parameters
-        refst.isFlagOn      = 1;                  // do we have steps in the procedure - asking the user to press enter to go on?
-        refst.isPlotted     = 1;                  // do we plot the results during the computation?
-        refst.isSaved       = 1;                  // do we save the results in data files?
-        refst.isFromServer  = 1;                  // does the raw data comes from server files?
+        refSt.isFlagOn      = 1;                  // do we have steps in the procedure - asking the user to press enter to go on?
+        refSt.isPlotted     = 1;                  // do we plot the results during the computation?
+        refSt.isSaved       = 1;                  // do we save the results in data files?
+        refSt.isFromServer  = 1;                  // does the raw data comes from server files?
+
+        //Maximum angle around SEMLi if REF_COND_T is used (in degrees)
+        refSt.thetaMax      = 360;                //should be a multiple of 90°
 
         //--------------------------------------------------------------------------------
         // Parameters that are stable
         //--------------------------------------------------------------------------------
-        refst.isDebug       = 0;                        // if yes, additionnal tests are performed
-        refst.gridSize      = 20;                       // number of points on the refinement grid. 20 is taken by heuristics.
+        refSt.isDebug       = 0;                        // if yes, additionnal tests are performed
+        refSt.gridSize      = 20;                       // number of points on the refinement grid. 20 is taken by heuristics.
 
-        refst.time          = REF_VAR_TN;               // type of constraints on the times in REF_CONT
-        refst.grid          = REF_FIXED_GRID;           // type of grid
-        refst.termination   = REF_COND_T;               // termination condition in the continuation with variable final time (either REF_VAR_TN/REF_VAR_TIME)
-        refst.coord_type    = NCSEM;                    // coordinates system in the refinement procedure
+        refSt.time          = REF_VAR_TN;               // type of constraints on the times in REF_CONT
+        refSt.grid          = REF_FIXED_GRID;           // type of grid
+        refSt.termination   = REF_COND_S5;               // termination condition in the continuation with variable final time (either REF_VAR_TN/REF_VAR_TIME)
+        refSt.coord_type    = NCSEM;                    // coordinates system in the refinement procedure
 
-        refst.xps           = (LI_SEM == 1)? +0.6:-0.6; // position of the poincaré section in NCSEM coordinates
-        refst.isJPL         = 1;                        // is the JPL refinement performed when possible?
-        refst.djplcoord     = -1;                       // coordinate system used during the JPL refinement (if -1, it is user defined) Best results obtained with NJ2000
-        refst.sidim         = 0;                        // 0 or 2 - component of s0 that stays constant when t0 is free
+        refSt.xps           = (LI_SEM == 1)? +0.6:-0.6; // position of the poincaré section in NCSEM coordinates
+        refSt.isJPL         = 1;                        // is the JPL refinement performed when possible?
+        refSt.djplcoord     = -1;                       // coordinate system used during the JPL refinement (if -1, it is user defined) Best results obtained with NJ2000
+        refSt.sidim         = 0;                        // 0 or 2 - component of s0 that stays constant when t0 is free
 
         // Sampling frequencies in REF_COMP (complete trajectory) in days
-        refst.sf_eml2  = 2;                             // orbit at EML2
-        refst.sf_man   = 5;                             // transfer leg
-        refst.sf_seml2 = 10;                            // orbit at SEML2
+        refSt.sf_eml2  = 2;                             // orbit at EML2
+        refSt.sf_man   = 5;                             // transfer leg
+        refSt.sf_seml2 = 10;                            // orbit at SEML2
 
         // Integration window for each orbit
-        refst.tspan_EM      = +10*SEML.us_em.T;
-        refst.tspan_SEM     = +10*SEML.us_sem.T;
+        refSt.tspan_EM      = +10*SEML.us_em.T;
+        refSt.tspan_SEM     = +10*SEML.us_sem.T;
 
     }
     else  //arguments were passed
@@ -466,9 +379,9 @@ int main(int argc, char** argv)
         switch(COMP_TYPE)
         {
 
-        //================================================================================
-        // 3D Projection CMU EML2 to CM SEMLi
-        //================================================================================
+            //================================================================================
+            // 3D Projection CMU EML2 to CM SEMLi
+            //================================================================================
         case COMP_CM_EML2_TO_CM_SEML_3D:
         case COMP_CM_EML2_TO_CM_SEML:
         {
@@ -522,65 +435,72 @@ int main(int argc, char** argv)
         //================================================================================
         case COMP_CM_EML2_TO_CMS_SEML:
         case COMP_REF_JPL:
-            {
-                //------------------------------------------------------------------------
-                // Parameters that change often
-                //------------------------------------------------------------------------
-                //rk: set REF_CONT_D_HARD_CASE for difficult cases
-                //with REF_CONT_D (ex: EML2-SEMLi via SEML1...)
-                refst.type          = atoi(argv[index++]);            // Type of refinement
-                refst.dim           = atoi(argv[index++]);            // Type of dimensions planar or 3d?
-                refst.t0_des        = atof(argv[index++])*SEML.us.T;  // Initial time
+        {
+            //------------------------------------------------------------------------
+            // Parameters that change often
+            //------------------------------------------------------------------------
+            //rk: set REF_CONT_D_HARD_CASE for difficult cases
+            //with REF_CONT_D (ex: EML2-SEMLi via SEML1...)
+            refSt.type          = atoi(argv[index++]);            // Type of refinement
+            refSt.dim           = atoi(argv[index++]);            // Type of dimensions planar or 3d?
+            refSt.t0_des        = atof(argv[index++])*SEML.us.T;  // Initial time
 
-                // Direction of the continuation procedure
-                refst.isDirUD       = atoi(argv[index++]);    // is it user defined?
-                refst.Dir           = atoi(argv[index++]);    // if not, +1 or -1
+            // Direction of the continuation procedure
+            refSt.isDirUD       = atoi(argv[index++]);    // is it user defined?
+            refSt.Dir           = atoi(argv[index++]);    // if not, +1 or -1
 
-                // Domain of search for the first guess
-                refst.s1_CMU_EM_MIN = atof(argv[index++]);
-                refst.s1_CMU_EM_MAX = atof(argv[index++]);
-                refst.s3_CMU_EM_MIN = atof(argv[index++]);
-                refst.s3_CMU_EM_MAX = atof(argv[index++]);
-                // Or, if we want the user to define such domain:
-                refst.isLimUD       =  atoi(argv[index++]);
+            // Domain of search for the first guess
+            refSt.s1_CMU_EM_MIN = atof(argv[index++]);
+            refSt.s1_CMU_EM_MAX = atof(argv[index++]);
+            refSt.s3_CMU_EM_MIN = atof(argv[index++]);
+            refSt.s3_CMU_EM_MAX = atof(argv[index++]);
+            // Or, if we want the user to define such domain:
+            refSt.isLimUD       = atoi(argv[index++]);
 
-                // Number of steps in the continuation procedure
-                refst.cont_step_max    = atoi(argv[index++]);  // with fixed times
-                refst.cont_step_max_vt = atoi(argv[index++]);  // with variable times
+            //Limits for the time of flight during transfers - not used if negative
+            refSt.tof_MIN       = atof(argv[index++])*SEML.us.T;
+            refSt.tof_MAX       = atof(argv[index++])*SEML.us.T;
 
-                //User parameters
-                refst.isFlagOn      = atoi(argv[index++]);     // do we have steps in the procedure - asking the user to press enter to go on?
-                refst.isPlotted     = atoi(argv[index++]);     // do we plot the results during the computation?
-                refst.isSaved       = atoi(argv[index++]);     // do we save the results in data files?
-                refst.isFromServer  = atoi(argv[index++]);     // does the raw data comes from server files?
+            // Number of steps in the continuation procedure
+            refSt.cont_step_max    = atoi(argv[index++]);  // with fixed times
+            refSt.cont_step_max_vt = atoi(argv[index++]);  // with variable times
 
-                //------------------------------------------------------------------------
-                // Parameters that are stable
-                //------------------------------------------------------------------------
-                refst.isDebug       = atoi(argv[index++]);  // if yes, additionnal tests are performed
-                refst.gridSize      = atoi(argv[index++]);  // number of points on the refinement grid. 20 is taken by heuristics.
+            //User parameters
+            refSt.isFlagOn      = atoi(argv[index++]);     // do we have steps in the procedure - asking the user to press enter to go on?
+            refSt.isPlotted     = atoi(argv[index++]);     // do we plot the results during the computation?
+            refSt.isSaved       = atoi(argv[index++]);     // do we save the results in data files?
+            refSt.isFromServer  = atoi(argv[index++]);     // does the raw data comes from server files?
 
-                refst.time          = atoi(argv[index++]);  // type of constraints on the times in REF_CONT
-                refst.grid          = atoi(argv[index++]);  // type of grid
-                refst.termination   = atoi(argv[index++]);  // termination condition in the continuation with variable final time (either REF_VAR_TN/REF_VAR_TIME)
-                refst.coord_type    = atoi(argv[index++]);  // coordinates system in the refinement procedure
+            //Maximum angle around SEMLi if REF_COND_T is used (in degrees)
+            refSt.thetaMax      = atof(argv[index++]);     //should be a multiple of 90°
 
-                refst.xps           = atof(argv[index++]);  // position of the poincaré section in NCSEM coordinates
-                refst.xps *= (LI_SEM == 1)? +1:-1;
-                refst.isJPL         = atoi(argv[index++]);  // is the JPL refinement performed when possible?
-                refst.djplcoord     = atoi(argv[index++]);  // coordinate system used during the JPL refinement (if -1, it is user defined) Best results obtained with NJ2000
-                refst.sidim         = atoi(argv[index++]);  // 0 or 2 - component of s0 that stays constant when t0 is free
+            //------------------------------------------------------------------------
+            // Parameters that are stable
+            //------------------------------------------------------------------------
+            refSt.isDebug       = atoi(argv[index++]);  // if yes, additionnal tests are performed
+            refSt.gridSize      = atoi(argv[index++]);  // number of points on the refinement grid. 20 is taken by heuristics.
 
-                // Sampling frequencies in REF_COMP (complete trajectory) in days
-                refst.sf_eml2  = atof(argv[index++]);       // orbit at EML2
-                refst.sf_man   = atof(argv[index++]);       // transfer leg
-                refst.sf_seml2 = atof(argv[index++]);       // orbit at SEML2
+            refSt.time          = atoi(argv[index++]);  // type of constraints on the times in REF_CONT
+            refSt.grid          = atoi(argv[index++]);  // type of grid
+            refSt.termination   = atoi(argv[index++]);  // termination condition in the continuation with variable final time (either REF_VAR_TN/REF_VAR_TIME)
+            refSt.coord_type    = atoi(argv[index++]);  // coordinates system in the refinement procedure
 
-                // Integration window for each orbit
-                refst.tspan_EM      = atof(argv[index++])*SEML.us_em.T;
-                refst.tspan_SEM     = atof(argv[index++])*SEML.us_sem.T;
-                break;
-            }
+            refSt.xps           = atof(argv[index++]);  // position of the poincaré section in NCSEM coordinates
+            refSt.xps *= (LI_SEM == 1)? +1:-1;
+            refSt.isJPL         = atoi(argv[index++]);  // is the JPL refinement performed when possible?
+            refSt.djplcoord     = atoi(argv[index++]);  // coordinate system used during the JPL refinement (if -1, it is user defined) Best results obtained with NJ2000
+            refSt.sidim         = atoi(argv[index++]);  // 0 or 2 - component of s0 that stays constant when t0 is free
+
+            // Sampling frequencies in REF_COMP (complete trajectory) in days
+            refSt.sf_eml2  = atof(argv[index++]);       // orbit at EML2
+            refSt.sf_man   = atof(argv[index++]);       // transfer leg
+            refSt.sf_seml2 = atof(argv[index++]);       // orbit at SEML2
+
+            // Integration window for each orbit
+            refSt.tspan_EM      = atof(argv[index++])*SEML.us_em.T;
+            refSt.tspan_SEM     = atof(argv[index++])*SEML.us_sem.T;
+            break;
+        }
 
 
         //================================================================================
@@ -598,9 +518,8 @@ int main(int argc, char** argv)
             break;
         }
 
+        }
     }
-    }
-
 
 
     //====================================================================================
@@ -648,22 +567,11 @@ int main(int argc, char** argv)
         break;
     }
 
-    //================================================================================
-    // Projection CMU EML2 to CM SEMLi
-    //================================================================================
+        //================================================================================
+        // Projection CMU EML2 to CM SEMLi
+        //================================================================================
     case COMP_CM_EML2_TO_CM_SEML:
     {
-        //--------------------------------------------------------------------------------
-        //UNSTABLE MANIFOLD AT EML2
-        //--------------------------------------------------------------------------------
-        double GMIN_S1  = projSt.GLIM_SI[0][0];
-        double GMAX_S1  = projSt.GLIM_SI[0][1];
-        int    GSIZE_S1 = projSt.GSIZE_SI[0];
-
-        double GMIN_S3  = projSt.GLIM_SI[2][0];
-        double GMAX_S3  = projSt.GLIM_SI[2][1];
-        int    GSIZE_S3 = projSt.GSIZE_SI[2];
-
         //--------------------------------------------------------------------------------
         // New version
         //--------------------------------------------------------------------------------
@@ -708,22 +616,22 @@ int main(int argc, char** argv)
         //cout << "End of int_sorted_sol_CMU_EM_to_CM_SEM in " << toc() << endl;
         break;
     }
-    //================================================================================
-    // Refinement CMU EML2 to CMS SEMLi
-    //================================================================================
+        //================================================================================
+        // Refinement CMU EML2 to CMS SEMLi
+        //================================================================================
     case COMP_CM_EML2_TO_CMS_SEML:
     {
         //--------------------------------------------------------------------------------
         // Complete routine: new version
         //--------------------------------------------------------------------------------
-        oorefeml2seml(refst);
-        //ooconteml2seml(refst);
+        oorefeml2seml(refSt);
+        //ooconteml2seml(refSt);
         break;
 
         //--------------------------------------------------------------------------------
         // Complete routine: old version
         //--------------------------------------------------------------------------------
-        //refeml2seml(20, NCSEM, CM_NC, CM_TFC, DCM_TFC, Mcoc, MIcoc, Vcoc, refst);
+        //refeml2seml(20, NCSEM, CM_NC, CM_TFC, DCM_TFC, Mcoc, MIcoc, Vcoc, refSt);
         break;
 
         //--------------------------------------------------------------------------------
@@ -743,23 +651,23 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         // Celestia format (for movies)
         //--------------------------------------------------------------------------------
-        toCelestiaFormat("jpltraj.xyz");
+        //toCelestiaFormat("jpltraj.xyz");
         break;
     }
 
-    //================================================================================
-    // Refinement of the whole trajectory to JPL ephemerides
-    //================================================================================
+        //================================================================================
+        // Refinement of the whole trajectory to JPL ephemerides
+        //================================================================================
     case COMP_REF_JPL:
     {
-        //oojplrefft3d(refst.coord_type, refst);
-        oointojplrefft3d(refst.coord_type, refst);
-        //oocomprefft3d_test_eml2seml_synjpl(refst.coord_type);
+        //oojplrefft3d(refSt.coord_type, refSt);
+        oointojplrefft3d(refSt.coord_type, refSt);
+        //oocomprefft3d_test_eml2seml_synjpl(refSt.coord_type);
         break;
     }
-    //================================================================================
-    // Refinement of the whole trajectory CMU EML2 to CM SEMLi
-    //================================================================================
+        //================================================================================
+        // Refinement of the whole trajectory CMU EML2 to CM SEMLi
+        //================================================================================
     case COMP_CM_EML2_TO_CM_SEML_REFINE:
     {
 
@@ -782,9 +690,9 @@ int main(int argc, char** argv)
         break;
     }
 
-    //================================================================================
-    // Test on ephemerides
-    //================================================================================
+        //================================================================================
+        // Test on ephemerides
+        //================================================================================
     case COMP_EPHEMERIDES_TEST:
     {
         //----------------------
@@ -824,9 +732,9 @@ int main(int argc, char** argv)
 
         break;
     }
-    //================================================================================
-    // READ CMU EML2 to CMS SEMLi
-    //================================================================================
+        //================================================================================
+        // READ CMU EML2 to CMS SEMLi
+        //================================================================================
     case COMP_CM_EML2_TO_CMS_SEML_READ:
     {
         //Filename;
@@ -877,9 +785,9 @@ int main(int argc, char** argv)
         break;
     }
 
-    //================================================================================
-    // Just some examples of solutions
-    //================================================================================
+        //================================================================================
+        // Just some examples of solutions
+        //================================================================================
     case COMP_SINGLE_ORBIT:
     {
         //Reduced number of variables in the default invariant manifolds
@@ -947,19 +855,19 @@ int main(int argc, char** argv)
 
         break;
     }
-    //================================================================================
-    // Test of the vector fields. Better in OOFTDA??
-    // @todo set this routine (qbtbp_test) in OOFTDA
-    //================================================================================
+        //================================================================================
+        // Test of the vector fields. Better in OOFTDA??
+        // @todo set this routine (qbtbp_test) in OOFTDA
+        //================================================================================
     case COMP_VF_TEST:
     {
         qbtbp_test(SEML.us.T, SEML);
         break;
     }
 
-    //================================================================================
-    // Test of the new invariant manifold representation
-    //================================================================================
+        //================================================================================
+        // Test of the new invariant manifold representation
+        //================================================================================
     case COMP_test_INVMAN:
     {
         test_evalCCMtoTFC();
@@ -1004,7 +912,6 @@ int main(int argc, char** argv)
         break;
     }
     }
-
 
     return FTC_SUCCESS;
 }

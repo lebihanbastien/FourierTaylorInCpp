@@ -61,6 +61,7 @@ struct RefSt
     int gridSize;         //desired grid size, for certain applications
 
     int termination;      //type of termination for time varying continuation
+    double thetaMax;      //maximum angle around SEMLi if REF_COND_T is used
 
     int sidim;            //direction for predictor-corrector with variable to (s1 or s3)
                           //hence sidim = 0 or 2.
@@ -77,6 +78,10 @@ struct RefSt
     double s1_CMU_EM_MAX;
     double s3_CMU_EM_MIN;
     double s3_CMU_EM_MAX;
+
+    //Limits for the time of flight during transfers
+    double tof_MIN;
+    double tof_MAX;
 
     //Poincaré section x = cst
     double xps;
@@ -166,7 +171,7 @@ int multiple_shooting_direct_deps(double **ymd, double *tmd,
 /**
  *  \brief Yields the number of free variables necessary to compute the refinment procedure.
  **/
-int nfreevariables(RefSt refst, int man_grid_size);
+int nfreevariables(RefSt refSt, int man_grid_size);
 
 //===========================================================
 // FIXED TIMES

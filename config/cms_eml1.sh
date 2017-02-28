@@ -23,7 +23,7 @@ MODEL=$M_QBCP
 #-----------------------------------------------------
 # DEFAULT LIBRATION POINT FOR EM & SEM SYSTEM
 #-----------------------------------------------------
-LI_EM=2
+LI_EM=1
 LI_SEM=2
 
 #-----------------------------------------------------
@@ -50,16 +50,16 @@ ISNOHUP=0
 #-----------------------------------------------------
 # Parameters that change often
 #-----------------------------------------------------
-REFST_TYPE=$REF_CONT             # Type of refinement - rk: set REF_CONT_D_HARD_CASE for difficult cases with REF_CONT_D (ex: EML2-SEMLi via SEML1...)
+REFST_TYPE=$REF_CONT_D           # Type of refinement - rk: set REF_CONT_D_HARD_CASE for difficult cases with REF_CONT_D (ex: EML2-SEMLi via SEML1...)
 REFST_DIM=$REF_PLANAR            # Type of dimensions planar or 3d?
-REFST_T0_DES=0.99                # Initial time - given as %T, with T the SEM period   
+REFST_T0_DES=0.00                # Initial time - given as %T, with T the SEM period   
 
 # Direction of the continuation procedure
 REFST_ISDIRUD=0			 # is it user defined?
 REFST_DIR=-1    		 # if not, +1 or -1
 
 # Domain of search (min s1, max s1, min s3, max s3) for the first guess
-REFST_SI_CMU_EM_LIM=(12 24 6 18)
+REFST_SI_CMU_EM_LIM=(-35 35 -35 35)
 # Or, if we want the user to define such domain:
 REFST_ISLIMUD=0
 
@@ -87,7 +87,7 @@ REFST_GRIDSIZE=20        	 # number of points on the refinement grid
 
 REFST_TIME=$REF_VAR_TN		 # type of constraints on the times in REF_CONT
 REFST_GRID=$REF_FIXED_GRID	 # type of grid
-REFST_TERMINATION=$REF_COND_S5   # Termination condition in the continuation with variable final time (either REF_VAR_TN/REF_VAR_TIME)
+REFST_TERMINATION=$REF_COND_T    # Termination condition in the continuation with variable final time (either REF_VAR_TN/REF_VAR_TIME)
 REFST_COORD_TYPE=$NCSEM		 # coordinates system in the refinement procedure
 
 REFST_XPS=0.6			 # position of the poincaré section in NCSEM coordinates

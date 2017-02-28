@@ -2071,7 +2071,7 @@ int refeml2seml(int man_grid_size,
                 matrix<Ofsc>  &Mcoc_EM,
                 matrix<Ofsc>  &MIcoc_EM,
                 vector<Ofsc>  &Vcoc_EM,
-                RefSt refst)
+                RefSt refSt)
 {
     //====================================================================================
     // 1. Get the default coordinates system from the coord_type
@@ -2154,7 +2154,7 @@ int refeml2seml(int man_grid_size,
     //====================================================================================
     // 4. Getting back the data
     //====================================================================================
-    int type = refst.dim == REF_PLANAR? TYPE_MAN_PROJ:TYPE_MAN_PROJ_3D;
+    int type = refSt.dim == REF_PLANAR? TYPE_MAN_PROJ:TYPE_MAN_PROJ_3D;
     string filename = filenameCUM(OFTS_ORDER, type, SEML.li_SEM);
 
     readIntProjCU_bin(filename, t0_EM, tf_EM, s1_CMU_EM, s2_CMU_EM, s3_CMU_EM, s4_CMU_EM,
@@ -2166,7 +2166,7 @@ int refeml2seml(int man_grid_size,
     double s1_CMU_EM_MIN, s1_CMU_EM_MAX;
     double s3_CMU_EM_MIN, s3_CMU_EM_MAX;
 
-    if(refst.isLimUD)
+    if(refSt.isLimUD)
     {
         cout << "-----------------------------------------------------" << endl;
         cout << "   refeml2seml. User-defined interval of research    " << endl;
@@ -2181,10 +2181,10 @@ int refeml2seml(int man_grid_size,
         cin >> s3_CMU_EM_MAX;
     }else
     {
-        s1_CMU_EM_MIN = refst.s1_CMU_EM_MIN;
-        s1_CMU_EM_MAX = refst.s1_CMU_EM_MAX;
-        s3_CMU_EM_MIN = refst.s3_CMU_EM_MIN;
-        s3_CMU_EM_MAX = refst.s3_CMU_EM_MAX;
+        s1_CMU_EM_MIN = refSt.s1_CMU_EM_MIN;
+        s1_CMU_EM_MAX = refSt.s1_CMU_EM_MAX;
+        s3_CMU_EM_MIN = refSt.s3_CMU_EM_MIN;
+        s3_CMU_EM_MAX = refSt.s3_CMU_EM_MAX;
     }
 
     //--------------------------------------
@@ -2220,21 +2220,21 @@ int refeml2seml(int man_grid_size,
     // 7. User-defined number of continuation steps, if necessary
     //====================================================================================
     int cont_steps_MAX = 0;
-    if(refst.isCont())
+    if(refSt.isCont())
     {
-        if(refst.isLimUD)
+        if(refSt.isLimUD)
         {
             cout << "-----------------------------------------------------" << endl;
             cout << "refeml2seml. User-defined number of continuation steps" << endl;
             cout << "-----------------------------------------------------" << endl;
             cout << "Enter a value for cont_steps_MAX: ";
             cin >> cont_steps_MAX;
-            refst.cont_step_max = cont_steps_MAX;
+            refSt.cont_step_max = cont_steps_MAX;
         }
     }else
     {
         cout << "refeml2seml. No continuation will be performed." << endl;
-        refst.cont_step_max = 0;
+        refSt.cont_step_max = 0;
     }
 
     //====================================================================================
@@ -2335,19 +2335,19 @@ int refeml2seml(int man_grid_size,
     // 8 Multiple shooting procedure
     //====================================================================================
     double **semP_coord = dmatrix(0, 6, 0, 2);
-    switch(refst.type)
+    switch(refSt.type)
     {
     case REF_CONT:
     case REF_SINGLE:
-        //----------------------------------------------------------
+        //--------------------------------------------------------------------------------
         //Gnuplot window
-        //----------------------------------------------------------
+        //--------------------------------------------------------------------------------
         gnuplot_ctrl *h2;
         h2 = gnuplot_init();
 
-        //----------------------------------------------------------
+        //--------------------------------------------------------------------------------
         //Notable points in SEM system
-        //----------------------------------------------------------
+        //--------------------------------------------------------------------------------
         switch(coord_type)
         {
         case PSEM:
@@ -2371,11 +2371,11 @@ int refeml2seml(int man_grid_size,
             break;
         }
 
-        //----------------------------------------------------------
+        //--------------------------------------------------------------------------------
         //Multiple shooting procedure
-        //----------------------------------------------------------
+        //--------------------------------------------------------------------------------
         srefeml2seml(orbit_EM, orbit_SEM, DCM_EM_TFC, DCMS_SEM_TFC,
-                     dcs, coord_type, man_grid_size, refst, h2);
+                     dcs, coord_type, man_grid_size, refSt, h2);
         gnuplot_close(h2);
         break;
 
@@ -2388,12 +2388,12 @@ int refeml2seml(int man_grid_size,
         cin >> msd_grid_size;
         char ch;
         scanf("%c",&ch);
-        comprefft3d(msd_grid_size, coord_type, orbit_EM, orbit_SEM, refst);
-        //comprefft3d_test_eml2seml_synjpl(msd_grid_size, coord_type, orbit_EM, orbit_SEM, refst);
-        //comprefft3d_test_seml_synjpl(msd_grid_size, coord_type, orbit_EM, orbit_SEM, refst);
-        //comprefft3d_test_seml_synjpl(msd_grid_size, coord_type, orbit_EM, orbit_SEM, refst);
+        comprefft3d(msd_grid_size, coord_type, orbit_EM, orbit_SEM, refSt);
+        //comprefft3d_test_eml2seml_synjpl(msd_grid_size, coord_type, orbit_EM, orbit_SEM, refSt);
+        //comprefft3d_test_seml_synjpl(msd_grid_size, coord_type, orbit_EM, orbit_SEM, refSt);
+        //comprefft3d_test_seml_synjpl(msd_grid_size, coord_type, orbit_EM, orbit_SEM, refSt);
 
-        //comprefft3d_test_eml2seml_insem(msd_grid_size, coord_type, orbit_EM, orbit_SEM, refst);
+        //comprefft3d_test_eml2seml_insem(msd_grid_size, coord_type, orbit_EM, orbit_SEM, refSt);
         break;
     }
 
@@ -2424,7 +2424,7 @@ void srefeml2seml(SingleOrbit &orbit_EM,
                   int dcs,
                   int coord_type,
                   int man_grid_size_t,
-                  RefSt refst,
+                  RefSt refSt,
                   gnuplot_ctrl *h2)
 {
     //====================================================================================
@@ -2433,16 +2433,16 @@ void srefeml2seml(SingleOrbit &orbit_EM,
     cout << " srefeml2seml. Initialization of the local variables..."  << endl;
 
     //Local plotting condition
-    int isPlotted   = refst.isPlotted;
+    int isPlotted   = refSt.isPlotted;
     //We keep the number of points below 10% of the maximum gnuplot temp file.
-    int plotfreq = floor((double)refst.cont_step_max/floor(0.1*GP_MAX_TMP_FILES))+1;
+    int plotfreq = floor((double)refSt.cont_step_max/floor(0.1*GP_MAX_TMP_FILES))+1;
 
     //---------------------------------------------------------------------
     //If the grid is fixed, then we use the user-provided size. Else, we use a
     //big value (max_grid_size) so that the arrays would not be saturated.
     //---------------------------------------------------------------------
     int max_grid_size = 1000;
-    int man_grid_size = refst.grid == REF_VAR_GRID? max_grid_size:man_grid_size_t;
+    int man_grid_size = refSt.grid == REF_VAR_GRID? max_grid_size:man_grid_size_t;
 
     //---------------------------------------------------------------------
     //Local variables to store the manifold leg
@@ -2495,7 +2495,7 @@ void srefeml2seml(SingleOrbit &orbit_EM,
     //------------------------------------------------------------------------------------
     int ode78coll;
     int man_index = man_grid_size;
-    if(refst.grid == REF_FIXED_GRID) //fixed time grid
+    if(refSt.grid == REF_FIXED_GRID) //fixed time grid
         ode78(y_man_coord, t_man_coord, &ode78coll, orbit_EM.t0, orbit_EM.tf, orbit_EM.z0, 6, man_grid_size, dcs, NCEM, coord_type);
     else //variable time grid
         man_index = ode78_qbcp_vg(y_man_coord, t_man_coord, &ode78coll, orbit_EM.t0, orbit_EM.tf, orbit_EM.z0, 6, man_grid_size, dcs, NCEM, coord_type, man_grid_size_t);
@@ -2563,7 +2563,7 @@ void srefeml2seml(SingleOrbit &orbit_EM,
     //======================================================================
     //Free variables
     //======================================================================
-    int nfv = nfreevariables(refst, man_index);
+    int nfv = nfreevariables(refSt, man_index);
     double *nullvector = dvector(0, nfv-1);
 
     //======================================================================
@@ -2575,9 +2575,9 @@ void srefeml2seml(SingleOrbit &orbit_EM,
     //======================================================================
     gnuplot_ctrl *h3 = 0, *h4 = 0, *h5 = 0;
 
-    if(refst.isCont())
+    if(refSt.isCont())
     {
-        switch(refst.time)
+        switch(refSt.time)
         {
         case REF_VAR_TIME:
         case REF_VAR_TN:
@@ -2622,10 +2622,10 @@ void srefeml2seml(SingleOrbit &orbit_EM,
     //======================================================================
     int status = 0;
     double inner_prec = 5e-8;
-    switch(refst.dim)
+    switch(refSt.dim)
     {
     case REF_3D:
-        switch(refst.time)
+        switch(refSt.time)
         {
         case REF_FIXED_TIME:
             status = msft3d(y_traj, t_traj, y_traj_n, t_traj_n,
@@ -2635,7 +2635,7 @@ void srefeml2seml(SingleOrbit &orbit_EM,
                             CCM_R_RCM_EM,
                             CCM_R_RCM_SEM,
                             orbit_EM, orbit_SEM,
-                            h2, isPlotted, refst.isDirUD, false);
+                            h2, isPlotted, refSt.isDirUD, false);
 
             break;
 
@@ -2652,12 +2652,12 @@ void srefeml2seml(SingleOrbit &orbit_EM,
 
             break;
         default:
-            perror("srefeml2seml. Unknown refst.time.");
+            perror("srefeml2seml. Unknown refSt.time.");
             break;
         }
         break;
     case REF_PLANAR:
-        switch(refst.time)
+        switch(refSt.time)
         {
         case REF_FIXED_TIME:
             status = msftplan(y_traj, t_traj, y_traj_n, t_traj_n,
@@ -2667,7 +2667,7 @@ void srefeml2seml(SingleOrbit &orbit_EM,
                               CCM_R_RCM_EM,
                               CCM_R_RCM_SEM,
                               orbit_EM, orbit_SEM,
-                              h2, isPlotted, refst.isDirUD, false);
+                              h2, isPlotted, refSt.isDirUD, false);
 
             break;
 
@@ -2684,12 +2684,12 @@ void srefeml2seml(SingleOrbit &orbit_EM,
 
             break;
         default:
-            perror("srefeml2seml. Unknown refst.time.");
+            perror("srefeml2seml. Unknown refSt.time.");
             break;
         }
          break;
     default:
-        perror("srefeml2seml. Unknown refst.dim.");
+        perror("srefeml2seml. Unknown refSt.dim.");
         break;
     }
 
@@ -2711,7 +2711,7 @@ void srefeml2seml(SingleOrbit &orbit_EM,
         string filename      = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF, SEML.li_SEM, orbit_EM.t0/SEML.us_em.T);
         string filename_traj = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF_TRAJ, SEML.li_SEM, orbit_EM.t0/SEML.us_em.T);
         fstream filestream;
-        if(refst.isSaved)
+        if(refSt.isSaved)
         {
             cout << " srefeml2seml. Save first entry.                           "  << endl;
             cout << "-----------------------------------------------------------"  << endl;
@@ -2780,17 +2780,17 @@ void srefeml2seml(SingleOrbit &orbit_EM,
 
         //An additional condition can be set: if the time is not fixed, we want to decrease the
         //s5 component at SEMLi. Therefore, we add a stopping condition on the loop.
-        bool addCondition = (refst.time == REF_VAR_TIME || refst.time == REF_VAR_TN) ? fabs(orbit_SEM.si[4]) > ORBIT_SEM_UNSTABLE_MIN: true;
+        bool addCondition = (refSt.time == REF_VAR_TIME || refSt.time == REF_VAR_TN) ? fabs(orbit_SEM.si[4]) > ORBIT_SEM_UNSTABLE_MIN: true;
 
         //======================================================================
         // 5.2.1. Updating the free variables
         //======================================================================
-        while(kn < refst.cont_step_max && status == GSL_SUCCESS && addCondition)
+        while(kn < refSt.cont_step_max && status == GSL_SUCCESS && addCondition)
         {
-            switch(refst.dim)
+            switch(refSt.dim)
             {
             case REF_3D:
-                switch(refst.time)
+                switch(refSt.time)
                 {
                 case REF_FIXED_TIME:
                     ufvarft3d(y_traj_n, t_traj_n, ds, nullvector,
@@ -2805,12 +2805,12 @@ void srefeml2seml(SingleOrbit &orbit_EM,
                               man_grid_size, coord_type);
                     break;
                 default:
-                    perror("srefeml2seml. Unknown refst.time.");
+                    perror("srefeml2seml. Unknown refSt.time.");
                     break;
                 }
                 break;
             case REF_PLANAR:
-                switch(refst.time)
+                switch(refSt.time)
                 {
                 case REF_FIXED_TIME:
                     ufvarftplan(y_traj_n, t_traj_n, ds, nullvector,
@@ -2825,12 +2825,12 @@ void srefeml2seml(SingleOrbit &orbit_EM,
                                 man_grid_size, coord_type);
                     break;
                 default:
-                    perror("srefeml2seml. Unknown refst.time.");
+                    perror("srefeml2seml. Unknown refSt.time.");
                     break;
                 }
                 break;
             default:
-                perror("srefeml2seml. Unknown refst.dim.");
+                perror("srefeml2seml. Unknown refSt.dim.");
 
                 break;
             }
@@ -2838,11 +2838,11 @@ void srefeml2seml(SingleOrbit &orbit_EM,
             //======================================================================
             // 5.2.2. Diff correction
             //======================================================================
-            isPlotted = (kn % plotfreq == 0) && refst.isPlotted ? 1:0;
-            switch(refst.dim)
+            isPlotted = (kn % plotfreq == 0) && refSt.isPlotted ? 1:0;
+            switch(refSt.dim)
             {
             case REF_3D:
-                switch(refst.time)
+                switch(refSt.time)
                 {
                 case REF_FIXED_TIME:
                     status = msft3d(y_traj_n, t_traj_n, y_traj_n, t_traj_n,
@@ -2852,7 +2852,7 @@ void srefeml2seml(SingleOrbit &orbit_EM,
                                     CCM_R_RCM_EM,
                                     CCM_R_RCM_SEM,
                                     orbit_EM, orbit_SEM,
-                                    h2, isPlotted, refst.isDirUD, false);
+                                    h2, isPlotted, refSt.isDirUD, false);
 
                     break;
 
@@ -2869,12 +2869,12 @@ void srefeml2seml(SingleOrbit &orbit_EM,
 
                     break;
                 default:
-                    perror("srefeml2seml. Unknown refst.time.");
+                    perror("srefeml2seml. Unknown refSt.time.");
                     break;
                 }
                 break;
             case REF_PLANAR:
-                switch(refst.time)
+                switch(refSt.time)
                 {
                 case REF_FIXED_TIME:
                     status = msftplan(y_traj_n, t_traj_n, y_traj_n, t_traj_n,
@@ -2884,7 +2884,7 @@ void srefeml2seml(SingleOrbit &orbit_EM,
                                       CCM_R_RCM_EM,
                                       CCM_R_RCM_SEM,
                                       orbit_EM, orbit_SEM,
-                                      h2, isPlotted, refst.isDirUD, false);
+                                      h2, isPlotted, refSt.isDirUD, false);
 
                     break;
 
@@ -2901,12 +2901,12 @@ void srefeml2seml(SingleOrbit &orbit_EM,
 
                     break;
                 default:
-                    perror("srefeml2seml. Unknown refst.time.");
+                    perror("srefeml2seml. Unknown refSt.time.");
                     break;
                 }
                 break;
             default:
-                perror("srefeml2seml. Unknown refst.dim.");
+                perror("srefeml2seml. Unknown refSt.dim.");
                 break;
 
             }
@@ -2915,7 +2915,7 @@ void srefeml2seml(SingleOrbit &orbit_EM,
             //======================================================================
             //Save
             //======================================================================
-            if(refst.isSaved && status == GSL_SUCCESS)
+            if(refSt.isSaved && status == GSL_SUCCESS)
             {
                 filestream.open (filename.c_str(), ios::out | ios::app);
                 //Data
@@ -2966,10 +2966,10 @@ void srefeml2seml(SingleOrbit &orbit_EM,
             //======================================================================
             dkn = (double) kn;
             if(kn % plotfreq == 0)
-            if(refst.isCont())
+            if(refSt.isCont())
             {
 
-                switch(refst.time)
+                switch(refSt.time)
                 {
                 case REF_VAR_TIME:
                 case REF_VAR_TN:
@@ -2994,7 +2994,7 @@ void srefeml2seml(SingleOrbit &orbit_EM,
             // 5.2.4. Advance
             //======================================================================
             kn++;
-            cout << "Step n°" << kn << "/" << refst.cont_step_max << " completed.               "  << endl;
+            cout << "Step n°" << kn << "/" << refSt.cont_step_max << " completed.               "  << endl;
             cout << "---------------------------------------------"  << endl;
             //printf("Press ENTER to go on\n");
             //scanf("%c",&ch);
@@ -3002,7 +3002,7 @@ void srefeml2seml(SingleOrbit &orbit_EM,
             //======================================================================
             // 5.2.5. update the additionnal condition, if necessary
             //======================================================================
-            addCondition = (refst.time == REF_VAR_TIME || refst.time == REF_VAR_TN) ? fabs(orbit_SEM.si[4]) > ORBIT_SEM_UNSTABLE_MIN: true;
+            addCondition = (refSt.time == REF_VAR_TIME || refSt.time == REF_VAR_TN) ? fabs(orbit_SEM.si[4]) > ORBIT_SEM_UNSTABLE_MIN: true;
 
         }
 
@@ -3124,9 +3124,9 @@ void srefeml2seml(SingleOrbit &orbit_EM,
     //====================================================================================
     // 9. Free
     //====================================================================================
-    if(refst.isCont())
+    if(refSt.isCont())
     {
-        switch(refst.time)
+        switch(refSt.time)
         {
         case REF_VAR_TIME:
         case REF_VAR_TN:
@@ -9256,7 +9256,7 @@ int comprefft3d(int man_grid_size_t,
                 int coord_type,
                 SingleOrbit &orbit_EM,
                 SingleOrbit &orbit_SEM,
-                RefSt refst)
+                RefSt refSt)
 
 {
     //====================================================================================
@@ -9272,8 +9272,8 @@ int comprefft3d(int man_grid_size_t,
     //----------------------------------------------------------
     // Define the time of flight on each orbit
     //----------------------------------------------------------
-    double tof_eml_EM   = refst.tspan_EM;       //TOF on EML2 orbit
-    double tof_seml_SEM = refst.tspan_SEM;   //TOF on SEMLi orbit
+    double tof_eml_EM   = refSt.tspan_EM;       //TOF on EML2 orbit
+    double tof_seml_SEM = refSt.tspan_SEM;   //TOF on SEMLi orbit
 
 
     //====================================================================================
@@ -9400,8 +9400,8 @@ int comprefft3d(int man_grid_size_t,
     // 3. Init the data containers
     //====================================================================================
     int max_grid    = 50000;
-    int man_grid_2  = (refst.grid == REF_VAR_GRID )? max_grid:man_grid_size_t;
-    int traj_grid_2 = (refst.grid == REF_VAR_GRID )? max_grid:3*man_grid_size_t;
+    int man_grid_2  = (refSt.grid == REF_VAR_GRID )? max_grid:man_grid_size_t;
+    int traj_grid_2 = (refSt.grid == REF_VAR_GRID )? max_grid:3*man_grid_size_t;
 
     //---------------------------------------------------------------------
     //To store final data
@@ -9458,7 +9458,7 @@ int comprefft3d(int man_grid_size_t,
     //Integration on man_grid_size+1 fixed grid
     //---------------------------------------------------------------------
     int em_index = man_grid_2;
-    if(refst.grid == REF_FIXED_GRID) //fixed grid
+    if(refSt.grid == REF_FIXED_GRID) //fixed grid
         trajectory_integration_grid(orbit_EM, orbit_EM.t0, orbit_EM.t0-tof_eml_EM, y_man_NCEM, t_man_EM, man_grid_2, 1);
     else //variable grid
         em_index = trajectory_integration_variable_grid(orbit_EM, orbit_EM.t0, orbit_EM.t0-tof_eml_EM, y_man_NCEM, t_man_EM, man_grid_2, 1);
@@ -9507,7 +9507,7 @@ int comprefft3d(int man_grid_size_t,
     //---------------------------------------------------------------------
     int ode78coll;
     int man_index = man_grid_2;
-    if(refst.grid == REF_FIXED_GRID) //fixed grid
+    if(refSt.grid == REF_FIXED_GRID) //fixed grid
         ode78(y_man_coord, t_man_coord, &ode78coll, orbit_EM.t0, tf_EM, orbit_EM.z0, 6, man_grid_2, dcs, NCEM, coord_type);
     else //variable grid
         man_index = ode78_qbcp_vg(y_man_coord, t_man_coord, &ode78coll, orbit_EM.t0, tf_EM, orbit_EM.z0, 6, man_grid_2, dcs, NCEM, coord_type, -1);
@@ -9549,7 +9549,7 @@ int comprefft3d(int man_grid_size_t,
     //Integration on man_grid_size+1 fixed grid
     //---------------------------------------------------------------------
     int sem_index = man_grid_2;
-    if(refst.grid == REF_FIXED_GRID) //fixed grid
+    if(refSt.grid == REF_FIXED_GRID) //fixed grid
         trajectory_integration_grid(orbit_SEM, orbit_SEM.t0, orbit_SEM.t0+tof_seml_SEM, y_man_NCSEM, t_man_SEM, man_grid_2, 1);
     else //variable grid
         sem_index = trajectory_integration_variable_grid(orbit_SEM, orbit_SEM.t0, orbit_SEM.t0+tof_seml_SEM, y_man_NCSEM, t_man_SEM, man_grid_2, 1);
@@ -9580,7 +9580,7 @@ int comprefft3d(int man_grid_size_t,
     // Entire size is: no more than 3*man_grid_size_t points or so.
     //====================================================================================
     int final_index = 0;
-    if(refst.grid == REF_VAR_GRID)
+    if(refSt.grid == REF_VAR_GRID)
     {
         final_index = em_index + man_index + sem_index;
         int freq = final_index/(3*man_grid_size_t);
@@ -9703,7 +9703,7 @@ int comprefft3d(int man_grid_size_t,
     //====================================================================================
     // JPL
     //====================================================================================
-    if(refst.isJPL)
+    if(refSt.isJPL)
     {
         //----------------------------------------------------------
         //Go on
@@ -10045,7 +10045,7 @@ int comprefft3d(int man_grid_size_t,
 int comprefft3d_test_seml_dimjpl(int man_grid_size_t,
                      int coord_type,
                      SingleOrbit &orbit_SEM,
-                     RefSt refst)
+                     RefSt refSt)
 
 {
     //====================================================================================
@@ -10061,7 +10061,7 @@ int comprefft3d_test_seml_dimjpl(int man_grid_size_t,
     //----------------------------------------------------------
     // Define the time of flight on each orbit
     //----------------------------------------------------------
-    double tof_seml_SEM = refst.tspan_SEM;   //TOF on SEMLi orbit
+    double tof_seml_SEM = refSt.tspan_SEM;   //TOF on SEMLi orbit
 
     //====================================================================================
     // 2. Init the gnuplot
@@ -10187,8 +10187,8 @@ int comprefft3d_test_seml_dimjpl(int man_grid_size_t,
     // 3. Init the data containers
     //====================================================================================
     int max_grid    = 3000;
-    int man_grid_2  = (refst.grid == REF_VAR_GRID) ? max_grid:man_grid_size_t;
-    int traj_grid_2 = (refst.grid == REF_VAR_GRID) ? max_grid:man_grid_size_t;
+    int man_grid_2  = (refSt.grid == REF_VAR_GRID) ? max_grid:man_grid_size_t;
+    int traj_grid_2 = (refSt.grid == REF_VAR_GRID) ? max_grid:man_grid_size_t;
 
     //---------------------------------------------------------------------
     //To store final data
@@ -10242,7 +10242,7 @@ int comprefft3d_test_seml_dimjpl(int man_grid_size_t,
     //Integration on man_grid_size+1 fixed grid
     //---------------------------------------------------------------------
     int sem_index = man_grid_2;
-    if(refst.grid == REF_FIXED_GRID) //fixed grid
+    if(refSt.grid == REF_FIXED_GRID) //fixed grid
         trajectory_integration_grid(orbit_SEM, orbit_SEM.t0, orbit_SEM.t0+tof_seml_SEM, y_man_NCSEM, t_man_SEM, man_grid_2, 1);
     else //variable grid
         sem_index = trajectory_integration_variable_grid(orbit_SEM, orbit_SEM.t0, orbit_SEM.t0+tof_seml_SEM, y_man_NCSEM, t_man_SEM, man_grid_2, 1);
@@ -10274,7 +10274,7 @@ int comprefft3d_test_seml_dimjpl(int man_grid_size_t,
     // Entire size is: no more than 3*man_grid_size_t points or so.
     //====================================================================================
     int final_index = 0;
-    if(refst.grid == REF_VAR_GRID)
+    if(refSt.grid == REF_VAR_GRID)
     {
         final_index = sem_index;
         int freq = final_index/(3*man_grid_size_t);
@@ -10397,7 +10397,7 @@ int comprefft3d_test_seml_dimjpl(int man_grid_size_t,
     //====================================================================================
     // JPL
     //====================================================================================
-    if(refst.isJPL)
+    if(refSt.isJPL)
     {
         //----------------------------------------------------------
         //Go on
@@ -10624,7 +10624,7 @@ int comprefft3d_test_seml_dimjpl(int man_grid_size_t,
 int comprefft3d_test_seml_synjpl(int man_grid_size_t,
                      int coord_type,
                      SingleOrbit &orbit_SEM,
-                     RefSt refst)
+                     RefSt refSt)
 
 {
     //====================================================================================
@@ -10640,7 +10640,7 @@ int comprefft3d_test_seml_synjpl(int man_grid_size_t,
     //----------------------------------------------------------
     // Define the time of flight on each orbit
     //----------------------------------------------------------
-    double tof_seml_SEM = refst.tspan_SEM;   //TOF on SEMLi orbit
+    double tof_seml_SEM = refSt.tspan_SEM;   //TOF on SEMLi orbit
 
     //====================================================================================
     // 2. Init the gnuplot
@@ -10766,8 +10766,8 @@ int comprefft3d_test_seml_synjpl(int man_grid_size_t,
     // 3. Init the data containers
     //====================================================================================
     int max_grid    = 3000;
-    int man_grid_2  = (refst.grid == REF_VAR_GRID) ? max_grid:man_grid_size_t;
-    int traj_grid_2 = (refst.grid == REF_VAR_GRID) ? max_grid:man_grid_size_t;
+    int man_grid_2  = (refSt.grid == REF_VAR_GRID) ? max_grid:man_grid_size_t;
+    int traj_grid_2 = (refSt.grid == REF_VAR_GRID) ? max_grid:man_grid_size_t;
 
     //---------------------------------------------------------------------
     //To store final data
@@ -10821,7 +10821,7 @@ int comprefft3d_test_seml_synjpl(int man_grid_size_t,
     //Integration on man_grid_size+1 fixed grid
     //---------------------------------------------------------------------
     int sem_index = man_grid_2;
-    if(refst.grid == REF_FIXED_GRID) //fixed grid
+    if(refSt.grid == REF_FIXED_GRID) //fixed grid
         trajectory_integration_grid(orbit_SEM, orbit_SEM.t0, orbit_SEM.t0+tof_seml_SEM, y_man_NCSEM, t_man_SEM, man_grid_2, 1);
     else //variable grid
         sem_index = trajectory_integration_variable_grid(orbit_SEM, orbit_SEM.t0, orbit_SEM.t0+tof_seml_SEM, y_man_NCSEM, t_man_SEM, man_grid_2, 1);
@@ -10852,7 +10852,7 @@ int comprefft3d_test_seml_synjpl(int man_grid_size_t,
     // Entire size is: no more than 3*man_grid_size_t points or so.
     //====================================================================================
     int final_index = 0;
-    if(refst.grid == REF_VAR_GRID)
+    if(refSt.grid == REF_VAR_GRID)
     {
         final_index = sem_index;
         int freq = final_index/(3*man_grid_size_t);
@@ -10974,7 +10974,7 @@ int comprefft3d_test_seml_synjpl(int man_grid_size_t,
     //====================================================================================
     // JPL
     //====================================================================================
-    if(refst.isJPL)
+    if(refSt.isJPL)
     {
         //----------------------------------------------------------
         //Go on
@@ -11204,7 +11204,7 @@ int comprefft3d_test_seml_synjpl(int man_grid_size_t,
 int comprefft3d_test_eml_synjpl(int man_grid_size_t,
                      int coord_type,
                      SingleOrbit &orbit_EM,
-                     RefSt refst)
+                     RefSt refSt)
 
 {
     //====================================================================================
@@ -11220,8 +11220,8 @@ int comprefft3d_test_eml_synjpl(int man_grid_size_t,
     //----------------------------------------------------------
     // Define the time of flight on each orbit
     //----------------------------------------------------------
-    double tof_eml_EM = refst.tspan_EM;   //TOF on EML2 orbit
-    //    double tof_seml_SEM = refst.tspan_SEM;   //TOF on SEMLi orbit
+    double tof_eml_EM = refSt.tspan_EM;   //TOF on EML2 orbit
+    //    double tof_seml_SEM = refSt.tspan_SEM;   //TOF on SEMLi orbit
 
     //====================================================================================
     // 2. Init the gnuplot
@@ -11347,8 +11347,8 @@ int comprefft3d_test_eml_synjpl(int man_grid_size_t,
     // 3. Init the data containers
     //====================================================================================
     int max_grid    = 3000;
-    int man_grid_2  = (refst.grid == REF_VAR_GRID) ? max_grid:man_grid_size_t;
-    int traj_grid_2 = (refst.grid == REF_VAR_GRID) ? max_grid:man_grid_size_t;
+    int man_grid_2  = (refSt.grid == REF_VAR_GRID) ? max_grid:man_grid_size_t;
+    int traj_grid_2 = (refSt.grid == REF_VAR_GRID) ? max_grid:man_grid_size_t;
 
     //---------------------------------------------------------------------
     //To store final data
@@ -11405,7 +11405,7 @@ int comprefft3d_test_eml_synjpl(int man_grid_size_t,
     //Integration on man_grid_size+1 fixed grid
     //---------------------------------------------------------------------
     int em_index = man_grid_2;
-    if(refst.grid == REF_FIXED_GRID) //fixed grid
+    if(refSt.grid == REF_FIXED_GRID) //fixed grid
         trajectory_integration_grid(orbit_EM, orbit_EM.t0, orbit_EM.t0-tof_eml_EM, y_man_NCEM, t_man_EM, man_grid_2, 1);
     else //variable grid
         em_index = trajectory_integration_variable_grid(orbit_EM, orbit_EM.t0, orbit_EM.t0-tof_eml_EM, y_man_NCEM, t_man_EM, man_grid_2, 1);
@@ -11437,7 +11437,7 @@ int comprefft3d_test_eml_synjpl(int man_grid_size_t,
     // Entire size is: no more than 3*man_grid_size_t points or so.
     //====================================================================================
     int final_index = 0;
-    if(refst.grid == REF_VAR_GRID)
+    if(refSt.grid == REF_VAR_GRID)
     {
         final_index = em_index;
         int freq = final_index/(3*man_grid_size_t);
@@ -11559,7 +11559,7 @@ int comprefft3d_test_eml_synjpl(int man_grid_size_t,
     //====================================================================================
     // JPL
     //====================================================================================
-    if(refst.isJPL)
+    if(refSt.isJPL)
     {
         //----------------------------------------------------------
         //Go on
@@ -11790,7 +11790,7 @@ int comprefft3d_test_eml2seml_synjpl(int man_grid_size_t,
                      int coord_type,
                      SingleOrbit &orbit_EM,
                      SingleOrbit &orbit_SEM,
-                     RefSt refst)
+                     RefSt refSt)
 
 
 {
@@ -11807,8 +11807,8 @@ int comprefft3d_test_eml2seml_synjpl(int man_grid_size_t,
     //----------------------------------------------------------
     // Define the time of flight on each orbit
     //----------------------------------------------------------
-    double tof_eml_EM = refst.tspan_EM;      //TOF on EML2 orbit
-    double tof_seml_SEM = refst.tspan_SEM;   //TOF on SEMLi orbit
+    double tof_eml_EM = refSt.tspan_EM;      //TOF on EML2 orbit
+    double tof_seml_SEM = refSt.tspan_SEM;   //TOF on SEMLi orbit
 
     //====================================================================================
     // 2. Init the gnuplot
@@ -11934,8 +11934,8 @@ int comprefft3d_test_eml2seml_synjpl(int man_grid_size_t,
     // 3. Init the data containers
     //====================================================================================
     int max_grid    = 10000;
-    int man_grid_2  = (refst.grid == REF_VAR_GRID) ? max_grid:man_grid_size_t;
-    int traj_grid_2 = (refst.grid == REF_VAR_GRID) ? max_grid:3*man_grid_size_t;
+    int man_grid_2  = (refSt.grid == REF_VAR_GRID) ? max_grid:man_grid_size_t;
+    int traj_grid_2 = (refSt.grid == REF_VAR_GRID) ? max_grid:3*man_grid_size_t;
 
     //---------------------------------------------------------------------
     //To store final data
@@ -11992,7 +11992,7 @@ int comprefft3d_test_eml2seml_synjpl(int man_grid_size_t,
     //Integration on man_grid_size+1 fixed grid
     //---------------------------------------------------------------------
     int em_index = man_grid_2;
-    if(refst.grid == REF_FIXED_GRID) //fixed grid
+    if(refSt.grid == REF_FIXED_GRID) //fixed grid
         trajectory_integration_grid(orbit_EM, orbit_EM.t0, orbit_EM.t0-tof_eml_EM, y_man_NCEM, t_man_EM, man_grid_2, 1);
     else //variable grid
         em_index = trajectory_integration_variable_grid(orbit_EM, orbit_EM.t0, orbit_EM.t0-tof_eml_EM, y_man_NCEM, t_man_EM, man_grid_2, 1);
@@ -12041,7 +12041,7 @@ int comprefft3d_test_eml2seml_synjpl(int man_grid_size_t,
     //---------------------------------------------------------------------
     int ode78coll;
     int man_index = man_grid_2;
-    if(refst.grid == REF_FIXED_GRID) //fixed grid
+    if(refSt.grid == REF_FIXED_GRID) //fixed grid
         ode78(y_man_coord, t_man_coord, &ode78coll, orbit_EM.t0, tf_EM, orbit_EM.z0, 6, man_grid_2, dcs, NCEM, coord_type);
     else //variable grid
         man_index = ode78_qbcp_vg(y_man_coord, t_man_coord, &ode78coll, orbit_EM.t0, tf_EM, orbit_EM.z0, 6, man_grid_2, dcs, NCEM, coord_type, -1);
@@ -12084,7 +12084,7 @@ int comprefft3d_test_eml2seml_synjpl(int man_grid_size_t,
     //Integration on man_grid_size+1 fixed grid
     //---------------------------------------------------------------------
     int sem_index = man_grid_2;
-    if(refst.grid == REF_FIXED_GRID) //fixed grid
+    if(refSt.grid == REF_FIXED_GRID) //fixed grid
         trajectory_integration_grid(orbit_SEM, orbit_SEM.t0, orbit_SEM.t0+tof_seml_SEM, y_man_NCSEM, t_man_SEM, man_grid_2, 1);
     else //variable grid
         sem_index = trajectory_integration_variable_grid(orbit_SEM, orbit_SEM.t0, orbit_SEM.t0+tof_seml_SEM, y_man_NCSEM, t_man_SEM, man_grid_2, 1);
@@ -12115,7 +12115,7 @@ int comprefft3d_test_eml2seml_synjpl(int man_grid_size_t,
     // Entire size is: no more than 3*man_grid_size_t points or so.
     //====================================================================================
     int final_index = 0;
-    if(refst.grid == REF_VAR_GRID)
+    if(refSt.grid == REF_VAR_GRID)
     {
         final_index = em_index + man_index+ sem_index;
         int freq = final_index/(3*man_grid_size_t);
@@ -12237,7 +12237,7 @@ int comprefft3d_test_eml2seml_synjpl(int man_grid_size_t,
     //====================================================================================
     // JPL
     //====================================================================================
-    if(refst.isJPL)
+    if(refSt.isJPL)
     {
         //----------------------------------------------------------
         //Go on
@@ -12492,7 +12492,7 @@ int comprefft3d_test_eml2seml_insem(int man_grid_size_t,
                                     int coord_type,
                                     SingleOrbit& orbit_EM,
                                     SingleOrbit& orbit_SEM,
-                                    RefSt refst)
+                                    RefSt refSt)
 
 
 {
@@ -12509,8 +12509,8 @@ int comprefft3d_test_eml2seml_insem(int man_grid_size_t,
     //----------------------------------------------------------
     // Define the time of flight on each orbit
     //----------------------------------------------------------
-    double tof_eml_EM = refst.tspan_EM;      //TOF on EML2 orbit
-    double tof_seml_SEM = refst.tspan_SEM;   //TOF on SEMLi orbit
+    double tof_eml_EM = refSt.tspan_EM;      //TOF on EML2 orbit
+    double tof_seml_SEM = refSt.tspan_SEM;   //TOF on SEMLi orbit
 
     //====================================================================================
     // 2. Init the gnuplot
@@ -12632,8 +12632,8 @@ int comprefft3d_test_eml2seml_insem(int man_grid_size_t,
     // 3. Init the data containers
     //====================================================================================
     int max_grid    = 10000;
-    int man_grid_2  = (refst.grid == REF_VAR_GRID) ? max_grid:man_grid_size_t;
-    int traj_grid_2 = (refst.grid == REF_VAR_GRID) ? max_grid:man_grid_size_t;
+    int man_grid_2  = (refSt.grid == REF_VAR_GRID) ? max_grid:man_grid_size_t;
+    int traj_grid_2 = (refSt.grid == REF_VAR_GRID) ? max_grid:man_grid_size_t;
 
     //---------------------------------------------------------------------
     //To store final data
@@ -12690,7 +12690,7 @@ int comprefft3d_test_eml2seml_insem(int man_grid_size_t,
     //Integration on man_grid_size+1 fixed grid
     //---------------------------------------------------------------------
     int em_index = man_grid_2;
-    if(refst.grid == REF_FIXED_GRID) //fixed grid
+    if(refSt.grid == REF_FIXED_GRID) //fixed grid
         trajectory_integration_grid(orbit_EM, orbit_EM.t0, orbit_EM.t0-tof_eml_EM, y_man_NCEM, t_man_EM, man_grid_2, 1);
     else //variable grid
         em_index = trajectory_integration_variable_grid(orbit_EM, orbit_EM.t0, orbit_EM.t0-tof_eml_EM, y_man_NCEM, t_man_EM, man_grid_2, 1);
@@ -12739,7 +12739,7 @@ int comprefft3d_test_eml2seml_insem(int man_grid_size_t,
     //---------------------------------------------------------------------
     int ode78coll;
     int man_index = man_grid_2;
-    if(refst.grid == REF_FIXED_GRID) //fixed grid
+    if(refSt.grid == REF_FIXED_GRID) //fixed grid
         ode78(y_man_coord, t_man_coord, &ode78coll, orbit_EM.t0, tf_EM, orbit_EM.z0, 6, man_grid_2, dcs, NCEM, coord_type);
     else //variable grid
         man_index = ode78_qbcp_vg(y_man_coord, t_man_coord, &ode78coll, orbit_EM.t0, tf_EM, orbit_EM.z0, 6, man_grid_2, dcs, NCEM, coord_type, -1);
@@ -12782,7 +12782,7 @@ int comprefft3d_test_eml2seml_insem(int man_grid_size_t,
     //Integration on man_grid_size+1 fixed grid
     //---------------------------------------------------------------------
     int sem_index = man_grid_2;
-    if(refst.grid == REF_FIXED_GRID) //fixed grid
+    if(refSt.grid == REF_FIXED_GRID) //fixed grid
         trajectory_integration_grid(orbit_SEM, orbit_SEM.t0, orbit_SEM.t0+tof_seml_SEM, y_man_NCSEM, t_man_SEM, man_grid_2, 1);
     else //variable grid
         sem_index = trajectory_integration_variable_grid(orbit_SEM, orbit_SEM.t0, orbit_SEM.t0+tof_seml_SEM, y_man_NCSEM, t_man_SEM, man_grid_2, 1);
@@ -12813,7 +12813,7 @@ int comprefft3d_test_eml2seml_insem(int man_grid_size_t,
     // Entire size is: no more than 3*man_grid_size_t points or so.
     //====================================================================================
     int final_index = 0;
-    if(refst.grid == REF_VAR_GRID)
+    if(refSt.grid == REF_VAR_GRID)
     {
         final_index = em_index + man_index+ sem_index;
         int freq = final_index/(3*man_grid_size_t);

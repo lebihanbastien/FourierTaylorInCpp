@@ -58,12 +58,12 @@ int ftc_compute_phi0(gsl_matrix* Phi0, gsl_matrix* J1, Orbit& orbit_EM, double t
 /**
  *  \brief Selection of a differential corrector (msft3d, msvt3d, etc).
  **/
-diffcorrptr ftc_select_diffcorr(RefSt& refst)
+diffcorrptr ftc_select_diffcorr(RefSt& refSt)
 {
-    switch(refst.dim)
+    switch(refSt.dim)
     {
     case REF_3D:
-        switch(refst.time)
+        switch(refSt.time)
         {
         case REF_FIXED_TIME:
             return msft3d;
@@ -73,12 +73,12 @@ diffcorrptr ftc_select_diffcorr(RefSt& refst)
             return msvt3d;
 
         default:
-            cerr << "ftc_select_diffcorr" << ". Unknown dcs. refst.time = " << ". msft3d is returned by default." << endl;
+            cerr << "ftc_select_diffcorr" << ". Unknown dcs. refSt.time = " << ". msft3d is returned by default." << endl;
             return msft3d;
         }
         break;
     case REF_PLANAR:
-        switch(refst.time)
+        switch(refSt.time)
         {
         case REF_FIXED_TIME:
             return msftplan;
@@ -91,13 +91,13 @@ diffcorrptr ftc_select_diffcorr(RefSt& refst)
             return msvltplan;
 
         default:
-            cerr << "ftc_select_diffcorr" << ". Unknown dcs. refst.time = " << ". msftplan is returned by default." << endl;
+            cerr << "ftc_select_diffcorr" << ". Unknown dcs. refSt.time = " << ". msftplan is returned by default." << endl;
             return msftplan;
         }
         break;
 
         default:
-            cerr << "ftc_select_diffcorr" << ". Unknown dcs. refst.dim = " << ". msftplan is returned by default." << endl;
+            cerr << "ftc_select_diffcorr" << ". Unknown dcs. refSt.dim = " << ". msftplan is returned by default." << endl;
             return msftplan;
     }
 }
@@ -107,13 +107,13 @@ diffcorrptr ftc_select_diffcorr(RefSt& refst)
  *  \brief Selection of a differential predictor (ufvarft3d, ufvarvt3d, etc).
  *         Must be coherent with ftc_select_diffcorr, just above.
  **/
-predictorptr ftc_select_predictor(RefSt& refst)
+predictorptr ftc_select_predictor(RefSt& refSt)
 
 {
-    switch(refst.dim)
+    switch(refSt.dim)
     {
     case REF_3D:
-        switch(refst.time)
+        switch(refSt.time)
         {
         case REF_FIXED_TIME:
             return ufvarft3d;
@@ -122,13 +122,13 @@ predictorptr ftc_select_predictor(RefSt& refst)
         case REF_VAR_TN:
             return ufvarvt3d;
 
-        cerr << "ftc_select_predictor" << ". Unknown dcs. refst.time = " << ". ufvarft3d is returned by default." << endl;
+        cerr << "ftc_select_predictor" << ". Unknown dcs. refSt.time = " << ". ufvarft3d is returned by default." << endl;
             return ufvarft3d;
         }
         break;
 
     case REF_PLANAR:
-        switch(refst.time)
+        switch(refSt.time)
         {
         case REF_FIXED_TIME:
             return ufvarftplan;
@@ -140,13 +140,13 @@ predictorptr ftc_select_predictor(RefSt& refst)
         case REF_VAR_TN:
             return ufvarvltplan;
 
-        cerr << "ftc_select_predictor" << ". Unknown dcs. refst.time = " << ". ufvarftplan is returned by default." << endl;
+        cerr << "ftc_select_predictor" << ". Unknown dcs. refSt.time = " << ". ufvarftplan is returned by default." << endl;
             return ufvarftplan;
         }
         break;
 
         default:
-            cerr << "ftc_select_predictor" << ". Unknown dcs. refst.dim = " << ". ufvarftplan is returned by default." << endl;
+            cerr << "ftc_select_predictor" << ". Unknown dcs. refSt.dim = " << ". ufvarftplan is returned by default." << endl;
             return ufvarftplan;
     }
 
@@ -168,7 +168,7 @@ predictorptr ftc_select_predictor(RefSt& refst)
  **/
 int msft3d(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nullvector,
            int nov, int mgs, int coord_type, double precision, int isFirst,
-           Orbit& orbit_EM, Orbit& orbit_SEM, gnuplot_ctrl* h1, RefSt& refst, int *niter)
+           Orbit& orbit_EM, Orbit& orbit_SEM, gnuplot_ctrl* h1, RefSt& refSt, int *niter)
 {
     //====================================================================================
     // 1. Initialization
@@ -294,7 +294,7 @@ int msft3d(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nullv
                 //Phi0 = Ji[0] x COORD_J_RCM(orbit_EM.si, t0)
                 ftc_compute_phi0(Phi0, Ji[0], orbit_EM, tmdn[0]/SEML.us_em.ns, coord_type);
 
-                if(refst.isDebug)
+                if(refSt.isDebug)
                 {
                     cout << fname << ". Phi0 = " << endl;
                     gslc_matrix_printf(Phi0);
@@ -310,7 +310,7 @@ int msft3d(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nullv
                 //PhiN = COORD_J_RCM(orbit_SEM.si, tf), in SEM units, in R(6,5)
                 orbit_SEM.getInvman()->evalDRCMtoCOORD(orbit_SEM.getSi(), tmdn[mgs], PhiN, OFTS_ORDER, OFS_ORDER, coord_type);
 
-                if(refst.isDebug)
+                if(refSt.isDebug)
                 {
                     cout << fname << ". PhiN = " << endl;
                     gslc_matrix_printf(PhiN);
@@ -453,7 +453,7 @@ int msft3d(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nullv
         // Norm display
         //--------------------------------------------------------------------------------
         //cout << "--------------------" << endl;
-        if(refst.isDebug)
+        if(refSt.isDebug)
         {
             cout << fname << ". si_norm_EM = "   << si_norm_EM << endl;
             cout << fname << ". si_norm_SEM = "  << si_norm_SEM << endl;
@@ -475,9 +475,9 @@ int msft3d(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nullv
     //------------------------------------------------------------------------------------
     //Last plot
     //------------------------------------------------------------------------------------
-    if(refst.isPlotted) gnuplot_plot_xyz(h1,  ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
-    if(refst.isPlotted) gnuplot_plot_xyz(h1, &ymdn[0][mgs], &ymdn[1][mgs],  &ymdn[2][mgs], 1, (char*)"", "points", "2", "2", 0);
-    if(refst.isPlotted) gnuplot_plot_xyz(h1, &ymdn[0][0], &ymdn[1][0],  &ymdn[2][0], 1, (char*)"", "points", "2", "2", 0);
+    if(refSt.isPlotted) gnuplot_plot_xyz(h1,  ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
+    if(refSt.isPlotted) gnuplot_plot_xyz(h1, &ymdn[0][mgs], &ymdn[1][mgs],  &ymdn[2][mgs], 1, (char*)"", "points", "2", "2", 0);
+    if(refSt.isPlotted) gnuplot_plot_xyz(h1, &ymdn[0][0], &ymdn[1][0],  &ymdn[2][0], 1, (char*)"", "points", "2", "2", 0);
 
 
     //====================================================================================
@@ -505,7 +505,7 @@ int msft3d(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nullv
     double dotNV = 0.0;
     if(isFirst)
     {
-        if(refst.isDirUD && refst.isCont())
+        if(refSt.isDirUD && refSt.isCont())
         {
             do
             {
@@ -520,7 +520,7 @@ int msft3d(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nullv
             }
             while(ti != 1 && ti != -1);
         }
-        else ti = refst.Dir;
+        else ti = refSt.Dir;
 
         //Here, we want to make s_EM[1] "grow"
         sign = gsl_matrix_get(Q, 1, nfv-1) > 0? ti:-ti;
@@ -595,7 +595,7 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
            int nov, int mgs, int coord_type,
            double precision, int isFirst,
            Orbit &orbit_EM, Orbit &orbit_SEM,
-           gnuplot_ctrl *h1, RefSt &refst, int *niter)
+           gnuplot_ctrl *h1, RefSt &refSt, int *niter)
 {
     //Name of the routine
     string fname = "msvt3d";
@@ -752,7 +752,7 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
                 //Phi0 = Ji[0] x COORD_J_RCM(orbit_EM.si, t0)
                 ftc_compute_phi0(Phi0, Ji[0], orbit_EM, tmdn[0]/SEML.us_em.ns, coord_type);
 
-                if(refst.isDebug)
+                if(refSt.isDebug)
                 {
                     cout << fname << ". Phi0 = " << endl;
                     gslc_matrix_printf(Phi0);
@@ -768,7 +768,7 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
                 //PhiN = COORD_J_RCM(orbit_SEM.si, tf), in SEM units, in R(6,5)
                 orbit_SEM.getInvman()->evalDRCMtoCOORD(orbit_SEM.getSi(), tmdn[mgs], PhiN, OFTS_ORDER, OFS_ORDER, coord_type);
 
-                if(refst.isDebug)
+                if(refSt.isDebug)
                 {
                     cout << fname << ". PhiN = " << endl;
                     gslc_matrix_printf(PhiN);
@@ -990,7 +990,7 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
         //--------------------------------------------------------------------------------
         // Norm display
         //--------------------------------------------------------------------------------
-        if(refst.isDebug)
+        if(refSt.isDebug)
         {
             cout << fname << ". si_norm_EM = "   << si_norm_EM << endl;
             cout << fname << ". si_norm_SEM = "  << si_norm_SEM << endl;
@@ -1014,7 +1014,7 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
     //------------------------------------------------------------------------------------
     //Last plot
     //------------------------------------------------------------------------------------
-    if(refst.isPlotted) gnuplot_plot_xyz(h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
+    if(refSt.isPlotted) gnuplot_plot_xyz(h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
 
     //====================================================================================
     // Reset the focus in SEML, if necessary
@@ -1104,7 +1104,7 @@ int msftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
              int nov, int mgs,
              int coord_type, double precision, int isFirst,
              Orbit &orbit_EM, Orbit &orbit_SEM,
-             gnuplot_ctrl *h1, RefSt &refst, int *niter)
+             gnuplot_ctrl *h1, RefSt &refSt, int *niter)
 {
     //====================================================================================
     // 1. Initialization
@@ -1228,7 +1228,7 @@ int msftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
                 //Phi0 = Ji[0] x COORD_J_RCM(orbit_EM.si, t0)
                 ftc_compute_phi0(Phi0, Ji[0], orbit_EM, tmdn[0]/SEML.us_em.ns, coord_type);
 
-                if(refst.isDebug)
+                if(refSt.isDebug)
                 {
                     cout << fname << ". Phi0 = " << endl;
                     gslc_matrix_printf(Phi0);
@@ -1243,7 +1243,7 @@ int msftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
                 //PhiN = COORD_J_RCM(orbit_SEM.si, tf), in SEM units, in R(6,5)
                 orbit_SEM.getInvman()->evalDRCMtoCOORD(orbit_SEM.getSi(), tmdn[mgs], PhiN, OFTS_ORDER, OFS_ORDER, coord_type);
 
-                if(refst.isDebug)
+                if(refSt.isDebug)
                 {
                     cout << fname << ". PhiN = " << endl;
                     gslc_matrix_printf(PhiN);
@@ -1440,7 +1440,7 @@ int msftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
         //--------------------------------------------------------------------------------
         // Norm display
         //--------------------------------------------------------------------------------
-        if(refst.isDebug)
+        if(refSt.isDebug)
         {
             cout << fname << ". si_norm_EM = "   << si_norm_EM << endl;
             cout << fname << ". si_norm_SEM = "  << si_norm_SEM << endl;
@@ -1462,7 +1462,7 @@ int msftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
     //------------------------------------------------------------------------------------
     //Last plot
     //------------------------------------------------------------------------------------
-    if(refst.isPlotted)
+    if(refSt.isPlotted)
     {
         gnuplot_plot_xyz(h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
         gnuplot_plot_xyz(h1, &ymdn[0][mgs], &ymdn[1][mgs],  &ymdn[2][mgs], 1, (char*)"", "points", "2", "2", 0);
@@ -1494,7 +1494,7 @@ int msftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
     double dotNV = 0.0;
     if(isFirst)
     {
-        if(refst.isDirUD && refst.isCont())
+        if(refSt.isDirUD && refSt.isCont())
         {
             do
             {
@@ -1509,7 +1509,7 @@ int msftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
             }
             while(ti != 1 && ti != -1);
         }
-        else ti = refst.Dir;
+        else ti = refSt.Dir;
 
         //Here, we want to make s_EM[0] "grow"
         sign = gsl_matrix_get(Q, 0, nfv-1) > 0? ti:-ti;
@@ -1579,7 +1579,7 @@ int msftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
  **/
 int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
              int nov, int mgs, int coord_type, double precision, int isFirst,
-             Orbit &orbit_EM, Orbit &orbit_SEM, gnuplot_ctrl *h1, RefSt &refst, int *niter)
+             Orbit &orbit_EM, Orbit &orbit_SEM, gnuplot_ctrl *h1, RefSt &refSt, int *niter)
 {
     //Name of the routine
     string fname = "msvtplan";
@@ -1730,7 +1730,7 @@ int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
                 //Phi0 = Ji[0] x COORD_J_RCM(orbit_EM.si, t0)
                 ftc_compute_phi0(Phi0, Ji[0], orbit_EM, tmdn[0]/SEML.us_em.ns, coord_type);
 
-                if(refst.isDebug)
+                if(refSt.isDebug)
                 {
                     cout << fname << ". Phi0 = " << endl;
                     gslc_matrix_printf(Phi0);
@@ -1745,7 +1745,7 @@ int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
                 //PhiN = COORD_J_RCM(orbit_SEM.si, tf), in SEM units, in R(6,5)
                 orbit_SEM.getInvman()->evalDRCMtoCOORD(orbit_SEM.getSi(), tmdn[mgs], PhiN, OFTS_ORDER, OFS_ORDER, coord_type);
 
-                if(refst.isDebug)
+                if(refSt.isDebug)
                 {
                     cout << fname << ". PhiN = " << endl;
                     gslc_matrix_printf(PhiN);
@@ -2028,7 +2028,7 @@ int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
         //--------------------------------------------------------------------------------
         // Norm display
         //--------------------------------------------------------------------------------
-        if(refst.isDebug)
+        if(refSt.isDebug)
         {
             cout << fname << ". si_norm_EM = "   << si_norm_EM << endl;
             cout << fname << ". si_norm_SEM = "  << si_norm_SEM << endl;
@@ -2049,7 +2049,7 @@ int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
     //------------------------------------------------------------------------------------
     //Last plot
     //------------------------------------------------------------------------------------
-    if(refst.isPlotted)
+    if(refSt.isPlotted)
     {
         gnuplot_plot_xyz(h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
         gnuplot_plot_xyz(h1, &ymdn[0][mgs], &ymdn[1][mgs],  &ymdn[2][mgs], 1, (char*)"", "points", "2", "2", 0);
@@ -2079,7 +2079,7 @@ int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
     int sign = 1;
     if(isFirst)
     {
-        switch(refst.termination)
+        switch(refSt.termination)
         {
         case REF_COND_S5:
         {
@@ -2105,7 +2105,7 @@ int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
     }
     else
     {
-        switch(refst.termination)
+        switch(refSt.termination)
         {
         case REF_COND_S5:
         {
@@ -2178,7 +2178,7 @@ int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
  **/
 int msvltplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
               int nov, int mgs, int coord_type, double precision, int isFirst,
-              Orbit &orbit_EM, Orbit &orbit_SEM, gnuplot_ctrl *h1, RefSt &refst, int *niter)
+              Orbit &orbit_EM, Orbit &orbit_SEM, gnuplot_ctrl *h1, RefSt &refSt, int *niter)
 {
     //Name of the routine
     string fname = "msvltplan";
@@ -2325,7 +2325,7 @@ int msvltplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
                 //Phi0 = Ji[0] x COORD_J_RCM(orbit_EM.si, t0)
                 ftc_compute_phi0(Phi0, Ji[0], orbit_EM, tmdn[0]/SEML.us_em.ns, coord_type);
 
-                if(refst.isDebug)
+                if(refSt.isDebug)
                 {
                     cout << fname << ". Phi0 = " << endl;
                     gslc_matrix_printf(Phi0);
@@ -2340,7 +2340,7 @@ int msvltplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
                 //PhiN = COORD_J_RCM(orbit_SEM.si, tf), in SEM units, in R(6,5)
                 orbit_SEM.getInvman()->evalDRCMtoCOORD(orbit_SEM.getSi(), tmdn[mgs], PhiN, OFTS_ORDER, OFS_ORDER, coord_type);
 
-                if(refst.isDebug)
+                if(refSt.isDebug)
                 {
                     cout << fname << ". PhiN = " << endl;
                     gslc_matrix_printf(PhiN);
@@ -2579,7 +2579,7 @@ int msvltplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
         //--------------------------------------------------------------------------------
         // Norm display
         //--------------------------------------------------------------------------------
-        if(refst.isDebug)
+        if(refSt.isDebug)
         {
             cout << fname << ". si_norm_EM = "   << si_norm_EM << endl;
             cout << fname << ". si_norm_SEM = "  << si_norm_SEM << endl;
@@ -2600,7 +2600,7 @@ int msvltplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
     //------------------------------------------------------------------------------------
     //Last plot
     //------------------------------------------------------------------------------------
-    if(refst.isPlotted)
+    if(refSt.isPlotted)
     {
         gnuplot_plot_xyz(h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
         gnuplot_plot_xyz(h1, &ymdn[0][mgs], &ymdn[1][mgs],  &ymdn[2][mgs], 1, (char*)"", "points", "2", "2", 0);
@@ -2630,7 +2630,7 @@ int msvltplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
     int sign = 1;
     if(isFirst)
     {
-        switch(refst.termination)
+        switch(refSt.termination)
         {
         case REF_COND_S5:
         {
@@ -2656,7 +2656,7 @@ int msvltplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
     }
     else
     {
-        switch(refst.termination)
+        switch(refSt.termination)
         {
         case REF_COND_S5:
         {
@@ -2729,7 +2729,7 @@ int msvltplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
  **/
 int msvftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
               int nov, int mgs, int coord_type, double precision, int isFirst,
-              Orbit &orbit_EM, Orbit &orbit_SEM, gnuplot_ctrl *h1, RefSt &refst, int *niter)
+              Orbit &orbit_EM, Orbit &orbit_SEM, gnuplot_ctrl *h1, RefSt &refSt, int *niter)
 {
     //====================================================================================
     // 1. Initialization
@@ -2869,7 +2869,7 @@ int msvftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
                 //Phi0 = Ji[0] x COORD_J_RCM(orbit_EM.si, t0)
                 ftc_compute_phi0(Phi0, Ji[0], orbit_EM, tmdn[0]/SEML.us_em.ns, coord_type);
 
-                if(refst.isDebug)
+                if(refSt.isDebug)
                 {
                     cout << fname << ". Phi0 = " << endl;
                     gslc_matrix_printf(Phi0);
@@ -2884,7 +2884,7 @@ int msvftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
                 //PhiN = COORD_J_RCM(orbit_SEM.si, tf), in SEM units, in R(6,5)
                 orbit_SEM.getInvman()->evalDRCMtoCOORD(orbit_SEM.getSi(), tmdn[mgs], PhiN, OFTS_ORDER, OFS_ORDER, coord_type);
 
-                if(refst.isDebug)
+                if(refSt.isDebug)
                 {
                     cout << fname << ". PhiN = " << endl;
                     gslc_matrix_printf(PhiN);
@@ -2952,7 +2952,7 @@ int msvftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
             //----------------------------------------------------------------------------
             // Update DF2
             //----------------------------------------------------------------------------
-            jacvftplan(k, DF2, refst.sidim, mgs, Ji, Phi0, PhiN, K4, Id);
+            jacvftplan(k, DF2, refSt.sidim, mgs, Ji, Phi0, PhiN, K4, Id);
         }
 
         //================================================================================
@@ -3055,7 +3055,7 @@ int msvftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
         //--------------------------------------------------------------------------------
         // Norm display
         //--------------------------------------------------------------------------------
-        if(refst.isDebug)
+        if(refSt.isDebug)
         {
             cout << fname << ". si_norm_EM = "   << si_norm_EM << endl;
             cout << fname << ". si_norm_SEM = "  << si_norm_SEM << endl;
@@ -3077,7 +3077,7 @@ int msvftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
     //------------------------------------------------------------------------------------
     //Last plot
     //------------------------------------------------------------------------------------
-    if(refst.isPlotted)
+    if(refSt.isPlotted)
     {
         gnuplot_plot_xyz(h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
         gnuplot_plot_xyz(h1, &ymdn[0][mgs], &ymdn[1][mgs],  &ymdn[2][mgs], 1, (char*)"", "points", "2", "2", 0);
@@ -3160,7 +3160,7 @@ int msvftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
 // **/
 //int msvftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
 //              int nov, int mgs, int coord_type, double precision, int isFirst, int dim,
-//              Orbit &orbit_EM, Orbit &orbit_SEM, gnuplot_ctrl *h1, RefSt &refst, int *niter)
+//              Orbit &orbit_EM, Orbit &orbit_SEM, gnuplot_ctrl *h1, RefSt &refSt, int *niter)
 //{
 //    //Name of the routine
 //    string fname = "msvltplan";
@@ -3312,7 +3312,7 @@ int msvftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
 //                //Phi0 = Ji[0] x COORD_J_RCM(orbit_EM.si, t0)
 //                ftc_compute_phi0(Phi0, Ji[0], orbit_EM, tmdn[0]/SEML.us_em.ns, coord_type);
 //
-//                if(refst.isDebug)
+//                if(refSt.isDebug)
 //                {
 //                    cout << fname << ". Phi0 = " << endl;
 //                    gslc_matrix_printf(Phi0);
@@ -3327,7 +3327,7 @@ int msvftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
 //                //PhiN = COORD_J_RCM(orbit_SEM.si, tf), in SEM units, in R(6,5)
 //                orbit_SEM.getInvman()->evalDRCMtoCOORD(orbit_SEM.getSi(), tmdn[mgs], PhiN, OFTS_ORDER, OFS_ORDER, coord_type);
 //
-//                if(refst.isDebug)
+//                if(refSt.isDebug)
 //                {
 //                    cout << fname << ". PhiN = " << endl;
 //                    gslc_matrix_printf(PhiN);
@@ -3586,7 +3586,7 @@ int msvftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
 //        //--------------------------------------------------------------------------------
 //        // Norm display
 //        //--------------------------------------------------------------------------------
-//        if(refst.isDebug)
+//        if(refSt.isDebug)
 //        {
 //            cout << fname << ". si_norm_EM = "   << si_norm_EM << endl;
 //            cout << fname << ". si_norm_SEM = "  << si_norm_SEM << endl;
@@ -3607,7 +3607,7 @@ int msvftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
 //    //------------------------------------------------------------------------------------
 //    //Last plot
 //    //------------------------------------------------------------------------------------
-//    if(refst.isPlotted)
+//    if(refSt.isPlotted)
 //    {
 //        gnuplot_plot_xyz(h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
 //        gnuplot_plot_xyz(h1, &ymdn[0][mgs], &ymdn[1][mgs],  &ymdn[2][mgs], 1, (char*)"", "points", "2", "2", 0);
@@ -3927,7 +3927,7 @@ int nullvectorjac(double *nullvector, gsl_matrix* DF, int ncs, int nfv)
 int ufvarft3d(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
                 double *nullvector,
                 Orbit &orbit_EM, Orbit &orbit_SEM,
-                int mgs, int coord_type,  RefSt &refst)
+                int mgs, int coord_type,  RefSt &refSt)
 {
     //------------------------------------------------------------------------------------
     //Temp variables
@@ -3988,7 +3988,7 @@ int ufvarft3d(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
 int ufvarvt3d(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
                 double *nullvector,
                 Orbit &orbit_EM, Orbit &orbit_SEM,
-                int mgs, int coord_type,  RefSt &refst)
+                int mgs, int coord_type,  RefSt &refSt)
 {
     //------------------------------------------------------------------------------------
     //Temp variables
@@ -4052,7 +4052,7 @@ int ufvarvt3d(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
 int ufvarftplan(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
                 double *nullvector,
                 Orbit &orbit_EM, Orbit &orbit_SEM,
-                int mgs, int coord_type,  RefSt &refst)
+                int mgs, int coord_type,  RefSt &refSt)
 {
     //------------------------------------------------------------------------------------
     //Temp variables
@@ -4117,7 +4117,7 @@ int ufvarftplan(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
 int ufvarvtplan(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
                 double *nullvector,
                 Orbit &orbit_EM, Orbit &orbit_SEM,
-                int mgs, int coord_type,  RefSt &refst)
+                int mgs, int coord_type,  RefSt &refSt)
 {
     //------------------------------------------------------------------------------------
     //Temp variables
@@ -4129,7 +4129,7 @@ int ufvarvtplan(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
     //Updating the free variables
     //====================================================================================
     // The value of ds depends on the type of termination condition for the continuation
-    switch(refst.termination)
+    switch(refSt.termination)
     {
     case REF_COND_S5:
     {
@@ -4192,7 +4192,7 @@ int ufvarvtplan(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
     //Updating CM_SEM_RCM coordinates
     orbit_SEM.addSi(*ds*nullvector[5*mgs-3], 0);
     orbit_SEM.addSi(*ds*nullvector[5*mgs-2], 2);
-    switch(refst.termination)
+    switch(refSt.termination)
     {
     case REF_COND_S5:
     {
@@ -4233,7 +4233,7 @@ int ufvarvtplan(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
 int ufvarvltplan(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
                 double *nullvector,
                 Orbit &orbit_EM, Orbit &orbit_SEM,
-                int mgs, int coord_type,  RefSt &refst)
+                int mgs, int coord_type,  RefSt &refSt)
 {
     //------------------------------------------------------------------------------------
     //Temp variables
@@ -4245,7 +4245,7 @@ int ufvarvltplan(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
     //Updating the free variables
     //====================================================================================
     // The value of ds depends on the type of termination condition for the continuation
-    switch(refst.termination)
+    switch(refSt.termination)
     {
     case REF_COND_S5:
     {
@@ -4307,7 +4307,7 @@ int ufvarvltplan(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
     //Updating CM_SEM_RCM coordinates
     orbit_SEM.addSi(*ds*nullvector[4*mgs-2], 0);
     orbit_SEM.addSi(*ds*nullvector[4*mgs-1], 2);
-    switch(refst.termination)
+    switch(refSt.termination)
     {
     case REF_COND_S5:
     {
@@ -4349,7 +4349,7 @@ int ufvarvltplan(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
 int ufvarvftplan(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
                 double *nullvector,
                 Orbit &orbit_EM, Orbit &orbit_SEM,
-                int mgs, int coord_type,  RefSt &refst)
+                int mgs, int coord_type,  RefSt &refSt)
 {
     //------------------------------------------------------------------------------------
     //Temp variables
@@ -4366,7 +4366,7 @@ int ufvarvftplan(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
     // Then we can go on
     //------------------------------------------------------------------------------------
     //Updating CM_EM_RCM coordinates
-    orbit_EM.addSi(*ds*nullvector[0], refst.sidim);
+    orbit_EM.addSi(*ds*nullvector[0], refSt.sidim);
     //First time:
     t_traj_n[0] += 5e6**ds*nullvector[1];
 

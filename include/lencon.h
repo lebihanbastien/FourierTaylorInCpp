@@ -157,21 +157,21 @@ int comprefft3d(int man_grid_size,
                 int coord_type,
                 SingleOrbit &orbit_EM,
                 SingleOrbit &orbit_SEM,
-                RefSt refst);
+                RefSt refSt);
 /**
  *  \brief Computes only a SEMLi orbit and test a JPL refinement.
  **/
 int comprefft3d_test_seml_dimjpl(int man_grid_size_t,
                      int coord_type,
                      SingleOrbit &orbit_SEM,
-                     RefSt refst);
+                     RefSt refSt);
 /**
  *  \brief Computes only a SEMLi orbit and test a JPL refinement.
  **/
 int comprefft3d_test_seml_synjpl(int man_grid_size_t,
                      int coord_type,
                      SingleOrbit &orbit_SEM,
-                     RefSt refst);
+                     RefSt refSt);
 
 /**
  *  \brief Computes only a SEMLi orbit and test a JPL refinement.
@@ -179,7 +179,7 @@ int comprefft3d_test_seml_synjpl(int man_grid_size_t,
 int comprefft3d_test_eml_synjpl(int man_grid_size_t,
                      int coord_type,
                      SingleOrbit &orbit_EM,
-                     RefSt refst);
+                     RefSt refSt);
 
 /**
  *  \brief Computes only a SEMLi orbit and test a JPL refinement.
@@ -188,7 +188,7 @@ int comprefft3d_test_eml2seml_synjpl(int man_grid_size_t,
                      int coord_type,
                      SingleOrbit &orbit_EM,
                      SingleOrbit &orbit_SEM,
-                     RefSt refst);
+                     RefSt refSt);
 
 /**
  *  \brief Computes the whole trajectory in INSEM coordinates
@@ -197,7 +197,7 @@ int comprefft3d_test_eml2seml_insem(int man_grid_size_t,
                                     int coord_type,
                                     SingleOrbit& orbit_EM,
                                     SingleOrbit& orbit_SEM,
-                                    RefSt refst);
+                                    RefSt refSt);
 
 /**
  *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM.
@@ -249,7 +249,7 @@ void srefeml2seml(SingleOrbit &orbit_EM,
                   int dcs,
                   int coord_type,
                   int man_grid_size,
-                  RefSt refst,
+                  RefSt refSt,
                   gnuplot_ctrl *h2);
 
 void crefvtplan(SingleOrbit &orbit_EM,
@@ -368,7 +368,7 @@ int refeml2seml(int man_grid_size,
                 matrix<Ofsc>  &Mcoc_EM,
                 matrix<Ofsc>  &MIcoc_EM,
                 vector<Ofsc>  &Vcoc_EM,
-                RefSt refst);
+                RefSt refSt);
 
 /**
  *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM. A multiple_shooting_direct is applied on the MANIFOLD trajectory (manifold leg).

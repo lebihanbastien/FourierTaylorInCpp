@@ -51,6 +51,7 @@ class Orbit
         const double  getTf() const;
         const double* getZ0() const;
         const double* getSi() const;
+        const double  getSi(int dim) const;
         const Invman* getInvman() const;
 
         //--------------------------------------------------------------------------------

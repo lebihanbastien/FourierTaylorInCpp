@@ -965,9 +965,10 @@ void readIntProjCU_bin(string filename,
                        vector<double>& s4_CM_SEM_0,
                        vector<size_t>& sortId)
 {
-    //==========================================================
+    coutmp();
+    //====================================================================================
     //Temporary variables
-    //==========================================================
+    //====================================================================================
     vector<double> t0_CMU_EM;
     vector<double> s1_CMU_EM;
     vector<double> s2_CMU_EM;
@@ -982,9 +983,9 @@ void readIntProjCU_bin(string filename,
     vector<double> s4_CM_SEM;
 
 
-    //==========================================================
+    //====================================================================================
     //Open and read datafile
-    //==========================================================
+    //====================================================================================
     fstream filestream;
     filestream.open (filename.c_str(), ios::binary | ios::in);
     if (filestream.is_open())
@@ -1069,9 +1070,9 @@ void readIntProjCU_bin(string filename,
     }
 
 
-    //==========================================================
+    //====================================================================================
     //Delete last element that is not a real value
-    //==========================================================
+    //====================================================================================
     t0_CMU_EM.pop_back();
     s1_CMU_EM.pop_back();
     s2_CMU_EM.pop_back();
@@ -1086,17 +1087,17 @@ void readIntProjCU_bin(string filename,
     s4_CM_SEM.pop_back();
 
 
-    //==========================================================
+    //====================================================================================
     //Get the unique elements in t0_CMU_EM
-    //==========================================================
+    //====================================================================================
     //Copy t0_CMU_EM into t0_CMU_EM_UNIQUE
     vector<double> t0_CMU_EM_UNIQUE(t0_CMU_EM);
     //Get unique elements
     vector_getUnique(t0_CMU_EM_UNIQUE);
 
-    //==========================================================
+    //====================================================================================
     // Get all the indices that match t0_CMU_EM_UNIQUE[xxx]
-    //==========================================================
+    //====================================================================================
     int ti = 0;
     cout << "--------------------------------------" << endl;
     cout << "There is " << t0_CMU_EM_UNIQUE.size() << " different times in data, in the following range:" << endl;
@@ -1113,9 +1114,9 @@ void readIntProjCU_bin(string filename,
     std::vector<size_t> indRes;
     vector_getIndices(indRes, t0_CMU_EM, t0_CMU_EM_UNIQUE[ti]);
 
-    //==========================================================
+    //====================================================================================
     // Display info on the indices that match t0_CMU_EM_UNIQUE[xxx]
-    //==========================================================
+    //====================================================================================
     coutmp();
     cout << "--------------------------------------" << endl;
     cout << "The first entry for this time is:" << endl;
@@ -1136,9 +1137,9 @@ void readIntProjCU_bin(string filename,
     cout << "s_CM_SEM = (" << s1_CM_SEM[ind] << ", " << s2_CM_SEM[ind] << ", " << s3_CM_SEM[ind] << ", " << s4_CM_SEM[ind] << ")" << endl;
     coutlp();
 
-    //==========================================================
+    //====================================================================================
     // Copy the selected results in the inputs
-    //==========================================================
+    //====================================================================================
     for(int ind = 0; ind < (int) indRes.size(); ind++)
     {
         //Times
@@ -1159,11 +1160,12 @@ void readIntProjCU_bin(string filename,
         s4_CM_SEM_0.push_back(s4_CM_SEM[indRes[ind]]);
     }
 
-    //==========================================================
+    //====================================================================================
     // Sort data wrt to the projection distance
-    //==========================================================
+    //====================================================================================
     sortId = sort_indexes(pmin_dist_SEM_0);
 
+    coutlp();
 }
 
 
@@ -1188,9 +1190,10 @@ void readAndInterpolateIntProjCU_bin(string filename,
                                      vector<double>& s4_CM_SEM_0,
                                      vector<size_t>& sortId)
 {
-    //==========================================================
+    coutmp();
+    //====================================================================================
     //Temporary variables
-    //==========================================================
+    //====================================================================================
     vector<double> t0_CMU_EM;
     vector<double> s1_CMU_EM;
     vector<double> s2_CMU_EM;
@@ -1205,9 +1208,9 @@ void readAndInterpolateIntProjCU_bin(string filename,
     vector<double> s4_CM_SEM;
 
 
-    //==========================================================
+    //====================================================================================
     //Open and read datafile
-    //==========================================================
+    //====================================================================================
     fstream filestream;
     filestream.open (filename.c_str(), ios::binary | ios::in);
     if (filestream.is_open())
@@ -1295,9 +1298,9 @@ void readAndInterpolateIntProjCU_bin(string filename,
     }
 
 
-    //==========================================================
+    //====================================================================================
     //Delete last element that is not a real value
-    //==========================================================
+    //====================================================================================
     t0_CMU_EM.pop_back();
     s1_CMU_EM.pop_back();
     s2_CMU_EM.pop_back();
@@ -1312,24 +1315,24 @@ void readAndInterpolateIntProjCU_bin(string filename,
     s4_CM_SEM.pop_back();
 
 
-    //==========================================================
+    //====================================================================================
     //Get the unique elements in t0_CMU_EM
-    //==========================================================
+    //====================================================================================
     //Copy t0_CMU_EM into t0_CMU_EM_UNIQUE
     vector<double> t0_CMU_EM_UNIQUE(t0_CMU_EM);
     //Get unique elements
     vector_getUnique(t0_CMU_EM_UNIQUE);
 
-    //==========================================================
+    //====================================================================================
     // Print all the indices that match t0_CMU_EM_UNIQUE[xxx]
-    //==========================================================
+    //====================================================================================
     cout << "--------------------------------------" << endl;
     cout << "There is " << t0_CMU_EM_UNIQUE.size() << " different times in data, in the following range:" << endl;
     cout << "[" << t0_CMU_EM_UNIQUE[0]/SEML.us_em.T << ", " << t0_CMU_EM_UNIQUE[t0_CMU_EM_UNIQUE.size()-1]/SEML.us_em.T << "]x SEML.us_em.T" << endl;
 
-    //==========================================================
+    //====================================================================================
     // Find the nearest t0 value
-    //==========================================================
+    //====================================================================================
     double dmin = fabs(t0_CMU_EM_UNIQUE[0] - t0_des);
     int ti = 0;
     for(int i = 1; i < (int) t0_CMU_EM_UNIQUE.size(); i++)
@@ -1348,32 +1351,34 @@ void readAndInterpolateIntProjCU_bin(string filename,
     std::vector<size_t> indRes;
     vector_getIndices(indRes, t0_CMU_EM, t0_CMU_EM_UNIQUE[ti]);
 
-    //==========================================================
+    //====================================================================================
     // Display info on the indices that match t0_CMU_EM_UNIQUE[xxx]
-    //==========================================================
-    coutmp();
-    cout << "--------------------------------------" << endl;
-    cout << "The first entry for this time is:" << endl;
+    //====================================================================================
     int ind = indRes[0];
-    cout << "t0_EM    = " << t0_CMU_EM[ind]  << endl;
-    cout << "tf_EM    = " << tf_man_SEM[ind]/SEML.us_em.ns << endl;
-    cout << "pmin_SEM = " << pmin_dist_SEM[ind] << endl;
-    cout << "s_CM_EM  = (" << s1_CMU_EM[ind] << ", " << s2_CMU_EM[ind] << ", " << s3_CMU_EM[ind] << ", " << s4_CMU_EM[ind] << ")" << endl;
-    cout << "s_CM_SEM = (" << s1_CM_SEM[ind] << ", " << s2_CM_SEM[ind] << ", " << s3_CM_SEM[ind] << ", " << s4_CM_SEM[ind] << ")" << endl;
 
-    cout << "--------------------------------------" << endl;
-    cout << "The last entry for this time is:" << endl;
-    ind = indRes[indRes.size()-1];
-    cout << "t0_EM    = " << t0_CMU_EM[ind]  << endl;
-    cout << "tf_EM    = " << tf_man_SEM[ind]/SEML.us_em.ns << endl;
-    cout << "pmin_SEM = " << pmin_dist_SEM[ind] << endl;
-    cout << "s_CM_EM  = (" << s1_CMU_EM[ind] << ", " << s2_CMU_EM[ind] << ", " << s3_CMU_EM[ind] << ", " << s4_CMU_EM[ind] << ")" << endl;
-    cout << "s_CM_SEM = (" << s1_CM_SEM[ind] << ", " << s2_CM_SEM[ind] << ", " << s3_CM_SEM[ind] << ", " << s4_CM_SEM[ind] << ")" << endl;
-    coutlp();
+    //    cout << "--------------------------------------" << endl;
+    //    cout << "The first entry for this time is:" << endl;
+    //    cout << "t0_EM    = " << t0_CMU_EM[ind]/SEML.us.T                  << " x T" << endl;
+    //    cout << "tf_EM    = " << tf_man_SEM[ind]/(SEML.us_em.ns*SEML.us.T) << " x T" << endl;
+    //    cout << "tof_EM   = " << tf_man_SEM[ind]/(SEML.us_em.ns*SEML.us.T) - t0_CMU_EM[ind]/SEML.us.T  << " x T" << endl;
+    //    cout << "pmin_SEM = " << pmin_dist_SEM[ind] << endl;
+    //    cout << "s_CM_EM  = (" << s1_CMU_EM[ind] << ", " << s2_CMU_EM[ind] << ", " << s3_CMU_EM[ind] << ", " << s4_CMU_EM[ind] << ")" << endl;
+    //    cout << "s_CM_SEM = (" << s1_CM_SEM[ind] << ", " << s2_CM_SEM[ind] << ", " << s3_CM_SEM[ind] << ", " << s4_CM_SEM[ind] << ")" << endl;
+    //
+    //    cout << "--------------------------------------" << endl;
+    //    cout << "The last entry for this time is:" << endl;
+    //    ind = indRes[indRes.size()-1];
+    //    cout << "t0_EM    = " << t0_CMU_EM[ind]/SEML.us.T                  << " x T" << endl;
+    //    cout << "tf_EM    = " << tf_man_SEM[ind]/(SEML.us_em.ns*SEML.us.T) << " x T" << endl;
+    //    cout << "tof_EM   = " << tf_man_SEM[ind]/(SEML.us_em.ns*SEML.us.T) - t0_CMU_EM[ind]/SEML.us.T  << " x T" << endl;
+    //    cout << "pmin_SEM = " << pmin_dist_SEM[ind] << endl;
+    //    cout << "s_CM_EM  = (" << s1_CMU_EM[ind] << ", " << s2_CMU_EM[ind] << ", " << s3_CMU_EM[ind] << ", " << s4_CMU_EM[ind] << ")" << endl;
+    //    cout << "s_CM_SEM = (" << s1_CM_SEM[ind] << ", " << s2_CM_SEM[ind] << ", " << s3_CM_SEM[ind] << ", " << s4_CM_SEM[ind] << ")" << endl;
 
-    //==========================================================
+
+    //====================================================================================
     // Copy the selected results in the inputs
-    //==========================================================
+    //====================================================================================
     for(int ind = 0; ind < (int) indRes.size(); ind++)
     {
         //Times
@@ -1394,11 +1399,24 @@ void readAndInterpolateIntProjCU_bin(string filename,
         s4_CM_SEM_0.push_back(s4_CM_SEM[indRes[ind]]);
     }
 
-    //==========================================================
-    // Sort data wrt to the projection distance
-    //==========================================================
-    sortId = sort_indexes(pmin_dist_SEM_0);
+    //====================================================================================
+    // Sort data wrt to the tof (this is done here using the tf, since t0 is constant)
+    //====================================================================================
+    sortId = sort_indexes(tf_man_EM_0);
 
+    cout << "--------------------------------------" << endl;
+    cout << "The min and max time of flights are:" << endl;
+    ind = sortId[0];
+    cout << "min(tof_EM)  = " << tf_man_SEM[ind]/(SEML.us_em.ns*SEML.us.T) - t0_CMU_EM[ind]/SEML.us.T  << " x T" << endl;
+    ind = sortId[tf_man_EM_0.size() -1];
+    cout << "max(tof_EM)  = " << tf_man_SEM[ind]/(SEML.us_em.ns*SEML.us.T) - t0_CMU_EM[ind]/SEML.us.T  << " x T" << endl;
+
+
+    //====================================================================================
+    // Sort data wrt to the projection distance
+    //====================================================================================
+    sortId = sort_indexes(pmin_dist_SEM_0);
+    coutlp();
 }
 
 

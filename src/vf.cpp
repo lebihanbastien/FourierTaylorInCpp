@@ -4265,7 +4265,6 @@ double qbcp_H_SEM(double t, const double y[], void* params_void)
     // Misc parameters
     //------------------------------------------------------------------------------------
     //Retrieving the parameters
-    //Retrieving the parameters
     //QBCP_L* qbp = (QBCP_L*) params_void;
     OdeParams* odeParams = (OdeParams*) params_void;
     QBCP_L* qbp = odeParams->qbcp_l;
@@ -4315,13 +4314,13 @@ double qbcp_H_SEM(double t, const double y[], void* params_void)
 }
 
 /**
- *  \brief Hamiltonian of the QBCP with EM units and Normalized-Centered coordinates. Note that alpha[14] (alpha15) is zero for the QBCP
+ *  \brief Hamiltonian of the QBCP with SYS units and Normalized-Centered coordinates. Note that alpha[14] (alpha15) is zero for the QBCP
  **/
 double qbcp_Hn(double t, const double y[], void *params_void)
 {
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Misc parameters
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Retrieving the parameters
     QBCP_L* qbp = (QBCP_L *) params_void;
     int noc      = qbp->numberOfCoefs;
@@ -4332,16 +4331,17 @@ double qbcp_Hn(double t, const double y[], void *params_void)
     double gamma = qbp->cs.gamma;
     //double c1    = qbp->cs.c1;
 
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Evaluate the alphas @ t
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double alpha[noc];
     evaluateCoef(alpha, t, n, qbp->nf, qbp->cs.coeffs, noc);
-    double alphad[3];
-    evaluateCoefDerivatives(alphad, t, n, qbp->nf, qbp->cs.coeffs, 3);
-    //-------------------------------------------------------------------------------
+    //double alphad[3];
+    //evaluateCoefDerivatives(alphad, t, n, qbp->nf, qbp->cs.coeffs, 3);
+
+    //------------------------------------------------------------------------------------
     //Evaluate the primaries positions @ t
-    //-------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double ps[3];
     evaluateCoef(ps, t, n, qbp->nf, qbp->cs.ps, 3);
     double pe[3];
@@ -4377,6 +4377,60 @@ double qbcp_Hn(double t, const double y[], void *params_void)
     //    H += +(alpha[3]*c1/gamma - c1*c1/(2*alpha[0])*(alpha[1]*alpha[1] + alpha[2]*alpha[2]));
     //    H += -alpha21d*c1*y[0] + alpha31d*c1*y[1];
     //    H *= gamma*gamma;
+    return H;
+}
+
+
+/**
+ *  \brief Hamiltonian of the QBCP with SEM units and Normalized-Centered coordinates. Note that alpha[14] (alpha15) is zero for the QBCP
+ **/
+double qbcp_Hn_SEM(double t, const double y[], void *params_void)
+{
+    //------------------------------------------------------------------------------------
+    //Retrieving the parameters
+    //------------------------------------------------------------------------------------
+    QBCP_L* qbp = (QBCP_L *) params_void;
+    int noc      = qbp->numberOfCoefs;
+    double ms    = qbp->us_sem.ms;
+    double me    = qbp->us_sem.me;
+    double mm    = qbp->us_sem.mm;
+    double n     = qbp->us_sem.n;
+    double gamma = qbp->cs_sem.gamma;
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the alphas @ t
+    //------------------------------------------------------------------------------------
+    double alpha[noc];
+    evaluateCoef(alpha, t, n, qbp->nf, qbp->cs_sem.coeffs, noc);
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the primaries positions @ t
+    //------------------------------------------------------------------------------------
+    double ps[3];
+    evaluateCoef(ps, t, n, qbp->nf, qbp->cs_sem.ps, 3);
+    double pe[3];
+    evaluateCoef(pe, t, n, qbp->nf, qbp->cs_sem.pe, 3);
+    double pm[3];
+    evaluateCoef(pm, t, n, qbp->nf, qbp->cs_sem.pm, 3);
+
+    //-------------------------------------------------------------------------------
+    // Distances to 2nd power
+    //-------------------------------------------------------------------------------
+    double qpe2 = (y[0]-pe[0])*(y[0]-pe[0]) + (y[1]-pe[1])*(y[1]-pe[1]) + (y[2]-pe[2])*(y[2]-pe[2]);
+    double qps2 = (y[0]-ps[0])*(y[0]-ps[0]) + (y[1]-ps[1])*(y[1]-ps[1]) + (y[2]-ps[2])*(y[2]-ps[2]);
+    double qpm2 = (y[0]-pm[0])*(y[0]-pm[0]) + (y[1]-pm[1])*(y[1]-pm[1]) + (y[2]-pm[2])*(y[2]-pm[2]);
+
+    //-------------------------------------------------------------------------------
+    // Hamiltonian
+    //-------------------------------------------------------------------------------
+    double H = 0.5*alpha[0]*(y[3]*y[3] + y[4]*y[4] + y[5]*y[5])
+             + alpha[1]*(y[3]*y[0] + y[4]*y[1] + y[5]*y[2])
+             + alpha[2]*(y[3]*y[1] - y[4]*y[0])
+             - y[0]*alpha[12]
+             - y[1]*alpha[13]
+             - 0.5*alpha[14]*(y[0]*y[0] + y[1]*y[1] + y[2]*y[2])
+             - alpha[5]/pow(gamma,3.0)*( me/pow(qpe2, 1.0/2) + mm/pow(qpm2, 1.0/2) + ms/pow(qps2, 1.0/2) );
+
     return H;
 }
 

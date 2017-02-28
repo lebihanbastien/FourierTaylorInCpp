@@ -211,6 +211,9 @@ if [ -z ${REFST_TYPE+x} ]; then
 	# Or, if we want the user to define such domain:
 	REFST_ISLIMUD=0
 
+	# Limits for the time of flight during transfers - not used if -1
+	REFST_TOF_LIM=(-1 -1)
+
 	# Number of steps in the continuation procedure
 	REFST_CONT_STEP_MAX=+450;        # with fixed times
 	REFST_CONT_STEP_MAX_VT=+50;      # with variable times
@@ -224,6 +227,9 @@ if [ -z ${REFST_TYPE+x} ]; then
 	REFST_ISPLOTTED=1   		 # do we plot the results during the computation?
 	REFST_ISSAVED=1     		 # do we save the results in data files?
 	REFST_ISFROMSERVER=1		 # does the raw data comes from server files?
+	
+	# Maximum angle around SEMLi if REF_COND_T is used (in degrees)
+	REFST_THETAMAX=360               # should be a multiple of 90°
 
 	#-----------------------------------------------------
 	# Parameters that are stable
@@ -285,12 +291,10 @@ else
 
 	echo "REFST_T0_DES           =" $REFST_T0_DES
 	echo ''
-	echo "GLIM_S4  = ["${GLIM_S4[*]}"]"
-	echo "REFST_S1_CMU_EM_MIN    =" $REFST_S1_CMU_EM_MIN
-	echo "REFST_S1_CMU_EM_MAX    =" $REFST_S1_CMU_EM_MAX
-	echo "REFST_S3_CMU_EM_MIN    =" $REFST_S3_CMU_EM_MIN
-	echo "REFST_S3_CMU_EM_MAX    =" $REFST_S3_CMU_EM_MAX
+	echo "REFST_SI_CMU_EM_LIM    = ["${REFST_SI_CMU_EM_LIM[*]}"]"
 	echo "REFST_ISLIMUD          =" $REFST_ISLIMUD
+	echo ''
+	echo "REFST_TOF_LIM          = ["${REFST_TOF_LIM[*]}"]"
 	echo ''
 	echo "REFST_CONT_STEP_MAX    =" $REFST_CONT_STEP_MAX
 	echo "REFST_CONT_STEP_MAX_VT =" $REFST_CONT_STEP_MAX_VT
@@ -302,6 +306,8 @@ else
 	echo "REFST_ISPLOTTED        =" $REFST_ISPLOTTED
 	echo "REFST_ISSAVED          =" $REFST_ISSAVED
 	echo "REFST_ISFROMSERVER     =" $REFST_ISFROMSERVER
+	echo ''
+	echo "REFST_THETAMAX         =" $REFST_THETAMAX
 	echo ''
 
 	#-----------------------------------------------------
@@ -430,8 +436,10 @@ if [ "$ans" == "y" ]; then
 			COEFFS=(${COEFFS[*]}  $REFST_TYPE $REFST_DIM $REFST_T0_DES)
 		        COEFFS=(${COEFFS[*]}  $REFST_ISDIRUD $REFST_DIR)
 		        COEFFS=(${COEFFS[*]}  ${REFST_SI_CMU_EM_LIM[*]} $REFST_ISLIMUD)
+			COEFFS=(${COEFFS[*]}  ${REFST_TOF_LIM[*]})
 		  	COEFFS=(${COEFFS[*]}  $REFST_CONT_STEP_MAX $REFST_CONT_STEP_MAX_VT)
 			COEFFS=(${COEFFS[*]}  $REFST_ISFLAGON $REFST_ISPLOTTED $REFST_ISSAVED $REFST_ISFROMSERVER)
+			COEFFS=(${COEFFS[*]}  $REFST_THETAMAX)
 
 			COEFFS=(${COEFFS[*]}  $REFST_ISDEBUG $REFST_GRIDSIZE)
 			COEFFS=(${COEFFS[*]}  $REFST_TIME $REFST_GRID $REFST_TERMINATION $REFST_COORD_TYPE)

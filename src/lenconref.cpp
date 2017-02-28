@@ -6165,13 +6165,13 @@ int msdvt_CMS_RCM_deps_planar_pac(double **ymd, double *tmd, double **ymdn, doub
 /**
  *  \brief Yields the number of free variables necessary to compute the refinment procedure.
  **/
-int nfreevariables(RefSt refst, int mgs)
+int nfreevariables(RefSt refSt, int mgs)
 {
     int nfv = 0;
-    switch(refst.dim)
+    switch(refSt.dim)
     {
     case REF_3D:
-        switch(refst.time)
+        switch(refSt.time)
         {
         case REF_FIXED_TIME:
                 nfv = 6*mgs+3;
@@ -6182,12 +6182,12 @@ int nfreevariables(RefSt refst, int mgs)
                 nfv = 7*mgs+3;
             break;
         default:
-            perror("nfreevariables. Unknown refst.time.");
+            perror("nfreevariables. Unknown refSt.time.");
         break;
         }
         break;
     case REF_PLANAR:
-        switch(refst.time)
+        switch(refSt.time)
         {
         case REF_FIXED_TIME:
                nfv = 4*mgs+1;
@@ -6202,12 +6202,12 @@ int nfreevariables(RefSt refst, int mgs)
             break;
 
         default:
-            perror("nfreevariables. Unknown refst.time.");
+            perror("nfreevariables. Unknown refSt.time.");
         break;
         }
          break;
     default:
-            perror("nfreevariables. Unknown refst.dim.");
+            perror("nfreevariables. Unknown refSt.dim.");
         break;
     }
 

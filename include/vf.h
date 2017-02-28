@@ -378,6 +378,11 @@ double qbcp_H_SEM(double t, const double y[], void *params_void);
  **/
 double qbcp_Hn(double t, const double y[], void *params_void);
 
+/**
+ *  \brief Hamiltonian of the QBCP with SEM units and Normalized-Centered coordinates. Note that alpha[14] (alpha15) is zero for the QBCP
+ **/
+double qbcp_Hn_SEM(double t, const double y[], void *params_void);
+
 //========================================================================================
 //
 // Testing the QBTBP

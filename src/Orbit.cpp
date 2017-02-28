@@ -29,7 +29,7 @@ Orbit::Orbit(Invman const *invman_, QBCP_L const *qbcp_l_, OdeStruct *driver_, i
     //------------------------------------------------------------------------------------
     // ePmax: maximum projection error allowed during the computation €€TODO
     //------------------------------------------------------------------------------------
-    ePmaxx = (fwrk == F_SEM)? 5e-2:1e-4;
+    ePmaxx = (fwrk == F_SEM)? 5e-3:1e-4;
 
     //------------------------------------------------------------------------------------
     // Initial, final and current state
@@ -148,6 +148,12 @@ const double* Orbit::getZ0() const
 const double* Orbit::getSi() const
 {
     return six;
+}
+
+const double Orbit::getSi(int dim) const
+{
+    if(dim < reduced_nv) return six[dim];
+    else return six[0];
 }
 
 const Invman* Orbit::getInvman() const

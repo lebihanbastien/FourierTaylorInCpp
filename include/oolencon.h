@@ -215,12 +215,12 @@ int notablePoints(gnuplot_ctrl* h2, gnuplot_ctrl* h3, int coord_type);
  *         A continuation procedure can be performed to get more than one refined solution.
  *
  *         Because of the possible use of msvt3d and msvtplan inside this routine,
- *         the refst.coord_type must be NCSEM. However, the user can put
+ *         the refSt.coord_type must be NCSEM. However, the user can put
  *         other coordinate systems (VNCSEM, PSEM, PEM...), as long as these two routines
  *         are not used.
  **/
-int oorefeml2seml(RefSt& refst);
-int ooconteml2seml(RefSt& refst);
+int oorefeml2seml(RefSt& refSt);
+int ooconteml2seml(RefSt& refSt);
 
 //========================================================================================
 //
@@ -242,7 +242,7 @@ int ooconteml2seml(RefSt& refst);
  **/
 int oosrefeml2seml(Orbit& orbit_EM, Orbit& orbit_SEM, double **y_traj, double *t_traj,
                    int dcs, int coord_type, int *man_grid_size_t,
-                   RefSt& refst, gnuplot_ctrl* h2);
+                   RefSt& refSt, gnuplot_ctrl* h2);
 
 //----------------------------------------------------------------------------------------
 //         Brick A: select the good IC for EML2-to-SEMli connections in data files
@@ -252,7 +252,7 @@ int oosrefeml2seml(Orbit& orbit_EM, Orbit& orbit_SEM, double **y_traj, double *t
  *         through data files produced by oo_int_proj_CMU_EM_on_CM_SEM_3D or
  *         oo_int_proj_CMU_EM_on_CM_SEM.
  **/
-int ooseleml2seml(RefSt& refst, double st_EM[5], double st_SEM[5], double t_EM[2],
+int ooseleml2seml(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM[2],
                  double *t0_SEM, double *pmin_dist_SEM_out);
 
 //----------------------------------------------------------------------------------------
@@ -267,7 +267,7 @@ int ooseleml2seml(RefSt& refst, double st_EM[5], double st_SEM[5], double t_EM[2
 int oomanfgeml2seml(double** y_traj, double*  t_traj,
                     Orbit& orbit_EM, Orbit& orbit_SEM,
                     int dcs, int coord_type, int man_grid_size,
-                    RefSt& refst);
+                    RefSt& refSt);
 
 /**
  *  \brief Computing the first guess for the connection leg between the orbit orbit_EM and
@@ -279,7 +279,7 @@ int oofgeml2seml(double **y_traj, double *t_traj,
                  double **y_traj_comp, double *t_traj_comp,
                  Orbit& orbit_EM, Orbit& orbit_SEM,
                  int dcs, int coord_type, int grid_points_des[3], int grid_points_eff[3], int max_grid,
-                 RefSt& refst, gnuplot_ctrl* h2, gnuplot_ctrl* h3);
+                 RefSt& refSt, gnuplot_ctrl* h2, gnuplot_ctrl* h3);
 
 /**
  *  \brief Get the complementary coordinates associated to the coordinates coord_type.
@@ -298,7 +298,7 @@ int comp_coord_typ(int coord_type);
  **/
 int oocomprefft3d(int grid_freq_days[3], int coord_type,
                   Orbit& orbit_EM, Orbit& orbit_SEM,
-                  RefSt &refst);
+                  RefSt &refSt);
 
 //========================================================================================
 //
@@ -308,12 +308,12 @@ int oocomprefft3d(int grid_freq_days[3], int coord_type,
 /**
  *  \brief Refine a given output of oocomprefft3d into JPL ephemerides.
  **/
-int oojplrefft3d(int coord_type, RefSt &refst);
+int oojplrefft3d(int coord_type, RefSt &refSt);
 
 /**
  *  \brief Refine a given output of oocomprefft3d into Inertial coordinates.
  **/
-int oointojplrefft3d(int coord_type, RefSt &refst);
+int oointojplrefft3d(int coord_type, RefSt &refSt);
 
 //----------------------------------------------------------------------------------------
 //         Refinement of solutions: to JPL - Subroutines
@@ -359,7 +359,7 @@ int oojplfg3d_interpolation(double** y_traj_n, double* t_traj_n,
 int oocomprefft3d_test_seml_synjpl(int man_grid_size_t,
                                    int coord_type,
                                    Orbit &orbit_SEM,
-                                   RefSt refst);
+                                   RefSt refSt);
 
 /**
  *  \brief Computes only an EML2 orbit and test a JPL refinement.
@@ -367,7 +367,7 @@ int oocomprefft3d_test_seml_synjpl(int man_grid_size_t,
 int oocomprefft3d_test_eml_synjpl(int man_grid_size_t,
                      int coord_type,
                      Orbit &orbit_EM,
-                     RefSt refst)
+                     RefSt refSt)
 ;
 /**
  *  \brief Computes only a EML2-SEMLi connection and test a JPL refinement, in synodical coordinates

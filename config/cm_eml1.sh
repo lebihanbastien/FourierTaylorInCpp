@@ -25,7 +25,7 @@ MODEL=$M_QBCP
 #-----------------------------------------------------
 # DEFAULT LIBRATION POINT FOR EM & SEM SYSTEM
 #-----------------------------------------------------
-LI_EM=2
+LI_EM=1
 LI_SEM=2
 
 #-----------------------------------------------------
@@ -74,7 +74,7 @@ YNMAX=0.6     # The maximum norm (in SEM normalized units) for a projection to o
 SNMAX=0.6     # The maximum norm (in RCM normalized units) for a projection to occur on the CM_NC of SEMLi
 NOD=6         # Number of dimensions on which we compute the norm of the projection error
 
- #====================================================================================
+    #====================================================================================
     # Computation parameters: Projection CMU EML2 to CM SEMLi
     #
     #  Used for producing the complete sets:
