@@ -1407,10 +1407,9 @@ void readAndInterpolateIntProjCU_bin(string filename,
     cout << "--------------------------------------" << endl;
     cout << "The min and max time of flights are:" << endl;
     ind = sortId[0];
-    cout << "min(tof_EM)  = " << tf_man_SEM[ind]/(SEML.us_em.ns*SEML.us.T) - t0_CMU_EM[ind]/SEML.us.T  << " x T" << endl;
+    cout << "min(tof_EM)  = " << tf_man_EM_0[ind]/SEML.us.T - t0_CMU_EM_0[ind]/SEML.us.T  << " x T" << endl;
     ind = sortId[tf_man_EM_0.size() -1];
-    cout << "max(tof_EM)  = " << tf_man_SEM[ind]/(SEML.us_em.ns*SEML.us.T) - t0_CMU_EM[ind]/SEML.us.T  << " x T" << endl;
-
+    cout << "max(tof_EM)  = " << tf_man_EM_0[ind]/SEML.us.T - t0_CMU_EM_0[ind]/SEML.us.T  << " x T" << endl;
 
     //====================================================================================
     // Sort data wrt to the projection distance

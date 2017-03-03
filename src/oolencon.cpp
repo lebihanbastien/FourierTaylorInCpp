@@ -29,13 +29,14 @@ void writeCONT_txt(Orbit& orbit_EM, Orbit& orbit_SEM, double* te_NCSEM, double* 
         filestream << "x0_CMU_NCEM  y0_CMU_NCEM z0_CMU_NCEM px0_CMU_NCEM py0_CMU_NCEM pz0_CMU_NCEM ";
         filestream << "x0_CMS_NCSEM y0_CMS_NCSEM z0_CMS_NCSEM px0_CMS_NCSEM py0_CMS_NCSEM pz0_CMS_NCSEM ";
         filestream << "te_NCSEM xe_CMS_NCSEM ye_CMS_NCSEM ze_CMS_NCSEM pxe_CMS_NCSEM pye_CMS_NCSEM pze_CMS_NCSEM ";
+        filestream << "H0_NCEM He_NCEM H0_NCSEM He_NCSEM";
         filestream << endl;
     }
     else
     {
-        //====================================================================================
+        //================================================================================
         // Else, we append
-        //====================================================================================
+        //================================================================================
         filestream.open (filename.c_str(), ios::out | ios::app);
     }
 
@@ -44,6 +45,9 @@ void writeCONT_txt(Orbit& orbit_EM, Orbit& orbit_SEM, double* te_NCSEM, double* 
     //====================================================================================
     filestream << setprecision(15) <<  setiosflags(ios::scientific) << std::showpos;
 
+    //------------------------------------------------------------------------------------
+    // Store from 1 to 8
+    //------------------------------------------------------------------------------------
     //1. t0 in EM units
     filestream << orbit_EM.getT0() << "  ";
     //2. s0 in RCM coordinates
@@ -60,6 +64,55 @@ void writeCONT_txt(Orbit& orbit_EM, Orbit& orbit_SEM, double* te_NCSEM, double* 
     filestream << *te_NCSEM* SEML.us_sem.n << "  ";
     //8. ze in NCSEM coordinates
     for(int i = 0; i <6; i++) filestream << ye_NCSEM[i] << "  ";
+
+
+    //------------------------------------------------------------------------------------
+    // Computing Energies
+    //------------------------------------------------------------------------------------
+    double H0_NCEM, He_NCEM, H0_NCSEM, He_NCSEM;
+    double yv_NCEM[6], yv_NCSEM[6];
+    double t0_EM, t0_SEM, te_EM, te_SEM;
+
+    //t0, z0 in NCEM coordinates
+    t0_EM = orbit_EM.getT0();
+    for(int i = 0; i <6; i++) yv_NCEM[i] = orbit_EM.getZ0()[i];
+    //t0, z0 in NCSEM coordinates
+    qbcp_coc(t0_EM, yv_NCEM, yv_NCSEM, &t0_SEM, NCEM, NCSEM);
+
+    //Initial energy in NCEM coordinates
+    H0_NCEM = qbcp_Hn_EM(t0_EM, yv_NCEM, &SEML);
+    //Initial energy in NCSEM coordinates
+    H0_NCSEM = qbcp_Hn_SEM(t0_SEM, yv_NCSEM, &SEML);
+
+    //te, ze in NCSEM coordinates
+    te_EM  = orbit_EM.getTf();                  //in EM units
+
+    cout << "te_EM  = " << te_EM << endl;
+
+    te_SEM = orbit_EM.getTf()*SEML.us_em.ns;    //in SEM units
+    for(int i = 0; i <6; i++) yv_NCSEM[i] = orbit_SEM.getZ0()[i];
+
+    //te, ze in NCEM coordinates
+    qbcp_coc(te_SEM, yv_NCSEM, yv_NCEM, &te_EM, NCSEM, NCEM);
+
+    cout << "te_EM  = " << te_EM << endl;
+
+    //Final energy in NCEM coordinates
+    He_NCEM = qbcp_Hn_EM(te_EM, yv_NCEM, &SEML);
+    //Final energy in NCSEM coordinates
+    He_NCSEM = qbcp_Hn_SEM(te_SEM, yv_NCSEM, &SEML);
+
+    //------------------------------------------------------------------------------------
+    // Storing Energies
+    //------------------------------------------------------------------------------------
+    // 9.  Initial energy in NCEM coordinates
+    filestream << H0_NCEM << "  ";
+    // 10. Final energy in NCEM coordinates
+    filestream << He_NCEM << "  ";
+    // 11. Initial energy in NCSEM coordinates
+    filestream << H0_NCSEM << "  ";
+    // 12. Final energy in NCSEM coordinates
+    filestream << He_NCSEM << "  ";
     filestream << endl;
 
     filestream.close();
@@ -113,6 +166,8 @@ int readCONT_txt(double*  t0_CMU_EM, double*   tf_CMU_EM,
                  double** si_CMU_EM, double** si_CMS_SEM,
                  double** z0_CMU_NCEM, double** z0_CMS_NCSEM,
                  double* tethae, double** ye_NCSEM,
+                 double* H0_NCEM, double* He_NCEM,
+                 double* H0_NCSEM, double* He_NCSEM,
                  double tr0, int fsize)
 {
     //====================================================================================
@@ -168,6 +223,14 @@ int readCONT_txt(double*  t0_CMU_EM, double*   tf_CMU_EM,
         filestream >> tethae[k];
         //8. ze in NCSEM coordinates
         for(int i = 0; i <6; i++) filestream >> ye_NCSEM[i][k];
+        // 9.  Initial energy in NCEM coordinates
+        filestream >> H0_NCEM[k];
+        // 10. Final energy in NCEM coordinates
+        filestream >> He_NCEM[k];
+        // 11. Initial energy in NCSEM coordinates
+        filestream >> H0_NCSEM[k];
+        // 12. Final energy in NCSEM coordinates
+        filestream >> He_NCSEM[k];
     }
 
     filestream.close();
@@ -249,9 +312,9 @@ int oo_compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt &projSt)
     //====================================================================================
     // Initialization
     //====================================================================================
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     //Building the working grids
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     double** grid_si_CMU_RCM = (double**) calloc(4, sizeof(double*));
     for(int i = 0; i <4; i++)
     {
@@ -260,27 +323,27 @@ int oo_compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt &projSt)
     }
 
 
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     //Building the time grid
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     double* grid_t_EM = dvector(0,  projSt.TSIZE);
     init_grid(grid_t_EM, projSt.TLIM[0], projSt.TLIM[1], projSt.TSIZE);
 
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     //Number of elements
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     int noe = (1+projSt.GSIZE_SI[0])*(1+projSt.GSIZE_SI[1])*(1+projSt.GSIZE_SI[2])*(1+projSt.GSIZE_SI[3])*(1+projSt.TSIZE);
     int iter = 1;
 
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     // Data structures
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     double** init_state_CMU_NCEM = dmatrix(0, 5, 0, projSt.GSIZE_SI[2]);
     double** init_state_CMU_RCM  = dmatrix(0, 4, 0, projSt.GSIZE_SI[2]);
 
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     // Reset the data file
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     initCU_bin_3D(projSt.GSIZE_SI, projSt.TSIZE, OFTS_ORDER, TYPE_CU_3D, SEML.li_SEM);
 
     //====================================================================================
@@ -338,9 +401,9 @@ int oo_compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt &projSt)
                         free_dvector(sti, 0, 4);
                     }
 
-                    //------------------------------------------
+                    //------------------------------------------------------------------------------------
                     //Store values
-                    //------------------------------------------
+                    //------------------------------------------------------------------------------------
                     writeCU_bin_3D(init_state_CMU_NCEM, init_state_CMU_RCM, projSt.GSIZE_SI,
                                    OFTS_ORDER, TYPE_CU_3D, SEML.li_SEM);
                 }
@@ -348,9 +411,9 @@ int oo_compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt &projSt)
         }
     }
 
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     //Free
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     free_dmatrix(init_state_CMU_NCEM, 0, 5, 0, projSt.GSIZE_SI[2]);
     free_dmatrix(init_state_CMU_RCM,  0, 4, 0, projSt.GSIZE_SI[2]);
 
@@ -409,38 +472,44 @@ int oo_compute_grid_CMU_EM(double dist_to_cm, ProjSt &projSt)
     cout << "===================================================================" << endl;
 
     //====================================================================================
-    // Get the invariant manifold at EML2
-    //====================================================================================
-    Invman invman(OFTS_ORDER, OFS_ORDER, SEML.cs);
-
-    //====================================================================================
     // Initialization
     //====================================================================================
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     //Building the working grids
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     double* grid_s1_CMU_RCM = dvector(0,  projSt.GSIZE_SI[0]);
     double* grid_s3_CMU_RCM = dvector(0,  projSt.GSIZE_SI[2]);
     init_grid(grid_s1_CMU_RCM, projSt.GLIM_SI[0][0], projSt.GLIM_SI[0][1], projSt.GSIZE_SI[0]);
     init_grid(grid_s3_CMU_RCM, projSt.GLIM_SI[2][0], projSt.GLIM_SI[2][1], projSt.GSIZE_SI[2]);
 
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     //Building the time grid
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     double* grid_t_EM = dvector(0,  projSt.TSIZE);
     init_grid(grid_t_EM, projSt.TLIM[0], projSt.TLIM[1], projSt.TSIZE);
 
-    //------------------------------------------
+    cout << " - The detailed values of t are:                                   " << endl;
+    for(int i = 0; i < projSt.TSIZE; i++) cout << grid_t_EM[i]/SEML.us.T << ", ";
+    cout << grid_t_EM[projSt.TSIZE]/SEML.us.T  << endl;
+    cout << "===================================================================" << endl;
+    pressEnter(true);
+
+    //------------------------------------------------------------------------------------
     //Number of elements
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     int noe = (1+projSt.GSIZE_SI[0])*(1+projSt.GSIZE_SI[2])*(1+projSt.TSIZE);
     int iter = 1;
 
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     // Data structures
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     double**** init_state_CMU_NCEM = d4tensor(0, 5, 0, projSt.TSIZE, 0, projSt.GSIZE_SI[0], 0, projSt.GSIZE_SI[2]);
     double**** init_state_CMU_RCM  = d4tensor(0, 4, 0, projSt.TSIZE, 0, projSt.GSIZE_SI[0], 0, projSt.GSIZE_SI[2]);
+
+    //====================================================================================
+    // Get the invariant manifold at EML2
+    //====================================================================================
+    Invman invman(OFTS_ORDER, OFS_ORDER, SEML.cs);
 
     //====================================================================================
     // Loop on all elements.
@@ -489,16 +558,16 @@ int oo_compute_grid_CMU_EM(double dist_to_cm, ProjSt &projSt)
         }
     }
 
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     //Store values
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     writeCU_bin(init_state_CMU_NCEM, init_state_CMU_RCM, grid_t_EM,
                 projSt.GSIZE_SI[0], projSt.GSIZE_SI[2], projSt.TSIZE, OFTS_ORDER,
                 TYPE_CU, SEML.li_SEM);
 
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     //Free
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     free_d4tensor(init_state_CMU_NCEM, 0, 5, 0, projSt.TSIZE, 0, projSt.GSIZE_SI[0], 0, projSt.GSIZE_SI[2]);
     free_d4tensor(init_state_CMU_RCM,  0, 4, 0, projSt.TSIZE, 0, projSt.GSIZE_SI[0], 0, projSt.GSIZE_SI[2]);
 
@@ -580,9 +649,9 @@ int oo_int_proj_CMU_EM_on_CM_SEM_3D(ProjSt &projSt)
     double** init_state_CMU_RCM  = dmatrix(0, 4, 0, si_grid_size[2]);
     double* init_time_grid_EM    = dvector(0, t_grid_size);
 
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     //Number of elements
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     int noe = (1+si_grid_size[0])*(1+si_grid_size[1])*(1+si_grid_size[2])*(1+si_grid_size[3])*(1+t_grid_size);
 
 
@@ -1616,12 +1685,17 @@ int ooconteml2seml(RefSt& refSt)
     double** z0_CMS_NCSEM = dmatrix(0, 5, 0, fsize-1);
     double* thetae        = dvector(0, fsize-1);
     double** ze_NCSEM     = dmatrix(0, 5, 0, fsize-1);
+    double* H0_NCEM       = dvector(0, fsize-1);
+    double* He_NCEM       = dvector(0, fsize-1);
+    double* H0_NCSEM      = dvector(0, fsize-1);
+    double* He_NCSEM      = dvector(0, fsize-1);
 
     //====================================================================================
     //         Read
     //====================================================================================
     status = readCONT_txt(t0_CMU_EM, tf_CMU_EM, si_CMU_EM, si_CMS_SEM,
-                          z0_CMU_NCEM, z0_CMS_NCSEM, thetae, ze_NCSEM, tr0, fsize);
+                          z0_CMU_NCEM, z0_CMS_NCSEM, thetae, ze_NCSEM, H0_NCEM, He_NCEM,
+                          H0_NCSEM, He_NCSEM, tr0, fsize);
 
     if(status)
     {
@@ -2113,7 +2187,8 @@ int oorefeml2seml(RefSt& refSt)
  *  \brief Find the intersection of a EML2-SEMLi connection contained in
  *         y_traj_n/t_traj_n with a certain Pk section x = cst defined by refSt.
  **/
-int ooxpseml2seml(double ye[6], double* te, double* t_traj_n, double** y_traj_n, int man_index, RefSt& refSt)
+int ooxpseml2seml(double ye[6], double* te, double* t_traj_n, double** y_traj_n,
+                  int man_index, RefSt& refSt)
 {
     double yv[42];
     //Get the default coordinates system from the coord_type
@@ -2195,15 +2270,12 @@ int ooxpseml2seml(double ye[6], double* te, double* t_traj_n, double** y_traj_n,
 /**
  *  \brief Save a given solution as a complete trajectory
  **/
-int oosaveeml2seml(RefSt& refSt, string filename_traj,
-                   int dcs, int coord_type,
-                   double** y_traj_n, double* t_traj_n,
-                   int man_index, int mPlot,
-                   Orbit &orbit_EM, Orbit &orbit_SEM,
-                   int label,
-                   bool isFirst, bool isEML, bool isSEML)
+int writeCONT_bin(RefSt& refSt, string filename_traj, int dcs, int coord_type,
+                   double** y_traj_n, double* t_traj_n, int man_index, int mPlot,
+                   Orbit &orbit_EM, Orbit &orbit_SEM, int label,
+                   bool isFirst, int comp_orb_eml, int comp_orb_seml)
 {
-    string fname = "oosaveeml2seml";
+    string fname = "writeCONT_bin";
 
     //====================================================================================
     // Initialization of temporary variables
@@ -2305,7 +2377,7 @@ int oosaveeml2seml(RefSt& refSt, string filename_traj,
     //====================================================================================
     // Compute the initial orbit if necessary
     //====================================================================================
-    if(isEML)
+    if(comp_orb_eml)
     {
         //--------------------------------------------------------------------------------
         // Initialize
@@ -2431,66 +2503,220 @@ int oosaveeml2seml(RefSt& refSt, string filename_traj,
     //====================================================================================
     // Compute the final orbit if necessary
     //====================================================================================
-    if(isSEML)
+    if(comp_orb_seml)
     {
-        //--------------------------------------------------------------------------------
-        // Initialize
-        //--------------------------------------------------------------------------------
-        //We plot every 0.5 days
-        int oPlot = 1.0/0.5*refSt.tspan_SEM*SEML.cs_sem.cr3bp.T/(86400*2*M_PI);
-        int nPlot = oPlot;
-        double** yorb_NCEM  = dmatrix(0, 5, 0, oPlot);
-        double*  torb_EM    = dvector(0, oPlot);
-        double** yorb_NCSEM = dmatrix(0, 5, 0, oPlot);
-        double*  torb_SEM   = dvector(0, oPlot);
-
-        //Save unstable value
-        double s5 = orbit_SEM.getSi(4);
-
-        //Reset the unstable direction
-        orbit_SEM.setSi(0, 4);
-
-        //Set the final time
-        orbit_SEM.setTf(orbit_SEM.getT0()+refSt.tspan_SEM);
-
-        //Update the initial state in the orbit, with the RCM coordinates
-        orbit_SEM.update_ic(orbit_SEM.getSi(), orbit_SEM.getT0());
-
-        //--------------------------------------------------------------------------------
-        //Integration on oPlot+1 fixed grid
-        //--------------------------------------------------------------------------------
-        int output = orbit_SEM.traj_int_grid(orbit_SEM.getTf(), yorb_NCSEM, torb_SEM, oPlot, 1);
-
-        //If output is strictly greater than 0, then the projection procedure inside
-        //the integration went wrong, and the new indix is output.
-        //It output == ORBIT_EPROJ, the projection procedure failed so bad that there
-        //is no point stored in the data, except the first one, and the new indix is zero
-        if(output == ORBIT_EPROJ) nPlot = 0;
-        else if(output > 0) nPlot = output;
-
-        //--------------------------------------------------------------------------------
-        //To NCEM coordinates
-        //--------------------------------------------------------------------------------
-        qbcp_coc_vec(yorb_NCSEM, torb_SEM, yorb_NCEM, torb_EM, nPlot, NCSEM, NCEM);
-
-        //--------------------------------------------------------------------------------
-        // Save to data file
-        // We save the following outputs:
-        //  1. Label of the solution (number)
-        //  2. Type of leg: either emli orbit (1), transfer leg (2) or semli orbit (3)
-        //  3. Current time in NCSEM coordinates
-        //  4. Current state in NCSEM coordinates
-        //  5. Current state in NCEM coordinates
-        //  6. Hamiltonian in NCSEM coordinates
-        //--------------------------------------------------------------------------------
-        if(nPlot > 0)
+        switch(comp_orb_seml)
         {
-            //Reopen stream
+        case 1: //computation using projection method
+        {
+            //----------------------------------------------------------------------------
+            // Initialize
+            //----------------------------------------------------------------------------
+            //We plot every 0.5 days
+            int oPlot = 1.0/0.5*refSt.tspan_SEM*SEML.cs_sem.cr3bp.T/(86400*2*M_PI);
+            int nPlot = oPlot;
+            double** yorb_NCEM  = dmatrix(0, 5, 0, oPlot);
+            double*  torb_EM    = dvector(0, oPlot);
+            double** yorb_NCSEM = dmatrix(0, 5, 0, oPlot);
+            double*  torb_SEM   = dvector(0, oPlot);
+
+            //Save unstable value
+            double s5 = orbit_SEM.getSi(4);
+
+            //Reset the unstable direction
+            orbit_SEM.setSi(0, 4);
+
+            //Set the final time
+            orbit_SEM.setTf(orbit_SEM.getT0()+refSt.tspan_SEM);
+
+            //Update the initial state in the orbit, with the RCM coordinates
+            orbit_SEM.update_ic(orbit_SEM.getSi(), orbit_SEM.getT0());
+
+            //----------------------------------------------------------------------------
+            //Integration on oPlot+1 fixed grid
+            //----------------------------------------------------------------------------
+            int output = orbit_SEM.traj_int_grid(orbit_SEM.getTf(), yorb_NCSEM, torb_SEM, oPlot, 1);
+
+            //If output is strictly greater than 0, then the projection procedure inside
+            //the integration went wrong, and the new indix is output.
+            //It output == ORBIT_EPROJ, the projection procedure failed so bad that there
+            //is no point stored in the data, except the first one, and the new indix is zero
+            if(output == ORBIT_EPROJ) nPlot = 0;
+            else if(output > 0) nPlot = output;
+
+            //----------------------------------------------------------------------------
+            //To NCEM coordinates
+            //----------------------------------------------------------------------------
+            qbcp_coc_vec(yorb_NCSEM, torb_SEM, yorb_NCEM, torb_EM, nPlot, NCSEM, NCEM);
+
+            //----------------------------------------------------------------------------
+            // Save to data file
+            // We save the following outputs:
+            //  1. Label of the solution (number)
+            //  2. Type of leg: either emli orbit (1), transfer leg (2) or semli orbit (3)
+            //  3. Current time in NCSEM coordinates
+            //  4. Current state in NCSEM coordinates
+            //  5. Current state in NCEM coordinates
+            //  6. Hamiltonian in NCSEM coordinates
+            //----------------------------------------------------------------------------
+            if(nPlot > 0)
+            {
+                //Reopen stream
+                filestream.open (filename_traj.c_str(), ios::out | ios::binary | ios::app);
+
+                //Storing all points between 0 and nPlot
+                for(int p = 0; p <= nPlot; p++)
+                {
+                    //1. Label of the solution
+                    res = label;
+                    filestream.write((char*) &res, sizeof(double));
+
+                    //2. Type of leg: either emli orbit (1), transfer leg (2) or semli orbit (3)
+                    res = 3;
+                    filestream.write((char*) &res, sizeof(double));
+
+                    //3. Current time in NCSEM coordinates
+                    res = torb_SEM[p];
+                    filestream.write((char*) &res, sizeof(double));
+
+                    //4. Current state in NCSEM coordinates
+                    for(int i = 0; i < 6; i++)
+                    {
+                        res   = yorb_NCSEM[i][p];
+                        yv[i] = yorb_NCSEM[i][p];
+                        filestream.write((char*) &res, sizeof(double));
+                    }
+
+                    //4. Current state in NCEM coordinates
+                    for(int i = 0; i < 6; i++)
+                    {
+                        res = yorb_NCEM[i][p];
+                        filestream.write((char*) &res, sizeof(double));
+                    }
+
+                    //6. Hamiltonian in NCSEM coordinates
+                    res = qbcp_Hn_SEM(torb_SEM[p], yv, &SEML);
+                    filestream.write((char*) &res, sizeof(double));
+                }
+                filestream.close();
+            }
+            else
+            {
+                cout << fname << ". Warning: computation of the orbit at EMLi went wrong." << endl;
+                cout << "The orbit is not stored." << endl;
+            }
+
+            //============================================================================
+            // At SEMLi, we need to update:
+            // 1. The unstable direction, that has been previously erased.
+            // 2. The initial time.
+            //============================================================================
+            orbit_SEM.setSi(s5, 4);
+            orbit_SEM.setT0(t_traj_n[man_index]);
+
+            //----------------------------------------------------------------------------
+            // Update the initial state in the orbit, with the RCM coordinates
+            //----------------------------------------------------------------------------
+            orbit_SEM.update_ic(orbit_SEM.getSi(), orbit_SEM.getT0());
+
+            //----------------------------------------------------------------------------
+            //Free variables
+            //----------------------------------------------------------------------------
+            free_dmatrix(yorb_NCEM, 0, 5, 0, oPlot);
+            free_dvector(torb_EM, 0, oPlot);
+            free_dmatrix(yorb_NCSEM, 0, 5, 0, oPlot);
+            free_dvector(torb_SEM, 0, oPlot);
+
+            break;
+        }
+        case 2: //computation using reduced coordinates
+        {
+            //----------------------------------------------------------------------------
+            //Read the reduced vector field
+            //----------------------------------------------------------------------------
+            vector<Oftsc> Fh;
+            Fh.reserve(5);
+            for(int i = 0; i < 5; i++) Fh.push_back(Oftsc(5, OFTS_ORDER, OFS_NV, OFS_ORDER));
+            readVOFTS_bin(Fh, SEML_SEM.cs.F_PMS+"rvf/fh");
+
+            //----------------------------------------------------------------------------
+            //For dot(s) = fh(s)
+            //----------------------------------------------------------------------------
+            RVF rvf;
+            rvf.ofs_order  = SEML.eff_nf_SEM;
+            Ofsc AUX(rvf.ofs_order);
+            rvf.fh         = &Fh;
+            rvf.ofs        = &AUX;
+            rvf.order      = OFTS_ORDER;
+            rvf.n          = orbit_SEM.getN();
+            rvf.reduced_nv = 5;
+
+            gsl_odeiv2_system sys_fh;
+            sys_fh.function  = qbfbp_fh;
+            sys_fh.jacobian  = NULL;
+            sys_fh.dimension = 2*rvf.reduced_nv;
+            sys_fh.params    = &rvf;
+            const gsl_odeiv2_step_type* T_fh = gsl_odeiv2_step_rk8pd;
+
+            gsl_odeiv2_driver* d_fh = gsl_odeiv2_driver_alloc_y_new (&sys_fh, T_fh,
+                                      Config::configManager().G_PREC_HSTART(),
+                                      Config::configManager().G_PREC_ABS(),
+                                      Config::configManager().G_PREC_REL());
+
+
+            //----------------------------------------------------------------------------
+            // Temp variables
+            //----------------------------------------------------------------------------
+            double t0_SEM = orbit_SEM.getT0();
+            double t1_SEM = t0_SEM+refSt.tspan_SEM;
+            double z[6], z_EM[6];
+            double t2 = t0_SEM;
+            int k  = 0;
+            double  s1ccm8[2*rvf.reduced_nv]; //CCM8
+
+            //----------------------------------------------------------------------------
+            // Initial state in CCM8 form
+            //----------------------------------------------------------------------------
+            RCMtoCCM8(orbit_SEM.getSi(), s1ccm8, 5);
+
+            //----------------------------------------------------------------------------
+            // Reopen  stream
+            //----------------------------------------------------------------------------
             filestream.open (filename_traj.c_str(), ios::out | ios::binary | ios::app);
 
-            //Storing all points between 0 and nPlot
-            for(int p = 0; p <= nPlot; p++)
+            //----------------------------------------------------------------------------
+            // Loop
+            //----------------------------------------------------------------------------
+            while(t2 < t1_SEM && k <= mPlot)
             {
+                cout << "t1_SEM -  t2 = " << t1_SEM -  t2 << endl;
+                cout << "z[0]         = " << z[0]         << endl;
+                cout << "mPlot - k    = " << mPlot - k    << endl;
+
+                //------------------------------------------------------------------------
+                //------------------------------------------------------------------------
+                //To NCSEM coordinates
+                //------------------------------------------------------------------------
+                //------------------------------------------------------------------------
+                orbit_SEM.evalRCMtoNC(t2, z);
+
+                //------------------------------------------------------------------------
+                //To NCEM coordinates
+                //------------------------------------------------------------------------
+                //------------------------------------------------------------------------
+                qbcp_coc(t2, z, z_EM, NCSEM, NCEM);
+
+
+                //------------------------------------------------------------------------
+                // Save to data file
+                // We save the following outputs:
+                //  1. Label of the solution (number)
+                //  2. Type of leg: either emli orbit (1), transfer leg (2) or semli orbit (3)
+                //  3. Current time in NCSEM coordinates
+                //  4. Current state in NCSEM coordinates
+                //  5. Current state in NCEM coordinates
+                //  6. Hamiltonian in NCSEM coordinates
+                //------------------------------------------------------------------------
                 //1. Label of the solution
                 res = label;
                 filestream.write((char*) &res, sizeof(double));
@@ -2500,56 +2726,40 @@ int oosaveeml2seml(RefSt& refSt, string filename_traj,
                 filestream.write((char*) &res, sizeof(double));
 
                 //3. Current time in NCSEM coordinates
-                res = torb_SEM[p];
+                res = t2;
                 filestream.write((char*) &res, sizeof(double));
 
                 //4. Current state in NCSEM coordinates
                 for(int i = 0; i < 6; i++)
                 {
-                    res   = yorb_NCSEM[i][p];
-                    yv[i] = yorb_NCSEM[i][p];
+                    res   = z[i];
                     filestream.write((char*) &res, sizeof(double));
                 }
 
                 //4. Current state in NCEM coordinates
                 for(int i = 0; i < 6; i++)
                 {
-                    res = yorb_NCEM[i][p];
+                    res = z_EM[i];
                     filestream.write((char*) &res, sizeof(double));
                 }
 
                 //6. Hamiltonian in NCSEM coordinates
-                res = qbcp_Hn_SEM(torb_SEM[p], yv, &SEML);
+                res = qbcp_Hn_SEM(t2, z, &SEML);
                 filestream.write((char*) &res, sizeof(double));
+
+
+                //------------------------------------------------------------------------
+                //Advance one step
+                //------------------------------------------------------------------------
+                gsl_odeiv2_evolve_apply (d_fh->e, d_fh->c, d_fh->s, d_fh->sys, &t2, t1_SEM, &d_fh->h, s1ccm8);
+                orbit_SEM.ccm8torcm(s1ccm8);
+                k++;
             }
             filestream.close();
+
+            break;
         }
-        else
-        {
-            cout << fname << ". Warning: computation of the orbit at EMLi went wrong." << endl;
-            cout << "The orbit is not stored." << endl;
         }
-
-        //================================================================================
-        // At SEMLi, we need to update:
-        // 1. The unstable direction, that has been previously erased.
-        // 2. The initial time.
-        //================================================================================
-        orbit_SEM.setSi(s5, 4);
-        orbit_SEM.setT0(t_traj_n[man_index]);
-
-        //--------------------------------------------------------------------------------
-        // Update the initial state in the orbit, with the RCM coordinates
-        //--------------------------------------------------------------------------------
-        orbit_SEM.update_ic(orbit_SEM.getSi(), orbit_SEM.getT0());
-
-        //--------------------------------------------------------------------------------
-        //Free variables
-        //--------------------------------------------------------------------------------
-        free_dmatrix(yorb_NCEM, 0, 5, 0, oPlot);
-        free_dvector(torb_EM, 0, oPlot);
-        free_dmatrix(yorb_NCSEM, 0, 5, 0, oPlot);
-        free_dvector(torb_SEM, 0, oPlot);
 
     }
 
@@ -2616,7 +2826,7 @@ int oosrefeml2seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* t
     //------------------------------------------------------------------------------------
     //Local variables for plotting
     //------------------------------------------------------------------------------------
-    int mPlot = 50;
+    int mPlot = refSt.mplot;
     double** y_man_NCEM        = dmatrix(0, 5, 0, mPlot);
     double** y_man_NCSEM       = dmatrix(0, 5, 0, mPlot);
     double*  t_man_EM          = dvector(0, mPlot);
@@ -2627,13 +2837,6 @@ int oosrefeml2seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* t
     //Number of potential new points, during the continuation procedure with variable time
     int nnew = 4;
     int ode78coll = 0;
-
-    //------------------------------------------------------------------------------------
-    //For saving results
-    //------------------------------------------------------------------------------------
-    bool isEML = false, isSEML = false;
-    int oPlot = 500;
-
 
     //------------------------------------------------------------------------------------
     //Local variables to store the refined trajectory
@@ -2716,7 +2919,7 @@ int oosrefeml2seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* t
             gnuplot_cmd(h3, "set grid");
 
             h4 = gnuplot_init();
-            gnuplot_cmd(h4,  "set title \"t0 vs s1_EM\" ");
+            gnuplot_cmd(h4,  "set title \"s3_SEM vs s1_SEM\" ");
             gnuplot_cmd(h4, "set grid");
 
             h5 = gnuplot_init();
@@ -2740,475 +2943,381 @@ int oosrefeml2seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* t
                       man_index, coord_type, inner_prec, true, orbit_EM, orbit_SEM,
                       h2, refSt, &niter);
 
-    //====================================================================================
-    //6.2. If it is a sucess, we go on.
-    //====================================================================================
-    int kn = 0;
-    string filename_traj = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF_TRAJ, SEML.li_SEM, orbit_EM.getT0()/SEML.us_em.T);
 
-    //------------------------------------------------------------------------------------
+
+
+    //====================================================================================
     // If it is not a success, we print the value, and we return
-    //------------------------------------------------------------------------------------
+    //====================================================================================
     if(status)
     {
         cerr << fname << ". Error during the first refinement procedure. ref_errno = " << ref_strerror(status) << endl;
         return FTC_FAILURE;
     }
-    else
+
+    //====================================================================================
+    // If it is a sucess, we go on.
+    //====================================================================================
+    //------------------------------------------------------------------------------------
+    // Some inner variables
+    //------------------------------------------------------------------------------------
+    double yv[6];
+    int kn = 0;
+
+    //====================================================================================
+    // Find the intersection with a certain Poincaré Section (PS)
+    //====================================================================================
+    double ye[6], te = 0.0;
+    ooxpseml2seml(ye, &te, t_traj_n, y_traj_n, man_index, refSt);
+
+    //====================================================================================
+    // Save first entry if the continuation process is on
+    //====================================================================================
+    string filename_traj = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF_TRAJ,
+                                       SEML.li_SEM, orbit_EM.getT0()/SEML.us_em.T);
+
+    if(refSt.isSaved && refSt.isCont())
     {
-        //================================================================================
-        // Some inner variables
-        //================================================================================
-        double yv[42];
+        cout << "-----------------------------------------------------------"  << endl;
+        cout << fname << ". Save first entry in " << filename_traj             << endl;
+        cout << "-----------------------------------------------------------"  << endl;
+
+        // Main parameters
+        writeCONT_txt(orbit_EM, orbit_SEM, &te, ye, true);
+
+        // Entire trajectory
+        writeCONT_bin(refSt, filename_traj, dcs, coord_type,
+                       y_traj_n, t_traj_n, man_index, mPlot,
+                       orbit_EM, orbit_SEM, kn++, true,
+                       refSt.isSaved_EM, refSt.isSaved_SEM);
+    }
+
+    //====================================================================================
+    //Continuation procedure
+    //====================================================================================
+    if(refSt.isCont())
+    {
+        cout << fname << ". Continuation procedure.                         "  << endl;
+        cout << "-----------------------------------------------------------"  << endl;
 
         //================================================================================
-        // Find the intersection with a certain Poincaré Section (PS)
+        // Initialization
         //================================================================================
-        double ye[6], te = 0.0;
-        ooxpseml2seml(ye, &te, t_traj_n, y_traj_n, man_index, refSt);
 
-        //================================================================================
-        // Save first entry if the continuation process is on
-        //================================================================================
-        double** ymc   = dmatrix(0, 5, 0, mPlot);
-        double* tmc    = dvector(0, mPlot);
+        //--------------------------------------------------------------------------------
+        // Initialize the stepper & desired number of iterations in Newton's method
+        //--------------------------------------------------------------------------------
+        double ds0    = 5e-2;
+        double niter0 = 4;
 
-
-        if(refSt.isSaved && refSt.isCont())
+        switch(refSt.time)
         {
-            cout << "-----------------------------------------------------------"  << endl;
-            cout << fname << ". Save first entry in " << filename_traj             << endl;
-            cout << "-----------------------------------------------------------"  << endl;
-
-            //============================================================================
-            // Main parameters
-            //============================================================================
-            writeCONT_txt(orbit_EM, orbit_SEM, &te, ye, true);
-
-            //============================================================================
-            // Entire trajectory
-            //============================================================================
-            oosaveeml2seml(refSt, filename_traj, dcs, coord_type,
-                           y_traj_n, t_traj_n, man_index, mPlot,
-                           orbit_EM, orbit_SEM, kn++, true, isEML, isSEML);
-
-            //============================================================================
-            // Compute final orbit in reduced coordinates (very SLOW, discarded for now
-            //============================================================================
-            /*
-            //            cout << "-------------------------------------------"  << endl;
-            //            cout << "Compute the initial SEMLi orbit            "  << endl;
-            //            cout << "-------------------------------------------"  << endl;
-            //            printf("Press ENTER to go on\n");
-            //            scanf("%c",&ch);
-            //
-            //
-            //            vector<Oftsc> Fh;
-            //            Fh.reserve(5);
-            //            for(int i = 0; i < 5; i++) Fh.push_back(Oftsc(5, OFTS_ORDER, OFS_NV, OFS_ORDER));
-            //            readVOFTS_bin(Fh, SEML_SEM.cs.F_PMS+"rvf/fh");
-            //
-            //            //------------------------------------------------------------------------------------
-            //            //For dot(s) = fh(s)
-            //            //------------------------------------------------------------------------------------
-            //            RVF rvf;
-            //            rvf.ofs_order = SEML.eff_nf_SEM;
-            //            Ofsc AUX(rvf.ofs_order);
-            //            rvf.fh         = &Fh;
-            //            rvf.ofs        = &AUX;
-            //            rvf.order      = OFTS_ORDER;
-            //            rvf.n          = orbit_SEM.getN();
-            //            rvf.reduced_nv = 5;
-            //
-            //            gsl_odeiv2_system sys_fh;
-            //            sys_fh.function  = qbfbp_fh;
-            //            sys_fh.jacobian  = NULL;
-            //            sys_fh.dimension = 2*rvf.reduced_nv;
-            //            sys_fh.params    = &rvf;
-            //
-            //            const gsl_odeiv2_step_type* T_fh = gsl_odeiv2_step_rk8pd;
-            //            gsl_odeiv2_driver* d_fh = gsl_odeiv2_driver_alloc_y_new (&sys_fh, T_fh, 1e-12, 1e-10, 1e-10);
-            //
-            //
-            //            //------------------------------------------------------------------------------------
-            //            // Temp variables
-            //            //------------------------------------------------------------------------------------
-            //            double t0_SEM = t_traj_n[man_index];
-            //            double t1_SEM = t0_SEM+tof_seml_SEM;
-            //            double z[6];
-            //            double t2 = t0_SEM;
-            //            int k  = 0;
-            //            double  s1ccm8[2*rvf.reduced_nv]; //CCM8
-            //
-            //            //------------------------------------------------------------------------------------
-            //            // Initial state in CCM8 form
-            //            //------------------------------------------------------------------------------------
-            //            RCMtoCCM8(orbit_SEM.getSi(), s1ccm8, 5);
-            //
-            //            //------------------------------------------------------------------------------------
-            //            // Reopen the file
-            //            //------------------------------------------------------------------------------------
-            //            filestream.open (filename_traj.c_str(), ios::out | ios::binary | ios::app);
-            //
-            //            //------------------------------------------------------------------------------------
-            //            // Loop
-            //            //------------------------------------------------------------------------------------
-            //            while(k <= mPlot && orbit_SEM.getSi()[4] > 1e-5)
-            //            {
-            //                cout << "orbit_SEM.si[4] = " << orbit_SEM.getSi()[4] << endl;
-            //                //To NC coordinates
-            //                orbit_SEM.evalRCMtoNC(t2, z);
-            //
-            //                //Save
-            //                for(int i = 0; i < 6; i++) y_man_NCSEM[i][k] = z[i];
-            //                t_man_SEM[k] = t2;
-            //
-            //                //Plot
-            //                gnuplot_plot_X(h2, &z[0], &z[1],  &z[2], 1, (char*)"", "points", "1", "1", 6);
-            //
-            //                //Save in file
-            //                res = -1.0;
-            //                filestream.write((char*) &res, sizeof(double));
-            //
-            //                res = t2;
-            //                filestream.write((char*) &res, sizeof(double));
-            //
-            //                for(int i = 0; i < 6; i++)
-            //                {
-            //                    res = z[i];
-            //                    filestream.write((char*) &res, sizeof(double));
-            //                }
-            //
-            //                //Advance one step
-            //                gsl_odeiv2_evolve_apply (d_fh->e, d_fh->c, d_fh->s, d_fh->sys, &t2, t1_SEM, &d_fh->h, s1ccm8);
-            //                orbit_SEM.ccm8torcm(s1ccm8);
-            //                k++;
-            //            }
-            //            filestream.close()
-            */
-
+        case REF_VAR_TIME:
+        case REF_VAR_TN:
+            ds0    = refSt.ds0_vt;
+            niter0 = refSt.nu0_vt;
+            break;
+        case REF_FIXED_TIME:
+            ds0    = refSt.ds0;
+            niter0 = refSt.nu0;
+            break;
         }
 
-        //================================================================================
-        //Continuation procedure
-        //================================================================================
-        if(refSt.isCont())
-        {
-            cout << fname << ". Continuation procedure.                         "  << endl;
-            cout << "-----------------------------------------------------------"  << endl;
+        double ds  = ds0;
+        double dkn = 0.0;
 
-            //----------------------------------------------------------------------------
-            // Initialize the stepper
-            //----------------------------------------------------------------------------
-            double ds0 = 1e-1;
-            double niter0 = 4;
+        //--------------------------------------------------------------------------------
+        //An additional condition can be set:
+        //
+        // REF_COND_S5: if the time is not fixed, we want to decrease the
+        //s5 component at SEMLi. Therefore, we add a stopping condition on the loop.
+        //
+        // REF_COND_T: we want to make enough "turns" about SEMLi
+        //--------------------------------------------------------------------------------
+        bool addCondition = true;
+        double theta_acc  = 0.0, theta_old = 0.0, theta_max  = refSt.thetaMax;
+        int mani_old = man_index;
+        switch(refSt.termination)
+        {
+        case REF_COND_S5:
+        {
             switch(refSt.time)
             {
             case REF_VAR_TIME:
             case REF_VAR_TN:
-                ds0 = 8e-2;
+                addCondition = fabs(orbit_SEM.getSi()[4]) > ORBIT_SEM_UNSTABLE_MIN;
                 break;
+
+
             case REF_FIXED_TIME:
-                ds0 = 3e-2;
+                addCondition =  true;
                 break;
             }
-            double ds  = ds0;
-            double dkn = 0.0;
+            break;
+        }
 
-            //----------------------------------------------------------------------------
-            //An additional condition can be set:
-            //
-            // REF_COND_S5: if the time is not fixed, we want to decrease the
-            //s5 component at SEMLi. Therefore, we add a stopping condition on the loop.
-            //
-            // REF_COND_T: we want to make enough "turns" about SEMLi
-            //----------------------------------------------------------------------------
-            bool addCondition = true;
-            double theta_acc  = 0.0, theta_old = 0.0, theta_max  = refSt.thetaMax;
-            int mani_old = man_index;
+        case REF_COND_T:
+        {
+            addCondition =  true;
+            break;
+        }
+        }
+
+        //================================================================================
+        // Continuation loop
+        //================================================================================
+
+        //--------------------------------------------------------------------------------
+        // The maximum number of steps depends on the strategy
+        //--------------------------------------------------------------------------------
+        int cont_step_max_local = refSt.cont_step_max;
+        switch(refSt.time)
+        {
+        case REF_VAR_TIME:
+        case REF_VAR_TN:
+            cont_step_max_local = refSt.cont_step_max_vt;
+            break;
+
+
+        case REF_FIXED_TIME:
+            cont_step_max_local = refSt.cont_step_max;
+            break;
+        }
+
+        //--------------------------------------------------------------------------------
+        //Loop
+        //--------------------------------------------------------------------------------
+        while(kn < cont_step_max_local && status == GSL_SUCCESS && addCondition)
+        {
+            //============================================================================
+            // Updating the free variables via the predictor
+            //============================================================================
+            predictor(y_traj_n, t_traj_n, &ds, ds, nullvector,
+                      orbit_EM, orbit_SEM, man_index, coord_type, refSt);
+
+            //============================================================================
+            // Diff correction
+            //============================================================================
+            status = diffcorr(y_traj_n, t_traj_n, y_traj_n, t_traj_n,
+                              nullvector, 42, man_index, coord_type, inner_prec,
+                              false, orbit_EM, orbit_SEM, h2, refSt, &niter);
+
+            //============================================================================
+            // Find the intersection with a certain Poincaré Section (PS)
+            //============================================================================
+            double ye[6], te = 0.0;
+            if(status == GSL_SUCCESS) ooxpseml2seml(ye, &te, t_traj_n, y_traj_n, man_index, refSt);
+
+            //============================================================================
+            // Save
+            //============================================================================
+            if(refSt.isSaved && status == GSL_SUCCESS)
+            {
+                // Main parameters
+                writeCONT_txt(orbit_EM, orbit_SEM, &te, ye, false);
+
+                // Entire trajectory
+                writeCONT_bin(refSt, filename_traj, dcs, coord_type,
+                               y_traj_n, t_traj_n, man_index, mPlot,
+                               orbit_EM, orbit_SEM, kn, false,
+                               refSt.isSaved_EM, refSt.isSaved_SEM);
+            }
+
+
+            //============================================================================
+            // Display
+            //============================================================================
+            dkn = (double) kn;
+            double t0 = orbit_EM.getT0()/SEML.us_sem.T;//t_traj_n[0]/SEML.us_sem.T;
+            if(refSt.isCont() && status == GSL_SUCCESS && kn % plotfreq == 0)
+            {
+                switch(refSt.time)
+                {
+                case REF_VAR_TIME:
+                case REF_VAR_TN:
+                {
+                    gnuplot_plotc_xy(h5, &dkn, &orbit_SEM.getSi()[4], 1, (char*)"", "points", "1", "2", 0);
+                    break;
+                }
+
+                case REF_FIXED_TIME:
+                {
+                    gnuplot_plotc_xy(h3, &orbit_EM.getSi()[0],  &orbit_EM.getSi()[2], 1, (char*)"", "points", "1", "2", 0);
+                    gnuplot_plotc_xy(h4, &orbit_SEM.getSi()[0],  &orbit_SEM.getSi()[2], 1, (char*)"", "points", "1", "2", 0);
+                    gnuplot_plotc_xy(h5, &dkn, &orbit_SEM.getSi()[4], 1, (char*)"", "points", "1", "2", 0);
+                    break;
+                }
+
+                }
+            }
+
+            //============================================================================
+            // Update the additionnal condition, if necessary
+            //============================================================================
             switch(refSt.termination)
             {
             case REF_COND_S5:
             {
+                //------------------------------------------------------------------------
+                // First type of condition: stop when we are close enough to the
+                // center manifold (unstable component is small enough)
+                // note: this condition is not used when all the times are fixed.
+                //------------------------------------------------------------------------
                 switch(refSt.time)
                 {
                 case REF_VAR_TIME:
                 case REF_VAR_TN:
                     addCondition = fabs(orbit_SEM.getSi()[4]) > ORBIT_SEM_UNSTABLE_MIN;
                     break;
-
-
                 case REF_FIXED_TIME:
-                    addCondition =  true;
+                    addCondition = true;
                     break;
                 }
                 break;
             }
-
             case REF_COND_T:
             {
-                addCondition =  true;
-                break;
-            }
-            }
+                //------------------------------------------------------------------------
+                // Another possible condition: enough turns around SEMLi.
+                //------------------------------------------------------------------------
+                double det, dot, theta;
 
-            //============================================================================
-            // Continuation loop
-            //============================================================================
+                //Compute the angle between the last point (entry in the manifold)
+                // and the second last, at the beginning of the procedure
+                dot = y_traj_n[0][man_index]*y_traj_n[0][mani_old-1] +
+                      y_traj_n[1][man_index]*y_traj_n[1][mani_old-1];  // dot product
+                det = y_traj_n[0][man_index]*y_traj_n[1][mani_old-1] -
+                      y_traj_n[1][man_index]*y_traj_n[0][mani_old-1];  // determinant
 
-            //----------------------------------------------------------------------------
-            // The maximum number of steps depends on the strategy
-            //----------------------------------------------------------------------------
-            int cont_step_max_local = refSt.cont_step_max;
-            switch(refSt.time)
-            {
-            case REF_VAR_TIME:
-            case REF_VAR_TN:
-                cont_step_max_local = refSt.cont_step_max_vt;
-                break;
+                theta = 180/M_PI*atan(det/dot);//180/M_PI*atan2(det, dot);  // atan2(sin, cos) or tan(sin/cos)
 
-
-            case REF_FIXED_TIME:
-                cont_step_max_local = refSt.cont_step_max;
-                break;
-            }
-
-            //----------------------------------------------------------------------------
-            //Loop
-            //----------------------------------------------------------------------------
-            while(kn < cont_step_max_local && status == GSL_SUCCESS && addCondition)
-            {
-                //========================================================================
-                // 5.2.1. Updating the free variables via the predictor
-                //========================================================================
-                predictor(y_traj_n, t_traj_n, &ds, ds0, nullvector,
-                          orbit_EM, orbit_SEM, man_index, coord_type, refSt);
-
-                //========================================================================
-                // 5.2.2. Diff correction
-                //========================================================================
-                status = diffcorr(y_traj_n, t_traj_n, y_traj_n, t_traj_n,
-                                  nullvector, 42, man_index, coord_type, inner_prec,
-                                  false, orbit_EM, orbit_SEM, h2, refSt, &niter);
-
-                //========================================================================
-                // Find the intersection with a certain Poincaré Section (PS)
-                //========================================================================
-                double ye[6], te = 0.0;
-                if(status == GSL_SUCCESS) ooxpseml2seml(ye, &te, t_traj_n, y_traj_n, man_index, refSt);
-
-                //========================================================================
-                // 5.2.3. Save
-                //========================================================================
-                if(refSt.isSaved && status == GSL_SUCCESS)
+                //We save the value
+                if(kn == 0)
                 {
-
-                    //====================================================================
-                    // Main parameters
-                    //====================================================================
-                    writeCONT_txt(orbit_EM, orbit_SEM, &te, ye, false);
-
-                    //====================================================================
-                    // Entire trajectory
-                    //====================================================================
-                    oosaveeml2seml(refSt, filename_traj, dcs, coord_type,
-                                   y_traj_n, t_traj_n, man_index, mPlot,
-                                   orbit_EM, orbit_SEM, kn, false, isEML, isSEML);
+                    theta_old = theta;
                 }
-
-
-                //========================================================================
-                // 5.2.4. Display
-                //========================================================================
-                dkn = (double) kn;
-                double t0 = orbit_EM.getT0()/SEML.us_sem.T;//t_traj_n[0]/SEML.us_sem.T;
-                if(refSt.isCont() && status == GSL_SUCCESS && kn % plotfreq == 0)
-                {
-                    switch(refSt.time)
-                    {
-                    case REF_VAR_TIME:
-                    case REF_VAR_TN:
-                    {
-                        gnuplot_plotc_xy(h5, &dkn, &orbit_SEM.getSi()[4], 1, (char*)"", "points", "1", "2", 0);
-                        break;
-                    }
-
-                    case REF_FIXED_TIME:
-                    {
-                        gnuplot_plotc_xy(h3, &orbit_EM.getSi()[0],  &orbit_EM.getSi()[2], 1, (char*)"", "points", "1", "2", 0);
-                        gnuplot_plotc_xy(h4, &t0, &orbit_EM.getSi()[0], 1, (char*)"", "points", "1", "2", 0);
-                        gnuplot_plotc_xy(h5, &dkn, &orbit_SEM.getSi()[4], 1, (char*)"", "points", "1", "2", 0);
-                        break;
-                    }
-
-                    }
-                }
-
-                //========================================================================
-                // 5.2.5. update the additionnal condition, if necessary
-                //========================================================================
-                switch(refSt.termination)
-                {
-                case REF_COND_S5:
+                else
                 {
                     //--------------------------------------------------------------------
-                    // First type of condition: stop when we are close enough to the
-                    // center manifold (unstable component is small enough)
-                    // note: this condition is not used when all the times are fixed.
+                    // Each time that theta_old*theta < 0, it means that we have made
+                    // about 180° around the last point. We then do 2 actions:
+                    //  1. We update the accumulated angle (+90°)
+                    //  2. We add a few patch points, to ensure numerical stability.
                     //--------------------------------------------------------------------
-                    switch(refSt.time)
+                    if(theta_old*theta < 0)
                     {
-                    case REF_VAR_TIME:
-                    case REF_VAR_TN:
-                        addCondition = fabs(orbit_SEM.getSi()[4]) > ORBIT_SEM_UNSTABLE_MIN;
-                        break;
-                    case REF_FIXED_TIME:
-                        addCondition = true;
-                        break;
-                    }
-                    break;
-                }
-                case REF_COND_T:
-                {
-                    //--------------------------------------------------------------------
-                    // Another possible condition: enough turns around SEMLi.
-                    //--------------------------------------------------------------------
-                    double det, dot, theta;
-
-                    //Compute the angle between the last point (entry in the manifold)
-                    // and the second last, at the beginning of the procedure
-                    dot = y_traj_n[0][man_index]*y_traj_n[0][mani_old-1] +
-                          y_traj_n[1][man_index]*y_traj_n[1][mani_old-1];  // dot product
-                    det = y_traj_n[0][man_index]*y_traj_n[1][mani_old-1] -
-                          y_traj_n[1][man_index]*y_traj_n[0][mani_old-1];  // determinant
-
-                    theta = 180/M_PI*atan(det/dot);//180/M_PI*atan2(det, dot);  // atan2(sin, cos) or tan(sin/cos)
-
-                    //We save the value
-                    if(kn == 0)
-                    {
-                        theta_old = theta;
-                    }
-                    else
-                    {
-                        //----------------------------------------------------------------
-                        // Each time that theta_old*theta < 0, it means that we have made
-                        // about 180° around the last point. We then do 2 actions:
                         //  1. We update the accumulated angle (+90°)
-                        //  2. We add a few patch points, to ensure numerical stability.
-                        //----------------------------------------------------------------
-                        if(theta_old*theta < 0)
-                        {
-                            //  1. We update the accumulated angle (+90°)
-                            theta_acc += 90;
-                        }
-
-                        theta_old = theta;
+                        theta_acc += 90;
                     }
 
-
-
-                    //--------------------------------------------------------------------
-                    // The condition is only applied when some times are left free to vary
-                    //--------------------------------------------------------------------
-                    switch(refSt.time)
-                    {
-                    case REF_VAR_TIME:
-                    case REF_VAR_TN:
-                        cout << fname << ". theta     = " << theta << endl;
-                        cout << fname << ". theta_acc = " << theta_acc << endl;
-                        cout << fname << ". theta_max = " << theta_max << endl;
-                        addCondition = theta_acc < theta_max;
-                        break;
-                    case REF_FIXED_TIME:
-                        addCondition = true;
-                        break;
-                    }
-
-                    break;
-                }
+                    theta_old = theta;
                 }
 
-
-                //========================================================================
-                // 5.2.4. Advance
-                //========================================================================
-                kn++;
-                cout << "Step n°" << kn << "/" << cont_step_max_local << " complete"  << endl;
-                cout << "----------------------------------------------------------"  << endl;
-
-
-                //========================================================================
-                // 5.2.6. update the stepper. For now, only in the REF_VAR_TIME case !
-                //========================================================================
+                //------------------------------------------------------------------------
+                // The condition is only applied when some times are left free to vary
+                //------------------------------------------------------------------------
                 switch(refSt.time)
                 {
                 case REF_VAR_TIME:
                 case REF_VAR_TN:
-                    ds *= niter0/niter;
+                    cout << fname << ". theta     = " << theta << endl;
+                    cout << fname << ". theta_acc = " << theta_acc << endl;
+                    cout << fname << ". theta_max = " << theta_max << endl;
+                    addCondition = theta_acc < theta_max;
                     break;
                 case REF_FIXED_TIME:
-                    ds *= niter0/niter;
+                    addCondition = true;
                     break;
                 }
+
+                break;
+            }
             }
 
+
             //============================================================================
-            // If the trajectory has been extended... We had a few points.
-            // Careful with this piece of code: if nnew is big, then a big number of points
-            // is added to the state vectors, which can make the Newton procedure unstable.
-            //
-            // Consequently, this option is taken only if refSt.type = REF_CONT_D_HARD_CASE
-            // i.e. basically if the user has tried refSt.type = REF_CONT_D before
-            // but it did not work...
-            //
-            // IMPORTANT: after this step, the number of points man_grid_size_t is changed!
-            // this means that any further use of this routine with man_grid_size_t will
-            // take into account this change.
-            //
+            // Advance
             //============================================================================
-            if(theta_acc >= theta_max && refSt.type == REF_CONT_D_HARD_CASE)
+            kn++;
+            cout << "Step n°" << kn << "/" << cont_step_max_local << " complete"  << endl;
+            cout << "----------------------------------------------------------"  << endl;
+
+
+            //============================================================================
+            // Update the stepper. For now, only in the REF_VAR_TIME case !
+            //============================================================================
+            cout << "Updating the stepper:                                     "  << endl;
+            cout << "ds_old = " << ds                                             << endl;
+
+            switch(refSt.time)
             {
-                //  Add a few patch points
-                for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][man_index-1];
-                status = ode78(ymt, tmt, &ode78coll, t_traj_n[man_index-1],
-                               t_traj_n[man_index], yv, 6, nnew, dcs, coord_type,
-                               coord_type);
-
-                //Copy y_traj_n/t_traj_n in y_traj/t_traj
-                for(int k = 0; k <= man_index; k++)
-                {
-                    for(int i = 0; i < 6; i++) y_traj[i][k] = y_traj_n[i][k];
-                    t_traj[k] = t_traj_n[k];
-                }
-
-                //Copy y_traj/t_traj back in y_traj_n/t_traj_n, except the last point
-                for(int k = 0; k < man_index; k++)
-                {
-                    for(int i = 0; i < 6; i++) y_traj_n[i][k] = y_traj[i][k];
-                    t_traj_n[k] = t_traj[k];
-                }
-
-                //Copy additionnal points, except the first one
-                for(int k = 1; k <= nnew; k++)
-                {
-                    for(int i = 0; i < 6; i++) y_traj_n[i][k+man_index-1] = ymt[i][k];
-                    t_traj_n[k+man_index-1] = tmt[k];
-                }
-
-                //////////////////////////////////////////////////////////////////////////
-                //New size is man_index+nnew-1 +
-                //IMPORTANT: we also update *man_grid_size_t for
-                //next continuation !!!
-                //////////////////////////////////////////////////////////////////////////
-                man_index += nnew-1;
-                *man_grid_size_t = man_index;
-
-                //Plot the new distribution
-                gnuplot_plot_X(h2, y_traj_n, man_index+1, (char*)"", "points", "1", "1", 8);
+            case REF_VAR_TIME:
+            case REF_VAR_TN:
+                ds *= niter0/niter;
+                break;
+            case REF_FIXED_TIME:
+                ds *= niter0/niter;
+                break;
             }
+
+            cout << "ds_new = " << ds                                             << endl;
+            cout << "----------------------------------------------------------"  << endl;
         }
 
+        //================================================================================
+        // If the trajectory has been extended... We add a few points.
+        // Careful with this piece of code: if nnew is big, then a big number of points
+        // is added to the state vectors, which can make the Newton procedure unstable.
+        //
+        // Consequently, this option is taken only if refSt.type = REF_CONT_D_HARD_CASE
+        // i.e. basically if the user has tried refSt.type = REF_CONT_D before
+        // but it did not work...
+        //
+        // IMPORTANT: after this step, the number of points man_grid_size_t is changed!
+        // this means that any further use of this routine with man_grid_size_t will
+        // take into account this change.
+        //
+        //================================================================================
+        if(theta_acc >= theta_max && refSt.type == REF_CONT_D_HARD_CASE)
+        {
+            //  Add a few patch points
+            for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][man_index-1];
+            status = ode78(ymt, tmt, &ode78coll, t_traj_n[man_index-1],
+                           t_traj_n[man_index], yv, 6, nnew, dcs, coord_type,
+                           coord_type);
+
+            //Copy y_traj_n/t_traj_n in y_traj/t_traj
+            for(int k = 0; k <= man_index; k++)
+            {
+                for(int i = 0; i < 6; i++) y_traj[i][k] = y_traj_n[i][k];
+                t_traj[k] = t_traj_n[k];
+            }
+
+            //Copy y_traj/t_traj back in y_traj_n/t_traj_n, except the last point
+            for(int k = 0; k < man_index; k++)
+            {
+                for(int i = 0; i < 6; i++) y_traj_n[i][k] = y_traj[i][k];
+                t_traj_n[k] = t_traj[k];
+            }
+
+            //Copy additionnal points, except the first one
+            for(int k = 1; k <= nnew; k++)
+            {
+                for(int i = 0; i < 6; i++) y_traj_n[i][k+man_index-1] = ymt[i][k];
+                t_traj_n[k+man_index-1] = tmt[k];
+            }
+
+            //////////////////////////////////////////////////////////////////////////
+            //New size is man_index+nnew-1 +
+            //IMPORTANT: we also update *man_grid_size_t for
+            //next continuation !!!
+            //////////////////////////////////////////////////////////////////////////
+            man_index += nnew-1;
+            *man_grid_size_t = man_index;
+
+            //Plot the new distribution
+            gnuplot_plot_X(h2, y_traj_n, man_index+1, (char*)"", "points", "1", "1", 8);
+        }
     }
 
     //====================================================================================
@@ -3277,15 +3386,28 @@ int oosrefeml2seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* t
     */
 
     //====================================================================================
-    // 7. Save final solution, only if REF_CONT
+    // Save final solution, only if REF_CONT. The savings of the orbit is FORCED.
     //====================================================================================
     if(refSt.type == REF_CONT)
-    oosaveeml2seml(refSt, filename_traj, dcs, coord_type,
-                                   y_traj_n, t_traj_n, man_index, mPlot,
-                                   orbit_EM, orbit_SEM, (kn+1), false, true, true);
+    {
+        // If !refSt.isSaved, this is the first solution to be solved, hence label = 0
+        double label = (refSt.isSaved)? kn+1:0;
+
+        // Intersection with the Pk section
+        ooxpseml2seml(ye, &te, t_traj_n, y_traj_n, man_index, refSt);
+
+        // Main parameters
+        writeCONT_txt(orbit_EM, orbit_SEM, &te, ye, true);
+
+        // Entire trajectory
+        writeCONT_bin(refSt, filename_traj, dcs, coord_type,
+                      y_traj_n, t_traj_n, man_index, mPlot,
+                      orbit_EM, orbit_SEM, label, !refSt.isSaved, 1, 1);
+    }
+
 
     //====================================================================================
-    // 8. Display final solution
+    // Display final solution
     //====================================================================================
     if(status)
     {
@@ -3528,6 +3650,8 @@ int ooseleml2seml(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM[2
             {
                 filename += "075T_T_FINAL.bin";
             }
+
+            //filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_t0_099T.bin";
         }
         else
         {
@@ -3624,8 +3748,8 @@ int ooseleml2seml(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM[2
         //--------------------------------------------------------------------------------
         // Limits in the time of flight (TOF) if necessary
         //--------------------------------------------------------------------------------
-        if(tof_MIN > 0) cst = cst & (tf_EM[kpor] - t0_EM[kpor]) > tof_MIN;
-        if(tof_MAX > 0) cst = cst & (tf_EM[kpor] - t0_EM[kpor]) < tof_MAX;
+        if(tof_MIN > 0) cst = cst & ( (tf_EM[kpor] - t0_EM[kpor]) > tof_MIN );
+        if(tof_MAX > 0) cst = cst & ( (tf_EM[kpor] - t0_EM[kpor]) < tof_MAX );
 
         if(cst)
         {

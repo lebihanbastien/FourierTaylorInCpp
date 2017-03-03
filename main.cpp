@@ -336,6 +336,14 @@ int main(int argc, char** argv)
         refSt.cont_step_max    = +450;            // with fixed times
         refSt.cont_step_max_vt = +150;            // with variable times
 
+        // Initial step in the continuation procedure
+        refSt.ds0    = 8e-2;                      //with fixed time
+        refSt.ds0_vt = (LI_EM ==1)?  3e-2:5e-1;   //with variable time
+
+        // Desired number of iterations in Newton's method in the continuation procedure
+        refSt.nu0 = 2;          //with fixed time
+        refSt.nu0_vt = 4;       //with variable time
+
         //User parameters
         refSt.isFlagOn      = 1;                  // do we have steps in the procedure - asking the user to press enter to go on?
         refSt.isPlotted     = 1;                  // do we plot the results during the computation?
@@ -350,10 +358,11 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         refSt.isDebug       = 0;                        // if yes, additionnal tests are performed
         refSt.gridSize      = 20;                       // number of points on the refinement grid. 20 is taken by heuristics.
+        refSt.mplot         = 200;                      // number of points per plot between to pach points (e.g. total plot points is gridSize*mplot)
 
         refSt.time          = REF_VAR_TN;               // type of constraints on the times in REF_CONT
         refSt.grid          = REF_FIXED_GRID;           // type of grid
-        refSt.termination   = REF_COND_S5;               // termination condition in the continuation with variable final time (either REF_VAR_TN/REF_VAR_TIME)
+        refSt.termination   = REF_COND_S5;              // termination condition in the continuation with variable final time (either REF_VAR_TN/REF_VAR_TIME)
         refSt.coord_type    = NCSEM;                    // coordinates system in the refinement procedure
 
         refSt.xps           = (LI_SEM == 1)? +0.6:-0.6; // position of the poincaré section in NCSEM coordinates
@@ -370,6 +379,10 @@ int main(int argc, char** argv)
         refSt.tspan_EM      = +10*SEML.us_em.T;
         refSt.tspan_SEM     = +10*SEML.us_sem.T;
 
+        // Storing the orbits at each step?
+        refSt.isSaved_EM    = 0;      //0: don't save, 1: save using projection method
+        refSt.isSaved_SEM   = 0;      //0: don't save, 1: save using projection method,
+                                      //2: save using integration in reduced coordinates
     }
     else  //arguments were passed
     {
@@ -379,9 +392,9 @@ int main(int argc, char** argv)
         switch(COMP_TYPE)
         {
 
-            //================================================================================
+            //============================================================================
             // 3D Projection CMU EML2 to CM SEMLi
-            //================================================================================
+            //============================================================================
         case COMP_CM_EML2_TO_CM_SEML_3D:
         case COMP_CM_EML2_TO_CM_SEML:
         {
@@ -465,6 +478,14 @@ int main(int argc, char** argv)
             refSt.cont_step_max    = atoi(argv[index++]);  // with fixed times
             refSt.cont_step_max_vt = atoi(argv[index++]);  // with variable times
 
+            // Initial step in the continuation procedure
+            refSt.ds0    = atof(argv[index++]);   //with fixed time
+            refSt.ds0_vt = atof(argv[index++]);   //with variable time
+
+            // Desired number of iterations in Newton's method in the continuation procedure
+            refSt.nu0    = atoi(argv[index++]);   //with fixed time
+            refSt.nu0_vt = atoi(argv[index++]);   //with variable time
+
             //User parameters
             refSt.isFlagOn      = atoi(argv[index++]);     // do we have steps in the procedure - asking the user to press enter to go on?
             refSt.isPlotted     = atoi(argv[index++]);     // do we plot the results during the computation?
@@ -479,6 +500,7 @@ int main(int argc, char** argv)
             //------------------------------------------------------------------------
             refSt.isDebug       = atoi(argv[index++]);  // if yes, additionnal tests are performed
             refSt.gridSize      = atoi(argv[index++]);  // number of points on the refinement grid. 20 is taken by heuristics.
+            refSt.mplot         = atoi(argv[index++]);  // number of points per plot between to pach points (e.g. total plot points is gridSize*mplot)
 
             refSt.time          = atoi(argv[index++]);  // type of constraints on the times in REF_CONT
             refSt.grid          = atoi(argv[index++]);  // type of grid
@@ -499,6 +521,12 @@ int main(int argc, char** argv)
             // Integration window for each orbit
             refSt.tspan_EM      = atof(argv[index++])*SEML.us_em.T;
             refSt.tspan_SEM     = atof(argv[index++])*SEML.us_sem.T;
+
+            // Storing the orbits at each step?
+            refSt.isSaved_EM    = atoi(argv[index++]);  //0: don't save, 1: save using projection method
+            refSt.isSaved_SEM   = atoi(argv[index++]);  //0: don't save, 1: save using projection method,
+                                                        //2: save using integration in reduced coordinates
+
             break;
         }
 

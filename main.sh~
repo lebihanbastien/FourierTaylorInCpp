@@ -218,6 +218,18 @@ if [ -z ${REFST_TYPE+x} ]; then
 	REFST_CONT_STEP_MAX=+450;        # with fixed times
 	REFST_CONT_STEP_MAX_VT=+50;      # with variable times
 
+	# Initial step in the continuation procedure
+	REFST_VAR_TIME_DS0=8e-2	         # for variable times
+	if [ $LI_EM == 1 ]; then
+		REFST_FIXED_TIME_DS0=3e-2   # for fixed times
+	else
+		REFST_FIXED_TIME_DS0=5e-1   # for fixed times
+	fi
+
+	# Desired number of iterations in Newton's method in the continuation procedure
+	REFST_VAR_TIME_NU0=4 	# for variable times
+	REFST_FIXED_TIME_NU0=2  # for fixed times
+
 	# Direction of the continuation procedure
 	REFST_ISDIRUD=0			 # is it user defined?
 	REFST_DIR=-1    		 # if not, +1 or -1
@@ -229,13 +241,14 @@ if [ -z ${REFST_TYPE+x} ]; then
 	REFST_ISFROMSERVER=1		 # does the raw data comes from server files?
 	
 	# Maximum angle around SEMLi if REF_COND_T is used (in degrees)
-	REFST_THETAMAX=360               # should be a multiple of 90°
+	REFST_THETAMAX=240               # should be a multiple of 90°
 
 	#-----------------------------------------------------
 	# Parameters that are stable
 	#-----------------------------------------------------
 	REFST_ISDEBUG=0			 # if yes, additionnal tests are performed
 	REFST_GRIDSIZE=20        	 # number of points on the refinement grid
+	REFST_MPLOT=200        	         # number of points per plot between to pach points (e.g. total plot points is REFST_MPLOT*REFST_GRIDSIZE)
 
 	REFST_TIME=$REF_VAR_TN		 # type of constraints on the times in REF_CONT
 	REFST_GRID=$REF_FIXED_GRID	 # type of grid
@@ -255,6 +268,10 @@ if [ -z ${REFST_TYPE+x} ]; then
 	# Integration window for each orbit
 	REFST_TSPAN_EM=10  		 # given as %T, where T is the SEM period, in EM units
 	REFST_TSPAN_SEM=10 		 # given as %T, where T is the SEM period, in SEM units
+	
+	# Storing the orbits at each step?
+	REFST_ISSAVED_EM=0   # 0: don't save, 1: save using projection method
+	REFST_ISSAVED_SEM=0  # 0: don't save, 1: save using projection method, 2: save using integration in reduced coordinates
 else
 	#-----------------------------------------------------
 	# Display current set of parameters
@@ -298,6 +315,12 @@ else
 	echo ''
 	echo "REFST_CONT_STEP_MAX    =" $REFST_CONT_STEP_MAX
 	echo "REFST_CONT_STEP_MAX_VT =" $REFST_CONT_STEP_MAX_VT
+	echo ''
+	echo "REFST_VAR_TIME_DS0     =" $REFST_VAR_TIME_DS0
+	echo "REFST_FIXED_TIME_DS0   =" $REFST_FIXED_TIME_DS0
+	echo ''
+	echo "REFST_VAR_TIME_NU0     =" $REFST_VAR_TIME_NU0
+	echo "REFST_FIXED_TIME_NU0   =" $REFST_FIXED_TIME_NU0
 	echo ''
 	echo "REFST_ISDIRUD          =" $REFST_ISDIRUD
 	echo "REFST_DIR              =" $REFST_DIR
@@ -368,18 +391,22 @@ else
 
 	echo "REFST_ISDEBUG         =" $REFST_ISDEBUG
 	echo "REFST_GRIDSIZE        =" $REFST_GRIDSIZE
-
+	echo "REFST_MPLOT           =" $REFST_MPLOT
+	echo ''
 	echo "REFST_XPS             =" $REFST_XPS
 	echo "REFST_ISJPL           =" $REFST_ISJPL
 	echo "REFST_DJPLCOORD       =" $REFST_DJPLCOORD
 	echo "REFST_SIDIM           =" $REFST_SIDIM
-
+	echo ''
 	echo "REFST_SF_EML2         =" $REFST_SF_EML2
 	echo "REFST_SF_MAN          =" $REFST_SF_MAN
 	echo "REFST_SF_SEML2        =" $REFST_SF_SEML2
-
+	echo ''
 	echo "REFST_TSPAN_EM        =" $REFST_TSPAN_EM
 	echo "REFST_TSPAN_SEM       =" $REFST_TSPAN_SEM
+	echo ''
+	echo "REFST_ISSAVED_EM      =" $REFST_ISSAVED_EM
+	echo "REFST_ISSAVED_SEM     =" $REFST_ISSAVED_SEM
 	echo ''
 fi
 
@@ -389,38 +416,12 @@ fi
 #--------------------------------------------------------------
 echo -e "Do you want to go on with the computation (y/n)? \c "
 read  ans
-echo $ans
 # bash check the answer
 if [ "$ans" == "y" ]; then
-	
-	# The list of parameters for COMP_CM_EML2_TO_CM_SEML
-	# --COMP_TYPE
-	# --MODEL=$M_QBCP 
-	# --LI_EM=2
-	# --LI_SEM=2
-	# --OFS_ORDER=30
-	# --OFTS_ORDER=16
-	# --ISPAR=1
-	# --NUM_THREADS=4
-	# --TMIN=0.00     
-	# --TMAX=0.25     
-	# --TSIZE=0	  
-	# --GLIM_S1=(-35 +35)
-	# --GLIM_S2=(+0  +10)
-	# --GLIM_S3=(-35 +35)
-	# --GLIM_S4=(+0  +10)
-	# --TM=12 	      
-	# --MSIZE=500     
-	# --NSMIN=20      
-	# --YNMAX=0.6     
-	# --SNMAX=0.6     
-	# --NOD=6  
-	
-
 
 	#-----------------------------------------------------------------------------
 	#Build the array of coefficients
-	#-------------------------------
+	#-----------------------------------------------------------------------------
 
 	# The general parameters are common to all types of computation
 	COEFFS=($OFTS_ORDER $OFS_ORDER $COMP_TYPE $MODEL $LI_EM $LI_SEM $ISPAR $NUM_THREADS)
@@ -438,14 +439,17 @@ if [ "$ans" == "y" ]; then
 		        COEFFS=(${COEFFS[*]}  ${REFST_SI_CMU_EM_LIM[*]} $REFST_ISLIMUD)
 			COEFFS=(${COEFFS[*]}  ${REFST_TOF_LIM[*]})
 		  	COEFFS=(${COEFFS[*]}  $REFST_CONT_STEP_MAX $REFST_CONT_STEP_MAX_VT)
+			COEFFS=(${COEFFS[*]}  $REFST_VAR_TIME_DS0 $REFST_FIXED_TIME_DS0)
+			COEFFS=(${COEFFS[*]}  $REFST_VAR_TIME_NU0 $REFST_FIXED_TIME_NU0)
 			COEFFS=(${COEFFS[*]}  $REFST_ISFLAGON $REFST_ISPLOTTED $REFST_ISSAVED $REFST_ISFROMSERVER)
 			COEFFS=(${COEFFS[*]}  $REFST_THETAMAX)
 
-			COEFFS=(${COEFFS[*]}  $REFST_ISDEBUG $REFST_GRIDSIZE)
+			COEFFS=(${COEFFS[*]}  $REFST_ISDEBUG $REFST_GRIDSIZE $REFST_MPLOT)
 			COEFFS=(${COEFFS[*]}  $REFST_TIME $REFST_GRID $REFST_TERMINATION $REFST_COORD_TYPE)
 			COEFFS=(${COEFFS[*]}  $REFST_XPS $REFST_ISJPL $REFST_DJPLCOORD $REFST_SIDIM)
 			COEFFS=(${COEFFS[*]}  $REFST_SF_EML2 $REFST_SF_MAN $REFST_SF_SEML2)
 			COEFFS=(${COEFFS[*]}  $REFST_TSPAN_EM $REFST_TSPAN_SEM)
+			COEFFS=(${COEFFS[*]}  $REFST_ISSAVED_EM $REFST_ISSAVED_SEM)
 		;;
 		$COMP_SINGLE_ORBIT)              
 

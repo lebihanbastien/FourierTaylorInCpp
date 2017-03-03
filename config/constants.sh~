@@ -5,6 +5,18 @@
 # in the header file via #define
 #=====================================================
 
+#=====================================================
+# Find the number of cores to detect 
+# if we are on the server
+#=====================================================
+NCORES=`nproc --all`
+
+SERVER=0
+if [ $NCORES -gt 10 ]; then
+	echo "Use of the server is detected"
+	SERVER=1
+fi
+echo $SERVER
 
 #=====================================================
 #  ---- General parameters ----

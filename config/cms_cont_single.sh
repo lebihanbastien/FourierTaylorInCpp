@@ -1,8 +1,8 @@
 # Configuration file for FourierTaylorInCpp
 
-#--------------------------------------------------------------
+#-----------------------------------------------------
 # Source the parameters
-#--------------------------------------------------------------
+#-----------------------------------------------------
 source config/constants.sh
 
 #=====================================================
@@ -23,20 +23,36 @@ MODEL=$M_QBCP
 #-----------------------------------------------------
 # DEFAULT LIBRATION POINT FOR EM & SEM SYSTEM
 #-----------------------------------------------------
-LI_EM=1
+LI_EM=2
 LI_SEM=2
 
 #-----------------------------------------------------
 # Orders for the semi-numerical expansions
 #-----------------------------------------------------
+# Order of the Fourier series
 OFS_ORDER=30
-OFTS_ORDER=16
+
+# Order of the Taylor series, 
+# depending on where the computation takes place
+if [ $SERVER == 1 ]; then
+	OFTS_ORDER=20
+else
+	OFTS_ORDER=16
+fi
+
 
 #-----------------------------------------------------
 # Parameters for parallel computation
 #-----------------------------------------------------
-NUM_THREADS=4   #number of parallel threads
-ISPAR=1		#parallel computation is on by default
+# Number of parallel threads
+if [ $SERVER == 1 ]; then
+	NUM_THREADS=50
+else
+	NUM_THREADS=4
+fi
+
+# Parallel computation is on by default
+ISPAR=1		
 
 #-----------------------------------------------------
 # NOHUP condition
@@ -50,16 +66,12 @@ ISNOHUP=0
 #-----------------------------------------------------
 # Parameters that change often
 #-----------------------------------------------------
-REFST_TYPE=$REF_CONT_D           # Type of refinement - rk: set REF_CONT_D_HARD_CASE for difficult cases with REF_CONT_D (ex: EML2-SEMLi via SEML1...)
+REFST_TYPE=$REF_CONT             # Type of refinement - rk: set REF_CONT_D_HARD_CASE for difficult cases with REF_CONT_D (ex: EML2-SEMLi via SEML1...)
 REFST_DIM=$REF_PLANAR            # Type of dimensions planar or 3d?
-REFST_T0_DES=0.00                # Initial time - given as %T, with T the SEM period   
-
-# Direction of the continuation procedure
-REFST_ISDIRUD=0			 # is it user defined?
-REFST_DIR=-1    		 # if not, +1 or -1
+REFST_T0_DES=0.99                # Initial time - given as %T, with T the SEM period   
 
 # Domain of search (min s1, max s1, min s3, max s3) for the first guess
-REFST_SI_CMU_EM_LIM=(-35 35 -35 35)
+REFST_SI_CMU_EM_LIM=(-12 0 -30 -18)
 # Or, if we want the user to define such domain:
 REFST_ISLIMUD=0
 
@@ -69,11 +81,28 @@ REFST_TOF_LIM=(-1 -1)
 # Number of steps in the continuation procedure
 REFST_CONT_STEP_MAX=+450;        # with fixed times
 REFST_CONT_STEP_MAX_VT=+150;     # with variable times
+
+# Initial step in the continuation procedure
+if [ $LI_EM == 1 ]; then
+	REFST_FIXED_TIME_DS0=3e-2 # for fixed times
+else
+	REFST_FIXED_TIME_DS0=5e-1 # for fixed times
+fi
+REFST_VAR_TIME_DS0=8e-2	          # for variable times
+
+
+# Desired number of iterations in Newton's method in the continuation procedure
+REFST_FIXED_TIME_NU0=2           # for fixed times
+REFST_VAR_TIME_NU0=4 	         # for variable times
+
+# Direction of the continuation procedure
+REFST_ISDIRUD=0			 # is it user defined?
+REFST_DIR=-1    		 # if not, +1 or -1
  
 # User parameters
-REFST_ISFLAGON=1   	         # do we have steps in the procedure - asking the user to press enter to go on?
+REFST_ISFLAGON=0   	         # do we have steps in the procedure - asking the user to press enter to go on?
 REFST_ISPLOTTED=1   		 # do we plot the results during the computation?
-REFST_ISSAVED=1     		 # do we save the results in data files?
+REFST_ISSAVED=0     		 # do we save the results in data files?
 REFST_ISFROMSERVER=1		 # does the raw data comes from server files?
 
 # Maximum angle around SEMLi if REF_COND_T is used (in degrees)
@@ -84,10 +113,11 @@ REFST_THETAMAX=90                # should be a multiple of 90°
 #-----------------------------------------------------
 REFST_ISDEBUG=0			 # if yes, additionnal tests are performed
 REFST_GRIDSIZE=20        	 # number of points on the refinement grid
+REFST_MPLOT=200        	         # number of points per plot between to pach points (e.g. total plot points is REFST_MPLOT*REFST_GRIDSIZE)
 
 REFST_TIME=$REF_VAR_TN		 # type of constraints on the times in REF_CONT
 REFST_GRID=$REF_FIXED_GRID	 # type of grid
-REFST_TERMINATION=$REF_COND_T    # Termination condition in the continuation with variable final time (either REF_VAR_TN/REF_VAR_TIME)
+REFST_TERMINATION=$REF_COND_S5   # Termination condition in the continuation with variable final time (either REF_VAR_TN/REF_VAR_TIME)
 REFST_COORD_TYPE=$NCSEM		 # coordinates system in the refinement procedure
 
 REFST_XPS=0.6			 # position of the poincaré section in NCSEM coordinates
@@ -104,5 +134,7 @@ REFST_SF_SEML2=10		 # orbit at SEML2
 REFST_TSPAN_EM=10  		 # given as %T, where T is the SEM period, in EM units
 REFST_TSPAN_SEM=10 		 # given as %T, where T is the SEM period, in SEM units
 
-
+# Storing the orbits at each step?
+REFST_ISSAVED_EM=0               # 0: don't save, 1: save using projection method
+REFST_ISSAVED_SEM=0              # 0: don't save, 1: save using projection method, 2: save using integration in reduced coordinates
 

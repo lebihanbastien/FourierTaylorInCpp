@@ -20,8 +20,8 @@ Orbit::Orbit(Invman const *invman_, QBCP_L const *qbcp_l_, OdeStruct *driver_, i
     ofs(ofs_order_),
     tfx(tf_),
     t0x(t0_),
-    tprojx(0.20*invman_->getCS()->us.T),   //The default tproj is set to (period of the model)/5
-    tprojminx(1e-6*invman_->getCS()->us.T) //equal to 1e-4*period of the model
+    tprojx(0.1*invman_->getCS()->us.T),   //The default tproj is set to (period of the model)/10
+    tprojminx(1e-5*invman_->getCS()->us.T) //equal to 1e-5*period of the model
 //----------------------------------------------------------------------------------------
 // Body of the constructor
 //----------------------------------------------------------------------------------------

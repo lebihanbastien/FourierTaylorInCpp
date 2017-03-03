@@ -40,10 +40,12 @@ int getLengthCONT_txt(double t0);
 /**
  *  \brief Reads the results of the continuation procedure, in txt file.
  **/
-int readCONT_txt(double  *t0_CMU_EM, double   *tf_CMU_EM,
-                 double **si_CMU_EM, double **si_CMS_SEM,
-                 double **z0_CMU_NCEM, double **z0_CMS_NCSEM,
-                 double *te_NCSEM, double **ye_NCSEM,
+int readCONT_txt(double*  t0_CMU_EM, double*   tf_CMU_EM,
+                 double** si_CMU_EM, double** si_CMS_SEM,
+                 double** z0_CMU_NCEM, double** z0_CMS_NCSEM,
+                 double* tethae, double** ye_NCSEM,
+                 double* H0_NCEM, double* He_NCEM,
+                 double* H0_NCSEM, double* He_NCSEM,
                  double tr0, int fsize);
 
 //========================================================================================

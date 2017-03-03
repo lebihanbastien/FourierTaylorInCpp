@@ -42,56 +42,82 @@
 typedef struct RefSt RefSt;
 struct RefSt
 {
-    int dim;              //planar or 3d
-    int grid;             //variable or fixed grid
-    int time;             //variable or fixed time
+    //------------------------------------------------------------------------------------
+    // Parameters that change often
+    //------------------------------------------------------------------------------------
     int type;             //single solution or continuation procedure
-    int cont_step_max;    //maximum number of steps in cont procedure, if necessary
-    int cont_step_max_vt; //maximum number of steps in cont procedure with variable time
-    int isDirUD;          //the direction of refinement is fixed by the user if true
-    int Dir;              //the direction of refinement if isDirUD = false
-    int isFlagOn;         //are the "press enter to go on" active
-    int isLimUD;          //the domain of search for first guess fixed by the user if true
-    int isPlotted;        //some additionnal plots are made if true
-    int isSaved;          //some additionnal storage is made if true
-    int isJPL;            //refinement to JPL ephemerides
-    int isDebug;          //debugging flag
-    int isFromServer;     //data are from server
-    int coord_type;       //desired type of coordinates for certain applications
-    int gridSize;         //desired grid size, for certain applications
+    int dim;              //planar or 3d
+    double t0_des;        //desired  initial time
 
-    int termination;      //type of termination for time varying continuation
-    double thetaMax;      //maximum angle around SEMLi if REF_COND_T is used
-
-    int sidim;            //direction for predictor-corrector with variable to (s1 or s3)
-                          //hence sidim = 0 or 2.
-
-    //Sampling frequencies
-    int sf_eml2;
-    int sf_man;
-    int sf_seml2;
-
-    int djplcoord; //Default JPL coordinates
-
-    //Limits for domain of research of the first guess
+    // Limits for domain of research of the first guess
     double s1_CMU_EM_MIN;
     double s1_CMU_EM_MAX;
     double s3_CMU_EM_MIN;
     double s3_CMU_EM_MAX;
 
-    //Limits for the time of flight during transfers
+    // The domain of search for first guess fixed by the user if true
+    int isLimUD;
+
+    // Direction of the continuation procedure
+    int isDirUD;          //the direction of refinement is fixed by the user if true
+    int Dir;              //the direction of refinement if isDirUD = false
+
+    // Limits for the time of flight during transfers - not used if negative
     double tof_MIN;
     double tof_MAX;
 
-    //Poincaré section x = cst
-    double xps;
+    // Maximum number of steps in the continuation procedure
+    int cont_step_max;    //with fixed time
+    int cont_step_max_vt; //with variable time
 
-    //Desired time
-    double t0_des;
+    // Initial step in the continuation procedure
+    double ds0;           //with fixed time
+    double ds0_vt;        //with variable time
 
-    //Limits for integration time
+    // Desired number of iterations in Newton's method in the continuation procedure
+    int nu0;              //with fixed time
+    int nu0_vt;           //with variable time
+
+    // User parameters
+    int isFlagOn;         //do we have steps in the procedure - asking the user to press enter to go on?
+    int isPlotted;        //do we plot the results during the computation?
+    int isSaved;          //do we save the results in data files?
+    int isFromServer;     //does the raw data comes from server files?
+
+    // Maximum angle around SEMLi if REF_COND_T is used (in degrees)
+    double thetaMax;      //should be a multiple of 90°
+
+    //------------------------------------------------------------------------------------
+    // Parameters that are stable
+    //------------------------------------------------------------------------------------
+    int isDebug;          //if yes, additionnal tests are performed
+    int gridSize;         //number of points on the refinement grid
+    int mplot;            //number of points per plot between to pach points (e.g. total plot points is gridSize*mplot)
+
+    int time;             //type of constraints on the times in REF_CONT
+    int grid;             //type of grid
+    int termination;      //termination condition in the continuation with variable final time (either REF_VAR_TN/REF_VAR_TIME)
+    int coord_type;       //coordinates system in the refinement procedure (usually NCSEM)
+
+
+    double xps;           //position of the poincaré section in NCSEM coordinates
+    int isJPL;            //is the JPL refinement performed when possible?
+    int djplcoord;        //coordinate system used during the JPL refinement (if -1, it is user defined) Best results obtained with $NJ2000
+    int sidim;            //0 or 2 - component of s0 that stays constant when t0 is free.
+
+    //Sampling frequencies in REF_COMP (complete trajectory) in days
+    int sf_eml2;          // orbit at EML2
+    int sf_man;           // transfer leg
+    int sf_seml2;         // orbit at SEML2
+
+    // Integration window for each orbit
     double tspan_EM;
     double tspan_SEM;
+
+    // Storing the orbits at each step?
+    int isSaved_EM;    //0: don't save, 1: save using projection method
+    int isSaved_SEM;   //0: don't save, 1: save using projection method, 2: save using integration in reduced coordinates
+
 
     //Check if the type is of continuation type
     bool isCont(){return (type == REF_CONT || type == REF_CONT_D || type == REF_CONT_D_HARD_CASE );}
