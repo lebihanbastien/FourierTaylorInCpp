@@ -70,8 +70,8 @@ REFST_TYPE=$REF_CONT_D           # Type of refinement - rk: set REF_CONT_D_HARD_
 REFST_DIM=$REF_PLANAR            # Type of dimensions planar or 3d?
 REFST_T0_DES=0.99                # Initial time - given as %T, with T the SEM period   
 
-# Domain of search (min s1, max s1, min s3, max s3) for the first guess
-REFST_SI_CMU_EM_LIM=(-3 3 -3 3)
+# Domain of search (min s1, max s1, min s2, max s2, min s3, max s3, min s4, max s4) for the first guess
+REFST_SI_CMU_EM_LIM=(-3 3 0 0 -3 3 0 0)
 # Or, if we want the user to define such domain:
 REFST_ISLIMUD=0
 
@@ -106,7 +106,7 @@ REFST_ISSAVED=1     		 # do we save the results in data files?
 REFST_ISFROMSERVER=1		 # does the raw data comes from server files?
 
 # Maximum angle around SEMLi if REF_COND_T is used (in degrees)
-REFST_THETAMAX=240               # should be a multiple of 90°
+REFST_THETAMAX=270               # should be a multiple of 90°
 
 #-----------------------------------------------------
 # Parameters that are stable

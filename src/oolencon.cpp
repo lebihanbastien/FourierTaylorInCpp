@@ -9,7 +9,8 @@
 /**
  *   \brief Storing the results of the continuation procedure, in txt file.
  **/
-void writeCONT_txt(Orbit& orbit_EM, Orbit& orbit_SEM, double* te_NCSEM, double* ye_NCSEM,  int isFirst)
+void writeCONT_txt(Orbit& orbit_EM, Orbit& orbit_SEM,
+                   double* te_NCSEM, double* ye_NCSEM,  int isFirst)
 {
     //====================================================================================
     // Initialize the I/O objects
@@ -2898,7 +2899,7 @@ int oosrefeml2seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* t
     //  2. if there is a continuation procedure based on fixed time,
     //     several computations are produced.
     //------------------------------------------------------------------------------------
-    gnuplot_ctrl* h3 = 0, *h4 = 0, *h5 = 0;
+    gnuplot_ctrl* h3 = 0, *h4 = 0, *h5 = 0, *h6 = 0, *h7;
     if(refSt.isCont())
     {
         switch(refSt.time)
@@ -2925,6 +2926,17 @@ int oosrefeml2seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* t
             h5 = gnuplot_init();
             gnuplot_cmd(h5,  "set title \"s5_SEM vs steps\" ");
             gnuplot_cmd(h5, "set grid");
+
+            if(refSt.is3D())
+            {
+                h6 = gnuplot_init();
+                gnuplot_cmd(h6,  "set title \"s4_EM vs s2_EM\" ");
+                gnuplot_cmd(h6, "set grid");
+
+                h7 = gnuplot_init();
+                gnuplot_cmd(h7,  "set title \"s4_SEM vs s2_SEM\" ");
+                gnuplot_cmd(h7, "set grid");
+            }
             break;
 
 
@@ -3008,18 +3020,23 @@ int oosrefeml2seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* t
         // Initialize the stepper & desired number of iterations in Newton's method
         //--------------------------------------------------------------------------------
         double ds0    = 5e-2;
-        double niter0 = 4;
+        double niterd = 4;
+        double dsmin, dsmax;
 
         switch(refSt.time)
         {
         case REF_VAR_TIME:
         case REF_VAR_TN:
             ds0    = refSt.ds0_vt;
-            niter0 = refSt.nu0_vt;
+            niterd = refSt.nu0_vt;
+            dsmin  = refSt.dsmin_vt;
+            dsmax  = refSt.dsmax_vt;
             break;
         case REF_FIXED_TIME:
             ds0    = refSt.ds0;
-            niter0 = refSt.nu0;
+            niterd = refSt.nu0;
+            dsmin  = refSt.dsmin;
+            dsmax  = refSt.dsmax;
             break;
         }
 
@@ -3128,7 +3145,7 @@ int oosrefeml2seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* t
             // Display
             //============================================================================
             dkn = (double) kn;
-            double t0 = orbit_EM.getT0()/SEML.us_sem.T;//t_traj_n[0]/SEML.us_sem.T;
+            //double t0 = orbit_EM.getT0()/SEML.us_sem.T;//t_traj_n[0]/SEML.us_sem.T;
             if(refSt.isCont() && status == GSL_SUCCESS && kn % plotfreq == 0)
             {
                 switch(refSt.time)
@@ -3145,6 +3162,14 @@ int oosrefeml2seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* t
                     gnuplot_plotc_xy(h3, &orbit_EM.getSi()[0],  &orbit_EM.getSi()[2], 1, (char*)"", "points", "1", "2", 0);
                     gnuplot_plotc_xy(h4, &orbit_SEM.getSi()[0],  &orbit_SEM.getSi()[2], 1, (char*)"", "points", "1", "2", 0);
                     gnuplot_plotc_xy(h5, &dkn, &orbit_SEM.getSi()[4], 1, (char*)"", "points", "1", "2", 0);
+
+                    if(refSt.is3D())
+                    {
+                        gnuplot_plotc_xy(h6, &orbit_EM.getSi()[1],  &orbit_EM.getSi()[3], 1, (char*)"", "points", "1", "2", 0);
+                        gnuplot_plotc_xy(h7, &orbit_SEM.getSi()[1],  &orbit_SEM.getSi()[3], 1, (char*)"", "points", "1", "2", 0);
+                    }
+
+
                     break;
                 }
 
@@ -3253,10 +3278,10 @@ int oosrefeml2seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* t
             {
             case REF_VAR_TIME:
             case REF_VAR_TN:
-                ds *= niter0/niter;
+                ds = min(dsmax, max(dsmin, ds*niterd/niter));
                 break;
             case REF_FIXED_TIME:
-                ds *= niter0/niter;
+                ds = min(dsmax, max(dsmin, ds*niterd/niter));
                 break;
             }
 
@@ -3538,6 +3563,12 @@ int oosrefeml2seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* t
             gnuplot_close(h3);
             gnuplot_close(h4);
             gnuplot_close(h5);
+            if(refSt.is3D())
+            {
+                gnuplot_close(h6);
+                gnuplot_close(h7);
+            }
+
             break;
         }
     }
@@ -3626,38 +3657,60 @@ int ooseleml2seml(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM[2
     string filename;
     if(refSt.isFromServer)
     {
-
+        //Getting the desired t0 as a fraction of T
         double t0_des_mod = fmod(refSt.t0_des/SEML.us_em.T, 1.0);
 
-        if(SEML.li_EM == 2)
+        //Getting the name of the data file, depending on the parameters in refSt
+        switch(refSt.dim)
         {
-            if(SEML.li_SEM == 2) filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_tspan_";
-            else filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_dest_L1_tspan_";
 
-            if(t0_des_mod >= 0 && t0_des_mod < 0.25)
+            case REF_PLANAR:
             {
-                filename += "0T_025T_FINAL.bin";
-            }
-            else if(t0_des_mod >= 0.25 && t0_des_mod < 0.5)
-            {
-                filename += "025T_05T_FINAL.bin";
-            }
-            else if(t0_des_mod >= 0.5 && t0_des_mod < 0.75)
-            {
-                filename += "05T_075T_FINAL.bin";
-            }
-            else
-            {
-                filename += "075T_T_FINAL.bin";
+                if(SEML.li_EM == 2)
+                {
+                    if(SEML.li_SEM == 2) filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_tspan_";
+                    else filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_dest_L1_tspan_";
+
+                    if(t0_des_mod >= 0 && t0_des_mod < 0.25)
+                    {
+                        filename += "0T_025T_FINAL.bin";
+                    }
+                    else if(t0_des_mod >= 0.25 && t0_des_mod < 0.5)
+                    {
+                        filename += "025T_05T_FINAL.bin";
+                    }
+                    else if(t0_des_mod >= 0.5 && t0_des_mod < 0.75)
+                    {
+                        filename += "05T_075T_FINAL.bin";
+                    }
+                    else
+                    {
+                        filename += "075T_T_FINAL.bin";
+                    }
+
+                    //filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_t0_099T.bin";
+                }
+                else
+                {
+                    if(SEML.li_SEM == 2) filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_dest_L2.bin";
+                    else filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_dest_L1.bin";
+                }
+
+            break;
             }
 
-            //filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_t0_099T.bin";
-        }
-        else
+        case REF_3D:
+        case REF_MIXED:
         {
-            if(SEML.li_SEM == 2) filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_dest_L2.bin";
-            else filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_dest_L1.bin";
+
+            if(SEML.li_SEM == 2) filename = SEML.cs_em.F_PLOT+"Serv/projcu_3d_order_20_dest_L2_t0_0995T.bin";
+            else filename = SEML.cs_em.F_PLOT+"Serv/projcu_3d_order_20_dest_L1_t0_0995T.bin";
+
+            break;
         }
+
+        }
+
 
         cout << "ooseleml2seml. The data will be retrieved from the server-computed file named:" << endl;
         cout << filename << endl;
@@ -3678,6 +3731,7 @@ int ooseleml2seml(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM[2
             break;
 
         case REF_3D:
+        case REF_MIXED:
             //type = refSt.isFromServer? TYPE_MAN_PROJ_3D_FROM_SERVER:TYPE_MAN_PROJ_3D;
             type = TYPE_MAN_PROJ_3D;
             break;
@@ -3696,6 +3750,8 @@ int ooseleml2seml(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM[2
     //====================================================================================
     double s1_CMU_EM_MIN, s1_CMU_EM_MAX;
     double s3_CMU_EM_MIN, s3_CMU_EM_MAX;
+    double s2_CMU_EM_MIN, s2_CMU_EM_MAX;
+    double s4_CMU_EM_MIN, s4_CMU_EM_MAX;
     double tof_MIN, tof_MAX;
 
     if(refSt.isLimUD)
@@ -3729,6 +3785,13 @@ int ooseleml2seml(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM[2
         tof_MAX = refSt.tof_MAX;
     }
 
+    s2_CMU_EM_MIN = refSt.s2_CMU_EM_MIN;
+    s2_CMU_EM_MAX = refSt.s2_CMU_EM_MAX;
+    s4_CMU_EM_MIN = refSt.s4_CMU_EM_MIN;
+    s4_CMU_EM_MAX = refSt.s4_CMU_EM_MAX;
+
+
+
     //------------------------------------------------------------------------------------
     // Subselection
     //------------------------------------------------------------------------------------
@@ -3742,8 +3805,11 @@ int ooseleml2seml(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM[2
         //--------------------------------------------------------------------------------
         // Limit in the reduced coordinates (s1, s2, s3, s4)
         //--------------------------------------------------------------------------------
-        cst  = (s1_CMU_EM[kpor] > s1_CMU_EM_MIN) & (s1_CMU_EM[kpor] < s1_CMU_EM_MAX);
-        cst  = cst & (s3_CMU_EM[kpor] > s3_CMU_EM_MIN) & (s3_CMU_EM[kpor] < s3_CMU_EM_MAX);
+        cst  = (s1_CMU_EM[kpor] >= s1_CMU_EM_MIN) & (s1_CMU_EM[kpor] <= s1_CMU_EM_MAX);
+        cst  = cst & (s3_CMU_EM[kpor] >= s3_CMU_EM_MIN) & (s3_CMU_EM[kpor] <= s3_CMU_EM_MAX);
+
+        cst  = (s2_CMU_EM[kpor] >= s2_CMU_EM_MIN) & (s2_CMU_EM[kpor] <= s2_CMU_EM_MAX);
+        cst  = cst & (s4_CMU_EM[kpor] >= s4_CMU_EM_MIN) & (s4_CMU_EM[kpor] <= s4_CMU_EM_MAX);
 
         //--------------------------------------------------------------------------------
         // Limits in the time of flight (TOF) if necessary

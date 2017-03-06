@@ -70,6 +70,7 @@ export M_ERTBP=3
 # Planar or 3D solutions
 export REF_PLANAR=0
 export REF_3D=1
+export REF_MIXED=101
 
 # Only one connection refined
 export REF_SINGLE=2

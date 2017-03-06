@@ -14,7 +14,7 @@ source config/constants.sh
 #-----------------------------------------------------
 # TYPE OF COMPUTATION (COMP_TYPE)
 #-----------------------------------------------------
-COMP_TYPE=$COMP_CM_EML2_TO_CM_SEML_3D
+COMP_TYPE=$COMP_CM_EML2_TO_CM_SEML
 
 #-----------------------------------------------------
 # MODEL
@@ -51,6 +51,9 @@ if [ $SERVER == 1 ]; then
 else
 	NUM_THREADS=4
 fi
+
+# Parallel computation is on by default
+ISPAR=1		
 
 #-----------------------------------------------------
 # NOHUP condition

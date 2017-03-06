@@ -14,7 +14,7 @@ source config/constants.sh
 #-----------------------------------------------------
 # TYPE OF COMPUTATION (COMP_TYPE)
 #-----------------------------------------------------
-COMP_TYPE=$COMP_CM_EML2_TO_CM_SEML_3D
+COMP_TYPE=$COMP_CM_EML2_TO_CM_SEML
 
 #-----------------------------------------------------
 # MODEL
@@ -86,29 +86,28 @@ YNMAX=0.6     # The maximum norm (in SEM normalized units) for a projection to o
 SNMAX=0.6     # The maximum norm (in RCM normalized units) for a projection to occur on the CM_NC of SEMLi
 NOD=6         # Number of dimensions on which we compute the norm of the projection error
 
-    #====================================================================================
-    # Computation parameters: Projection CMU EML2 to CM SEMLi
-    #
-    #  Used for producing the complete sets:
-    #
-    #    #TIME
-    #    double TM    = 12*SEML.us.T;
-    #    double TMIN  = 0.75*SEML.us.T;
-    #    double TMAX  = 1*SEML.us.T;
-    #    int    TSIZE = 50;
-    #
-    #    #UNSTABLE MANIFOLD AT EML2
-    #    double GMIN_S1  = -35;
-    #    double GMAX_S1  = +35;
-    #    int    GSIZE_S1 = 200;
-    #
-    #    double GMIN_S3  = -35;
-    #    double GMAX_S3  = +35;
-    #    int    GSIZE_S3 = 200;
-    #
-    #    #TRAJECTORTY REFINMENT
-    #    int MSIZE = 500;    #number of points on each trajectory
-    #    int NSMIN = 20;      #number of sorted solutions
-    #
-    #====================================================================================
-
+#====================================================================================
+# Computation parameters: Projection CMU EML2 to CM SEMLi
+#
+#  Used for producing the complete sets:
+#
+#    #TIME
+#    double TM    = 12*SEML.us.T;
+#    double TMIN  = 0.75*SEML.us.T;
+#    double TMAX  = 1*SEML.us.T;
+#    int    TSIZE = 50;
+#
+#    #UNSTABLE MANIFOLD AT EML2
+#    double GMIN_S1  = -35;
+#    double GMAX_S1  = +35;
+#    int    GSIZE_S1 = 200;
+#
+#    double GMIN_S3  = -35;
+#    double GMAX_S3  = +35;
+#    int    GSIZE_S3 = 200;
+#
+#    #TRAJECTORTY REFINMENT
+#    int MSIZE = 500;    #number of points on each trajectory
+#    int NSMIN = 20;      #number of sorted solutions
+#
+#====================================================================================

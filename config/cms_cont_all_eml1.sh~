@@ -84,16 +84,16 @@ REFST_CONT_STEP_MAX_VT=+150;     # with variable times
 
 # Initial step in the continuation procedure
 if [ $LI_EM == 1 ]; then
-	REFST_FIXED_TIME_DS0=3e-2   # for fixed times
+	REFST_FIXED_TIME_DS0=3e-2 # for fixed times
 else
-	REFST_FIXED_TIME_DS0=5e-1   # for fixed times
+	REFST_FIXED_TIME_DS0=5e-1 # for fixed times
 fi
-REFST_VAR_TIME_DS0=8e-2	            # for variable times
+REFST_VAR_TIME_DS0=8e-2	          # for variable times
 
 
 # Desired number of iterations in Newton's method in the continuation procedure
-REFST_FIXED_TIME_NU0=2  # for fixed times
-REFST_VAR_TIME_NU0=4 	# for variable times
+REFST_FIXED_TIME_NU0=2           # for fixed times
+REFST_VAR_TIME_NU0=4 	         # for variable times
 
 # Direction of the continuation procedure
 REFST_ISDIRUD=0			 # is it user defined?

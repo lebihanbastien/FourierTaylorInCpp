@@ -78,11 +78,23 @@ int msft3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
            Orbit &orbit_EM, Orbit &orbit_SEM,
            gnuplot_ctrl *h1, RefSt &refSt, int *niter);
 
+int msftmixed(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nullvector,
+               int nov, int mgs, int coord_type, double precision, int isFirst,
+               Orbit& orbit_EM, Orbit& orbit_SEM, gnuplot_ctrl* h1, RefSt& refSt, int *niter);
+
+
 int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
            int number_of_variables, int man_grid_size, int coord_type,
            double precision, int isFirst,
            Orbit &orbit_EM, Orbit &orbit_SEM,
            gnuplot_ctrl *h1, RefSt &refSt, int *niter);
+
+int msvtmixed(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
+               int nov, int mgs, int coord_type,
+               double precision, int isFirst,
+               Orbit &orbit_EM, Orbit &orbit_SEM,
+               gnuplot_ctrl *h1, RefSt &refSt, int *niter);
+
 
 int msftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
              int number_of_variables, int man_grid_size,
@@ -132,6 +144,17 @@ int ufvarvt3d(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
                 double *nullvector,
                 Orbit &orbit_EM, Orbit &orbit_SEM,
                 int mgs, int coord_type,  RefSt &refSt);
+
+int ufvarftmixed(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
+                double *nullvector,
+                Orbit &orbit_EM, Orbit &orbit_SEM,
+                int mgs, int coord_type,  RefSt &refSt);
+
+int ufvarvtmixed(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
+                double *nullvector,
+                Orbit &orbit_EM, Orbit &orbit_SEM,
+                int mgs, int coord_type,  RefSt &refSt);
+
 
 int ufvarftplan(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
                 double *nullvector,

@@ -12,6 +12,7 @@
 //Parameters for the type of refinements
 #define REF_PLANAR     0
 #define REF_3D         1
+#define REF_MIXED      101
 
 #define REF_SINGLE     2
 
@@ -54,6 +55,11 @@ struct RefSt
     double s1_CMU_EM_MAX;
     double s3_CMU_EM_MIN;
     double s3_CMU_EM_MAX;
+
+    double s2_CMU_EM_MIN;
+    double s2_CMU_EM_MAX;
+    double s4_CMU_EM_MIN;
+    double s4_CMU_EM_MAX;
 
     // The domain of search for first guess fixed by the user if true
     int isLimUD;
@@ -99,6 +105,11 @@ struct RefSt
     int termination;      //termination condition in the continuation with variable final time (either REF_VAR_TN/REF_VAR_TIME)
     int coord_type;       //coordinates system in the refinement procedure (usually NCSEM)
 
+    // Maximum/Minimum step in the continuation procedure
+    double dsmin;           //with fixed time
+    double dsmin_vt;        //with variable time
+    double dsmax;           //with fixed time
+    double dsmax_vt;        //with variable time
 
     double xps;           //position of the poincaré section in NCSEM coordinates
     int isJPL;            //is the JPL refinement performed when possible?
@@ -121,6 +132,8 @@ struct RefSt
 
     //Check if the type is of continuation type
     bool isCont(){return (type == REF_CONT || type == REF_CONT_D || type == REF_CONT_D_HARD_CASE );}
+    // Check if the trajectory are 3D
+    bool is3D(){return (dim == REF_3D || dim == REF_MIXED);}
 };
 
 //========================================================================================

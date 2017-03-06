@@ -312,19 +312,28 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         //rk: set REF_CONT_D_HARD_CASE for difficult cases
         //with REF_CONT_D (ex: EML2-SEMLi via SEML1...)
-        refSt.type          = REF_CONT;         // Type of refinement
-        refSt.dim           = REF_PLANAR;         // Type of dimensions planar or 3d?
-        refSt.t0_des        = 0.99*SEML.us_em.T;  // Initial time
+        refSt.type          = REF_CONT_D;         // Type of refinement
+        refSt.dim           = REF_MIXED;         // Type of dimensions planar or 3d?
+        refSt.t0_des        = 0.995*SEML.us_em.T;  // Initial time
 
         // Direction of the continuation procedure
         refSt.isDirUD       = 0;                  // is it user defined?
-        refSt.Dir           = -1;                 // if not, +1 or -1
+        refSt.Dir           = +1;                 // if not, +1 or -1
 
         // Domain of search for the first guess
         refSt.s1_CMU_EM_MIN = -35;
         refSt.s1_CMU_EM_MAX = +35;
+
+        refSt.s2_CMU_EM_MIN = +0;
+        refSt.s2_CMU_EM_MAX = +0;
+
         refSt.s3_CMU_EM_MIN = -35;
         refSt.s3_CMU_EM_MAX = +35;
+
+        refSt.s4_CMU_EM_MIN = +4;
+        refSt.s4_CMU_EM_MAX = +4;
+
+
         // Or, if we want the user to define such domain:
         refSt.isLimUD       =  0;
 
@@ -338,11 +347,11 @@ int main(int argc, char** argv)
 
         // Initial step in the continuation procedure
         refSt.ds0    = 8e-2;                      //with fixed time
-        refSt.ds0_vt = (LI_EM ==1)?  3e-2:5e-1;   //with variable time
+        refSt.ds0_vt = (LI_EM ==1)?  3e-2:1e-2;   //with variable time
 
         // Desired number of iterations in Newton's method in the continuation procedure
         refSt.nu0 = 2;          //with fixed time
-        refSt.nu0_vt = 4;       //with variable time
+        refSt.nu0_vt = 3;       //with variable time
 
         //User parameters
         refSt.isFlagOn      = 1;                  // do we have steps in the procedure - asking the user to press enter to go on?
@@ -351,7 +360,7 @@ int main(int argc, char** argv)
         refSt.isFromServer  = 1;                  // does the raw data comes from server files?
 
         //Maximum angle around SEMLi if REF_COND_T is used (in degrees)
-        refSt.thetaMax      = 360;                //should be a multiple of 90°
+        refSt.thetaMax      = 240;                //should be a multiple of 90°
 
         //--------------------------------------------------------------------------------
         // Parameters that are stable
@@ -362,8 +371,14 @@ int main(int argc, char** argv)
 
         refSt.time          = REF_VAR_TN;               // type of constraints on the times in REF_CONT
         refSt.grid          = REF_FIXED_GRID;           // type of grid
-        refSt.termination   = REF_COND_S5;              // termination condition in the continuation with variable final time (either REF_VAR_TN/REF_VAR_TIME)
+        refSt.termination   = REF_COND_T;               // termination condition in the continuation with variable final time (either REF_VAR_TN/REF_VAR_TIME)
         refSt.coord_type    = NCSEM;                    // coordinates system in the refinement procedure
+
+        // Maximum/Minimum step in the continuation procedure
+        refSt.dsmin         = 1e-6;                     //with fixed time
+        refSt.dsmin_vt      = 1e-6;                     //with variable time
+        refSt.dsmax         = 2e-1;                     //with fixed time
+        refSt.dsmax_vt      = 2e-1;                     //with variable time
 
         refSt.xps           = (LI_SEM == 1)? +0.6:-0.6; // position of the poincaré section in NCSEM coordinates
         refSt.isJPL         = 1;                        // is the JPL refinement performed when possible?
@@ -465,8 +480,17 @@ int main(int argc, char** argv)
             // Domain of search for the first guess
             refSt.s1_CMU_EM_MIN = atof(argv[index++]);
             refSt.s1_CMU_EM_MAX = atof(argv[index++]);
+
+            refSt.s2_CMU_EM_MIN = atof(argv[index++]);
+            refSt.s2_CMU_EM_MAX = atof(argv[index++]);
+
             refSt.s3_CMU_EM_MIN = atof(argv[index++]);
             refSt.s3_CMU_EM_MAX = atof(argv[index++]);
+
+            refSt.s4_CMU_EM_MIN = atof(argv[index++]);
+            refSt.s4_CMU_EM_MAX = atof(argv[index++]);
+
+
             // Or, if we want the user to define such domain:
             refSt.isLimUD       = atoi(argv[index++]);
 
@@ -506,6 +530,12 @@ int main(int argc, char** argv)
             refSt.grid          = atoi(argv[index++]);  // type of grid
             refSt.termination   = atoi(argv[index++]);  // termination condition in the continuation with variable final time (either REF_VAR_TN/REF_VAR_TIME)
             refSt.coord_type    = atoi(argv[index++]);  // coordinates system in the refinement procedure
+
+            // Maximum/Minimum step in the continuation procedure (for now, not changed by the user)
+            refSt.dsmin         = 1e-6;                 //with fixed time
+            refSt.dsmin_vt      = 1e-6;                 //with variable time
+            refSt.dsmax         = 2e-1;                 //with fixed time
+            refSt.dsmax_vt      = 2e-1;                 //with variable time
 
             refSt.xps           = atof(argv[index++]);  // position of the poincaré section in NCSEM coordinates
             refSt.xps *= (LI_SEM == 1)? +1:-1;

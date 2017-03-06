@@ -106,7 +106,7 @@ REFST_ISSAVED=1     		 # do we save the results in data files?
 REFST_ISFROMSERVER=1		 # does the raw data comes from server files?
 
 # Maximum angle around SEMLi if REF_COND_T is used (in degrees)
-REFST_THETAMAX=240               # should be a multiple of 90°
+REFST_THETAMAX=270               # should be a multiple of 90°
 
 #-----------------------------------------------------
 # Parameters that are stable
@@ -117,7 +117,7 @@ REFST_MPLOT=200        	         # number of points per plot between to pach poi
 
 REFST_TIME=$REF_VAR_TN		 # type of constraints on the times in REF_CONT
 REFST_GRID=$REF_FIXED_GRID	 # type of grid
-REFST_TERMINATION=$REF_COND_S5   # Termination condition in the continuation with variable final time (either REF_VAR_TN/REF_VAR_TIME)
+REFST_TERMINATION=$REF_COND_T    # Termination condition in the continuation with variable final time (either REF_VAR_TN/REF_VAR_TIME)
 REFST_COORD_TYPE=$NCSEM		 # coordinates system in the refinement procedure
 
 REFST_XPS=0.6			 # position of the poincaré section in NCSEM coordinates

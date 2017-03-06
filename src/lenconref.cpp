@@ -6186,6 +6186,22 @@ int nfreevariables(RefSt refSt, int mgs)
         break;
         }
         break;
+    case REF_MIXED:
+        switch(refSt.time)
+        {
+        case REF_FIXED_TIME:
+                nfv = 6*mgs+1;
+            break;
+
+        case REF_VAR_TIME:
+        case REF_VAR_TN:
+                nfv = 7*mgs+1;
+            break;
+        default:
+            perror("nfreevariables. Unknown refSt.time.");
+        break;
+        }
+        break;
     case REF_PLANAR:
         switch(refSt.time)
         {

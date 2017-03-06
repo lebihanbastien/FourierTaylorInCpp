@@ -77,6 +77,21 @@ diffcorrptr ftc_select_diffcorr(RefSt& refSt)
             return msft3d;
         }
         break;
+    case REF_MIXED:
+        switch(refSt.time)
+        {
+        case REF_FIXED_TIME:
+            return msftmixed;
+
+        case REF_VAR_TIME:
+        case REF_VAR_TN:
+            return msvtmixed;
+
+        default:
+            cerr << "ftc_select_diffcorr" << ". Unknown dcs. refSt.time = " << ". msftmixed is returned by default." << endl;
+            return msftmixed;
+        }
+        break;
     case REF_PLANAR:
         switch(refSt.time)
         {
@@ -124,6 +139,21 @@ predictorptr ftc_select_predictor(RefSt& refSt)
 
         cerr << "ftc_select_predictor" << ". Unknown dcs. refSt.time = " << ". ufvarft3d is returned by default." << endl;
             return ufvarft3d;
+        }
+        break;
+
+    case REF_MIXED:
+        switch(refSt.time)
+        {
+        case REF_FIXED_TIME:
+            return ufvarftmixed;
+
+        case REF_VAR_TIME:
+        case REF_VAR_TN:
+            return ufvarvtmixed;
+
+        cerr << "ftc_select_predictor" << ". Unknown dcs. refSt.time = " << ". ufvarftmixed is returned by default." << endl;
+            return ufvarftmixed;
         }
         break;
 
@@ -331,9 +361,9 @@ int msft3d(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nullv
             //----------------------------------------------------------------------------
             for(int i = 0; i < 6; i++)
             {
-                //---------------------------
+                //------------------------------------------------------------------------
                 //DF/DS
-                //---------------------------
+                //------------------------------------------------------------------------
                 if(k == 0)
                 {
                     for(int j = 0; j < 4; j++) gsl_matrix_set(DF, i, j,    gsl_matrix_get(Phi0, i, j));
@@ -584,6 +614,434 @@ int msft3d(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nullv
  *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
  *        - The initial conditions z0 vary in the center-unstable manifold of EML2.
  *        - The final state zN vary in the center-stable manifold of SEMLi.
+ *        - The times t0,..., tN are fixed.
+ *        - The null vector associated to the solution is computed.
+ *
+ *        Difference with msft3d: only s1 and s3 are corrected at EML2
+ **/
+int msftmixed(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nullvector,
+               int nov, int mgs, int coord_type, double precision, int isFirst,
+               Orbit& orbit_EM, Orbit& orbit_SEM, gnuplot_ctrl* h1, RefSt& refSt, int *niter)
+{
+    //====================================================================================
+    // 1. Initialization
+    //====================================================================================
+    //Status along the computation
+    int status = 0;
+    //Name of the routine
+    string fname = "msftmixed";
+
+    //------------------------------------------------------------------------------------
+    //Get the default coordinates system from the coord_type
+    //------------------------------------------------------------------------------------
+    int dcs  = default_coordinate_system(coord_type);
+    if(dcs == FTC_FAILURE)
+    {
+        cerr << fname << ". The selection of dcs failed." << endl;
+        return FTC_FAILURE;
+    }
+
+    //------------------------------------------------------------------------------------
+    //Get the default framework from the coord_type
+    //------------------------------------------------------------------------------------
+    int fwrk = default_framework(coord_type);
+    if(fwrk == FTC_FAILURE)
+    {
+        cerr << fname << ". The selection of fwrk failed." << endl;
+        return FTC_FAILURE;
+    }
+
+    //------------------------------------------------------------------------------------
+    // Other initialization
+    //------------------------------------------------------------------------------------
+    //Cumulated norm of the error
+    double normC;
+    //Current state along the trajectory
+    double** ym  = dmatrix(0, 41, 0, mgs);
+    //Current time along the trajectory
+    double* tm   = dvector(0, mgs);
+    //Various temporary states and times
+    double yv[nov], ye[nov];
+
+    //------------------------------------------------------------------------------------
+    // GSL matrices and vectors
+    //------------------------------------------------------------------------------------
+    int nfv = 6*mgs+1;  //free variables
+    int ncs = 6*mgs;    //constraints
+
+    // Correction vector at patch points
+    gsl_vector* DQv = gsl_vector_calloc(nfv);
+    // Error vector at patch points
+    gsl_vector* Fv  = gsl_vector_calloc(ncs);
+    // Error isolated at final point
+    gsl_vector* Fvn  = gsl_vector_calloc(6);
+
+    //Jacobian at patch points
+    gsl_matrix** Ji  = gslc_matrix_array_calloc(6, 6, mgs);
+    gsl_matrix* DF   = gsl_matrix_calloc(ncs, nfv);
+
+    //Identity matrix eye(6)
+    gsl_matrix* Id = gsl_matrix_calloc(6,6);
+    gsl_matrix_set_identity (Id);
+
+    //Phi0: Jacobian wrt to EM RCM variables
+    gsl_matrix* Phi0 = gsl_matrix_calloc(6,5);
+    //PhiN: Jacobian wrt to SEM RCM variables
+    gsl_matrix* PhiN = gsl_matrix_calloc(6,5);
+
+    //Norms
+    double si_norm_EM, si_norm_SEM;
+
+    //------------------------------------------------------------------------------------
+    // Copy the departure state in ymdn
+    //------------------------------------------------------------------------------------
+    for(int k = 0; k <= mgs; k++)
+    {
+        for(int i = 0; i < nov; i++) ymdn[i][k] = ymd[i][k];
+        tmdn[k] = tmd[k];
+    }
+
+
+    //====================================================================================
+    // 2. Loop correction
+    //====================================================================================
+    //Maximum number of iterations is retrieved from config manager
+    int itermax = Config::configManager().G_DC_ITERMAX();
+    int iter = 0;
+    int ode78coll = 0, tempcoll = 0;
+    while(iter <  itermax)
+    {
+        //================================================================================
+        // Build the Jacobian and other useful matrices
+        //================================================================================
+        ode78coll = 0;
+        for(int k = 0; k <= mgs-1; k++)
+        {
+            //----------------------------------------------------------------------------
+            // Integration
+            //----------------------------------------------------------------------------
+            tempcoll = 0;
+            for(int i = 0; i < nov; i++) yv[i] = ymdn[i][k];
+            ode78(ym, tm, &tempcoll, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
+
+            //----------------------------------------------------------------------------
+            // Collisionner. If a collision occured, we save it in ode78coll
+            //----------------------------------------------------------------------------
+            if(tempcoll && !ode78coll) ode78coll = tempcoll;
+
+            //----------------------------------------------------------------------------
+            // Final position is at the end of ym
+            //----------------------------------------------------------------------------
+            for(int i = 0; i < nov; i++) ye[i] = ym[i][1];
+
+            //----------------------------------------------------------------------------
+            // Update the Jacobian
+            //----------------------------------------------------------------------------
+            gslc_vectorToMatrix(Ji[k], ye, 6, 6, 6);
+
+            //----------------------------------------------------------------------------
+            // Update Phi0
+            //----------------------------------------------------------------------------
+            if(k == 0)
+            {
+                //Phi0 = Ji[0] x COORD_J_RCM(orbit_EM.si, t0)
+                ftc_compute_phi0(Phi0, Ji[0], orbit_EM, tmdn[0]/SEML.us_em.ns, coord_type);
+
+                if(refSt.isDebug)
+                {
+                    cout << fname << ". Phi0 = " << endl;
+                    gslc_matrix_printf(Phi0);
+                }
+            }
+
+            //----------------------------------------------------------------------------
+            // Update PhiN
+            //----------------------------------------------------------------------------
+            if(k == mgs-1)
+            {
+
+                //PhiN = COORD_J_RCM(orbit_SEM.si, tf), in SEM units, in R(6,5)
+                orbit_SEM.getInvman()->evalDRCMtoCOORD(orbit_SEM.getSi(), tmdn[mgs], PhiN, OFTS_ORDER, OFS_ORDER, coord_type);
+
+                if(refSt.isDebug)
+                {
+                    cout << fname << ". PhiN = " << endl;
+                    gslc_matrix_printf(PhiN);
+                }
+            }
+
+            //----------------------------------------------------------------------------
+            // Update the error vector: F[k] = [ye[k] - ymdn[k+1]]
+            //----------------------------------------------------------------------------
+            for(int i = 0; i < 6; i++)
+            {
+                gsl_vector_set(Fv, 6*k+i, ye[i] - ymdn[i][k+1]);
+                if(k == mgs - 1) gsl_vector_set(Fvn, i, ye[i] - ymdn[i][k+1]);
+            }
+
+            //----------------------------------------------------------------------------
+            // Update DF
+            //----------------------------------------------------------------------------
+            for(int i = 0; i < 6; i++)
+            {
+                //------------------------------------------------------------------------
+                //DF/DS
+                //------------------------------------------------------------------------
+                if(k == 0)
+                {
+                    gsl_matrix_set(DF, i, 0,    gsl_matrix_get(Phi0, i, 0));
+                    gsl_matrix_set(DF, i, 1,    gsl_matrix_get(Phi0, i, 2));
+
+                    for(int j = 0; j < 6; j++) gsl_matrix_set(DF, i, j+2, -gsl_matrix_get(Id, i, j));
+                }
+                else if(k == mgs-1)
+                {
+                    for(int j = 0; j < 6; j++) gsl_matrix_set(DF, i + 6*k, j + 6*k-4,       gsl_matrix_get(Ji[k], i, j));
+                    for(int j = 0; j < 5; j++) gsl_matrix_set(DF, i + 6*k, j + 6*(k+1)-4,  -gsl_matrix_get(PhiN, i, j));
+                }
+                else
+                {
+                    for(int j = 0; j < 6; j++)
+                    {
+                        gsl_matrix_set(DF, i + 6*k, j + 6*k-4,      gsl_matrix_get(Ji[k], i, j));
+                        gsl_matrix_set(DF, i + 6*k, j + 6*(k+1)-4, -gsl_matrix_get(Id, i, j));
+                    }
+                }
+
+            }
+        }
+
+        //================================================================================
+        //Termination condition: if the desired precision is met,
+        //the process is terminated.
+        //================================================================================
+        // Norm
+        normC  = gsl_blas_dnrm2(Fv);
+
+        //Display current status
+        cout << fname << ". nerror = " << normC << endl;
+
+        // Check that all points are under a given threshold
+        if(normC < precision)
+        {
+            cout << fname << ". Desired precision was reached. break. nerror = " << normC << endl;
+            break;
+        }
+
+
+        //================================================================================
+        //Compute the correction vector
+        //================================================================================
+        status = ftc_corrvec_mn(DQv, Fv, DF, nfv, ncs);
+        if(status)
+        {
+            cerr << fname << ". The computation of the correction vector failed."  << endl;
+            return FTC_FAILURE;
+        }
+
+
+        //================================================================================
+        // Update the free variables
+        //================================================================================
+        //--------------------------------------------------------------------------------
+        //First 4 correction variables is orbit_EM.si
+        //--------------------------------------------------------------------------------
+        //Updating CM_EM_RCM coordinates
+        orbit_EM.addSi(gsl_vector_get(DQv, 0), 0);
+        orbit_EM.addSi(gsl_vector_get(DQv, 1), 2);
+
+        //Here we suppose that the default framework is SEM, so we need to normalize the time
+        //Updating CM_EM_NCEM coordinates
+        orbit_EM.update_ic(orbit_EM.getSi(), tmdn[0]/SEML.us_em.ns);
+
+        //To CM_EM_NCSEM coordinates
+        //Here we suppose that the default framework is SEM, so we need to normalize the time
+        for(int i = 0; i < 6; i++) yv[i] = orbit_EM.getZ0()[i];
+        qbcp_coc(tmdn[0]/SEML.us_em.ns, yv, ye, NCEM, coord_type);
+        for(int i = 0; i < 6; i++) ymdn[i][0] = ye[i];
+
+        //--------------------------------------------------------------------------------
+        //The middle (patch points) is classical cartesian coordinates at patch points
+        //--------------------------------------------------------------------------------
+        for(int k = 1; k < mgs; k++)
+        {
+            for(int i = 0; i < 6; i++) ymdn[i][k] += gsl_vector_get(DQv, i + 6*k-4);
+        }
+
+        //--------------------------------------------------------------------------------
+        //Last 4 correction variables is orbit.si
+        //--------------------------------------------------------------------------------
+        //Updating CM_SEM_RCM coordinates
+        for(int i = 0; i < 5; i++) orbit_SEM.addSi(gsl_vector_get(DQv, i+ 6*mgs-4), i);
+
+        //Updating in CM_SEM_NCSEM coordinates
+        orbit_SEM.update_ic(orbit_SEM.getSi(), tmdn[mgs]);
+
+        //Updating in CM_SEM_NCSEM coordinates
+        for(int i = 0; i < 6; i++) yv[i] = orbit_SEM.getZ0()[i];
+        qbcp_coc(tmdn[mgs], yv, ye, NCSEM, coord_type);
+        for(int i = 0; i < 6; i++) ymdn[i][mgs] = ye[i];
+
+        //================================================================================
+        // Norm check: we need to know if we are in the DPC of the semi-analytical tools
+        //================================================================================
+        // First check at EML2
+        si_norm_EM  = ENorm(orbit_EM.getSi(), 4);
+        if(si_norm_EM > SI_NORM_EM_MAX)
+        {
+            cerr << fname << ". si_norm_EM has reached its limits: " << endl;
+            cout << " si_norm_EM = "       << si_norm_EM << " >";
+            cout << " SI_NORM_EM_MAX = "  << SI_NORM_EM_MAX << endl;
+            return REF_EOUTOFDPC;
+        }
+
+        // Second check at SEMLi
+        si_norm_SEM = ENorm(orbit_SEM.getSi(), 5);
+        if(si_norm_SEM > SI_NORM_SEM_MAX)
+        {
+            cerr << fname << ". si_norm_SEM has reached its limits: " << endl;
+            cout << " si_norm_SEM = "      << si_norm_SEM << " >";
+            cout << " SI_NORM_SEM_MAX = "  << SI_NORM_SEM_MAX << endl;
+            return REF_EOUTOFDPC;
+        }
+
+        //--------------------------------------------------------------------------------
+        // Norm display
+        //--------------------------------------------------------------------------------
+        //cout << "--------------------" << endl;
+        if(refSt.isDebug)
+        {
+            cout << fname << ". si_norm_EM = "   << si_norm_EM << endl;
+            cout << fname << ". si_norm_SEM = "  << si_norm_SEM << endl;
+        }
+
+        //--------------------------------------------------------------------------------
+        // Update number of iterations
+        //--------------------------------------------------------------------------------
+        iter++;
+    }
+
+
+    //====================================================================================
+    //Collision check: just a warning (for now). In the long run we need to give it to
+    // the upper level!
+    //====================================================================================
+    if(ode78coll) cout << fname << ". A collision has occured with " << ode78coll << endl;
+
+    //------------------------------------------------------------------------------------
+    //Last plot
+    //------------------------------------------------------------------------------------
+    if(refSt.isPlotted) gnuplot_plot_xyz(h1,  ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
+    if(refSt.isPlotted) gnuplot_plot_xyz(h1, &ymdn[0][mgs], &ymdn[1][mgs],  &ymdn[2][mgs], 1, (char*)"", "points", "2", "2", 0);
+    if(refSt.isPlotted) gnuplot_plot_xyz(h1, &ymdn[0][0], &ymdn[1][0],  &ymdn[2][0], 1, (char*)"", "points", "2", "2", 0);
+
+
+    //====================================================================================
+    //Compute the null vector: QR decomposition of DP^T
+    //====================================================================================
+    //QR elements
+    gsl_vector* work  = gsl_vector_calloc(ncs);
+    gsl_matrix* Q     = gsl_matrix_calloc(nfv,nfv);
+    gsl_matrix* R     = gsl_matrix_calloc(nfv,ncs);
+    gsl_matrix* DFT   = gsl_matrix_calloc(nfv,ncs);
+
+
+    //DPT = transpose(DP)
+    gsl_matrix_transpose_memcpy(DFT, DF);
+    //QR decomposition
+    gsl_linalg_QR_decomp (DFT, work);
+    gsl_linalg_QR_unpack (DFT, work, Q, R);
+
+    //------------------------------------------------------------------------------------
+    //Null vector is the last column of Q
+    //------------------------------------------------------------------------------------
+    //Sign of the null vector ?
+    int sign = 1, ti = 1;
+    double dti = 1;
+    double dotNV = 0.0;
+    if(isFirst)
+    {
+        if(refSt.isDirUD && refSt.isCont())
+        {
+            do
+            {
+                cout << "-------------------------------------------------------" << endl;
+                cout << "After refinement: s1_CMU_EM = " << orbit_EM.getSi()[0]   << endl;
+                cout << "Please choose a direction for the cont. procedure:"      << endl;
+                cout << "+1: s1_CMU_EM is increasing"                             << endl;
+                cout << "-1: s1_CMU_EM is decreasing"                             << endl;
+                cout << " to select a specific starting time"                     << endl;
+                cin >> dti;
+                ti = (int) dti;
+            }
+            while(ti != 1 && ti != -1);
+        }
+        else ti = refSt.Dir;
+
+        //Here, we want to make s_EM[1] "grow"
+        sign = gsl_matrix_get(Q, 1, nfv-1) > 0? ti:-ti;
+    }
+    else
+    {
+        //OR
+        //Here, we want to go "in the same direction" for some components of Q
+        dotNV += gsl_matrix_get(Q, 0, nfv-1)*nullvector[0];                  //CMU of  EML2
+        //dotNV += gsl_matrix_get(Q, 1, nfv-1)*nullvector[1];                //CMU of  EML2
+        dotNV += gsl_matrix_get(Q, 2, nfv-1)*nullvector[2];                  //CMU of  EML2
+        //dotNV += gsl_matrix_get(Q, 3, nfv-1)*nullvector[3];                //CMU of  EML2
+        sign = dotNV > 0? 1:-1;
+
+        //        dotNV += gsl_matrix_get(Q, nfv-4, nfv-1)*nullvector[nfv-4];                //CMS of  SEMLi
+        //        dotNV += gsl_matrix_get(Q, nfv-2, nfv-1)*nullvector[nfv-2];                //CMS of  SEMLi
+        //        sign = dotNV > 0? 1:-1;
+
+        //OR
+        //Here, we want to go "in the same direction for the whole Q vector": no u_turn!
+        //for(int i = 0; i < nfv-1; i++) dotNV += gsl_matrix_get(Q, i, nfv-1)*nullvector[i];
+
+        //OR always decrease the stable component at SEMLi
+        //sign = gsl_matrix_get(Q, nfv-2, nfv-1) < 0? 1:-1;
+
+        //OR always increase the s1 component at EML2
+        //sign = gsl_matrix_get(Q, 0, nfv-1) > 0? 1:-1;
+    }
+
+    //Null vector is the last column of Q
+    for(int i = 0; i < nfv; i++) nullvector[i] = sign*gsl_matrix_get(Q, i, nfv-1);
+
+    //------------------------------------------------------------------------------------
+    //Number of iterations
+    //------------------------------------------------------------------------------------
+    *niter = iter;
+
+    //====================================================================================
+    // Free
+    //====================================================================================
+    free_dmatrix(ym, 0, 41, 0, mgs);
+    free_dvector(tm, 0, mgs);
+    gslc_matrix_array_free(Ji , mgs);
+
+    gsl_vector_free(DQv);
+    gsl_vector_free(Fv);
+    gsl_vector_free(Fvn);
+    gsl_matrix_free(DF);
+    gsl_matrix_free(Id);
+    gsl_matrix_free(Phi0);
+    gsl_matrix_free(PhiN);
+    gsl_vector_free(work);
+    gsl_matrix_free(Q);
+    gsl_matrix_free(R);
+    gsl_matrix_free(DFT);
+
+    return GSL_SUCCESS;
+}
+
+
+/**
+ * \brief Multiple shooting scheme with no boundary conditions.
+ *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
+ *        - The initial conditions z0 vary in the center-unstable manifold of EML2.
+ *        - The final state zN vary in the center-stable manifold of SEMLi.
  *        - The times t0,..., tN are free to vary.
  *        - The null vector associated to the solution is computed.
  *
@@ -656,14 +1114,13 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
     //Current time along the trajectory
     double *tm   = dvector(0, mgs);
     //Various temporary states and times
-    double yv[nov], ye[nov], f[6];
-    double te;
+    double yv[nov], ye[nov], f[6], te;
 
     //------------------------------------------------------------------------------------
     // GSL matrices and vectors
     //------------------------------------------------------------------------------------
-    int nfv = 7*(mgs+1)-4;  //free variables
-    int ncs = 6*mgs;        //constraints
+    int nfv = 7*mgs+3;  //free variables
+    int ncs = 6*mgs;    //constraints
 
     // Correction vector at patch points
     gsl_vector *DQv = gsl_vector_calloc(nfv);
@@ -823,9 +1280,9 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
             //----------------------------------------------------------------------------
             for(int i = 0; i < 6; i++)
             {
-                //---------------------------
+                //------------------------------------------------------------------------
                 //DF/DS
-                //---------------------------
+                //------------------------------------------------------------------------
                 if(k == 0)
                 {
                     for(int j = 0; j < 4; j++) gsl_matrix_set(DF, i, j,    gsl_matrix_get(Phi0, i, j));
@@ -846,43 +1303,43 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
                 }
 
 
-                //---------------------------
+                //------------------------------------------------------------------------
                 //DF/DT
-                //---------------------------
+                //------------------------------------------------------------------------
                 if(k == 0)
                 {
-                    //--------------------------
+                    //--------------------------------------------------------------------
                     //dF[0]/dt[0]
-                    //--------------------------
+                    //--------------------------------------------------------------------
                     //NOTHING IS DONE FOR NOW
 
-                    //--------------------------
+                    //--------------------------------------------------------------------
                     //dF[0]/dt[1]
-                    //--------------------------
+                    //--------------------------------------------------------------------
                     gsl_matrix_set(DF, i + 6*k, 7*(k+2)-4, f[i]);
                 }
                 else if(k == mgs-1)
                 {
-                    //--------------------------
+                    //--------------------------------------------------------------------
                     //dF[k]/dt[k] = - Ji[k]*f[Q[k], t[k])
-                    //--------------------------
+                    //--------------------------------------------------------------------
                     gsl_matrix_set(DF, i + 6*k, 7*mgs-4, gsl_vector_get(K4, i));
 
-                    //--------------------------
+                    //--------------------------------------------------------------------
                     //dF[k]/dt[k+1] = +f[Q[k+1], t[k+1]] - dCM_SEM_NC/dt[k+1]
-                    //--------------------------
+                    //--------------------------------------------------------------------
                     gsl_matrix_set(DF, i + 6*k, 7*mgs+2, f[i]);
                 }
                 else
                 {
-                    //--------------------------
+                    //--------------------------------------------------------------------
                     //dF[k]/dt[k] = - Ji[k]*f[Q[k], t[k])
-                    //--------------------------
+                    //--------------------------------------------------------------------
                     gsl_matrix_set(DF, i + 6*k, 7*(k+1)-4, gsl_vector_get(K4, i));
 
-                    //--------------------------
+                    //--------------------------------------------------------------------
                     //dF[k]/dt[k+1] = +f[Q[k+1], t[k+1]]
-                    //--------------------------
+                    //--------------------------------------------------------------------
                     gsl_matrix_set(DF, i + 6*k, 7*(k+2)-4, f[i]);
                 }
 
@@ -922,9 +1379,9 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
         //================================================================================
         // Update the free variables
         //================================================================================
-        //------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         //First 4 correction variables is orbit_EM.si
-        //------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         //Updating CM_EM_RCM coordinates
         for(int i = 0; i < 4; i++) orbit_EM.addSi(gsl_vector_get(DQv, i), i);
 
@@ -938,21 +1395,23 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
         qbcp_coc(tmdn[0]/SEML.us_em.ns, yv, ye, NCEM, coord_type);
         for(int i = 0; i < 6; i++) ymdn[i][0] = ye[i];
 
-        //------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         //The middle (patch points) is classical cartesian coordinates at patch points
-        //------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         for(int k = 1; k < mgs; k++)
         {
             for(int i = 0; i < 6; i++) ymdn[i][k] += gsl_vector_get(DQv, i + 7*k-3);
-            tmdn[k] += gsl_vector_get(DQv, 7*(k+1)-4);
+            tmdn[k] = max(tmdn[k] + gsl_vector_get(DQv, 7*(k+1)-4), tmdn[k-1]);
+            //tmdn[k] += gsl_vector_get(DQv, 7*(k+1)-4);
         }
         //Last time:
-        tmdn[mgs] += gsl_vector_get(DQv, 7*mgs+2);
+        tmdn[mgs] = max(tmdn[mgs]+ gsl_vector_get(DQv, 7*mgs+2), tmdn[mgs-1]);
+        //tmdn[mgs] += gsl_vector_get(DQv, 7*mgs+2);
 
 
-        //------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         //Last 4 correction variables is orbit.si
-        //------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         //Updating CM_SEM_RCM coordinates
         for(int i = 0; i < 5; i++) orbit_SEM.addSi(gsl_vector_get(DQv, i + 7*mgs-3), i);
 
@@ -1044,19 +1503,55 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
     double dotNV = 0.0;
     if(isFirst)
     {
-        //Here, we want to make s_EM[0] "grow"
-        sign = gsl_matrix_get(Q, 0, nfv-1) > 0? 1:-1;
+        switch(refSt.termination)
+        {
+        case REF_COND_S5:
+        {
+            //----------------------------------------------------------------------------
+            // First type of condition: stop when we are close enough to the
+            // center manifold (unstable component is small enough)
+            // So, here, we want to make s_SEM[4] "decrease"
+            //----------------------------------------------------------------------------
+            if(orbit_SEM.getSi()[4] > 0) sign = gsl_matrix_get(Q, nfv-2, nfv-1) < 0? 1:-1;
+            else sign = gsl_matrix_get(Q, nfv-2, nfv-1) > 0? 1:-1;
+            break;
+        }
+        case REF_COND_T:
+        {
+            //----------------------------------------------------------------------------
+            // Another possible condition: enough turns around SEMLi. So, here,
+            // we just want to increase the last time, at position nfv-1 = 5*mgs
+            //----------------------------------------------------------------------------
+            sign = gsl_matrix_get(Q, nfv-1, nfv-1) > 0? 1:-1;
+            break;
+        }
+        }
     }
     else
     {
-        //Here, we want to go "in the same direction for s_EM = Q[0:3]": no u_turn!
-        for(int i = 0; i < 4; i++) dotNV += gsl_matrix_get(Q, i, nfv-1)*nullvector[i];
-        //sign = dotNV > 0? 1:-1;
-
-        //OR
-
-        //Here, we want to make s_SEM[4] "decrease"
-        sign = gsl_matrix_get(Q, nfv-2, nfv-1) < 0? 1:-1;
+        switch(refSt.termination)
+        {
+        case REF_COND_S5:
+        {
+            //----------------------------------------------------------------------------
+            // First type of condition: stop when we are close enough to the
+            // center manifold (unstable component is small enough)
+            // So, here, we want to make s_SEM[4] "decrease"
+            //----------------------------------------------------------------------------
+            if(orbit_SEM.getSi()[4] > 0) sign = gsl_matrix_get(Q, nfv-2, nfv-1) < 0? 1:-1;
+            else sign = gsl_matrix_get(Q, nfv-2, nfv-1) > 0? 1:-1;
+            break;
+        }
+        case REF_COND_T:
+        {
+            //----------------------------------------------------------------------------
+            // Another possible condition: enough turns around SEMLi. So, here,
+            // we just want to increase the last time, at position nfv-1 = 5*mgs
+            //----------------------------------------------------------------------------
+            sign = gsl_matrix_get(Q, nfv-1, nfv-1) > 0? 1:-1;
+            break;
+        }
+        }
     }
 
     //Null vector is the last column of Q
@@ -1091,6 +1586,563 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
 
     return GSL_SUCCESS;
 }
+
+/**
+ * \brief Multiple shooting scheme with no boundary conditions.
+ *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
+ *        - The initial conditions z0 vary in the center-unstable manifold of EML2.
+ *        - The final state zN vary in the center-stable manifold of SEMLi.
+ *        - The times t0,..., tN are free to vary.
+ *        - The null vector associated to the solution is computed.
+ *
+ *        Difference with msvt3d: only s1 and s3 are corrected at EML2
+ *
+ *        For now, the computation is limited to coord_type == NCSEM. The general structure
+ *        Of the code leaves room for an extension to other types of coordinates. To do so,
+ *        One should adapt the part that computes dF[k]/dt[k] = - Ji[k]*f[Q[k], t[k]).
+ **/
+int msvtmixed(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
+               int nov, int mgs, int coord_type,
+               double precision, int isFirst,
+               Orbit &orbit_EM, Orbit &orbit_SEM,
+               gnuplot_ctrl *h1, RefSt &refSt, int *niter)
+{
+    //Name of the routine
+    string fname = "msvtmixed";
+
+    //====================================================================================
+    // 0. Test on coord_type (for now)
+    //====================================================================================
+    if(coord_type !=  NCSEM)
+    {
+        cerr << fname << ". Wrong coord_type. Must be NCSEM." << endl;
+        return FTC_EDOM;
+    }
+
+
+    //====================================================================================
+    // 1. Initialization
+    //====================================================================================
+    //Status along the computation
+    int status = 0;
+
+    //------------------------------------------------------------------------------------
+    //Get the default coordinates system from the coord_type
+    //------------------------------------------------------------------------------------
+    int dcs  = default_coordinate_system(coord_type);
+    if(dcs == FTC_FAILURE){
+        cerr << fname << ". The selection of dcs failed." << endl;
+        return FTC_FAILURE;
+    }
+
+    //------------------------------------------------------------------------------------
+    //Get the default framework from the coord_type
+    //------------------------------------------------------------------------------------
+    int fwrk = default_framework(coord_type);
+    if(fwrk == FTC_FAILURE){
+        cerr << fname << ". The selection of fwrk failed." << endl;
+        return FTC_FAILURE;
+    }
+
+    //------------------------------------------------------------------------------------
+    // Selection of the vector field vf
+    //------------------------------------------------------------------------------------
+    vfptr vf  = ftc_select_vf(dcs, 6);
+
+
+    //====================================================================================
+    // Check that the focus in SEML is in accordance with the dcs.
+    //====================================================================================
+    int fwrk0 = SEML.fwrk;
+    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
+
+    //------------------------------------------------------------------------------------
+    // Other initialization
+    //------------------------------------------------------------------------------------
+    //Cumulated norm of the error
+    double normC;
+    //Current state along the trajectory
+    double **ym  = dmatrix(0, 41, 0, mgs);
+    //Current time along the trajectory
+    double *tm   = dvector(0, mgs);
+    //Various temporary states and times
+    double yv[nov], ye[nov], f[6], te;
+
+    //------------------------------------------------------------------------------------
+    // GSL matrices and vectors
+    //------------------------------------------------------------------------------------
+    int nfv = 7*mgs+1;  //free variables
+    int ncs = 6*mgs;    //constraints
+
+    // Correction vector at patch points
+    gsl_vector *DQv = gsl_vector_calloc(nfv);
+
+    // Error vector at patch points
+    gsl_vector *Fv  = gsl_vector_calloc(ncs);
+    //Error isolated at final point
+    gsl_vector *Fvn  = gsl_vector_calloc(6);
+
+    //Jacobian at patch points
+    gsl_matrix **Ji  = gslc_matrix_array_calloc(6, 6, mgs);
+    gsl_matrix *DF   = gsl_matrix_calloc(ncs, nfv);
+
+    //Identity matrix eye(6)
+    gsl_matrix *Id = gsl_matrix_calloc(6,6);
+    gsl_matrix_set_identity (Id);
+
+    //Intermediate variables
+    gsl_vector *Kf  = gsl_vector_calloc(6);
+    gsl_vector *K4  = gsl_vector_calloc(6);
+
+    //Phi0: Jacobian wrt to EM RCM variables
+    gsl_matrix *Phi0 = gsl_matrix_calloc(6,5);
+    //PhiN: Jacobian wrt to SEM RCM variables
+    gsl_matrix *PhiN = gsl_matrix_calloc(6,5);
+
+    //For time derivatives
+    double z1[6];
+
+    //Norms
+    double si_norm_EM, si_norm_SEM;
+
+    //------------------------------------------------------------------------------------
+    // Copy the departure state in ymdn
+    //------------------------------------------------------------------------------------
+    for(int k = 0; k <= mgs; k++)
+    {
+        for(int i = 0; i < nov; i++) ymdn[i][k] = ymd[i][k];
+        tmdn[k] = tmd[k];
+    }
+
+
+    //====================================================================================
+    // 2. Loop correction
+    //====================================================================================
+    //Maximum number of iterations is retrieved from config manager
+    int itermax = Config::configManager().G_DC_ITERMAX();
+    int iter = 0;
+    int ode78coll = 0, tempcoll = 0;
+    while(iter <  itermax)
+    {
+        //================================================================================
+        // Build the Jacobian and other useful matrices
+        //================================================================================
+        ode78coll = 0;
+        for(int k = 0; k <= mgs-1; k++)
+        {
+            //----------------------------------------------------------------------------
+            // Integration
+            //----------------------------------------------------------------------------
+            tempcoll = 0;
+            for(int i = 0; i < nov; i++) yv[i] = ymdn[i][k];
+            ode78(ym, tm, &tempcoll, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
+
+            //----------------------------------------------------------------------------
+            // Collisionner. If a collision occured, we save it in ode78coll
+            //----------------------------------------------------------------------------
+            if(tempcoll && !ode78coll) ode78coll = tempcoll;
+
+            //----------------------------------------------------------------------------
+            // Final position is at the end of ym
+            //----------------------------------------------------------------------------
+            for(int i = 0; i < nov; i++) ye[i] = ym[i][1];
+            te = tm[1];
+
+            //----------------------------------------------------------------------------
+            // Update the Jacobian
+            //----------------------------------------------------------------------------
+            gslc_vectorToMatrix(Ji[k], ye, 6, 6, 6);
+
+            //----------------------------------------------------------------------------
+            // Update Phi0
+            //----------------------------------------------------------------------------
+            if(k == 0)
+            {
+                //Phi0 = Ji[0] x COORD_J_RCM(orbit_EM.si, t0)
+                ftc_compute_phi0(Phi0, Ji[0], orbit_EM, tmdn[0]/SEML.us_em.ns, coord_type);
+
+                if(refSt.isDebug)
+                {
+                    cout << fname << ". Phi0 = " << endl;
+                    gslc_matrix_printf(Phi0);
+                }
+            }
+
+
+            //----------------------------------------------------------------------------
+            // Update PhiN
+            //----------------------------------------------------------------------------
+            if(k == mgs-1)
+            {
+                //PhiN = COORD_J_RCM(orbit_SEM.si, tf), in SEM units, in R(6,5)
+                orbit_SEM.getInvman()->evalDRCMtoCOORD(orbit_SEM.getSi(), tmdn[mgs], PhiN, OFTS_ORDER, OFS_ORDER, coord_type);
+
+                if(refSt.isDebug)
+                {
+                    cout << fname << ". PhiN = " << endl;
+                    gslc_matrix_printf(PhiN);
+                }
+            }
+
+
+            //----------------------------------------------------------------------------
+            // Update the error vector: F[k] = [ye[k] - ymdn[k+1]]
+            //----------------------------------------------------------------------------
+            for(int i = 0; i < 6; i++)
+            {
+                gsl_vector_set(Fv, 6*k+i, ye[i] - ymdn[i][k+1]);
+                if(k == mgs - 1) gsl_vector_set(Fvn, i, ye[i] - ymdn[i][k+1]);
+            }
+
+            //----------------------------------------------------------------------------
+            // Update the derivatives wrt to time
+            //----------------------------------------------------------------------------
+            //------------------------------------------
+            //dF[k]/dt[k] = - Ji[k]*f[Q[k], t[k])
+            //------------------------------------------
+            //Computing f[Q[k], t[k])
+            for(int i = 0; i < 6; i++) yv[i] = ymdn[i][k];
+            vf(tmdn[k], yv, f, &ODESEML);
+
+            //Kf = -f[Q[k], t[k])
+            for(int i = 0; i < 6; i++) gsl_vector_set(Kf, i, -f[i]);
+
+            //K4 = dF[k]/dt[k] = - Ji[k]*f[Q[k], t[k])
+            gsl_blas_dgemv(CblasNoTrans, 1.0, Ji[k], Kf, 0.0, K4);
+
+            //------------------------------------------
+            //dF[k]/dt[k+1] = +f[Q[k+1], t[k+1])
+            //------------------------------------------
+            //Computing f[Q[k+1], t[k+1])
+            vf(te, ye, f, &ODESEML);
+
+            //Special case of the last point: dF[k]/dt[k+1] = +f[Q[k+1], t[k+1]) - dCM_SEM_NC/dt[k+1]
+            if(k == mgs-1)
+            {
+                // z1 = dCM_SEM_NC/dt[k+1]
+                orbit_SEM.getInvman()->evaldotRCMtoNC(orbit_SEM.getSi(), tmdn[mgs], z1, OFTS_ORDER, OFS_ORDER);
+
+                // Then f = f - z1
+                for(int i = 0; i < 6; i++) f[i] -= z1[i];
+            }
+
+
+            //----------------------------------------------------------------------------
+            // Update DF
+            //----------------------------------------------------------------------------
+            for(int i = 0; i < 6; i++)
+            {
+                //------------------------------------------------------------------------
+                //DF/DS
+                //------------------------------------------------------------------------
+                if(k == 0)
+                {
+                    //for(int j = 0; j < 4; j++) gsl_matrix_set(DF, i, j,    gsl_matrix_get(Phi0, i, j));
+                    gsl_matrix_set(DF, i, 0,    gsl_matrix_get(Phi0, i, 0));
+                    gsl_matrix_set(DF, i, 1,    gsl_matrix_get(Phi0, i, 2));
+
+                    for(int j = 0; j < 6; j++) gsl_matrix_set(DF, i, j+2, -gsl_matrix_get(Id, i, j));
+                }
+                else if(k == mgs-1)
+                {
+                    for(int j = 0; j < 6; j++) gsl_matrix_set(DF, i + 6*k, j + 7*k-5,       gsl_matrix_get(Ji[k], i, j));
+                    for(int j = 0; j < 5; j++) gsl_matrix_set(DF, i + 6*k, j + 7*(k+1)-5,  -gsl_matrix_get(PhiN, i, j));
+                }
+                else
+                {
+                    for(int j = 0; j < 6; j++)
+                    {
+                        gsl_matrix_set(DF, i + 6*k, j + 7*k-5,      gsl_matrix_get(Ji[k], i, j));
+                        gsl_matrix_set(DF, i + 6*k, j + 7*(k+1)-5, -gsl_matrix_get(Id, i, j));
+                    }
+                }
+
+
+                //------------------------------------------------------------------------
+                //DF/DT
+                //------------------------------------------------------------------------
+                if(k == 0)
+                {
+                    //--------------------------------------------------------------------
+                    //dF[0]/dt[0]
+                    //--------------------------------------------------------------------
+                    //NOTHING IS DONE FOR NOW
+
+                    //--------------------------------------------------------------------
+                    //dF[0]/dt[1]
+                    //--------------------------------------------------------------------
+                    gsl_matrix_set(DF, i + 6*k, 7*(k+2)-6, f[i]);
+                }
+                else if(k == mgs-1)
+                {
+                    //--------------------------------------------------------------------
+                    //dF[k]/dt[k] = - Ji[k]*f[Q[k], t[k])
+                    //--------------------------------------------------------------------
+                    gsl_matrix_set(DF, i + 6*k, 7*mgs-6, gsl_vector_get(K4, i));
+
+                    //--------------------------------------------------------------------
+                    //dF[k]/dt[k+1] = +f[Q[k+1], t[k+1]] - dCM_SEM_NC/dt[k+1]
+                    //--------------------------------------------------------------------
+                    gsl_matrix_set(DF, i + 6*k, 7*mgs, f[i]);
+                }
+                else
+                {
+                    //--------------------------------------------------------------------
+                    //dF[k]/dt[k] = - Ji[k]*f[Q[k], t[k])
+                    //--------------------------------------------------------------------
+                    gsl_matrix_set(DF, i + 6*k, 7*(k+1)-6, gsl_vector_get(K4, i));
+
+                    //--------------------------------------------------------------------
+                    //dF[k]/dt[k+1] = +f[Q[k+1], t[k+1]]
+                    //--------------------------------------------------------------------
+                    gsl_matrix_set(DF, i + 6*k, 7*(k+2)-6, f[i]);
+                }
+
+            }
+
+
+        }
+
+        //================================================================================
+        //Termination condition: if the desired precision is met,
+        //the process is terminated.
+        //================================================================================
+        //Norm
+        normC  = gsl_blas_dnrm2(Fv);
+
+        //Display current status
+        cout << fname << ". nerror = " << normC << endl;
+
+        // Check that all points are under a given threshold
+        if(normC < precision)
+        {
+            cout << fname << ". Desired precision was reached. break. nerror = " << normC << endl;
+            break;
+        }
+
+        //================================================================================
+        //Compute the correction vector
+        //================================================================================
+        status = ftc_corrvec_mn(DQv, Fv, DF, nfv, ncs);
+        if(status)
+        {
+            cerr << fname << ". The computation of the correction vector failed."  << endl;
+            return FTC_FAILURE;
+        }
+
+
+        //================================================================================
+        // Update the free variables
+        //================================================================================
+        //--------------------------------------------------------------------------------
+        //First 4 correction variables is orbit_EM.si
+        //--------------------------------------------------------------------------------
+        //Updating CM_EM_RCM coordinates
+        orbit_EM.addSi(gsl_vector_get(DQv, 0), 0);
+        orbit_EM.addSi(gsl_vector_get(DQv, 1), 2);
+
+        //Here we suppose that the default framework is SEM, so we need to normalize the time
+        //Updating CM_EM_NCEM coordinates
+        orbit_EM.update_ic(orbit_EM.getSi(), tmdn[0]/SEML.us_em.ns);
+
+        //To CM_EM_NCSEM coordinates
+        //Here we suppose that the default framework is SEM, so we need to normalize the time
+        for(int i = 0; i < nov; i++) yv[i] = orbit_EM.getZ0()[i];
+        qbcp_coc(tmdn[0]/SEML.us_em.ns, yv, ye, NCEM, coord_type);
+        for(int i = 0; i < 6; i++) ymdn[i][0] = ye[i];
+
+        //--------------------------------------------------------------------------------
+        //The middle (patch points) is classical cartesian coordinates at patch points
+        //--------------------------------------------------------------------------------
+        for(int k = 1; k < mgs; k++)
+        {
+            for(int i = 0; i < 6; i++) ymdn[i][k] += gsl_vector_get(DQv, i + 7*k-5);
+            tmdn[k] = max(tmdn[k] + gsl_vector_get(DQv, 7*(k+1)-6), tmdn[k-1]);
+            //tmdn[k] += gsl_vector_get(DQv, 7*(k+1)-6);
+        }
+        //Last time:
+        tmdn[mgs] = max(tmdn[mgs]+ gsl_vector_get(DQv, 7*mgs), tmdn[mgs-1]);
+        //tmdn[mgs] += gsl_vector_get(DQv, 7*mgs);
+
+
+        //--------------------------------------------------------------------------------
+        //Last 4 correction variables is orbit.si
+        //--------------------------------------------------------------------------------
+        //Updating CM_SEM_RCM coordinates
+        for(int i = 0; i < 5; i++) orbit_SEM.addSi(gsl_vector_get(DQv, i + 7*mgs-5), i);
+
+        //Updating CM_SEM_NCSEM coordinates
+        orbit_SEM.update_ic(orbit_SEM.getSi(), tmdn[mgs]);
+
+        //Updating in CM_SEM_NCSEM coordinates
+        for(int i = 0; i < 6; i++) yv[i] = orbit_SEM.getZ0()[i];
+        qbcp_coc(tmdn[mgs], yv, ye, NCSEM, coord_type);
+        for(int i = 0; i < 6; i++) ymdn[i][mgs] = ye[i];
+
+        //================================================================================
+        // Norm check: we need to know if we are in the DPC of the semi-analytical tools
+        //================================================================================
+        // First check at EML2
+        si_norm_EM  = ENorm(orbit_EM.getSi(), 4);
+        if(si_norm_EM > SI_NORM_EM_MAX)
+        {
+            cerr << fname << ". si_norm_EM has reached its limits: " << endl;
+            cout << " si_norm_EM = "       << si_norm_EM << " >";
+            cout << " SI_NORM_EM_MAX = "  << SI_NORM_EM_MAX << endl;
+            return REF_EOUTOFDPC;
+        }
+
+        // Second check at SEMLi
+        si_norm_SEM = ENorm(orbit_SEM.getSi(), 5);
+        if(si_norm_SEM > SI_NORM_SEM_MAX)
+        {
+            cerr << fname << ". si_norm_SEM has reached its limits: " << endl;
+            cout << " si_norm_SEM = "      << si_norm_SEM << " >";
+            cout << " SI_NORM_SEM_MAX = "  << SI_NORM_SEM_MAX << endl;
+            return REF_EOUTOFDPC;
+        }
+
+        //--------------------------------------------------------------------------------
+        // Norm display
+        //--------------------------------------------------------------------------------
+        if(refSt.isDebug)
+        {
+            cout << fname << ". si_norm_EM = "   << si_norm_EM << endl;
+            cout << fname << ". si_norm_SEM = "  << si_norm_SEM << endl;
+        }
+
+
+        //================================================================================
+        // Update number of iterations
+        //================================================================================
+        iter++;
+    }
+
+
+    //====================================================================================
+    //Collision check: just a warning (for now). In the long run we need to give it to
+    // the upper level!
+    //====================================================================================
+    if(ode78coll) cout << fname << ". A collision has occured with " << ode78coll << endl;
+
+
+    //------------------------------------------------------------------------------------
+    //Last plot
+    //------------------------------------------------------------------------------------
+    if(refSt.isPlotted) gnuplot_plot_xyz(h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
+
+    //====================================================================================
+    // Reset the focus in SEML, if necessary
+    //====================================================================================
+    if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
+
+
+    //====================================================================================
+    // 3. Compute the null vector: QR decomposition of DP^T
+    //====================================================================================
+    //QR elements
+    gsl_vector *work  = gsl_vector_calloc(ncs);
+    gsl_matrix *Q     = gsl_matrix_calloc(nfv,nfv);
+    gsl_matrix *R     = gsl_matrix_calloc(nfv,ncs);
+    gsl_matrix *DFT   = gsl_matrix_calloc(nfv,ncs);
+    //DPT = transpose(DP)
+    gsl_matrix_transpose_memcpy(DFT, DF);
+    //QR decomposition
+    gsl_linalg_QR_decomp (DFT, work);
+    gsl_linalg_QR_unpack (DFT, work, Q, R);
+
+    //------------------------------------------------------------------------------------
+    //Null vector is the last column of Q
+    //------------------------------------------------------------------------------------
+    //Sign of the null vector ?
+    int sign = 1;
+    double dotNV = 0.0;
+    if(isFirst)
+    {
+        switch(refSt.termination)
+        {
+        case REF_COND_S5:
+        {
+            //----------------------------------------------------------------------------
+            // First type of condition: stop when we are close enough to the
+            // center manifold (unstable component is small enough)
+            // So, here, we want to make s_SEM[4] "decrease"
+            //----------------------------------------------------------------------------
+            if(orbit_SEM.getSi()[4] > 0) sign = gsl_matrix_get(Q, nfv-2, nfv-1) < 0? 1:-1;
+            else sign = gsl_matrix_get(Q, nfv-2, nfv-1) > 0? 1:-1;
+            break;
+        }
+        case REF_COND_T:
+        {
+            //----------------------------------------------------------------------------
+            // Another possible condition: enough turns around SEMLi. So, here,
+            // we just want to increase the last time, at position nfv-1 = 5*mgs
+            //----------------------------------------------------------------------------
+            sign = gsl_matrix_get(Q, nfv-1, nfv-1) > 0? 1:-1;
+            break;
+        }
+        }
+    }
+    else
+    {
+        switch(refSt.termination)
+        {
+        case REF_COND_S5:
+        {
+            //----------------------------------------------------------------------------
+            // First type of condition: stop when we are close enough to the
+            // center manifold (unstable component is small enough)
+            // So, here, we want to make s_SEM[4] "decrease"
+            //----------------------------------------------------------------------------
+            if(orbit_SEM.getSi()[4] > 0) sign = gsl_matrix_get(Q, nfv-2, nfv-1) < 0? 1:-1;
+            else sign = gsl_matrix_get(Q, nfv-2, nfv-1) > 0? 1:-1;
+            break;
+        }
+        case REF_COND_T:
+        {
+            //----------------------------------------------------------------------------
+            // Another possible condition: enough turns around SEMLi. So, here,
+            // we just want to increase the last time, at position nfv-1 = 5*mgs
+            //----------------------------------------------------------------------------
+            sign = gsl_matrix_get(Q, nfv-1, nfv-1) > 0? 1:-1;
+            break;
+        }
+        }
+    }
+
+    //Null vector is the last column of Q
+    for(int i = 0; i < nfv; i++) nullvector[i] = sign*gsl_matrix_get(Q, i, nfv-1);
+
+    //------------------------------------------------------------------------------------
+    //Number of iterations
+    //------------------------------------------------------------------------------------
+    *niter = iter;
+
+    //------------------------------------------------------------------------------------
+    // 4. Free
+    //------------------------------------------------------------------------------------
+    free_dmatrix(ym, 0, 41, 0, mgs);
+    free_dvector(tm, 0, mgs);
+    gslc_matrix_array_free(Ji , mgs);
+
+    gsl_vector_free(DQv);
+    gsl_vector_free(Fv);
+    gsl_vector_free(Fvn);
+    gsl_vector_free(Kf);
+    gsl_vector_free(K4);
+    gsl_matrix_free(DF);
+    gsl_matrix_free(Id);
+    gsl_matrix_free(Phi0);
+    gsl_matrix_free(PhiN);
+    gsl_vector_free(work);
+    gsl_matrix_free(Q);
+    gsl_matrix_free(R);
+    gsl_matrix_free(DFT);
+
+
+    return GSL_SUCCESS;
+}
+
 
 /**
  * \brief Multiple shooting scheme with no boundary conditions. PLANAR CASE.
@@ -1264,80 +2316,6 @@ int msftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
             // Update DF
             //----------------------------------------------------------------------------
             jacftplan(k, DF, mgs, Ji, Phi0, PhiN, Id);
-            //            for(int i = 0; i < 4; i++)
-            //            {
-            //                //---------------------------
-            //                //DF/DS
-            //                //---------------------------
-            //                if(k == 0)
-            //                {
-            //                    if(i < 2)
-            //                    {
-            //                        gsl_matrix_set(DF, i, 0,    gsl_matrix_get(Phi0, i, 0));
-            //                        gsl_matrix_set(DF, i, 1,    gsl_matrix_get(Phi0, i, 2));
-            //                    }
-            //                    else
-            //                    {
-            //                        gsl_matrix_set(DF, i, 0,    gsl_matrix_get(Phi0, i+1, 0));
-            //                        gsl_matrix_set(DF, i, 1,    gsl_matrix_get(Phi0, i+1, 2));
-            //                    }
-            //
-            //                    for(int j = 0; j < 4; j++) gsl_matrix_set(DF, i, j+2, -gsl_matrix_get(Id, i, j));
-            //                }
-            //                else if(k == mgs-1)
-            //                {
-            //                    if(i < 2)
-            //                    {
-            //                        gsl_matrix_set(DF, i + 4*k, 4*mgs-6,  gsl_matrix_get(Ji[k], i, 0));
-            //                        gsl_matrix_set(DF, i + 4*k, 4*mgs-5,  gsl_matrix_get(Ji[k], i, 1));
-            //                        gsl_matrix_set(DF, i + 4*k, 4*mgs-4,  gsl_matrix_get(Ji[k], i, 3));
-            //                        gsl_matrix_set(DF, i + 4*k, 4*mgs-3,  gsl_matrix_get(Ji[k], i, 4));
-            //
-            //                        gsl_matrix_set(DF, i + 4*k, 4*mgs-2,  -gsl_matrix_get(PhiN, i, 0));
-            //                        gsl_matrix_set(DF, i + 4*k, 4*mgs-1,  -gsl_matrix_get(PhiN, i, 2));
-            //                        gsl_matrix_set(DF, i + 4*k, 4*mgs-0,  -gsl_matrix_get(PhiN, i, 4));
-            //                    }
-            //                    else
-            //                    {
-            //                        gsl_matrix_set(DF, i + 4*k, 4*mgs-6,  gsl_matrix_get(Ji[k], i+1, 0));
-            //                        gsl_matrix_set(DF, i + 4*k, 4*mgs-5,  gsl_matrix_get(Ji[k], i+1, 1));
-            //                        gsl_matrix_set(DF, i + 4*k, 4*mgs-4,  gsl_matrix_get(Ji[k], i+1, 3));
-            //                        gsl_matrix_set(DF, i + 4*k, 4*mgs-3,  gsl_matrix_get(Ji[k], i+1, 4));
-            //
-            //                        gsl_matrix_set(DF, i + 4*k, 4*mgs-2,  -gsl_matrix_get(PhiN, i+1, 0));
-            //                        gsl_matrix_set(DF, i + 4*k, 4*mgs-1,  -gsl_matrix_get(PhiN, i+1, 2));
-            //                        gsl_matrix_set(DF, i + 4*k, 4*mgs-0,  -gsl_matrix_get(PhiN, i+1, 4));
-            //                    }
-            //                }
-            //                else
-            //                {
-            //                    if(i < 2)
-            //                    {
-            //                        gsl_matrix_set(DF, i + 4*k, 4*k-2,  gsl_matrix_get(Ji[k], i, 0));
-            //                        gsl_matrix_set(DF, i + 4*k, 4*k-1,  gsl_matrix_get(Ji[k], i, 1));
-            //                        gsl_matrix_set(DF, i + 4*k, 4*k-0,  gsl_matrix_get(Ji[k], i, 3));
-            //                        gsl_matrix_set(DF, i + 4*k, 4*k+1,  gsl_matrix_get(Ji[k], i, 4));
-            //
-            //                        gsl_matrix_set(DF, i + 4*k, 4*k+2,  -gsl_matrix_get(Id, i, 0));
-            //                        gsl_matrix_set(DF, i + 4*k, 4*k+3,  -gsl_matrix_get(Id, i, 1));
-            //                        gsl_matrix_set(DF, i + 4*k, 4*k+4,  -gsl_matrix_get(Id, i, 3));
-            //                        gsl_matrix_set(DF, i + 4*k, 4*k+5,  -gsl_matrix_get(Id, i, 4));
-            //                    }
-            //                    else
-            //                    {
-            //                        gsl_matrix_set(DF, i + 4*k, 4*k-2,  gsl_matrix_get(Ji[k], i+1, 0));
-            //                        gsl_matrix_set(DF, i + 4*k, 4*k-1,  gsl_matrix_get(Ji[k], i+1, 1));
-            //                        gsl_matrix_set(DF, i + 4*k, 4*k-0,  gsl_matrix_get(Ji[k], i+1, 3));
-            //                        gsl_matrix_set(DF, i + 4*k, 4*k+1,  gsl_matrix_get(Ji[k], i+1, 4));
-            //
-            //                        gsl_matrix_set(DF, i + 4*k, 4*k+2,  -gsl_matrix_get(Id, i+1, 0));
-            //                        gsl_matrix_set(DF, i + 4*k, 4*k+3,  -gsl_matrix_get(Id, i+1, 1));
-            //                        gsl_matrix_set(DF, i + 4*k, 4*k+4,  -gsl_matrix_get(Id, i+1, 3));
-            //                        gsl_matrix_set(DF, i + 4*k, 4*k+5,  -gsl_matrix_get(Id, i+1, 4));
-            //                    }
-            //
-            //                }
-            //            }
         }
 
         //================================================================================
@@ -1386,9 +2364,9 @@ int msftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
         qbcp_coc(tmdn[0]/SEML.us_em.ns, yv, ye, NCEM, coord_type);
         for(int i = 0; i < 6; i++) ymdn[i][0] = ye[i];
 
-        //------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         //The middle (patch points) is classical cartesian coordinates at patch points
-        //------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         for(int k = 1; k < mgs; k++)
         {
             ymdn[0][k] += gsl_vector_get(DQv, 4*k-2);
@@ -1397,9 +2375,9 @@ int msftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
             ymdn[4][k] += gsl_vector_get(DQv, 4*k+1);
         }
 
-        //------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         //Last 4 correction variables is orbit.si
-        //------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         //Updating CM_SEM_RCM coordinates
         orbit_SEM.addSi(gsl_vector_get(DQv, 4*mgs-2), 0);
         orbit_SEM.addSi(gsl_vector_get(DQv, 4*mgs-1), 2);
@@ -1517,8 +2495,11 @@ int msftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
     else
     {
         //OR
-        //Here, we want to go "in the same direction for some components of Q
-        for(int i = 0; i < 2; i++) dotNV += gsl_matrix_get(Q, i, nfv-1)*nullvector[i];    //CMU of  EML2
+        //Here, we want to go "in the same direction" for some components of Q
+        dotNV += gsl_matrix_get(Q, 0, nfv-1)*nullvector[0];                  //CMU of  EML2
+        //dotNV += gsl_matrix_get(Q, 1, nfv-1)*nullvector[1];                //CMU of  EML2
+        dotNV += gsl_matrix_get(Q, 2, nfv-1)*nullvector[2];                  //CMU of  EML2
+        //dotNV += gsl_matrix_get(Q, 3, nfv-1)*nullvector[3];                //CMU of  EML2
         sign = dotNV > 0? 1:-1;
 
         //OR
@@ -3145,546 +4126,6 @@ int msvftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
 }
 
 
-
-///**
-// * \brief Multiple shooting scheme with no boundary conditions. PLANAR CASE.
-// *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
-// *        - The initial conditions z0 vary in the center-unstable manifold of EML2.
-// *        - The final state zN vary in the center-stable manifold of SEMLi.
-// *        - The time t0 alone is free to vary.
-// *        - The null vector associated to the solution is computed.
-// *
-// *        For now, the computation is limited to coord_type == NCSEM. The general structure
-// *        Of the code leaves room for an extension to other types of coordinates. To do so,
-// *        One should adapt the part that computes dF[k]/dt[k] = - Ji[k]*f[Q[k], t[k]).
-// **/
-//int msvftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
-//              int nov, int mgs, int coord_type, double precision, int isFirst, int dim,
-//              Orbit &orbit_EM, Orbit &orbit_SEM, gnuplot_ctrl *h1, RefSt &refSt, int *niter)
-//{
-//    //Name of the routine
-//    string fname = "msvltplan";
-//
-//    //====================================================================================
-//    // 0. Test on coord_type (for now)
-//    //====================================================================================
-//    if(coord_type !=  NCSEM)
-//    {
-//        cerr << fname << ". Wrong coord_type. Must be NCSEM." << endl;
-//        return FTC_EDOM;
-//    }
-//
-//    //====================================================================================
-//    // 1. Initialization
-//    //====================================================================================
-//    //Status along the computation
-//    int status = 0;
-//
-//    //------------------------------------------------------------------------------------
-//    //Get the default coordinates system from the coord_type
-//    //------------------------------------------------------------------------------------
-//    int dcs  = default_coordinate_system(coord_type);
-//    if(dcs == FTC_FAILURE){
-//        cerr << fname << ". The selection of dcs failed." << endl;
-//        return FTC_FAILURE;
-//    }
-//
-//    //------------------------------------------------------------------------------------
-//    //Get the default framework from the coord_type
-//    //------------------------------------------------------------------------------------
-//    int fwrk = default_framework(coord_type);
-//    if(fwrk == FTC_FAILURE){
-//        cerr << fname << ". The selection of fwrk failed." << endl;
-//        return FTC_FAILURE;
-//    }
-//
-//    //------------------------------------------------------------------------------------
-//    // Selection of the vector field vf
-//    //------------------------------------------------------------------------------------
-//    vfptr vf  = ftc_select_vf(dcs, 6);
-//
-//    //====================================================================================
-//    // Check that the focus in SEML is in accordance with the dcs.
-//    //====================================================================================
-//    int fwrk0 = SEML.fwrk;
-//    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
-//
-//    //------------------------------------------------------------------------------------
-//    // Other initialization
-//    //------------------------------------------------------------------------------------
-//    //Cumulated norm of the error
-//    double normC;
-//    //Current state along the trajectory
-//    double **ym  = dmatrix(0, 41, 0, mgs);
-//    //Current time along the trajectory
-//    double *tm   = dvector(0, mgs);
-//    //Various temporary states and times
-//    double yv[nov], ye[nov], f[6], te;
-//
-//    //------------------------------------------------------------------------------------
-//    // GSL matrices and vectors
-//    //------------------------------------------------------------------------------------
-//    int nfv = 4*mgs+1;  //number of free variables
-//    int ncs = 4*mgs;    //number of constraints
-//
-//    // Correction vector at patch points
-//    gsl_vector *DQv = gsl_vector_calloc(nfv);
-//
-//    // Error vector at patch points
-//    gsl_vector *Fv  = gsl_vector_calloc(ncs);
-//
-//    //Jacobian at patch points
-//    gsl_matrix **Ji  = gslc_matrix_array_calloc(6, 6, mgs);
-//    gsl_matrix *DF   = gsl_matrix_calloc(ncs, nfv);
-//
-//    //Identity matrix eye(6)
-//    gsl_matrix *Id = gsl_matrix_calloc(6,6);
-//    gsl_matrix_set_identity (Id);
-//
-//    //Intermediate variables
-//    gsl_vector *Kf  = gsl_vector_calloc(6);
-//    gsl_vector *K4  = gsl_vector_calloc(6);
-//
-//    //Phi0: Jacobian wrt to EM RCM variables
-//    gsl_matrix *Phi0 = gsl_matrix_calloc(6,5);
-//    //PhiN: Jacobian wrt to SEM RCM variables
-//    gsl_matrix *PhiN = gsl_matrix_calloc(6,5);
-//
-//    //For time derivatives
-//    double z1[6];
-//    gsl_vector *dzNCSEM  = gsl_vector_calloc(6);
-//
-//    //Norms
-//    double si_norm_EM, si_norm_SEM;
-//
-//    //------------------------------------------------------------------------------------
-//    // Copy the departure state in ymdn
-//    //------------------------------------------------------------------------------------
-//    for(int k = 0; k <= mgs; k++)
-//    {
-//        for(int i = 0; i < nov; i++) ymdn[i][k] = ymd[i][k];
-//        tmdn[k] = tmd[k];
-//    }
-//
-//    //====================================================================================
-//    // 2. Loop correction
-//    //====================================================================================
-//    //Maximum number of iterations is retrieved from config manager
-//    int itermax = Config::configManager().G_DC_ITERMAX();
-//    int iter = 0;
-//    int ode78coll = 0, tempcoll = 0;
-//    while(iter <  itermax)
-//    {
-//        //================================================================================
-//        // Build the Jacobian and other useful matrices
-//        //================================================================================
-//        ode78coll = 0;
-//        for(int k = 0; k <= mgs-1; k++)
-//        {
-//            //----------------------------------------------------------------------------
-//            // Integration
-//            //----------------------------------------------------------------------------
-//            tempcoll = 0;
-//            for(int i = 0; i < nov; i++) yv[i] = ymdn[i][k];
-//            ode78(ym, tm, &tempcoll, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
-//
-//            //----------------------------------------------------------------------------
-//            // Collisionner. If a collision occured, we save it in ode78coll
-//            //----------------------------------------------------------------------------
-//            if(tempcoll && !ode78coll) ode78coll = tempcoll;
-//
-//            //----------------------------------------------------------------------------
-//            // Final position is at the end of ym
-//            //----------------------------------------------------------------------------
-//            for(int i = 0; i < nov; i++) ye[i] = ym[i][1];
-//            te = tm[1];
-//
-//            //----------------------------------------------------------------------------
-//            // Update the Jacobian
-//            //----------------------------------------------------------------------------
-//            gslc_vectorToMatrix(Ji[k], ye, 6, 6, 6);
-//
-//            //----------------------------------------------------------------------------
-//            // Update Phi0
-//            //----------------------------------------------------------------------------
-//            if(k == 0)
-//            {
-//                //Phi0 = Ji[0] x COORD_J_RCM(orbit_EM.si, t0)
-//                ftc_compute_phi0(Phi0, Ji[0], orbit_EM, tmdn[0]/SEML.us_em.ns, coord_type);
-//
-//                if(refSt.isDebug)
-//                {
-//                    cout << fname << ". Phi0 = " << endl;
-//                    gslc_matrix_printf(Phi0);
-//                }
-//            }
-//
-//            //----------------------------------------------------------------------------
-//            // Update PhiN
-//            //----------------------------------------------------------------------------
-//            if(k == mgs-1)
-//            {
-//                //PhiN = COORD_J_RCM(orbit_SEM.si, tf), in SEM units, in R(6,5)
-//                orbit_SEM.getInvman()->evalDRCMtoCOORD(orbit_SEM.getSi(), tmdn[mgs], PhiN, OFTS_ORDER, OFS_ORDER, coord_type);
-//
-//                if(refSt.isDebug)
-//                {
-//                    cout << fname << ". PhiN = " << endl;
-//                    gslc_matrix_printf(PhiN);
-//                }
-//            }
-//
-//            //----------------------------------------------------------------------------
-//            // Update the error vector: F[k] = [ye[k] - ymdn[k+1]]
-//            //----------------------------------------------------------------------------
-//            for(int i = 0; i < 4; i++)
-//            {
-//                if(i < 2)  gsl_vector_set(Fv, 4*k+i, ye[i] - ymdn[i][k+1]);
-//                if(i >= 2) gsl_vector_set(Fv, 4*k+i, ye[i+1] - ymdn[i+1][k+1]);
-//            }
-//
-//            //----------------------------------------------------------------------------
-//            // Update the derivatives wrt to time
-//            // Special case of the first point: dF[k]/dt[k] = + Ji[k]*(-f[Q[k], t[k]) + T)
-//            // where T = dCMU_EM_NC/dt[k]
-//            //
-//            // The computation of T is quite hard, because it involves lots computation
-//            // in terms of Fourier series (remember that CMU_EM_NC is not originally
-//            // computed in NCSEM coordinates BUT in NCEM coordinates, so a BIG change
-//            // of coordinates is necessary. It is done in evaldotRCMEMtoNCSEM.
-//            //
-//            //  Moreover, generally f[Q[k], t[k]) >> T
-//            //
-//            //  Moreover, the way T is involved in dF[k]/dt[k] is not fixed from
-//            //  a theoretical point of view. I am not certain of that the expression of
-//            //  dF[k]/dt[k] is right.
-//            //
-//            // Therefore, for now we only compute dF[k]/dt[k] = - Ji[k]*f[Q[k], t[k])
-//            //
-//            //----------------------------------------------------------------------------
-//            if(k == 0)
-//            {
-//                //------------------------------------------------------------------------
-//                //Computing T = dCMU_EM_NC/dt[k]
-//                //------------------------------------------------------------------------
-//                //dCMU_EM_NC/dt[k] in NCSEM coordinates
-//                //orbit_EM.getInvman()->evaldotRCMEMtoNCSEM(orbit_EM.getSi(),
-//                //tmdn[k], dzNCSEM, OFTS_ORDER, OFS_ORDER, *orbit_SEM.getInvman());
-//
-//                //------------------------------------------------------------------------
-//                //dF[k]/dt[k] = - Ji[k]*f[Q[k], t[k])
-//                //------------------------------------------------------------------------
-//                //Computing f[Q[k], t[k])
-//                for(int i = 0; i < 6; i++) yv[i] = ymdn[i][k];
-//                vf(tmdn[k], yv, f, &ODESEML);
-//
-//                //Kf = -f[Q[k], t[k])
-//                for(int i = 0; i < 6; i++) gsl_vector_set(Kf, i, -f[i]);
-//
-//                //K4 = dF[k]/dt[k] = - Ji[k]*f[Q[k], t[k])
-//                gsl_blas_dgemv(CblasNoTrans, 1.0, Ji[k], Kf, 0.0, K4);
-//            }
-//
-//
-//            //----------------------------------------------------------------------------
-//            // Update DF
-//            //----------------------------------------------------------------------------
-//            for(int i = 0; i < 4; i++)
-//            {
-//                //------------------------------------------------------------------------
-//                //DF/DS
-//                //------------------------------------------------------------------------
-//                if(k == 0)
-//                {
-//                    if(i < 2)
-//                    {
-//                        gsl_matrix_set(DF, i, 0, gsl_matrix_get(Phi0, i, dim));
-//                    }
-//                    else
-//                    {
-//                        gsl_matrix_set(DF, i, 0, gsl_matrix_get(Phi0, i+1, dim));
-//                    }
-//
-//                    for(int j = 0; j < 4; j++) gsl_matrix_set(DF, i, j+2, -gsl_matrix_get(Id, i, j));
-//                }
-//                else if(k == mgs-1)
-//                {
-//                    if(i < 2)
-//                    {
-//                        gsl_matrix_set(DF, i + 4*k, 4*mgs-6,  gsl_matrix_get(Ji[k], i, 0));
-//                        gsl_matrix_set(DF, i + 4*k, 4*mgs-5,  gsl_matrix_get(Ji[k], i, 1));
-//                        gsl_matrix_set(DF, i + 4*k, 4*mgs-4,  gsl_matrix_get(Ji[k], i, 3));
-//                        gsl_matrix_set(DF, i + 4*k, 4*mgs-3,  gsl_matrix_get(Ji[k], i, 4));
-//
-//                        gsl_matrix_set(DF, i + 4*k, 4*mgs-2,  -gsl_matrix_get(PhiN, i, 0));
-//                        gsl_matrix_set(DF, i + 4*k, 4*mgs-1,  -gsl_matrix_get(PhiN, i, 2));
-//                        gsl_matrix_set(DF, i + 4*k, 4*mgs-0,  -gsl_matrix_get(PhiN, i, 4));
-//                    }
-//                    else
-//                    {
-//                        gsl_matrix_set(DF, i + 4*k, 4*mgs-6,  gsl_matrix_get(Ji[k], i+1, 0));
-//                        gsl_matrix_set(DF, i + 4*k, 4*mgs-5,  gsl_matrix_get(Ji[k], i+1, 1));
-//                        gsl_matrix_set(DF, i + 4*k, 4*mgs-4,  gsl_matrix_get(Ji[k], i+1, 3));
-//                        gsl_matrix_set(DF, i + 4*k, 4*mgs-3,  gsl_matrix_get(Ji[k], i+1, 4));
-//
-//                        gsl_matrix_set(DF, i + 4*k, 4*mgs-2,  -gsl_matrix_get(PhiN, i+1, 0));
-//                        gsl_matrix_set(DF, i + 4*k, 4*mgs-1,  -gsl_matrix_get(PhiN, i+1, 2));
-//                        gsl_matrix_set(DF, i + 4*k, 4*mgs-0,  -gsl_matrix_get(PhiN, i+1, 4));
-//                    }
-//                }
-//                else
-//                {
-//                    if(i < 2)
-//                    {
-//                        gsl_matrix_set(DF, i + 4*k, 4*k-2,  gsl_matrix_get(Ji[k], i, 0));
-//                        gsl_matrix_set(DF, i + 4*k, 4*k-1,  gsl_matrix_get(Ji[k], i, 1));
-//                        gsl_matrix_set(DF, i + 4*k, 4*k-0,  gsl_matrix_get(Ji[k], i, 3));
-//                        gsl_matrix_set(DF, i + 4*k, 4*k+1,  gsl_matrix_get(Ji[k], i, 4));
-//
-//                        gsl_matrix_set(DF, i + 4*k, 4*k+2,  -gsl_matrix_get(Id, i, 0));
-//                        gsl_matrix_set(DF, i + 4*k, 4*k+3,  -gsl_matrix_get(Id, i, 1));
-//                        gsl_matrix_set(DF, i + 4*k, 4*k+4,  -gsl_matrix_get(Id, i, 3));
-//                        gsl_matrix_set(DF, i + 4*k, 4*k+5,  -gsl_matrix_get(Id, i, 4));
-//                    }
-//                    else
-//                    {
-//                        gsl_matrix_set(DF, i + 4*k, 4*k-2,  gsl_matrix_get(Ji[k], i+1, 0));
-//                        gsl_matrix_set(DF, i + 4*k, 4*k-1,  gsl_matrix_get(Ji[k], i+1, 1));
-//                        gsl_matrix_set(DF, i + 4*k, 4*k-0,  gsl_matrix_get(Ji[k], i+1, 3));
-//                        gsl_matrix_set(DF, i + 4*k, 4*k+1,  gsl_matrix_get(Ji[k], i+1, 4));
-//
-//                        gsl_matrix_set(DF, i + 4*k, 4*k+2,  -gsl_matrix_get(Id, i+1, 0));
-//                        gsl_matrix_set(DF, i + 4*k, 4*k+3,  -gsl_matrix_get(Id, i+1, 1));
-//                        gsl_matrix_set(DF, i + 4*k, 4*k+4,  -gsl_matrix_get(Id, i+1, 3));
-//                        gsl_matrix_set(DF, i + 4*k, 4*k+5,  -gsl_matrix_get(Id, i+1, 4));
-//                    }
-//                }
-//
-//
-//                //------------------------------------------------------------------------
-//                //DF/DT
-//                //------------------------------------------------------------------------
-//                if(k == 0)
-//                {
-//                    //--------------------------
-//                    //dF[0]/dt[0]
-//                    //--------------------------
-//                    if(i < 2) gsl_matrix_set(DF, i, 1, gsl_vector_get(K4, i));
-//                    else gsl_matrix_set(DF, i, 1, gsl_vector_get(K4, i+1));
-//                }
-//                else if(k == mgs-1)
-//                {
-//                    //NOTHING IS DONE FOR NOW
-//                }
-//                else
-//                {
-//                    //NOTHING IS DONE FOR NOW
-//                }
-//            }
-//        }
-//
-//        //================================================================================
-//        //Termination condition: if the desired precision is met,
-//        //the process is terminated.
-//        //================================================================================
-//        //Norm
-//        normC  = gsl_blas_dnrm2(Fv);
-//
-//        //Display current status
-//        cout << fname << ". nerror = " << normC << endl;
-//
-//        // Check that all points are under a given threshold
-//        if(normC < precision)
-//        {
-//            cout << fname << ". Desired precision was reached. break. nerror = " << normC << endl;
-//            break;
-//        }
-//
-//        //================================================================================
-//        //Compute the correction vector
-//        //================================================================================
-//        int status = ftc_corrvec_mn(DQv, Fv, DF, nfv, ncs);
-//        if(status)
-//        {
-//            cerr << fname << ". The computation of the correction vector failed."  << endl;
-//            return FTC_FAILURE;
-//        }
-//
-//        //================================================================================
-//        // Update the free variables
-//        //================================================================================
-//        //--------------------------------------------------------------------------------
-//        //First 4 correction variables is orbit_EM.si
-//        //--------------------------------------------------------------------------------
-//        //Updating CM_EM_RCM coordinates
-//        orbit_EM.addSi(gsl_vector_get(DQv, 0), dim);
-//
-//        //First time:
-//        tmdn[0] += gsl_vector_get(DQv, 1);
-//
-//        //Here we suppose that the default framework is SEM, so we need to normalize the time
-//        //Updating CM_EM_NCEM coordinates
-//        orbit_EM.update_ic(orbit_EM.getSi(), tmdn[0]/SEML.us_em.ns);
-//
-//        //To CM_EM_NCSEM coordinates
-//        //Here we suppose that the default framework is SEM, so we need to normalize the time
-//        for(int i = 0; i < 6; i++) yv[i] = orbit_EM.getZ0()[i];
-//        qbcp_coc(tmdn[0]/SEML.us_em.ns, yv, ye, NCEM, coord_type);
-//        for(int i = 0; i < 6; i++) ymdn[i][0] = ye[i];
-//
-//        //--------------------------------------------------------------------------------
-//        //The middle (patch points) is classical cartesian coordinates at patch points
-//        //--------------------------------------------------------------------------------
-//        for(int k = 1; k < mgs; k++)
-//        {
-//            ymdn[0][k] += gsl_vector_get(DQv, 4*k-2);
-//            ymdn[1][k] += gsl_vector_get(DQv, 4*k-1);
-//            ymdn[3][k] += gsl_vector_get(DQv, 4*k-0);
-//            ymdn[4][k] += gsl_vector_get(DQv, 4*k+1);
-//        }
-//
-//        //--------------------------------------------------------------------------------
-//        //Last 3 correction variables is orbit.si
-//        //--------------------------------------------------------------------------------
-//        //Updating CM_SEM_RCM coordinates
-//        orbit_SEM.addSi(gsl_vector_get(DQv, 4*mgs-2), 0);
-//        orbit_SEM.addSi(gsl_vector_get(DQv, 4*mgs-1), 2);
-//        orbit_SEM.addSi(gsl_vector_get(DQv, 4*mgs-0), 4);
-//
-//        //Updating in CM_SEM_NCSEM coordinates
-//        orbit_SEM.update_ic(orbit_SEM.getSi(), tmdn[mgs]);
-//
-//        //Updating in CM_SEM_NCSEM coordinates
-//        for(int i = 0; i < 6; i++) yv[i] = orbit_SEM.getZ0()[i];
-//        qbcp_coc(tmdn[mgs], yv, ye, NCSEM, coord_type);
-//        for(int i = 0; i < 6; i++) ymdn[i][mgs] = ye[i];
-//
-//
-//        //================================================================================
-//        // Norm check: we need to know if we are in the DPC of the semi-analytical tools
-//        //================================================================================
-//        // First check at EML2
-//        si_norm_EM  = ENorm(orbit_EM.getSi(), 4);
-//        if(si_norm_EM > SI_NORM_EM_MAX)
-//        {
-//            cerr << fname << ". si_norm_EM has reached its limits: " << endl;
-//            cout << " si_norm_EM = "       << si_norm_EM << " >";
-//            cout << " SI_NORM_EM_MAX = "  << SI_NORM_EM_MAX << endl;
-//            return REF_EOUTOFDPC;
-//        }
-//
-//        // Second check at SEMLi
-//        si_norm_SEM = ENorm(orbit_SEM.getSi(), 5);
-//        if(si_norm_SEM > SI_NORM_SEM_MAX)
-//        {
-//            cerr << fname << ". si_norm_SEM has reached its limits: " << endl;
-//            cout << " si_norm_SEM = "      << si_norm_SEM << " >";
-//            cout << " SI_NORM_SEM_MAX = "  << SI_NORM_SEM_MAX << endl;
-//            return REF_EOUTOFDPC;
-//        }
-//
-//        //--------------------------------------------------------------------------------
-//        // Norm display
-//        //--------------------------------------------------------------------------------
-//        if(refSt.isDebug)
-//        {
-//            cout << fname << ". si_norm_EM = "   << si_norm_EM << endl;
-//            cout << fname << ". si_norm_SEM = "  << si_norm_SEM << endl;
-//        }
-//
-//        //================================================================================
-//        // Update number of iterations
-//        //================================================================================
-//        iter++;
-//    }
-//
-//    //====================================================================================
-//    //Collision check: just a warning (for now). In the long run we need to give it to
-//    // the upper level!
-//    //====================================================================================
-//    if(ode78coll) cout << fname << ". A collision has occured with " << ode78coll << endl;
-//
-//    //------------------------------------------------------------------------------------
-//    //Last plot
-//    //------------------------------------------------------------------------------------
-//    if(refSt.isPlotted)
-//    {
-//        gnuplot_plot_xyz(h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
-//        gnuplot_plot_xyz(h1, &ymdn[0][mgs], &ymdn[1][mgs],  &ymdn[2][mgs], 1, (char*)"", "points", "2", "2", 0);
-//        gnuplot_plot_xyz(h1, &ymdn[0][0], &ymdn[1][0],  &ymdn[2][0], 1, (char*)"", "points", "2", "2", 0);
-//    }
-//
-//    //====================================================================================
-//    // 3. Compute the null vector: QR decomposition of DP^T
-//    //====================================================================================
-//    //QR elements
-//    gsl_vector *work  = gsl_vector_calloc(ncs);
-//    gsl_matrix *Q     = gsl_matrix_calloc(nfv,nfv);
-//    gsl_matrix *R     = gsl_matrix_calloc(nfv,ncs);
-//    gsl_matrix *DFT   = gsl_matrix_calloc(nfv,ncs);
-//
-//
-//    //DPT = transpose(DP)
-//    gsl_matrix_transpose_memcpy(DFT, DF);
-//    //QR decomposition
-//    gsl_linalg_QR_decomp (DFT, work);
-//    gsl_linalg_QR_unpack (DFT, work, Q, R);
-//
-//    //------------------------------------------------------------------------------------
-//    //Null vector is the last column of Q
-//    //------------------------------------------------------------------------------------
-//    //Sign of the null vector ?
-//    int sign = 1;
-//    if(isFirst)
-//    {
-//        //--------------------------------------------------------------------------------
-//        // we just want to increase the first time, at position 1
-//        //--------------------------------------------------------------------------------
-//        sign = gsl_matrix_get(Q, 1, nfv-1) > 0? -1:+1;
-//    }
-//    else
-//    {
-//        //--------------------------------------------------------------------------------
-//        // we just want to increase the first time, at position 1
-//        //--------------------------------------------------------------------------------
-//        sign = gsl_matrix_get(Q, 1, nfv-1) > 0? -1:+1;
-//    }
-//
-//    //Null vector is the last column of Q
-//    for(int i = 0; i < nfv; i++) nullvector[i] = sign*gsl_matrix_get(Q, i, nfv-1);
-//
-//    //------------------------------------------------------------------------------------
-//    //Number of iterations
-//    //------------------------------------------------------------------------------------
-//    *niter = iter;
-//
-//    //====================================================================================
-//    // Reset the focus in SEML, if necessary
-//    //====================================================================================
-//    if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
-//
-//    //====================================================================================
-//    // 4. Free
-//    //====================================================================================
-//    free_dmatrix(ym, 0, 41, 0, mgs);
-//    free_dvector(tm, 0, mgs);
-//    gslc_matrix_array_free(Ji , mgs);
-//    gsl_vector_free(DQv);
-//    gsl_vector_free(Fv);
-//    gsl_matrix_free(DF);
-//    gsl_matrix_free(Id);
-//    gsl_matrix_free(Phi0);
-//    gsl_matrix_free(PhiN);
-//    gsl_vector_free(work);
-//    gsl_matrix_free(Q);
-//    gsl_matrix_free(R);
-//    gsl_matrix_free(DFT);
-//
-//
-//    return FTC_SUCCESS;
-//}
-
-
 //========================================================================================
 //
 //          DIFFCORR CUSTOM: CMU to CMS: JACOBIAN MATRICES
@@ -3983,6 +4424,66 @@ int ufvarft3d(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
     return GSL_SUCCESS;
 }
 
+int ufvarftmixed(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
+                double *nullvector,
+                Orbit &orbit_EM, Orbit &orbit_SEM,
+                int mgs, int coord_type,  RefSt &refSt)
+{
+    //------------------------------------------------------------------------------------
+    //Temp variables
+    //------------------------------------------------------------------------------------
+    double *yv = dvector(0, 5);
+    double *ye = dvector(0, 5);
+
+    //------------------------------------------------------------------------------------
+    //Here, we simply update *ds = ds0, no additionnal constraint.
+    //------------------------------------------------------------------------------------
+    *ds = ds0;
+
+    //------------------------------------------------------------------------------------
+    //Updating CM_EM
+    //------------------------------------------------------------------------------------
+    //Updating CM_EM_RCM coordinates
+    orbit_EM.addSi(*ds*nullvector[0], 0);
+    orbit_EM.addSi(*ds*nullvector[1], 2);
+
+    //Updating CM_EM_NCEM coordinates
+    orbit_EM.update_ic(orbit_EM.getSi(), t_traj_n[0]/SEML.us_em.ns);
+    //To CM_EM_NCSEM coordinates
+    for(int i = 0; i < 6; i++) yv[i] = orbit_EM.getZ0()[i];
+    qbcp_coc(t_traj_n[0]/SEML.us_em.ns, yv, ye, NCEM, coord_type);
+    for(int i = 0; i < 6; i++) y_traj_n[i][0] = ye[i];
+
+    //------------------------------------------------------------------------------------
+    //The middle (patch points) is classical cartesian coordinates at patch points
+    //------------------------------------------------------------------------------------
+    for(int k = 1; k < mgs; k++)
+    {
+        for(int i = 0; i < 6; i++) y_traj_n[i][k] += *ds*nullvector[i+6*k-4];
+    }
+
+    //------------------------------------------------------------------------------------
+    //Updating CM_SEM
+    //------------------------------------------------------------------------------------
+    //Updating CM_SEM_RCM coordinates
+    for(int i = 0; i < 5; i++) orbit_SEM.addSi(*ds*nullvector[i + 6*mgs-4], i);
+
+    //Updating CM_SEM_NCSEM coordinates
+    orbit_SEM.update_ic(orbit_SEM.getSi(), t_traj_n[mgs]);
+
+    //Updating in CM_SEM_NCSEM coordinates
+    for(int i = 0; i < 6; i++) yv[i] = orbit_SEM.getZ0()[i];
+    qbcp_coc(t_traj_n[mgs], yv, ye, NCSEM, coord_type);
+    for(int i = 0; i < 6; i++) y_traj_n[i][mgs] = ye[i];
+
+
+    //------------------------------------------------------------------------------------
+    //Free variables
+    //------------------------------------------------------------------------------------
+    free_dvector(yv, 0, 5);
+    free_dvector(ye, 0, 5);
+    return GSL_SUCCESS;
+}
 
 
 int ufvarvt3d(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
@@ -3999,7 +4500,36 @@ int ufvarvt3d(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
     //------------------------------------------------------------------------------------
     //Here, we simply update *ds = ds0, no additionnal constraint.
     //------------------------------------------------------------------------------------
-    *ds = ds0;
+    // The value of ds depends on the type of termination condition for the continuation
+    switch(refSt.termination)
+    {
+    case REF_COND_S5:
+    {
+        //--------------------------------------------------------------------------------
+        // First type of condition: stop when we are close enough to the
+        // center manifold (unstable component is small enough)
+        // The objective of this continuation is to bring orbit_SEM.si[4] to 0.0.
+        // Prior to updating, we check that the continuation is not going "to far"
+        // (orbit_SEM.si[4] may change sign).
+        //--------------------------------------------------------------------------------
+        double dkn = orbit_SEM.getSi()[4] + ds0*nullvector[7*mgs+1];
+        if(dkn * orbit_SEM.getSi()[4] < 0) //if there is a change of sign, we reduce the stepsize
+        {
+            *ds = -orbit_SEM.getSi()[4]/nullvector[7*mgs+1];
+        }
+        else *ds = ds0;
+        break;
+    }
+    case REF_COND_T:
+    {
+        //--------------------------------------------------------------------------------
+        // Another possible condition: enough turns around SEMLi. So, here,
+        // we just want to increase the last time, at position nfv-1
+        //--------------------------------------------------------------------------------
+        *ds = ds0;
+        break;
+    }
+    }
 
     //------------------------------------------------------------------------------------
     //Updating CM_EM
@@ -4022,14 +4552,149 @@ int ufvarvt3d(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
         t_traj_n[k] += *ds*nullvector[7*(k+1)-4];
     }
     //Last time:
-    t_traj_n[mgs] += *ds*nullvector[ 7*mgs+2];
+    t_traj_n[mgs] += *ds*nullvector[7*mgs+2];
 
 
     //------------------------------------------------------------------------------------
     //Last 4 correction variables is orbit.si
     //------------------------------------------------------------------------------------
     //Updating CM_SEM_RCM coordinates
-    for(int i = 0; i < 5; i++) orbit_SEM.addSi(*ds*nullvector[i + 7*mgs-3], i);
+    for(int i = 0; i < 4; i++) orbit_SEM.addSi(*ds*nullvector[i + 7*mgs-3], i);
+    switch(refSt.termination)
+    {
+    case REF_COND_S5:
+    {
+        //--------------------------------------------------------------------------------
+        // First type of condition: stop when we are close enough to the
+        // center manifold (unstable component is small enough)
+        //--------------------------------------------------------------------------------
+        orbit_SEM.addSi(max(0.0, orbit_SEM.getSi()[4] + *ds*nullvector[7*mgs+1]), 4);
+        break;
+    }
+    case REF_COND_T:
+    {
+        //--------------------------------------------------------------------------------
+        // Another possible condition: enough turns around SEMLi. So, here,
+        // we just want to increase the last time, at position nfv-1
+        //--------------------------------------------------------------------------------
+        orbit_SEM.addSi(orbit_SEM.getSi()[4] + *ds*nullvector[7*mgs+1], 4);
+        break;
+    }
+    }
+
+    //Updating CM_SEM_NCSEM coordinates
+    orbit_SEM.update_ic(orbit_SEM.getSi(), t_traj_n[mgs]);
+
+    //Updating in CM_SEM_NCSEM coordinates
+    for(int i = 0; i < 6; i++) yv[i] = orbit_SEM.getZ0()[i];
+    qbcp_coc(t_traj_n[mgs], yv, ye, NCSEM, coord_type);
+    for(int i = 0; i < 6; i++) y_traj_n[i][mgs] = ye[i];
+
+
+    //------------------------------------------------------------------------------------
+    //Free variables
+    //------------------------------------------------------------------------------------
+    free_dvector(yv, 0, 5);
+    free_dvector(ye, 0, 5);
+    return GSL_SUCCESS;
+}
+
+int ufvarvtmixed(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
+                double *nullvector,
+                Orbit &orbit_EM, Orbit &orbit_SEM,
+                int mgs, int coord_type,  RefSt &refSt)
+{
+    //------------------------------------------------------------------------------------
+    //Temp variables
+    //------------------------------------------------------------------------------------
+    double *yv = dvector(0, 5);
+    double *ye = dvector(0, 5);
+
+    //------------------------------------------------------------------------------------
+    //Here, we simply update *ds = ds0, no additionnal constraint.
+    //------------------------------------------------------------------------------------
+    // The value of ds depends on the type of termination condition for the continuation
+    switch(refSt.termination)
+    {
+    case REF_COND_S5:
+    {
+        //--------------------------------------------------------------------------------
+        // First type of condition: stop when we are close enough to the
+        // center manifold (unstable component is small enough)
+        // The objective of this continuation is to bring orbit_SEM.si[4] to 0.0.
+        // Prior to updating, we check that the continuation is not going "to far"
+        // (orbit_SEM.si[4] may change sign).
+        //--------------------------------------------------------------------------------
+        double dkn = orbit_SEM.getSi()[4] + ds0*nullvector[7*mgs-1];
+        if(dkn * orbit_SEM.getSi()[4] < 0) //if there is a change of sign, we reduce the stepsize
+        {
+            *ds = -orbit_SEM.getSi()[4]/nullvector[7*mgs-1];
+        }
+        else *ds = ds0;
+        break;
+    }
+    case REF_COND_T:
+    {
+        //--------------------------------------------------------------------------------
+        // Another possible condition: enough turns around SEMLi. So, here,
+        // we just want to increase the last time, at position nfv-1
+        //--------------------------------------------------------------------------------
+        *ds = ds0;
+        break;
+    }
+    }
+
+    //------------------------------------------------------------------------------------
+    //Updating CM_EM
+    //------------------------------------------------------------------------------------
+    //Updating CM_EM_RCM coordinates
+    orbit_EM.addSi(*ds*nullvector[0], 0);
+    orbit_EM.addSi(*ds*nullvector[1], 2);
+    //Updating CM_EM_NCEM coordinates
+    orbit_EM.update_ic(orbit_EM.getSi(), t_traj_n[0]/SEML.us_em.ns);
+    //To CM_EM_NCSEM coordinates
+    for(int i = 0; i < 6; i++) yv[i] = orbit_EM.getZ0()[i];
+    qbcp_coc(t_traj_n[0]/SEML.us_em.ns, yv, ye, NCEM, coord_type);
+    for(int i = 0; i < 6; i++) y_traj_n[i][0] = ye[i];
+
+    //------------------------------------------------------------------------------------
+    //The middle (patch points) is classical cartesian coordinates at patch points
+    //------------------------------------------------------------------------------------
+    for(int k = 1; k < mgs; k++)
+    {
+        for(int i = 0; i < 6; i++) y_traj_n[i][k] += *ds*nullvector[i + 7*k-5];
+        t_traj_n[k] += *ds*nullvector[7*(k+1)-6];
+    }
+    //Last time:
+    t_traj_n[mgs] += *ds*nullvector[7*mgs];
+
+
+    //------------------------------------------------------------------------------------
+    //Last 4 correction variables is orbit.si
+    //------------------------------------------------------------------------------------
+    //Updating CM_SEM_RCM coordinates
+    for(int i = 0; i < 4; i++) orbit_SEM.addSi(*ds*nullvector[i + 7*mgs-5], i);
+    switch(refSt.termination)
+    {
+    case REF_COND_S5:
+    {
+        //--------------------------------------------------------------------------------
+        // First type of condition: stop when we are close enough to the
+        // center manifold (unstable component is small enough)
+        //--------------------------------------------------------------------------------
+        orbit_SEM.addSi(max(0.0, orbit_SEM.getSi()[4] + *ds*nullvector[7*mgs-1]), 4);
+        break;
+    }
+    case REF_COND_T:
+    {
+        //--------------------------------------------------------------------------------
+        // Another possible condition: enough turns around SEMLi. So, here,
+        // we just want to increase the last time, at position nfv-1
+        //--------------------------------------------------------------------------------
+        orbit_SEM.addSi(orbit_SEM.getSi()[4] + *ds*nullvector[7*mgs-1], 4);
+        break;
+    }
+    }
 
     //Updating CM_SEM_NCSEM coordinates
     orbit_SEM.update_ic(orbit_SEM.getSi(), t_traj_n[mgs]);

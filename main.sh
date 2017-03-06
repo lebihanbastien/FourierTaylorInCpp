@@ -207,7 +207,7 @@ if [ -z ${REFST_TYPE+x} ]; then
 	REFST_T0_DES=0.00                # Initial time - given as %T, with T the SEM period   
 
 	# Domain of search (min s1, max s1, min s3, max s3) for the first guess
-	REFST_SI_CMU_EM_LIM=(-35 +35 -35 +35)
+	REFST_SI_CMU_EM_LIM=(-35 +35 0 0 -35 +35 0 0)
 	# Or, if we want the user to define such domain:
 	REFST_ISLIMUD=0
 
@@ -302,6 +302,8 @@ else
 		$REF_PLANAR) echo 'REFST_DIM              = REF_PLANAR'
 		;;
 		$REF_3D)     echo 'REFST_DIM              = REF_3D'
+		;;
+		$REF_MIXED)  echo 'REFST_DIM              = REF_MIXED'
 		;;
 		*)     	     echo "REFST_DIM              = "$REFST_DIM". Unknown type."
 	esac
@@ -435,8 +437,8 @@ if [ "$ans" == "y" ]; then
 		;;
 		$COMP_CM_EML2_TO_CMS_SEML) 	 
 			COEFFS=(${COEFFS[*]}  $REFST_TYPE $REFST_DIM $REFST_T0_DES)
-		        COEFFS=(${COEFFS[*]}  $REFST_ISDIRUD $REFST_DIR)
-		        COEFFS=(${COEFFS[*]}  ${REFST_SI_CMU_EM_LIM[*]} $REFST_ISLIMUD)
+		    COEFFS=(${COEFFS[*]}  $REFST_ISDIRUD $REFST_DIR)
+		    COEFFS=(${COEFFS[*]}  ${REFST_SI_CMU_EM_LIM[*]} $REFST_ISLIMUD)
 			COEFFS=(${COEFFS[*]}  ${REFST_TOF_LIM[*]})
 		  	COEFFS=(${COEFFS[*]}  $REFST_CONT_STEP_MAX $REFST_CONT_STEP_MAX_VT)
 			COEFFS=(${COEFFS[*]}  $REFST_FIXED_TIME_DS0 $REFST_VAR_TIME_DS0)
