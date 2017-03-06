@@ -377,8 +377,8 @@ int main(int argc, char** argv)
         // Maximum/Minimum step in the continuation procedure
         refSt.dsmin         = 1e-6;                     //with fixed time
         refSt.dsmin_vt      = 1e-6;                     //with variable time
-        refSt.dsmax         = 2e-1;                     //with fixed time
-        refSt.dsmax_vt      = 2e-1;                     //with variable time
+        refSt.dsmax         = 10;                 //with fixed time
+        refSt.dsmax_vt      = 10;                 //with variable time
 
         refSt.xps           = (LI_SEM == 1)? +0.6:-0.6; // position of the poincaré section in NCSEM coordinates
         refSt.isJPL         = 1;                        // is the JPL refinement performed when possible?
