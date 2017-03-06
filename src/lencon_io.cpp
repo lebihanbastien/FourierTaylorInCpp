@@ -32,12 +32,15 @@ string filenameCUM(int ofts_order, int type, int destination)
         return SEML.cs_em.F_PLOT+"cu_3d_order_"+numTostring(ofts_order)+"_dest_L"+numTostring(destination)+".bin";
     case TYPE_MAN_PROJ_3D:
         return SEML.cs_em.F_PLOT+"projcu_3d_order_"+numTostring(ofts_order)+"_dest_L"+numTostring(destination)+".bin";
+
+    case TYPE_COMP_FOR_JPL:
+        return SEML.cs_em.F_PLOT+"comp_for_jpl_order_"+numTostring(ofts_order)+"_dest_L"+numTostring(destination)+".txt";
+
     case TYPE_MAN_PROJ_FROM_SERVER:
         return SEML.cs_em.F_PLOT+"Serv/projcu_order_20.bin";
     case TYPE_MAN_PROJ_3D_FROM_SERVER:
         return SEML.cs_em.F_PLOT+"Serv/projcu_3d_order_20.bin";
-    case TYPE_COMP_FOR_JPL:
-        return SEML.cs_em.F_PLOT+"comp_for_jpl_order_"+numTostring(ofts_order)+"_dest_L"+numTostring(destination)+".txt";
+
     default:
         cout << "filenameOrbit: unknown type." << endl;
         return "";

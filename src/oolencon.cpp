@@ -2913,7 +2913,7 @@ int oosrefeml2seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* t
     //  2. if there is a continuation procedure based on fixed time,
     //     several computations are produced.
     //------------------------------------------------------------------------------------
-    gnuplot_ctrl* h3 = 0, *h4 = 0, *h5 = 0, *h6 = 0, *h7;
+    gnuplot_ctrl* h3 = 0, *h4 = 0, *h5 = 0, *h6 = 0, *h7 = 0;
     if(refSt.isCont())
     {
         switch(refSt.time)
@@ -2941,16 +2941,20 @@ int oosrefeml2seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* t
             gnuplot_cmd(h5,  "set title \"s5_SEM vs steps\" ");
             gnuplot_cmd(h5, "set grid");
 
-            if(refSt.is3D())
+            if(refSt.type == REF_3D)
             {
                 h6 = gnuplot_init();
                 gnuplot_cmd(h6,  "set title \"s4_EM vs s2_EM\" ");
                 gnuplot_cmd(h6, "set grid");
+            }
 
+            if(refSt.is3D())
+            {
                 h7 = gnuplot_init();
                 gnuplot_cmd(h7,  "set title \"s4_SEM vs s2_SEM\" ");
                 gnuplot_cmd(h7, "set grid");
             }
+
             break;
 
 
@@ -3035,7 +3039,7 @@ int oosrefeml2seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* t
         //--------------------------------------------------------------------------------
         double ds0    = 5e-2;
         double niterd = 4;
-        double dsmin, dsmax;
+        double dsmin  = refSt.dsmin, dsmax = refSt.dsmax;
 
         switch(refSt.time)
         {
@@ -3177,12 +3181,15 @@ int oosrefeml2seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* t
                     gnuplot_plotc_xy(h4, &orbit_SEM.getSi()[0],  &orbit_SEM.getSi()[2], 1, (char*)"", "points", "1", "2", 0);
                     gnuplot_plotc_xy(h5, &dkn, &orbit_SEM.getSi()[4], 1, (char*)"", "points", "1", "2", 0);
 
-                    if(refSt.is3D())
+                    if(refSt.type == REF_3D)
                     {
                         gnuplot_plotc_xy(h6, &orbit_EM.getSi()[1],  &orbit_EM.getSi()[3], 1, (char*)"", "points", "1", "2", 0);
-                        gnuplot_plotc_xy(h7, &orbit_SEM.getSi()[1],  &orbit_SEM.getSi()[3], 1, (char*)"", "points", "1", "2", 0);
                     }
 
+                    if(refSt.is3D())
+                    {
+                        gnuplot_plotc_xy(h7, &orbit_SEM.getSi()[1],  &orbit_SEM.getSi()[3], 1, (char*)"", "points", "1", "2", 0);
+                    }
 
                     break;
                 }
@@ -3577,9 +3584,14 @@ int oosrefeml2seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* t
             gnuplot_close(h3);
             gnuplot_close(h4);
             gnuplot_close(h5);
-            if(refSt.is3D())
+
+            if(refSt.type == REF_3D)
             {
                 gnuplot_close(h6);
+            }
+
+            if(refSt.is3D())
+            {
                 gnuplot_close(h7);
             }
 
@@ -3822,7 +3834,7 @@ int ooseleml2seml(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM[2
         cst  = (s1_CMU_EM[kpor] >= s1_CMU_EM_MIN) & (s1_CMU_EM[kpor] <= s1_CMU_EM_MAX);
         cst  = cst & (s3_CMU_EM[kpor] >= s3_CMU_EM_MIN) & (s3_CMU_EM[kpor] <= s3_CMU_EM_MAX);
 
-        cst  = (s2_CMU_EM[kpor] >= s2_CMU_EM_MIN) & (s2_CMU_EM[kpor] <= s2_CMU_EM_MAX);
+        cst  = cst & (s2_CMU_EM[kpor] >= s2_CMU_EM_MIN) & (s2_CMU_EM[kpor] <= s2_CMU_EM_MAX);
         cst  = cst & (s4_CMU_EM[kpor] >= s4_CMU_EM_MIN) & (s4_CMU_EM[kpor] <= s4_CMU_EM_MAX);
 
         //--------------------------------------------------------------------------------

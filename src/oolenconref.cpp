@@ -564,9 +564,6 @@ int msft3d(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nullv
         dotNV += gsl_matrix_get(Q, 2, nfv-1)*nullvector[2];                  //CMU of  EML2
         //dotNV += gsl_matrix_get(Q, 3, nfv-1)*nullvector[3];                //CMU of  EML2
         sign = dotNV > 0? 1:-1;
-        //        dotNV += gsl_matrix_get(Q, nfv-4, nfv-1)*nullvector[nfv-4];                //CMS of  SEMLi
-        //        dotNV += gsl_matrix_get(Q, nfv-2, nfv-1)*nullvector[nfv-2];                //CMS of  SEMLi
-        //        sign = dotNV > 0? 1:-1;
 
         //OR
         //Here, we want to go "in the same direction for the whole Q vector": no u_turn!
@@ -984,11 +981,8 @@ int msftmixed(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nu
     else
     {
         //OR
-        //Here, we want to go "in the same direction" for some components of Q
-        dotNV += gsl_matrix_get(Q, 0, nfv-1)*nullvector[0];                  //CMU of  EML2
-        //dotNV += gsl_matrix_get(Q, 1, nfv-1)*nullvector[1];                //CMU of  EML2
-        dotNV += gsl_matrix_get(Q, 2, nfv-1)*nullvector[2];                  //CMU of  EML2
-        //dotNV += gsl_matrix_get(Q, 3, nfv-1)*nullvector[3];                //CMU of  EML2
+        //Here, we want to go "in the same direction for some components of Q
+        for(int i = 0; i < 2; i++) dotNV += gsl_matrix_get(Q, i, nfv-1)*nullvector[i];    //CMU of  EML2
         sign = dotNV > 0? 1:-1;
 
         //        dotNV += gsl_matrix_get(Q, nfv-4, nfv-1)*nullvector[nfv-4];                //CMS of  SEMLi
@@ -1500,7 +1494,6 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
     //------------------------------------------------------------------------------------
     //Sign of the null vector ?
     int sign = 1;
-    double dotNV = 0.0;
     if(isFirst)
     {
         switch(refSt.termination)
@@ -2056,7 +2049,7 @@ int msvtmixed(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
     //------------------------------------------------------------------------------------
     //Sign of the null vector ?
     int sign = 1;
-    double dotNV = 0.0;
+    //double dotNV = 0.0;
     if(isFirst)
     {
         switch(refSt.termination)
@@ -2494,12 +2487,8 @@ int msftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
     }
     else
     {
-        //OR
-        //Here, we want to go "in the same direction" for some components of Q
-        dotNV += gsl_matrix_get(Q, 0, nfv-1)*nullvector[0];                  //CMU of  EML2
-        //dotNV += gsl_matrix_get(Q, 1, nfv-1)*nullvector[1];                //CMU of  EML2
-        dotNV += gsl_matrix_get(Q, 2, nfv-1)*nullvector[2];                  //CMU of  EML2
-        //dotNV += gsl_matrix_get(Q, 3, nfv-1)*nullvector[3];                //CMU of  EML2
+        //Here, we want to go "in the same direction for some components of Q
+        for(int i = 0; i < 2; i++) dotNV += gsl_matrix_get(Q, i, nfv-1)*nullvector[i];    //CMU of  EML2
         sign = dotNV > 0? 1:-1;
 
         //OR
