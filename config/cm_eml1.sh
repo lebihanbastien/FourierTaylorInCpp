@@ -52,6 +52,9 @@ else
 	NUM_THREADS=4
 fi
 
+# Parallel computation is on by default
+ISPAR=1		
+
 #-----------------------------------------------------
 # NOHUP condition
 #-----------------------------------------------------

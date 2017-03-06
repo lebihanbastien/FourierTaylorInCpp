@@ -272,10 +272,7 @@ int oo_compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt &projSt)
     //====================================================================================
     bool isPar = projSt.ISPAR;
 
-    //====================================================================================
-    // Get the invariant manifold at EML2
-    //====================================================================================
-    Invman invman(OFTS_ORDER, OFS_ORDER, SEML.cs);
+
 
     //====================================================================================
     // Splash screen
@@ -302,15 +299,6 @@ int oo_compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt &projSt)
     cout << "===================================================================" << endl;
 
     //====================================================================================
-    // Check that the invman is an unstable-manifold
-    //====================================================================================
-    if(invman.getManType() != MAN_CENTER_U)
-    {
-        cout << "oo_compute_grid_CMU_EM_3D. The invariant manifold must be of center-unstable type. return." << endl;
-        return FTC_FAILURE;
-    }
-
-    //====================================================================================
     // Initialization
     //====================================================================================
     //------------------------------------------------------------------------------------
@@ -323,12 +311,24 @@ int oo_compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt &projSt)
         init_grid(grid_si_CMU_RCM[i], projSt.GLIM_SI[i][0], projSt.GLIM_SI[i][1], projSt.GSIZE_SI[i]);
     }
 
+    cout << " - The detailed values of s2 are:                                   " << endl;
+    for(int i = 0; i < projSt.GSIZE_SI[1]; i++) cout << grid_si_CMU_RCM[1][i] << ", ";
+    cout << grid_si_CMU_RCM[1][projSt.GSIZE_SI[1]]  << endl;
+    cout << "===================================================================" << endl;
+    pressEnter(true);
+
 
     //------------------------------------------------------------------------------------
     //Building the time grid
     //------------------------------------------------------------------------------------
     double* grid_t_EM = dvector(0,  projSt.TSIZE);
     init_grid(grid_t_EM, projSt.TLIM[0], projSt.TLIM[1], projSt.TSIZE);
+
+    cout << " - The detailed values of t are:                                   " << endl;
+    for(int i = 0; i < projSt.TSIZE; i++) cout << grid_t_EM[i]/SEML.us.T << ", ";
+    cout << grid_t_EM[projSt.TSIZE]/SEML.us.T  << endl;
+    cout << "===================================================================" << endl;
+    pressEnter(true);
 
     //------------------------------------------------------------------------------------
     //Number of elements
@@ -341,6 +341,20 @@ int oo_compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt &projSt)
     //------------------------------------------------------------------------------------
     double** init_state_CMU_NCEM = dmatrix(0, 5, 0, projSt.GSIZE_SI[2]);
     double** init_state_CMU_RCM  = dmatrix(0, 4, 0, projSt.GSIZE_SI[2]);
+
+    //====================================================================================
+    // Get the invariant manifold at EML2
+    //====================================================================================
+    Invman invman(OFTS_ORDER, OFS_ORDER, SEML.cs);
+
+    //====================================================================================
+    // Check that the invman is an unstable-manifold
+    //====================================================================================
+    if(invman.getManType() != MAN_CENTER_U)
+    {
+        cout << "oo_compute_grid_CMU_EM_3D. The invariant manifold must be of center-unstable type. return." << endl;
+        return FTC_FAILURE;
+    }
 
     //------------------------------------------------------------------------------------
     // Reset the data file

@@ -68,16 +68,16 @@ ISNOHUP=0
 # Parameters that change often
 #-----------------------------------------------------
 # Time grid: min, max and number of points on the grid
-TMIN=0.00     # (given as %T, with T the SEM period)
-TMAX=0.25     # (given as %T, with T the SEM period)
+TMIN=0.995     # (given as %T, with T the SEM period)
+TMAX=0.25      # (given as %T, with T the SEM period)
 TSIZE=0	  
 
 # Configuration (s1, s2, s3, s4) grid
 GLIM_S1=(-35 +35)
-GLIM_S2=(+0  +10)
+GLIM_S2=(-12 +12)
 GLIM_S3=(-35 +35)
-GLIM_S4=(+0  +10)
-GSIZE_SI=(+50 +5 +50 +5)
+GLIM_S4=(-12 +12)
+GSIZE_SI=(+100 +6 +100 +6)
 
 #-----------------------------------------------------
 # Parameters that are stable
