@@ -88,15 +88,11 @@ void writeCONT_txt(Orbit& orbit_EM, Orbit& orbit_SEM,
     //te, ze in NCSEM coordinates
     te_EM  = orbit_EM.getTf();                  //in EM units
 
-    cout << "te_EM  = " << te_EM << endl;
-
     te_SEM = orbit_EM.getTf()*SEML.us_em.ns;    //in SEM units
     for(int i = 0; i <6; i++) yv_NCSEM[i] = orbit_SEM.getZ0()[i];
 
     //te, ze in NCEM coordinates
     qbcp_coc(te_SEM, yv_NCSEM, yv_NCEM, &te_EM, NCSEM, NCEM);
-
-    cout << "te_EM  = " << te_EM << endl;
 
     //Final energy in NCEM coordinates
     He_NCEM = qbcp_Hn_EM(te_EM, yv_NCEM, &SEML);
