@@ -18,35 +18,8 @@ struct ProjSt
     double YNMAX, SNMAX;
 };
 
-//========================================================================================
-//
-//          I/O (to set in oolencon_io.cpp)
-//
-//========================================================================================
-//========================================================================================
-//
-//          I/O (to set in oolencon_io.cpp)
-//
-//========================================================================================
-/**
- *   \brief Storing the results of the continuation procedure, in txt file.
- **/
-void writeCONT_txt(Orbit& orbit_EM, Orbit& orbit_SEM, double *te_NCSEM, double *ye_NCSEM,  int isFirst);
-/**
- *  \brief Get the length the results of the continuation procedure, in txt file.
- **/
-int getLengthCONT_txt(double t0);
+#include "oolencon.h"
 
-/**
- *  \brief Reads the results of the continuation procedure, in txt file.
- **/
-int readCONT_txt(double*  t0_CMU_EM, double*   tf_CMU_EM,
-                 double** si_CMU_EM, double** si_CMS_SEM,
-                 double** z0_CMU_NCEM, double** z0_CMS_NCSEM,
-                 double* tethae, double** ye_NCSEM,
-                 double* H0_NCEM, double* He_NCEM,
-                 double* H0_NCSEM, double* He_NCSEM,
-                 double tr0, int fsize);
 
 //========================================================================================
 //
@@ -73,7 +46,7 @@ int readCONT_txt(double*  t0_CMU_EM, double*   tf_CMU_EM,
  * The output data are saved in a binary file of the form:
  *                   "plot/QBCP/EM/L2/cu_3d_order_16.bin"
  **/
-int oo_compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt &projSt);
+int compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt &projSt);
 
 /**
  *  \brief Computes initial conditions in the Planar Center-Unstable Manifold about EML2,
@@ -98,7 +71,8 @@ int oo_compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt &projSt);
  * The output data are saved in a binary file of the form:
  *               "plot/QBCP/EM/L2/cu_order_16.bin"
  **/
-int oo_compute_grid_CMU_EM(double dist_to_cm, ProjSt &projSt);
+int compute_grid_CMU_EM(double dist_to_cm, ProjSt &projSt);
+
 
 //========================================================================================
 //
@@ -143,8 +117,7 @@ int oo_compute_grid_CMU_EM(double dist_to_cm, ProjSt &projSt);
  * The output data are saved in a binary file of the form:
  *          "plot/QBCP/EM/L2/projcu_3d_order_16.bin".
  **/
-int oo_int_proj_CMU_EM_on_CM_SEM_3D(ProjSt &projSt);
-
+int int_proj_CMU_EM_on_CM_SEM_3D(ProjSt &projSt);
 
 /**
  *  \brief Integrates the central-unstable legs from a discrete set of unstable directions
@@ -181,7 +154,205 @@ int oo_int_proj_CMU_EM_on_CM_SEM_3D(ProjSt &projSt);
  * "plot/QBCP/EM/L2/projcu_order_16.bin", and
  * "plot/QBCP/EM/L2/sortprojcu_order_16.bin" for the projSt.NSMIN best solutions.
  **/
-int oo_int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt);
+int int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt);
+
+//========================================================================================
+//
+//         Refinement of solutions: CMU to CMS - general routine
+//
+//========================================================================================
+/**
+ *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM.
+ *         A multiple_shooting_direct is applied on the MANIFOLD trajectory (manifold leg).
+ *         The initial conditions vary in the paramerization of the CMU of EML2.
+ *         The final conditions vary in the paramerization of the CMS of SEMLi.
+ *         The time at each point except the first one is allowed to vary.
+ *         A continuation procedure can be performed to get more than one refined solution.
+ *
+ *         Because of the possible use of msvt3d and msvtplan inside this routine,
+ *         the refSt.coord_type must be NCSEM. However, the user can put
+ *         other coordinate systems (VNCSEM, PSEM, PEM...), as long as these two routines
+ *         are not used.
+ **/
+int refemlisemli(RefSt& refSt);
+
+//========================================================================================
+//
+//         Refinement of solutions: CMU to CMS - subroutines
+//
+//========================================================================================
+/**
+ *  \brief Continuation of a single of EML2-to-SEMLi connection, between orbit_EM and
+ *         orbit_SEM.
+ *
+ *         Because of the possible use of msvt3d and msvtplan inside this routine,the
+ *         coord_type must be NCSEM. However, the user can put other
+ *         coordinate systems (VNCSEM, PSEM, PEM...), as long as these two routines are
+ *         not used.
+ *
+ *         In general, we recommend to use NCSEM at least for precision
+ *         reasons. In this way, a warning is issued when coord_type is different
+ *         from NCSEM.
+ **/
+int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* t_traj,
+                   int dcs, int coord_type, int* man_grid_size_t,
+                   RefSt& refSt, gnuplot_ctrl* h2);
+
+//----------------------------------------------------------------------------------------
+//         Brick A: select the good IC for EML2-to-SEMli connections in data files
+//----------------------------------------------------------------------------------------
+/**
+ *  \brief Selects good initial conditions for EML2-to-SEMLi connections, searching
+ *         through data files produced by int_proj_CMU_EM_on_CM_SEM_3D or
+ *         int_proj_CMU_EM_on_CM_SEM.
+ **/
+int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM[2],
+                  double* t0_SEM, double* pmin_dist_SEM_out);
+
+//----------------------------------------------------------------------------------------
+//         Brick B: generate a first guess (either a single unstable manifold leg or
+//              a complete trajectory EML2 orbit + man leg + SEMLi orbit).
+//----------------------------------------------------------------------------------------
+/**
+ *  \brief Computing the first guess for the connection leg between the orbit orbit_EM and
+ *         and the orbit orbit_SEM. Only the manifold leg is computed.
+ *         The grid size is returned.
+ **/
+int icmanemlisemli(double** y_traj, double* t_traj,
+                    Orbit& orbit_EM, Orbit& orbit_SEM,
+                    int dcs, int coord_type, int man_grid_size,
+                    RefSt& refSt);
+
+/**
+ *  \brief Computing the first guess for the connection leg between the orbit orbit_EM and
+ *         and the orbit orbit_SEM. The complete trajectory (EML2 + man leg + SEMLi)
+ *         is computed.
+ *         The grid size is returned.
+ **/
+int iccompemlisemli(double** y_traj, double* t_traj,
+                 double** y_traj_comp, double* t_traj_comp,
+                 Orbit& orbit_EM, Orbit& orbit_SEM,
+                 int dcs, int coord_type, int grid_points_des[3],
+                 int grid_points_eff[3], int max_grid,
+                 RefSt& refSt, gnuplot_ctrl* h2, gnuplot_ctrl* h3);
+
+//----------------------------------------------------------------------------------------
+//         Brick C: Find the intersection of a EML2-SEMLi connection
+//                     with a certain Pk section x = cst
+//----------------------------------------------------------------------------------------
+/**
+ *  \brief Find the intersection of a EML2-SEMLi connection contained in
+ *         y_traj_n/t_traj_n with a certain Pk section x = cst defined by refSt.
+ **/
+int xpkemlisemli(double ye[6], double* te, double* t_traj_n, double** y_traj_n,
+                  int man_index, RefSt& refSt);
+
+/**
+ *  \brief Get the complementary coordinates associated to the coordinates coord_type.
+ **/
+int comp_coord_typ(int coord_type);
+
+//========================================================================================
+//
+//         Refining trajectories from continuation procedures
+//
+//========================================================================================
+/**
+ *  \brief Refine complete EMLi-SEMLi connections from semi-analyticalcontinuation results
+ *         The orbits at both ends are included in the refinement process. Each trajectory
+ *         is then refined in a higher-fidelity model (JPL DE430).
+ **/
+int reffromcontemlisemli(RefSt& refSt);
+
+//========================================================================================
+//
+//         Refinement of solutions: Complete trajectory
+//
+//========================================================================================
+/**
+ *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM.
+ *         A multiple_shooting_direct is applied on the WHOLE trajectory
+ *         (EML2 orbit + manifold leg + SEMLi orbit).
+ **/
+int comprefemlisemli3d(int grid_freq_days[3], int coord_type,
+                  Orbit& orbit_EM, Orbit& orbit_SEM,
+                  RefSt& refSt, int label, int isFirst);
+
+//========================================================================================
+//
+//         Refinement of solutions: to JPL
+//
+//========================================================================================
+/**
+ *  \brief Refine a given output of comprefemlisemli3d into JPL ephemerides.
+ **/
+int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst);
+
+/**
+ *  \brief Refine a given output of comprefemlisemli3d into Inertial Coordinates, then into
+ *         JPL coordinates.
+ **/
+int comptojplref3d(int coord_type, RefSt& refSt);
+
+//----------------------------------------------------------------------------------------
+//         Refinement of solutions: to JPL - Subroutines
+//----------------------------------------------------------------------------------------
+/**
+ * \brief Computes a first guess in ephemerides coordinates, switching between the
+ *        Earth-Moon and Sun-Earth plane of motion when the discrepancy between the two
+ *        coordinates system is minimal.
+ **/
+int jplfg3d_switch(double** y_traj_n, double* t_traj_n,
+                     double** y_traj_jpl, double* t_traj_jpl,
+                     int final_index, int coord_type,
+                     int comp_type, int coord_int,
+                     double et0, double tsys0, double tsys0_comp);
+
+/**
+ * \brief Same as jplfg3d_switch, with a refinement of the position of the minimum.
+ **/
+int jplfg3d_super_switch(double** y_traj_n, double* t_traj_n,
+                           double** y_traj_jpl, double* t_traj_jpl,
+                           int final_index, int coord_type,
+                           int comp_type, int coord_int,
+                           int mRef,
+                           double et0, double tsys0, double tsys0_comp);
+
+/**
+ * \brief Same as jplfg3d_switch, with an interpolation before and after the switching
+ *        point.
+ **/
+int jplfg3d_interpolation(double** y_traj_n, double* t_traj_n,
+                            double** * y_traj_jpl, double** t_traj_jpl,
+                            int final_index, int coord_type,
+                            int comp_type, int coord_int,
+                            int mRef,
+                            double et0, double tsys0, double tsys0_comp);
+
+//----------------------------------------------------------------------------------------
+//         Refinement of solutions: to JPL - Tests
+//----------------------------------------------------------------------------------------
+/**
+ *  \brief Computes only a SEMLi orbit and test a JPL refinement.
+ **/
+int compref3d_test_seml_synjpl(int man_grid_size_t,
+                                   int coord_type,
+                                   Orbit& orbit_SEM,
+                                   RefSt refSt);
+
+/**
+ *  \brief Computes only an EML2 orbit and test a JPL refinement.
+ **/
+int compref3d_test_eml_synjpl(int man_grid_size_t,
+                                  int coord_type,
+                                  Orbit& orbit_EM,
+                                  RefSt refSt);
+
+
+/**
+ *  \brief Computes only a EML2-SEMLi connection and test a JPL refinement, in synodical coordinates
+ **/
+int compref3d_test_eml2seml_synjpl(int coord_type);
 
 //========================================================================================
 //
@@ -199,188 +370,60 @@ int notablePoints_sem(gnuplot_ctrl* h2, int coord_type);
  **/
 int notablePoints(gnuplot_ctrl* h2, gnuplot_ctrl* h3, int coord_type);
 
+/**
+ *  \brief Plot a trajectory, segment by segment, in to complementary coordinate systems.
+ **/
+int plottrajsegbyseg(double** y_traj, double* t_traj,
+                     int final_index, int mPlot, int coord_int,
+                     double et0,     double tsys0,
+                     int coordsys1,  gnuplot_ctrl* h2,
+                     int coordsys2,  gnuplot_ctrl* h3,
+                     int color, string title);
+
+/**
+ *  \brief Save a trajectory, segment by segment, in to complementary coordinate systems.
+ **/
+int savetrajsegbyseg(double** y_traj, double* t_traj,
+                     int final_index, int mPlot,
+                     int coord_int,
+                     double et0,      double tsys0,
+                     int coordsys1,   int coordsys2,
+                     string filename, int label, bool isFirst);
 
 //========================================================================================
 //
-//         REFINING TRAJECTORIES
-//
-//========================================================================================
-//========================================================================================
-//         Refinement of solutions: CMU to CMS - general routines
-//========================================================================================
-/**
- *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM.
- *         A multiple_shooting_direct is applied on the MANIFOLD trajectory (manifold leg).
- *         The initial conditions vary in the paramerization of the CMU of EML2.
- *         The final conditions vary in the paramerization of the CMS of SEMLi.
- *         The time at each point except the first one is allowed to vary.
- *         A continuation procedure can be performed to get more than one refined solution.
- *
- *         Because of the possible use of msvt3d and msvtplan inside this routine,
- *         the refSt.coord_type must be NCSEM. However, the user can put
- *         other coordinate systems (VNCSEM, PSEM, PEM...), as long as these two routines
- *         are not used.
- **/
-int oorefeml2seml(RefSt& refSt);
-int ooconteml2seml(RefSt& refSt);
-
-//========================================================================================
-//
-//         Refinement of solutions: CMU to CMS - subroutines
+//          I/O (to set in oolencon_io.cpp)
 //
 //========================================================================================
 /**
- *  \brief Continuation of a single of EML2-to-SEMLi connection, between orbit_EM and
- *         orbit_SEM.
- *
- *         Because of the possible use of msvt3d and msvtplan inside this routine,the
- *         coord_type must be NCSEM. However, the user can put other
- *         coordinate systems (VNCSEM, PSEM, PEM...), as long as these two routines are
- *         not used.
- *
- *         In general, we recommend to use either NCSEM at least for precision
- *         reasons. In this way, a warning is issued when coord_type is different
- *         from NCSEM.
+ *   \brief Storing the results of the continuation procedure, in txt file.
  **/
-int oosrefeml2seml(Orbit& orbit_EM, Orbit& orbit_SEM, double **y_traj, double *t_traj,
-                   int dcs, int coord_type, int *man_grid_size_t,
-                   RefSt& refSt, gnuplot_ctrl* h2);
-
-//----------------------------------------------------------------------------------------
-//         Brick A: select the good IC for EML2-to-SEMli connections in data files
-//----------------------------------------------------------------------------------------
-/**
- *  \brief Selects good initial conditions for EML2-to-SEMLi connections, searching
- *         through data files produced by oo_int_proj_CMU_EM_on_CM_SEM_3D or
- *         oo_int_proj_CMU_EM_on_CM_SEM.
- **/
-int ooseleml2seml(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM[2],
-                 double *t0_SEM, double *pmin_dist_SEM_out);
-
-//----------------------------------------------------------------------------------------
-//         Brick B: generate a first guess (either a single unstable manifold leg or
-//              a complete trajectory EML2 orbit + man leg + SEMLi orbit).
-//----------------------------------------------------------------------------------------
-/**
- *  \brief Computing the first guess for the connection leg between the orbit orbit_EM and
- *         and the orbit orbit_SEM. Only the manifold leg is computed.
- *         The grid size is returned.
- **/
-int oomanfgeml2seml(double** y_traj, double*  t_traj,
-                    Orbit& orbit_EM, Orbit& orbit_SEM,
-                    int dcs, int coord_type, int man_grid_size,
-                    RefSt& refSt);
+void writeCONT_txt(Orbit& orbit_EM, Orbit& orbit_SEM,
+                   double* te_NCSEM, double* ye_NCSEM,  int isFirst);
 
 /**
- *  \brief Computing the first guess for the connection leg between the orbit orbit_EM and
- *         and the orbit orbit_SEM. The complete trajectory (EML2 + man leg + SEMLi)
- *         is computed.
- *         The grid size is returned.
+ *  \brief Get the length the results of the continuation procedure, in txt file.
  **/
-int oofgeml2seml(double **y_traj, double *t_traj,
-                 double **y_traj_comp, double *t_traj_comp,
-                 Orbit& orbit_EM, Orbit& orbit_SEM,
-                 int dcs, int coord_type, int grid_points_des[3], int grid_points_eff[3], int max_grid,
-                 RefSt& refSt, gnuplot_ctrl* h2, gnuplot_ctrl* h3);
+int getLengthCONT_txt(double t0xT);
 
 /**
- *  \brief Get the complementary coordinates associated to the coordinates coord_type.
+ *  \brief Reads the results of the continuation procedure, in txt file.
  **/
-int comp_coord_typ(int coord_type);
-
-//========================================================================================
-//
-//         Refinement of solutions: Complete trajectory
-//
-//========================================================================================
-/**
- *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM.
- *         A multiple_shooting_direct is applied on the WHOLE trajectory
- *         (EML2 orbit + manifold leg + SEMLi orbit).
- **/
-int oocomprefft3d(int grid_freq_days[3], int coord_type,
-                  Orbit& orbit_EM, Orbit& orbit_SEM,
-                  RefSt &refSt);
-
-//========================================================================================
-//
-//         Refinement of solutions: to JPL
-//
-//========================================================================================
-/**
- *  \brief Refine a given output of oocomprefft3d into JPL ephemerides.
- **/
-int oojplrefft3d(int coord_type, RefSt &refSt);
+int readCONT_txt(double*  t0_CMU_EM, double*   tf_CMU_EM,
+                 double** si_CMU_EM, double** si_CMS_SEM,
+                 double** z0_CMU_NCEM, double** z0_CMS_NCSEM,
+                 double* tethae, double** ye_NCSEM,
+                 double* H0_NCEM, double* He_NCEM,
+                 double* H0_NCSEM, double* He_NCSEM,
+                 double tr0, int fsize);
 
 /**
- *  \brief Refine a given output of oocomprefft3d into Inertial coordinates.
+ *  \brief Save a given solution as a complete trajectory
  **/
-int oointojplrefft3d(int coord_type, RefSt &refSt);
-
-//----------------------------------------------------------------------------------------
-//         Refinement of solutions: to JPL - Subroutines
-//----------------------------------------------------------------------------------------
-/**
- * \brief Computes a first guess in ephemerides coordinates, switching between the
- *        Earth-Moon and Sun-Earth plane of motion when the discrepancy between the two
- *        coordinates system is minimal.
- **/
-int oojplfg3d_switch(double** y_traj_n, double* t_traj_n,
-                     double** y_traj_jpl, double* t_traj_jpl,
-                     int final_index, int coord_type,
-                     int comp_type, int coord_int,
-                     double et0, double tsys0, double tsys0_comp);
-
-/**
- * \brief Same as oojplfg3d_switch, with a refinement of the position of the minimum.
- **/
-int oojplfg3d_super_switch(double** y_traj_n, double* t_traj_n,
-                           double** y_traj_jpl, double* t_traj_jpl,
-                           int final_index, int coord_type,
-                           int comp_type, int coord_int,
-                           int mRef,
-                           double et0, double tsys0, double tsys0_comp);
-
-/**
- * \brief Same as oojplfg3d_switch, with an interpolation before and after the switching
- *        point.
- **/
-int oojplfg3d_interpolation(double** y_traj_n, double* t_traj_n,
-                            double*** y_traj_jpl, double** t_traj_jpl,
-                            int final_index, int coord_type,
-                            int comp_type, int coord_int,
-                            int mRef,
-                            double et0, double tsys0, double tsys0_comp);
-
-//----------------------------------------------------------------------------------------
-//         Refinement of solutions: to JPL - Tests
-//----------------------------------------------------------------------------------------
-/**
- *  \brief Computes only a SEMLi orbit and test a JPL refinement.
- **/
-int oocomprefft3d_test_seml_synjpl(int man_grid_size_t,
-                                   int coord_type,
-                                   Orbit &orbit_SEM,
-                                   RefSt refSt);
-
-/**
- *  \brief Computes only an EML2 orbit and test a JPL refinement.
- **/
-int oocomprefft3d_test_eml_synjpl(int man_grid_size_t,
-                     int coord_type,
-                     Orbit &orbit_EM,
-                     RefSt refSt)
-;
-/**
- *  \brief Computes only a EML2-SEMLi connection and test a JPL refinement, in synodical coordinates
- **/
-int oocomprefft3d_test_eml2seml_synjpl(int coord_type);
-
-//========================================================================================
-//
-// Text format, read
-//
-//========================================================================================
+int writeCONT_bin(RefSt& refSt, string filename_traj, int dcs, int coord_type,
+                   double** y_traj_n, double* t_traj_n, int man_index, int mPlot,
+                   Orbit &orbit_EM, Orbit &orbit_SEM, int label,
+                   bool isFirst, int comp_orb_eml, int comp_orb_seml);
 /**
  * \brief Reads a given \c Ofsc  object within a \c Oftsc, in txt format.
  **/

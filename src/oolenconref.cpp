@@ -1,6 +1,8 @@
 #include "oolenconref.h"
 
 
+
+
 //========================================================================================
 //
 //          SUBROUTINES:
@@ -181,6 +183,74 @@ predictorptr ftc_select_predictor(RefSt& refSt)
     }
 
     return ufvarftplan;
+}
+
+/**
+ *  \brief Yields the number of free variables necessary to compute the refinment procedure.
+ **/
+int nfreevariables(RefSt refSt, int mgs)
+{
+    int nfv = 0;
+    switch(refSt.dim)
+    {
+    case REF_3D:
+        switch(refSt.time)
+        {
+        case REF_FIXED_TIME:
+                nfv = 6*mgs+3;
+            break;
+
+        case REF_VAR_TIME:
+        case REF_VAR_TN:
+                nfv = 7*mgs+3;
+            break;
+        default:
+            perror("nfreevariables. Unknown refSt.time.");
+        break;
+        }
+        break;
+    case REF_MIXED:
+        switch(refSt.time)
+        {
+        case REF_FIXED_TIME:
+                nfv = 6*mgs+1;
+            break;
+
+        case REF_VAR_TIME:
+        case REF_VAR_TN:
+                nfv = 7*mgs+1;
+            break;
+        default:
+            perror("nfreevariables. Unknown refSt.time.");
+        break;
+        }
+        break;
+    case REF_PLANAR:
+        switch(refSt.time)
+        {
+        case REF_FIXED_TIME:
+               nfv = 4*mgs+1;
+            break;
+
+        case REF_VAR_TN:
+               nfv = 4*mgs+2;
+            break;
+
+        case REF_VAR_TIME:
+               nfv = 5*mgs+1;
+            break;
+
+        default:
+            perror("nfreevariables. Unknown refSt.time.");
+        break;
+        }
+         break;
+    default:
+            perror("nfreevariables. Unknown refSt.dim.");
+        break;
+    }
+
+    return nfv;
 }
 
 //========================================================================================

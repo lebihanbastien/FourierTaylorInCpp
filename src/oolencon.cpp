@@ -3,241 +3,6 @@
 
 //========================================================================================
 //
-//          I/O (to set in oolencon_io.cpp)
-//
-//========================================================================================
-/**
- *   \brief Storing the results of the continuation procedure, in txt file.
- **/
-void writeCONT_txt(Orbit& orbit_EM, Orbit& orbit_SEM,
-                   double* te_NCSEM, double* ye_NCSEM,  int isFirst)
-{
-    //====================================================================================
-    // Initialize the I/O objects
-    //====================================================================================
-    string filename  = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF, SEML.li_SEM, orbit_EM.getT0()/SEML.us_em.T);
-    fstream filestream;
-
-    if(isFirst)
-    {
-        //====================================================================================
-        // If it is the first entry, the title of the columns are written
-        //====================================================================================
-        filestream.open (filename.c_str(), ios::out);
-        //Title
-        filestream << "t0_CMU_EM  s1_CMU_EM  s2_CMU_EM  s3_CMU_EM  s4_CMU_EM s5_CMU_EM ";
-        filestream << "tf_CMU_EM  s1_CMS_SEM s2_CMS_SEM s3_CMS_SEM s4_CMS_SEM s5_CMS_SEM ";
-        filestream << "x0_CMU_NCEM  y0_CMU_NCEM z0_CMU_NCEM px0_CMU_NCEM py0_CMU_NCEM pz0_CMU_NCEM ";
-        filestream << "x0_CMS_NCSEM y0_CMS_NCSEM z0_CMS_NCSEM px0_CMS_NCSEM py0_CMS_NCSEM pz0_CMS_NCSEM ";
-        filestream << "te_NCSEM xe_CMS_NCSEM ye_CMS_NCSEM ze_CMS_NCSEM pxe_CMS_NCSEM pye_CMS_NCSEM pze_CMS_NCSEM ";
-        filestream << "H0_NCEM He_NCEM H0_NCSEM He_NCSEM";
-        filestream << endl;
-    }
-    else
-    {
-        //================================================================================
-        // Else, we append
-        //================================================================================
-        filestream.open (filename.c_str(), ios::out | ios::app);
-    }
-
-    //====================================================================================
-    //Data storage
-    //====================================================================================
-    filestream << setprecision(15) <<  setiosflags(ios::scientific) << std::showpos;
-
-    //------------------------------------------------------------------------------------
-    // Store from 1 to 8
-    //------------------------------------------------------------------------------------
-    //1. t0 in EM units
-    filestream << orbit_EM.getT0() << "  ";
-    //2. s0 in RCM coordinates
-    for(int i = 0; i <5; i++) filestream << orbit_EM.getSi()[i]  << "  ";
-    //3. tf in EM units
-    filestream << orbit_EM.getTf() << "  ";
-    //4. sf in RCM coordinates
-    for(int i = 0; i <5; i++) filestream << orbit_SEM.getSi()[i] << "  ";
-    //5. z0 in NCEM coordinates
-    for(int i = 0; i <6; i++) filestream << orbit_EM.getZ0()[i]  << "  ";
-    //6. zf in NCSEM coordinates
-    for(int i = 0; i <6; i++) filestream << orbit_SEM.getZ0()[i] << "  ";
-    //7. thetae_NCSEM
-    filestream << *te_NCSEM* SEML.us_sem.n << "  ";
-    //8. ze in NCSEM coordinates
-    for(int i = 0; i <6; i++) filestream << ye_NCSEM[i] << "  ";
-
-
-    //------------------------------------------------------------------------------------
-    // Computing Energies
-    //------------------------------------------------------------------------------------
-    double H0_NCEM, He_NCEM, H0_NCSEM, He_NCSEM;
-    double yv_NCEM[6], yv_NCSEM[6];
-    double t0_EM, t0_SEM, te_EM, te_SEM;
-
-    //t0, z0 in NCEM coordinates
-    t0_EM = orbit_EM.getT0();
-    for(int i = 0; i <6; i++) yv_NCEM[i] = orbit_EM.getZ0()[i];
-    //t0, z0 in NCSEM coordinates
-    qbcp_coc(t0_EM, yv_NCEM, yv_NCSEM, &t0_SEM, NCEM, NCSEM);
-
-    //Initial energy in NCEM coordinates
-    H0_NCEM = qbcp_Hn_EM(t0_EM, yv_NCEM, &SEML);
-    //Initial energy in NCSEM coordinates
-    H0_NCSEM = qbcp_Hn_SEM(t0_SEM, yv_NCSEM, &SEML);
-
-    //te, ze in NCSEM coordinates
-    te_EM  = orbit_EM.getTf();                  //in EM units
-
-    te_SEM = orbit_EM.getTf()*SEML.us_em.ns;    //in SEM units
-    for(int i = 0; i <6; i++) yv_NCSEM[i] = orbit_SEM.getZ0()[i];
-
-    //te, ze in NCEM coordinates
-    qbcp_coc(te_SEM, yv_NCSEM, yv_NCEM, &te_EM, NCSEM, NCEM);
-
-    //Final energy in NCEM coordinates
-    He_NCEM = qbcp_Hn_EM(te_EM, yv_NCEM, &SEML);
-    //Final energy in NCSEM coordinates
-    He_NCSEM = qbcp_Hn_SEM(te_SEM, yv_NCSEM, &SEML);
-
-    //------------------------------------------------------------------------------------
-    // Storing Energies
-    //------------------------------------------------------------------------------------
-    // 9.  Initial energy in NCEM coordinates
-    filestream << H0_NCEM << "  ";
-    // 10. Final energy in NCEM coordinates
-    filestream << He_NCEM << "  ";
-    // 11. Initial energy in NCSEM coordinates
-    filestream << H0_NCSEM << "  ";
-    // 12. Final energy in NCSEM coordinates
-    filestream << He_NCSEM << "  ";
-    filestream << endl;
-
-    filestream.close();
-}
-
-/**
- *  \brief Get the length the results of the continuation procedure, in txt file.
- **/
-int getLengthCONT_txt(double t0)
-{
-    //====================================================================================
-    // Initialize the I/O objects
-    //====================================================================================
-    string filename  = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF, SEML.li_SEM, t0);
-    fstream filestream;
-    filestream.open (filename.c_str(), ios::in);
-
-    //====================================================================================
-    // Check the opening
-    //====================================================================================
-    if (!filestream.is_open())
-    {
-        cerr << "getLengthCONT_txt. Cannot open file." << endl;
-        return FTC_FAILURE;
-    }
-
-    //====================================================================================
-    // First value is discarded: these are the column titles
-    //====================================================================================
-    string ct;
-    getline(filestream,  ct);
-
-    //====================================================================================
-    // Get the size of the file
-    //====================================================================================
-    int fsize = 0;
-    while (!filestream.eof())
-    {
-        getline(filestream,  ct);
-        fsize++;
-    }
-    filestream.close();
-
-    return fsize-1;
-}
-
-/**
- *  \brief Reads the results of the continuation procedure, in txt file.
- **/
-int readCONT_txt(double*  t0_CMU_EM, double*   tf_CMU_EM,
-                 double** si_CMU_EM, double** si_CMS_SEM,
-                 double** z0_CMU_NCEM, double** z0_CMS_NCSEM,
-                 double* tethae, double** ye_NCSEM,
-                 double* H0_NCEM, double* He_NCEM,
-                 double* H0_NCSEM, double* He_NCSEM,
-                 double tr0, int fsize)
-{
-    //====================================================================================
-    // Get the size of the file
-    //====================================================================================
-    int fsize0 = getLengthCONT_txt(tr0);
-    if(fsize0 != fsize)
-    {
-        cerr << "readCONT_txt. The user-defined file size mismatch the true size." << endl;
-        return FTC_FAILURE;
-    }
-
-    //====================================================================================
-    // Initialize the I/O objects
-    //====================================================================================
-    string filename  = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF, SEML.li_SEM, tr0);
-    fstream filestream;
-    filestream.open (filename.c_str(), ios::in);
-
-    //====================================================================================
-    // Check the opening
-    //====================================================================================
-    if (!filestream.is_open())
-    {
-        cerr << "readCONT_txt. Cannot open file." << endl;
-        return FTC_FAILURE;
-    }
-
-    //====================================================================================
-    // First value is discarded: these are the column titles
-    //====================================================================================
-    string ct;
-    getline(filestream,  ct);
-
-    //====================================================================================
-    // Read the data on each line and close
-    //====================================================================================
-    for(int k = 0; k < fsize; k++)
-    {
-        //1. t0 in EM units
-        filestream >> t0_CMU_EM[k];
-        //2. s0 in RCM coordinates
-        for(int i = 0; i <5; i++) filestream >> si_CMU_EM[i][k];
-        //3. tf in EM units
-        filestream >> tf_CMU_EM[k];
-        //4. sf in RCM coordinates
-        for(int i = 0; i <5; i++) filestream >> si_CMS_SEM[i][k];
-        //5. z0 in NCEM coordinates
-        for(int i = 0; i <6; i++) filestream >> z0_CMU_NCEM[i][k];
-        //6. zf in NCEM coordinates
-        for(int i = 0; i <6; i++) filestream >> z0_CMS_NCSEM[i][k];
-        //7. tethae
-        filestream >> tethae[k];
-        //8. ze in NCSEM coordinates
-        for(int i = 0; i <6; i++) filestream >> ye_NCSEM[i][k];
-        // 9.  Initial energy in NCEM coordinates
-        filestream >> H0_NCEM[k];
-        // 10. Final energy in NCEM coordinates
-        filestream >> He_NCEM[k];
-        // 11. Initial energy in NCSEM coordinates
-        filestream >> H0_NCSEM[k];
-        // 12. Final energy in NCSEM coordinates
-        filestream >> He_NCSEM[k];
-    }
-
-    filestream.close();
-
-    return FTC_SUCCESS;
-}
-
-
-//========================================================================================
-//
 //          Computation of the CMU about EML2
 //
 //========================================================================================
@@ -261,14 +26,12 @@ int readCONT_txt(double*  t0_CMU_EM, double*   tf_CMU_EM,
  * The output data are saved in a binary file of the form:
  *                   "plot/QBCP/EM/L2/cu_3d_order_16.bin"
  **/
-int oo_compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt &projSt)
+int compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt &projSt)
 {
     //====================================================================================
     // Retrieve the parameters in the projection structure
     //====================================================================================
     bool isPar = projSt.ISPAR;
-
-
 
     //====================================================================================
     // Splash screen
@@ -348,7 +111,7 @@ int oo_compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt &projSt)
     //====================================================================================
     if(invman.getManType() != MAN_CENTER_U)
     {
-        cout << "oo_compute_grid_CMU_EM_3D. The invariant manifold must be of center-unstable type. return." << endl;
+        cout << "compute_grid_CMU_EM_3D. The invariant manifold must be of center-unstable type. return." << endl;
         return FTC_FAILURE;
     }
 
@@ -405,7 +168,7 @@ int oo_compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt &projSt)
                             for(int i = 0; i < 6; i++) init_state_CMU_NCEM[i][ks3] = yvu[i];
                             for(int i = 0; i < 5; i++) init_state_CMU_RCM[i][ks3] = sti[i];
                             //Display
-                            displayCompletion("oo_compute_grid_CMU_EM", (double) iter++/noe*100);
+                            displayCompletion("compute_grid_CMU_EM", (double) iter++/noe*100);
                         }
 
                         free_dvector(yvu, 0, 5);
@@ -454,7 +217,7 @@ int oo_compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt &projSt)
  * The output data are saved in a binary file of the form:
  *               "plot/QBCP/EM/L2/cu_order_16.bin"
  **/
-int oo_compute_grid_CMU_EM(double dist_to_cm, ProjSt &projSt)
+int compute_grid_CMU_EM(double dist_to_cm, ProjSt &projSt)
 {
     //====================================================================================
     // Retrieve the parameters in the projection structure
@@ -560,7 +323,7 @@ int oo_compute_grid_CMU_EM(double dist_to_cm, ProjSt &projSt)
                     for(int i = 0; i < 6; i++) init_state_CMU_NCEM[i][kt][ks1][ks3] = yvu[i];
                     for(int i = 0; i < 5; i++) init_state_CMU_RCM[i][kt][ks1][ks3] = sti[i];
                     //Display
-                    displayCompletion("oo_compute_grid_CMU_EM", (double) iter++/noe*100);
+                    displayCompletion("compute_grid_CMU_EM", (double) iter++/noe*100);
                 }
 
                 free_dvector(yvu, 0, 5);
@@ -629,7 +392,7 @@ int oo_compute_grid_CMU_EM(double dist_to_cm, ProjSt &projSt)
  * The output data are saved in a binary file of the form:
  *          "plot/QBCP/EM/L2/projcu_3d_order_16.bin".
  **/
-int oo_int_proj_CMU_EM_on_CM_SEM_3D(ProjSt &projSt)
+int int_proj_CMU_EM_on_CM_SEM_3D(ProjSt &projSt)
 {
     //====================================================================================
     // Retrieve the parameters in the projection structure
@@ -672,7 +435,7 @@ int oo_int_proj_CMU_EM_on_CM_SEM_3D(ProjSt &projSt)
     //First, check that the type of manifold provided is good:
     if(SEML_SEM.cs.manType != MAN_CENTER)
     {
-        cout << "oo_int_proj_CMU_EM_on_CM_SEM_3D. The invariant manifold at SEMLi ";
+        cout << "int_proj_CMU_EM_on_CM_SEM_3D. The invariant manifold at SEMLi ";
         cout << "must be of center type. return." << endl;
         return FTC_FAILURE;
     }
@@ -914,7 +677,7 @@ int oo_int_proj_CMU_EM_on_CM_SEM_3D(ProjSt &projSt)
                         //----------------------------------------------------------
                         #pragma omp critical
                         {
-                            displayCompletion("oo_int_proj_CMU_EM_on_CM_SEM_3D", 100.0*index++/noe);
+                            displayCompletion("int_proj_CMU_EM_on_CM_SEM_3D", 100.0*index++/noe);
                         }
 
                         //----------------------------------------------------------------
@@ -970,7 +733,7 @@ int oo_int_proj_CMU_EM_on_CM_SEM_3D(ProjSt &projSt)
  * "plot/QBCP/EM/L2/projcu_order_16.bin", and
  * "plot/QBCP/EM/L2/sortprojcu_order_16.bin" for the projSt.NSMIN best solutions.
  **/
-int oo_int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt)
+int int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt)
 {
     //====================================================================================
     // Retrieve the parameters in the projection structure
@@ -1034,16 +797,16 @@ int oo_int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt)
     //First, check that the type of manifold provided is good:
     if(SEML_SEM.cs.manType != MAN_CENTER)
     {
-        cout << "oo_int_proj_CMU_EM_on_CM_SEM. The invariant manifold at SEMLi ";
+        cout << "int_proj_CMU_EM_on_CM_SEM. The invariant manifold at SEMLi ";
         cout << "must be of center type. return." << endl;
         return FTC_FAILURE;
     }
     Invman invman_SEM(OFTS_ORDER, OFS_ORDER, SEML_SEM.cs);
 
 
-    //----------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //To store
-    //----------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double**** final_state_CMU_SEM      = d4tensor(0, 5, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
     double**** projected_state_CMU_SEM  = d4tensor(0, 5, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
     double**** projected_state_CMU_RCM  = d4tensor(0, 3, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
@@ -1056,15 +819,15 @@ int oo_int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt)
     // 2.3. Misc initialization. Require better presentation?
     //====================================================================================
 
-    //----------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Notable points in SEM system
-    //----------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double** semP = dmatrix(0, 6, 0, 2);
     semPoints(0.0, semP);
 
-    //----------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // projection by default is arbitrary big
-    //----------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double ePdef = 1e5;
 
     //====================================================================================
@@ -1289,23 +1052,22 @@ int oo_int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt)
     //----------------------------------------------------------
     int number_of_sol  = min(projSt.NSMIN, Nsort-2);
 
-
-    //---------------------
+    //------------------------------------------------------------------------------------
     //Filename
-    //---------------------
+    //------------------------------------------------------------------------------------
     filename = filenameCUM(OFTS_ORDER, TYPE_MAN_SORT, SEML.li_SEM);
 
-    //---------------------
+    //------------------------------------------------------------------------------------
     //Write sorted solutions
-    //---------------------
+    //------------------------------------------------------------------------------------
     writeIntProjSortCU_bin(filename, init_state_CMU_NCEM, init_state_CMU_RCM,
                            final_state_CMU_SEM,  projected_state_CMU_SEM, projected_state_CMU_RCM,
                            min_proj_dist_tens_SEM, sortId, ktMin, ks1Min, ks3Min, t0_min_EM, tf_min_EM, distMin, number_of_sol);
 
 
-    //----------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Free
-    //----------------------------------------------------------
+    //------------------------------------------------------------------------------------
     free_d4tensor(final_state_CMU_SEM, 0, 5, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
     free_d4tensor(projected_state_CMU_SEM, 0, 5, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
     free_d4tensor(projected_state_CMU_RCM, 0, 3, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
@@ -1324,6 +1086,5341 @@ int oo_int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt)
 
     return FTC_SUCCESS;
 }
+
+
+
+//========================================================================================
+//
+//         Refinement of solutions: CMU to CMS - general routine
+//
+//========================================================================================
+/**
+ *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM.
+ *         A multiple_shooting_direct is applied on the MANIFOLD trajectory (manifold leg).
+ *         The initial conditions vary in the paramerization of the CMU of EML2.
+ *         The final conditions vary in the paramerization of the CMS of SEMLi.
+ *         The time at each point except the first one is allowed to vary.
+ *         A continuation procedure can be performed to get more than one refined solution.
+ *
+ *         Because of the possible use of msvt3d and msvtplan inside this routine,
+ *         the refSt.coord_type must be NCSEM. However, the user can put
+ *         other coordinate systems (VNCSEM, PSEM, PEM...), as long as these two routines
+ *         are not used.
+ **/
+int refemlisemli(RefSt& refSt)
+{
+    //====================================================================================
+    // 0. Splash screen
+    //====================================================================================
+    string fname = "refemlisemli";
+    cout << "===================================================================" << endl;
+    cout << "   refemlisemli. Refinement of EML2-SEMLi arc                     " << endl;
+    cout << "===================================================================" << endl;
+
+    //====================================================================================
+    // 1. Get the default coordinates system from the coord_type
+    //====================================================================================
+    int coord_type = refSt.coord_type;
+    int man_grid_size = refSt.gridSize;
+    int dcs  = default_coordinate_system(coord_type);
+    int status = 0;
+
+    //====================================================================================
+    // 2. Structures to compute the invariant manifolds
+    //====================================================================================
+    Invman invman_EM(OFTS_ORDER, OFS_ORDER, SEML.cs);
+    Invman invman_SEM(OFTS_ORDER, OFS_ORDER, SEML_SEM.cs);
+
+    //====================================================================================
+    // 3. User-defined number of continuation steps, if necessary
+    //====================================================================================
+    int cont_steps_MAX = 0;
+    if(refSt.type == REF_CONT || refSt.type == REF_CONT_D ||
+            refSt.type == REF_CONT_D_HARD_CASE ||  refSt.type == REF_COMP)
+    {
+        if(refSt.isLimUD)
+        {
+            cout << "refemlisemli. User-defined number of continuation steps" << endl;
+            cout << "Enter a value for cont_steps_MAX: ";
+            cin >> cont_steps_MAX;
+            refSt.cont_step_max    = cont_steps_MAX;
+
+            cout << "refemlisemli. User-defined number of continuation steps" << endl;
+            cout << "Enter a value for cont_steps_MAX_vt: ";
+            cin >> cont_steps_MAX;
+            refSt.cont_step_max_vt = cont_steps_MAX;
+        }
+    }
+    else
+    {
+        cout << "refemlisemli. No continuation will be performed." << endl;
+        refSt.cont_step_max    = 0;
+        refSt.cont_step_max_vt = 0;
+    }
+
+    //====================================================================================
+    // 4. Select the good IC for EML2-to-SEMLi connections in data files
+    //====================================================================================
+    double st_EM[5], st_SEM[5], t_EM[2], t0_SEM = 0.0, pmin_dist_SEM_out = 0.0;
+    status = selectemlisemli(refSt, st_EM, st_SEM, t_EM, &t0_SEM, &pmin_dist_SEM_out);
+
+    if(status == FTC_FAILURE)
+    {
+        cout << "No solution satisfying all the constraints has been found." << endl;
+        cout << "End of computation." << endl;
+        return FTC_FAILURE;
+    }
+
+    //====================================================================================
+    // Display the selected first guess
+    //====================================================================================
+    coutmp();
+    cout << "===================================================================" << endl;
+    cout << " refemlisemli. A solution has been selected,                      " << endl;
+    cout << " with the following characteristics:                               " << endl;
+    cout << " 1. Estimated error at patch point (km):                           " << endl;
+    cout << " ep = " << pmin_dist_SEM_out* SEML.cs_sem.cr3bp.L  << " km, ";
+    cout <<  pmin_dist_SEM_out  << " in SEMSU coord."                             << endl;
+    cout << " 2. Initial conditions at EML2 (RCM):                              " << endl;
+    cout << " s0 = (" << st_EM[0] << ", " << st_EM[1] << ", ";
+    cout              << st_EM[2] << ", " << st_EM[3] << ")"                      << endl;
+    cout << " 3. Final conditions at SEML2 (RCM):                               " << endl;
+    cout << " qf = (" << st_SEM[0] << ", " << st_SEM[1] << ", ";
+    cout              << st_SEM[2] << ", " << st_SEM[3] << ")"                    << endl;
+    cout << " 4. Estimated TOF (x T):                                           " << endl;
+    cout << " TOF = " << (t_EM[1] - t_EM[0])/SEML.us_em.T                         << endl;
+    cout << "===================================================================" << endl;
+    coutlp();
+    pressEnter(refSt.isFlagOn);
+
+    //====================================================================================
+    // 5.1 Initialize local variables: EM
+    //====================================================================================
+    //------------------------------------------------------------------------------------
+    // Initialisation of the orbit structure
+    //------------------------------------------------------------------------------------
+    OdeStruct driver_EM;
+    //Root-finding
+    const gsl_root_fsolver_type* T_root = gsl_root_fsolver_brent;
+    //Stepper
+    const gsl_odeiv2_step_type* T = gsl_odeiv2_step_rk8pd;
+    //Parameters
+    int coll_EM;
+    OdeParams odeParams_EM(&coll_EM, &SEML_EM);
+    //Init ode structure
+    init_ode_structure(&driver_EM, T, T_root, 6, qbcp_vfn, &odeParams_EM);
+    //Init routine
+    Orbit orbit_EM(&invman_EM, &SEML_EM, &driver_EM, OFTS_ORDER, OFS_ORDER, t_EM[0], t_EM[1]);
+
+    //------------------------------------------------------------------------------------
+    // Update the initial state in the orbit_EM, with the RCM coordinates
+    //------------------------------------------------------------------------------------
+    orbit_EM.update_ic(st_EM,  t_EM[0]);
+
+    //====================================================================================
+    // 5.2 Initialize local variables: SEM
+    //====================================================================================
+
+    //------------------------------------------------------------------------------------
+    // Initialisation of the orbit structure
+    //------------------------------------------------------------------------------------
+    OdeStruct driver_SEM;
+    //Parameters
+    int coll_SEM;
+    OdeParams odeParams_SEM(&coll_SEM, &SEML_SEM);
+    //Init ode structure
+    init_ode_structure(&driver_SEM, T, T_root, 6, qbcp_vfn, &odeParams_SEM);
+    //Init routine
+    Orbit orbit_SEM(&invman_SEM, &SEML_SEM, &driver_SEM, OFTS_ORDER, OFS_ORDER,
+                    t0_SEM, t0_SEM+5*SEML.us_sem.T);
+
+    //------------------------------------------------------------------------------------
+    // Update the initial state in the orbit_SEM, with the RCM coordinates
+    //------------------------------------------------------------------------------------
+    orbit_SEM.update_ic(st_SEM, t0_SEM);
+
+    //------------------------------------------------------------------------------------
+    // Time and state vectors (twice the size)
+    //------------------------------------------------------------------------------------
+    double** y_traj  = dmatrix(0, 41, 0, 2*man_grid_size);
+    double*  t_traj  = dvector(0, 2*man_grid_size);
+
+    //====================================================================================
+    // 6 Multiple shooting procedure
+    //====================================================================================
+    gnuplot_ctrl* h2;
+    switch(refSt.type)
+    {
+    case REF_CONT:
+    case REF_SINGLE:
+    {
+        //--------------------------------------------------------------------------------
+        //Gnuplot window
+        //--------------------------------------------------------------------------------
+        h2 = gnuplot_init();
+
+        //--------------------------------------------------------------------------------
+        //Notable points in SEM system
+        //--------------------------------------------------------------------------------
+        notablePoints_sem(h2, coord_type);
+
+        //--------------------------------------------------------------------------------
+        //Multiple shooting procedure
+        //--------------------------------------------------------------------------------
+        status = subrefemlisemli(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, &man_grid_size, refSt, h2);
+        gnuplot_close(h2);
+        if(status)
+        {
+            cerr << fname << ". Error during the refinement procedure. ref_errno = " << ref_strerror (status) << endl;
+            return FTC_FAILURE;
+        }
+        break;
+    }
+
+    case REF_CONT_D:
+    {
+        //--------------------------------------------------------------------------------
+        //Gnuplot window
+        //--------------------------------------------------------------------------------
+        h2 = gnuplot_init();
+
+        //--------------------------------------------------------------------------------
+        //Notable points in SEM system
+        //--------------------------------------------------------------------------------
+        notablePoints_sem(h2, coord_type);
+
+        //--------------------------------------------------------------------------------
+        //First step: variable tn
+        //--------------------------------------------------------------------------------
+        refSt.time = REF_VAR_TN;
+
+        //There is no need to save at this point,
+        //since everything is gonna be erased by the second step
+        int isSaved = refSt.isSaved;
+        refSt.isSaved = 0;
+
+        status = subrefemlisemli(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, &man_grid_size, refSt, h2);
+        if(status)
+        {
+            cerr << fname << ". Error during the continuation procedure with variable time. ref_errno = " << ref_strerror(status) << endl;
+            return FTC_FAILURE;
+        }
+
+
+        //--------------------------------------------------------------------------------
+        //Second step: fixed time + saved, if desired by the user
+        //--------------------------------------------------------------------------------
+        refSt.time    = REF_FIXED_TIME;
+        refSt.isSaved = isSaved;
+
+        status = subrefemlisemli(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, &man_grid_size, refSt, h2);
+        if(status)
+        {
+            cerr << fname << ". Error during the continuation procedure with fixed time. ref_errno = " << ref_strerror(status) << endl;
+            return FTC_FAILURE;
+        }
+
+        gnuplot_close(h2);
+        break;
+    }
+
+    case REF_CONT_D_HARD_CASE:
+    {
+        //--------------------------------------------------------------------------------
+        //Gnuplot window
+        //--------------------------------------------------------------------------------
+        h2 = gnuplot_init();
+
+        //--------------------------------------------------------------------------------
+        //Notable points in SEM system
+        //--------------------------------------------------------------------------------
+        notablePoints_sem(h2, coord_type);
+
+        //--------------------------------------------------------------------------------
+        //First step: variable tn
+        //--------------------------------------------------------------------------------
+        refSt.time = REF_VAR_TN;
+
+        //There is no need to save at this point,
+        //since everything is gonna be erased by the second step
+        int isSaved = refSt.isSaved;
+        refSt.isSaved = 0;
+
+        status = subrefemlisemli(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, &man_grid_size, refSt, h2);
+        if(status)
+        {
+            cerr << fname << ". Error during the continuation procedure with variable time. ref_errno = " << ref_strerror(status) << endl;
+            return FTC_FAILURE;
+        }
+
+
+        //--------------------------------------------------------------------------------
+        //Second step: fixed time + given grid + saved, if desired by the user
+        // The main change with respect to REF_CONT_D is REF_GIVEN_GRID: this means
+        // that the time grid used for the first phase is kept for the next phase (fixed time)
+        //--------------------------------------------------------------------------------
+        refSt.time    = REF_FIXED_TIME;
+        refSt.grid    = REF_GIVEN_GRID;
+        refSt.isSaved = isSaved;
+
+        status = subrefemlisemli(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, &man_grid_size, refSt, h2);
+        if(status)
+        {
+            cerr << fname << ". Error during the continuation procedure with fixed time. ref_errno = " << ref_strerror(status) << endl;
+            return FTC_FAILURE;
+        }
+
+        gnuplot_close(h2);
+        break;
+    }
+
+
+    case REF_COMP:
+    {
+        cout << "===============================================================" << endl;
+        cout << "refemlisemli.                                                 " << endl;
+        cout << "The computation of the entire trajectory has been selected.    " << endl;
+        cout << "===============================================================" << endl;
+        cout << "refemlisemli. First part: "                                     << endl;
+        cout << "Refinement of the connection leg in the parameterization space." << endl;
+        //--------------------------------------------------------------------------------
+        //First part: REF_CONT with variable tn
+        //--------------------------------------------------------------------------------
+        refSt.type = REF_CONT;
+        refSt.time = REF_VAR_TN;
+
+        //--------------------------------------------------------------------------------
+        //Gnuplot window
+        //--------------------------------------------------------------------------------
+        h2 = gnuplot_init();
+
+        //--------------------------------------------------------------------------------
+        //Notable points in SEM system
+        //--------------------------------------------------------------------------------
+        notablePoints_sem(h2, coord_type);
+
+        //Multiple shooting procedure
+        status = subrefemlisemli(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, &man_grid_size, refSt, h2);
+
+        if(status)
+        {
+            cerr << fname << ". Error during the continuation procedure with variable time. ref_errno = " << ref_strerror(status) << endl;
+            return FTC_FAILURE;
+        }
+
+        //--------------------------------------------------------------------------------
+        //Second part: REF_SINGLE
+        //--------------------------------------------------------------------------------
+        refSt.type = REF_SINGLE;
+        refSt.time = REF_FIXED_TIME;
+
+
+        //Multiple shooting procedure
+        status = subrefemlisemli(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, &man_grid_size, refSt, h2);
+        gnuplot_close(h2);
+
+        if(status)
+        {
+            cerr << fname << ". Error during the refinement procedure. ref_errno = " << ref_strerror(status) << endl;
+            return FTC_FAILURE;
+        }
+
+        //--------------------------------------------------------------------------------
+        // After this point, the orbits are updated so that the connection is
+        // truly natural in the parameterization space.
+        // We can then advance to REF_COMP for the rest of the computation
+        //--------------------------------------------------------------------------------
+        refSt.type = REF_COMP;
+        int sf_eml2, sf_man, sf_seml2;
+        cout << "===============================================================" << endl;
+        cout << "refemlisemli. Second part: "                                    << endl;
+        cout << "Refinement of the entire trajectory."                            << endl;
+        cout << "This is a 3-legged trajectory: "                                 << endl;
+        cout << "EML2 orbit + manifold leg + SEMLi orbit."                        << endl;
+        cout << "Enter a value for sf_eml2, "                                     << endl;
+        cout << "the sampling frequeny (in days) during the EML2 leg: "           << endl;
+        cin >> sf_eml2;
+        cout << "Enter a value for sf_man, "                                      << endl;
+        cout << "the sampling frequeny (in days) during the man leg: "            << endl;
+        cin >> sf_man;
+        cout << "Enter a value for sf_seml2, "                                    << endl;
+        cout << "the sampling frequeny (in days) during the SEMLi leg: "          << endl;
+        cin >> sf_seml2;
+        char ch;
+        scanf("%c",&ch);
+
+        int sampfreq[3] = {sf_eml2, sf_man, sf_seml2};
+        status = comprefemlisemli3d(sampfreq, coord_type, orbit_EM, orbit_SEM, refSt, 0, 1);
+
+        if(status)
+        {
+            cerr << fname << ". Error during the continuation procedure on the whole trajectory. ref_errno = " << ref_strerror(status) << endl;
+            return FTC_FAILURE;
+        }
+
+        //--------------------------------------------------------------------------------
+        //CAREFUL!! the rest of the routines are still using msd_grid_size
+        //(a number of points) and NOT the sampling frequencies!! To be adapted...
+        //--------------------------------------------------------------------------------
+        //compref3d_test_seml_synjpl(msd_grid_size, coord_type, orbit_SEM, refSt);
+        //compref3d_test_eml_synjpl(msd_grid_size, coord_type, orbit_EM, refSt);
+        //comprefft3d_test_eml2seml_synjpl(msd_grid_size, coord_type, orbit_EM, orbit_SEM, refSt);
+        //comprefft3d_test_eml2seml_insem(msd_grid_size, coord_type, orbit_EM, orbit_SEM, refSt);
+        break;
+    }
+    }
+
+    //------------------------------------------------------------------------------------
+    //Gnuplot window
+    //------------------------------------------------------------------------------------
+    pressEnter(refSt.isFlagOn);
+
+
+    return FTC_SUCCESS;
+}
+
+//========================================================================================
+//
+//         Refinement of solutions: CMU to CMS - subroutines
+//
+//========================================================================================
+/**
+ *  \brief Continuation of a single of EML2-to-SEMLi connection, between orbit_EM and
+ *         orbit_SEM.
+ *
+ *         Because of the possible use of msvt3d and msvtplan inside this routine,the
+ *         coord_type must be NCSEM. However, the user can put other
+ *         coordinate systems (VNCSEM, PSEM, PEM...), as long as these two routines are
+ *         not used.
+ *
+ *         In general, we recommend to use NCSEM at least for precision
+ *         reasons. In this way, a warning is issued when coord_type is different
+ *         from NCSEM.
+ **/
+int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* t_traj,
+                   int dcs, int coord_type, int* man_grid_size_t,
+                   RefSt& refSt, gnuplot_ctrl* h2)
+{
+    //====================================================================================
+    // 0. Check on  coord_type (for now)
+    //====================================================================================
+    if(coord_type !=  NCSEM)
+    {
+        cout << "subrefemlisemli. WARNING: the coord_type inside refSt is different  " << endl;
+        cout << "from NCSEM, which means that the variable-time capability cannot   " << endl;
+        cout << "be used. If you still wish to continue, press enter.               " << endl;
+        cout << "===================================================================" << endl;
+        char ch;
+        scanf("%c",&ch);
+    }
+
+    //====================================================================================
+    // 1. Initialize local variables
+    //====================================================================================
+    string fname = "subrefemlisemli";
+    cout << fname << ". Initialization of the local variables..."  << endl;
+
+    //We keep the number of points below 10% of the maximum gnuplot temp file.
+    int plotfreq = 2;//floor((double)refSt.cont_step_max/floor(0.1*GP_MAX_TMP_FILES))+1;
+
+    //------------------------------------------------------------------------------------
+    //If the grid is fixed, then we use the user-provided size. Else, we use a
+    //big value (max_grid_size) so that the arrays would not be saturated.
+    //------------------------------------------------------------------------------------
+    int max_grid_size = 1000;
+    int man_grid_size = (refSt.grid == REF_VAR_GRID) ? max_grid_size:*man_grid_size_t;
+
+    //------------------------------------------------------------------------------------
+    //Local variables for plotting
+    //------------------------------------------------------------------------------------
+    int mPlot = refSt.mplot;
+    double** y_man_NCEM        = dmatrix(0, 5, 0, mPlot);
+    double** y_man_NCSEM       = dmatrix(0, 5, 0, mPlot);
+    double*  t_man_EM          = dvector(0, mPlot);
+    double*  t_man_SEM         = dvector(0, mPlot);
+    double** y_man_coord_plot  = dmatrix(0, 5, 0, mPlot);
+    double*  t_man_coord_plot  = dvector(0, mPlot);
+
+    //Number of potential new points, during the continuation procedure with variable time
+    int nnew = 4;
+    int ode78coll = 0;
+
+    //------------------------------------------------------------------------------------
+    //Local variables to store the refined trajectory
+    //------------------------------------------------------------------------------------
+    double** ymt   = dmatrix(0, 5, 0, nnew);
+    double* tmt    = dvector(0, nnew);
+    //double** y_traj       = dmatrix(0, 41, 0, man_grid_size+2*nnew);
+    //double*  t_traj       = dvector(0, man_grid_size+2*nnew);
+
+    //------------------------------------------------------------------------------------
+    //Type of corrector & predictor
+    //------------------------------------------------------------------------------------
+    diffcorrptr  diffcorr  = ftc_select_diffcorr(refSt);
+    predictorptr predictor = ftc_select_predictor(refSt);
+
+    //------------------------------------------------------------------------------------
+    //To store final data
+    //------------------------------------------------------------------------------------
+    double** y_traj_n   = dmatrix(0, 41, 0, man_grid_size+2*nnew);
+    double* t_traj_n    = dvector(0, man_grid_size+2*nnew);
+
+    //------------------------------------------------------------------------------------
+    // Initialize the COC matrices
+    //------------------------------------------------------------------------------------
+    //CCM_R_RCM_EM: RCM to CCM in R(4,4), about EML2
+    gsl_matrix_complex* CCM_R_RCM_EM  = gsl_matrix_complex_calloc(4, 4);
+    rotmat_CC_R_RCM_CENTER(CCM_R_RCM_EM);
+
+    //CCM_R_RCM_SEM: RCM to CCM in R(5,5), about SEMLi
+    gsl_matrix_complex* CCM_R_RCM_SEM  = gsl_matrix_complex_calloc(5, 5);
+    rotmat_CC_R_RCM_CENTER_HYP(CCM_R_RCM_SEM);
+
+    //====================================================================================
+    // 2.  Compute first guess
+    //====================================================================================
+    int man_index = icmanemlisemli(y_traj, t_traj, orbit_EM, orbit_SEM, dcs, coord_type, man_grid_size, refSt);
+
+    // Plot the resulting trajectory
+    gnuplot_plot_X(h2, y_traj, man_index,   (char*)"", "lines", "1", "1", 4);
+    gnuplot_plot_X(h2, y_traj, man_index+1, (char*)"", "points", "1", "1", 4);
+
+
+    //====================================================================================
+    // 3.  Differential correction
+    //====================================================================================
+    cout << fname << ". Differential correction procedure.          "  << endl;
+    pressEnter(refSt.isFlagOn);
+
+    //------------------------------------------------------------------------------------
+    //Free variables
+    //------------------------------------------------------------------------------------
+    int nfv = nfreevariables(refSt, man_index);
+    double* nullvector = dvector(0, nfv-1);
+
+    //------------------------------------------------------------------------------------
+    //GNUPLOT:
+    //  1. if there is a continuation procedure based on variable time,
+    //     the component s5 at SEML is plotted.
+    //  2. if there is a continuation procedure based on fixed time,
+    //     several computations are produced.
+    //------------------------------------------------------------------------------------
+    gnuplot_ctrl* h3 = 0, *h4 = 0, *h5 = 0, *h6 = 0, *h7 = 0;
+    if(refSt.isCont())
+    {
+        switch(refSt.time)
+        {
+        case REF_VAR_TIME:
+        case REF_VAR_TN:
+
+            h5 = gnuplot_init();
+            gnuplot_cmd(h5,  "set title \"s5_SEM vs steps\" ");
+            gnuplot_cmd(h5, "set grid");
+            break;
+
+
+        case REF_FIXED_TIME:
+
+            h3 = gnuplot_init();
+            gnuplot_cmd(h3,  "set title \"s3_EM vs s1_EM\" ");
+            gnuplot_cmd(h3, "set grid");
+
+            h4 = gnuplot_init();
+            gnuplot_cmd(h4,  "set title \"s3_SEM vs s1_SEM\" ");
+            gnuplot_cmd(h4, "set grid");
+
+            h5 = gnuplot_init();
+            gnuplot_cmd(h5,  "set title \"s5_SEM vs steps\" ");
+            gnuplot_cmd(h5, "set grid");
+
+            if(refSt.type == REF_3D)
+            {
+                h6 = gnuplot_init();
+                gnuplot_cmd(h6,  "set title \"s4_EM vs s2_EM\" ");
+                gnuplot_cmd(h6, "set grid");
+            }
+
+            if(refSt.is3D())
+            {
+                h7 = gnuplot_init();
+                gnuplot_cmd(h7,  "set title \"s4_SEM vs s2_SEM\" ");
+                gnuplot_cmd(h7, "set grid");
+            }
+
+            break;
+
+
+        }
+    }
+
+
+    //====================================================================================
+    //6.1. First step of the continuation procedure.
+    //====================================================================================
+    int status = 0;
+    double inner_prec = 5e-8;
+    int niter = 1;
+
+    status = diffcorr(y_traj, t_traj, y_traj_n, t_traj_n, nullvector, 42,
+                      man_index, coord_type, inner_prec, true, orbit_EM, orbit_SEM,
+                      h2, refSt, &niter);
+
+
+
+
+    //====================================================================================
+    // If it is not a success, we print the value, and we return
+    //====================================================================================
+    if(status)
+    {
+        cerr << fname << ". Error during the first refinement procedure. ref_errno = " << ref_strerror(status) << endl;
+        return FTC_FAILURE;
+    }
+
+    //====================================================================================
+    // If it is a sucess, we go on.
+    //====================================================================================
+    //------------------------------------------------------------------------------------
+    // Some inner variables
+    //------------------------------------------------------------------------------------
+    double yv[6];
+    int kn = 0;
+
+    //====================================================================================
+    // Find the intersection with a certain Poincaré Section (PS)
+    //====================================================================================
+    double ye[6], te = 0.0;
+    xpkemlisemli(ye, &te, t_traj_n, y_traj_n, man_index, refSt);
+
+    //====================================================================================
+    // Save first entry if the continuation process is on
+    //====================================================================================
+    string filename_traj = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF_TRAJ,
+                                       SEML.li_SEM, orbit_EM.getT0()/SEML.us_em.T);
+
+    if(refSt.isSaved && refSt.isCont())
+    {
+        cout << "-----------------------------------------------------------"  << endl;
+        cout << fname << ". Save first entry in " << filename_traj             << endl;
+        cout << "-----------------------------------------------------------"  << endl;
+
+        // Main parameters
+        writeCONT_txt(orbit_EM, orbit_SEM, &te, ye, true);
+
+        // Entire trajectory
+        writeCONT_bin(refSt, filename_traj, dcs, coord_type,
+                       y_traj_n, t_traj_n, man_index, mPlot,
+                       orbit_EM, orbit_SEM, kn++, true,
+                       refSt.isSaved_EM, refSt.isSaved_SEM);
+    }
+
+    //====================================================================================
+    //Continuation procedure
+    //====================================================================================
+    if(refSt.isCont())
+    {
+        cout << fname << ". Continuation procedure.                         "  << endl;
+        cout << "-----------------------------------------------------------"  << endl;
+
+        //================================================================================
+        // Initialization
+        //================================================================================
+
+        //--------------------------------------------------------------------------------
+        // Initialize the stepper & desired number of iterations in Newton's method
+        //--------------------------------------------------------------------------------
+        double ds0    = 5e-2;
+        double niterd = 4;
+        double dsmin  = refSt.dsmin, dsmax = refSt.dsmax;
+
+        switch(refSt.time)
+        {
+        case REF_VAR_TIME:
+        case REF_VAR_TN:
+            ds0    = refSt.ds0_vt;
+            niterd = refSt.nu0_vt;
+            dsmin  = refSt.dsmin_vt;
+            dsmax  = refSt.dsmax_vt;
+            break;
+        case REF_FIXED_TIME:
+            ds0    = refSt.ds0;
+            niterd = refSt.nu0;
+            dsmin  = refSt.dsmin;
+            dsmax  = refSt.dsmax;
+            break;
+        }
+
+        double ds  = ds0;
+        double dkn = 0.0;
+
+        //--------------------------------------------------------------------------------
+        //An additional condition can be set:
+        //
+        // REF_COND_S5: if the time is not fixed, we want to decrease the
+        //s5 component at SEMLi. Therefore, we add a stopping condition on the loop.
+        //
+        // REF_COND_T: we want to make enough "turns" about SEMLi
+        //--------------------------------------------------------------------------------
+        bool addCondition = true;
+        double theta_acc  = 0.0, theta_old = 0.0, theta_max  = refSt.thetaMax;
+        int mani_old = man_index;
+        switch(refSt.termination)
+        {
+        case REF_COND_S5:
+        {
+            switch(refSt.time)
+            {
+            case REF_VAR_TIME:
+            case REF_VAR_TN:
+                addCondition = fabs(orbit_SEM.getSi()[4]) > ORBIT_SEM_UNSTABLE_MIN;
+                break;
+
+
+            case REF_FIXED_TIME:
+                addCondition =  true;
+                break;
+            }
+            break;
+        }
+
+        case REF_COND_T:
+        {
+            addCondition =  true;
+            break;
+        }
+        }
+
+        //================================================================================
+        // Continuation loop
+        //================================================================================
+
+        //--------------------------------------------------------------------------------
+        // The maximum number of steps depends on the strategy
+        //--------------------------------------------------------------------------------
+        int cont_step_max_local = refSt.cont_step_max;
+        switch(refSt.time)
+        {
+        case REF_VAR_TIME:
+        case REF_VAR_TN:
+            cont_step_max_local = refSt.cont_step_max_vt;
+            break;
+
+
+        case REF_FIXED_TIME:
+            cont_step_max_local = refSt.cont_step_max;
+            break;
+        }
+
+        //--------------------------------------------------------------------------------
+        //Loop
+        //--------------------------------------------------------------------------------
+        while(kn < cont_step_max_local && status == GSL_SUCCESS && addCondition)
+        {
+            //============================================================================
+            // Updating the free variables via the predictor
+            //============================================================================
+            predictor(y_traj_n, t_traj_n, &ds, ds, nullvector,
+                      orbit_EM, orbit_SEM, man_index, coord_type, refSt);
+
+            //============================================================================
+            // Diff correction
+            //============================================================================
+            status = diffcorr(y_traj_n, t_traj_n, y_traj_n, t_traj_n,
+                              nullvector, 42, man_index, coord_type, inner_prec,
+                              false, orbit_EM, orbit_SEM, h2, refSt, &niter);
+
+            //============================================================================
+            // Find the intersection with a certain Poincaré Section (PS)
+            //============================================================================
+            double ye[6], te = 0.0;
+            if(status == GSL_SUCCESS) xpkemlisemli(ye, &te, t_traj_n, y_traj_n, man_index, refSt);
+
+            //============================================================================
+            // Save
+            //============================================================================
+            if(refSt.isSaved && status == GSL_SUCCESS)
+            {
+                // Main parameters
+                writeCONT_txt(orbit_EM, orbit_SEM, &te, ye, false);
+
+                // Entire trajectory
+                writeCONT_bin(refSt, filename_traj, dcs, coord_type,
+                               y_traj_n, t_traj_n, man_index, mPlot,
+                               orbit_EM, orbit_SEM, kn, false,
+                               refSt.isSaved_EM, refSt.isSaved_SEM);
+            }
+
+
+            //============================================================================
+            // Display
+            //============================================================================
+            dkn = (double) kn;
+            //double t0 = orbit_EM.getT0()/SEML.us_sem.T;//t_traj_n[0]/SEML.us_sem.T;
+            if(refSt.isCont() && status == GSL_SUCCESS && kn % plotfreq == 0)
+            {
+                switch(refSt.time)
+                {
+                case REF_VAR_TIME:
+                case REF_VAR_TN:
+                {
+                    gnuplot_plotc_xy(h5, &dkn, &orbit_SEM.getSi()[4], 1, (char*)"", "points", "1", "2", 0);
+                    break;
+                }
+
+                case REF_FIXED_TIME:
+                {
+                    gnuplot_plotc_xy(h3, &orbit_EM.getSi()[0],  &orbit_EM.getSi()[2], 1, (char*)"", "points", "1", "2", 0);
+                    gnuplot_plotc_xy(h4, &orbit_SEM.getSi()[0],  &orbit_SEM.getSi()[2], 1, (char*)"", "points", "1", "2", 0);
+                    gnuplot_plotc_xy(h5, &dkn, &orbit_SEM.getSi()[4], 1, (char*)"", "points", "1", "2", 0);
+
+                    if(refSt.type == REF_3D)
+                    {
+                        gnuplot_plotc_xy(h6, &orbit_EM.getSi()[1],  &orbit_EM.getSi()[3], 1, (char*)"", "points", "1", "2", 0);
+                    }
+
+                    if(refSt.is3D())
+                    {
+                        gnuplot_plotc_xy(h7, &orbit_SEM.getSi()[1],  &orbit_SEM.getSi()[3], 1, (char*)"", "points", "1", "2", 0);
+                    }
+
+                    break;
+                }
+
+                }
+            }
+
+            //============================================================================
+            // Update the additionnal condition, if necessary
+            //============================================================================
+            switch(refSt.termination)
+            {
+            case REF_COND_S5:
+            {
+                //------------------------------------------------------------------------
+                // First type of condition: stop when we are close enough to the
+                // center manifold (unstable component is small enough)
+                // note: this condition is not used when all the times are fixed.
+                //------------------------------------------------------------------------
+                switch(refSt.time)
+                {
+                case REF_VAR_TIME:
+                case REF_VAR_TN:
+                    addCondition = fabs(orbit_SEM.getSi()[4]) > ORBIT_SEM_UNSTABLE_MIN;
+                    break;
+                case REF_FIXED_TIME:
+                    addCondition = true;
+                    break;
+                }
+                break;
+            }
+            case REF_COND_T:
+            {
+                //------------------------------------------------------------------------
+                // Another possible condition: enough turns around SEMLi.
+                //------------------------------------------------------------------------
+                double det, dot, theta;
+
+                //Compute the angle between the last point (entry in the manifold)
+                // and the second last, at the beginning of the procedure
+                dot = y_traj_n[0][man_index]*y_traj_n[0][mani_old-1] +
+                      y_traj_n[1][man_index]*y_traj_n[1][mani_old-1];  // dot product
+                det = y_traj_n[0][man_index]*y_traj_n[1][mani_old-1] -
+                      y_traj_n[1][man_index]*y_traj_n[0][mani_old-1];  // determinant
+
+                theta = 180/M_PI*atan(det/dot);//180/M_PI*atan2(det, dot);  // atan2(sin, cos) or tan(sin/cos)
+
+                //We save the value
+                if(kn == 0)
+                {
+                    theta_old = theta;
+                }
+                else
+                {
+                    //--------------------------------------------------------------------
+                    // Each time that theta_old*theta < 0, it means that we have made
+                    // about 180° around the last point. We then do 2 actions:
+                    //  1. We update the accumulated angle (+90°)
+                    //  2. We add a few patch points, to ensure numerical stability.
+                    //--------------------------------------------------------------------
+                    if(theta_old*theta < 0)
+                    {
+                        //  1. We update the accumulated angle (+90°)
+                        theta_acc += 90;
+                    }
+
+                    theta_old = theta;
+                }
+
+                //------------------------------------------------------------------------
+                // The condition is only applied when some times are left free to vary
+                //------------------------------------------------------------------------
+                switch(refSt.time)
+                {
+                case REF_VAR_TIME:
+                case REF_VAR_TN:
+                    cout << fname << ". theta     = " << theta << endl;
+                    cout << fname << ". theta_acc = " << theta_acc << endl;
+                    cout << fname << ". theta_max = " << theta_max << endl;
+                    addCondition = theta_acc < theta_max;
+                    break;
+                case REF_FIXED_TIME:
+                    addCondition = true;
+                    break;
+                }
+
+                break;
+            }
+            }
+
+
+            //============================================================================
+            // Advance
+            //============================================================================
+            kn++;
+            cout << "Step n°" << kn << "/" << cont_step_max_local << " complete"  << endl;
+            cout << "----------------------------------------------------------"  << endl;
+
+
+            //============================================================================
+            // Update the stepper. For now, only in the REF_VAR_TIME case !
+            //============================================================================
+            cout << "Updating the stepper:                                     "  << endl;
+            cout << "ds_old = " << ds                                             << endl;
+
+            switch(refSt.time)
+            {
+            case REF_VAR_TIME:
+            case REF_VAR_TN:
+                ds = min(dsmax, max(dsmin, ds*niterd/niter));
+                break;
+            case REF_FIXED_TIME:
+                ds = min(dsmax, max(dsmin, ds*niterd/niter));
+                break;
+            }
+
+            cout << "ds_new = " << ds                                             << endl;
+            cout << "----------------------------------------------------------"  << endl;
+        }
+
+        //================================================================================
+        // If the trajectory has been extended... We add a few points.
+        // Careful with this piece of code: if nnew is big, then a big number of points
+        // is added to the state vectors, which can make the Newton procedure unstable.
+        //
+        // Consequently, this option is taken only if refSt.type = REF_CONT_D_HARD_CASE
+        // i.e. basically if the user has tried refSt.type = REF_CONT_D before
+        // but it did not work...
+        //
+        // IMPORTANT: after this step, the number of points man_grid_size_t is changed!
+        // this means that any further use of this routine with man_grid_size_t will
+        // take into account this change.
+        //
+        //================================================================================
+        if(theta_acc >= theta_max && refSt.type == REF_CONT_D_HARD_CASE)
+        {
+            //  Add a few patch points
+            for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][man_index-1];
+            status = ode78(ymt, tmt, &ode78coll, t_traj_n[man_index-1],
+                           t_traj_n[man_index], yv, 6, nnew, dcs, coord_type,
+                           coord_type);
+
+            //Copy y_traj_n/t_traj_n in y_traj/t_traj
+            for(int k = 0; k <= man_index; k++)
+            {
+                for(int i = 0; i < 6; i++) y_traj[i][k] = y_traj_n[i][k];
+                t_traj[k] = t_traj_n[k];
+            }
+
+            //Copy y_traj/t_traj back in y_traj_n/t_traj_n, except the last point
+            for(int k = 0; k < man_index; k++)
+            {
+                for(int i = 0; i < 6; i++) y_traj_n[i][k] = y_traj[i][k];
+                t_traj_n[k] = t_traj[k];
+            }
+
+            //Copy additionnal points, except the first one
+            for(int k = 1; k <= nnew; k++)
+            {
+                for(int i = 0; i < 6; i++) y_traj_n[i][k+man_index-1] = ymt[i][k];
+                t_traj_n[k+man_index-1] = tmt[k];
+            }
+
+            //////////////////////////////////////////////////////////////////////////
+            //New size is man_index+nnew-1 +
+            //IMPORTANT: we also update *man_grid_size_t for
+            //next continuation !!!
+            //////////////////////////////////////////////////////////////////////////
+            man_index += nnew-1;
+            *man_grid_size_t = man_index;
+
+            //Plot the new distribution
+            gnuplot_plot_X(h2, y_traj_n, man_index+1, (char*)"", "points", "1", "1", 8);
+        }
+    }
+
+    //====================================================================================
+    // Final correction with better precision
+    // CAREFUL: it is NOT done for now because some elements depends on man_index for their size,
+    // and man_index CAN move if REF_CONT_D_HARD_CASE is used !!
+    // TODO: make a check on who is using man_index...
+    //====================================================================================
+    /*
+    //    inner_prec = 1e-10;                    //harder precision in diff corr procedures
+    //    Config::configManager().C_PREC_HARD(); //harder precision in numerical integration
+    //    switch(refSt.dim)
+    //    {
+    //    case REF_3D:
+    //        switch(refSt.time)
+    //        {
+    //        case REF_FIXED_TIME:
+    //            status = msft3d(y_traj_n, t_traj_n, y_traj_n, t_traj_n,
+    //                            nullvector, 42,
+    //                            man_index, coord_type, inner_prec, false,
+    //                            orbit_EM, orbit_SEM,
+    //                            h2, refSt, &niter);
+    //            break;
+    //
+    //        case REF_VAR_TIME:
+    //        case REF_VAR_TN:
+    //            status = msvt3d(y_traj_n, t_traj_n, y_traj_n, t_traj_n,
+    //                            nullvector, 42,
+    //                            man_index, coord_type, inner_prec, false,
+    //                            orbit_EM, orbit_SEM,
+    //                            h2, refSt, &niter);
+    //            break;
+    //        }
+    //        break;
+    //    case REF_PLANAR:
+    //        switch(refSt.time)
+    //        {
+    //        case REF_FIXED_TIME:
+    //            status = msftplan(y_traj_n, t_traj_n, y_traj_n, t_traj_n,
+    //                              nullvector, 42,
+    //                              man_index, coord_type, inner_prec, false,
+    //                              orbit_EM, orbit_SEM,
+    //                              h2, refSt, &niter);
+    //            break;
+    //
+    //        case REF_VAR_TIME:
+    //            status = msvtplan(y_traj_n, t_traj_n, y_traj_n, t_traj_n,
+    //                              nullvector, 42,
+    //                              man_index, coord_type, inner_prec, false,
+    //                              orbit_EM, orbit_SEM,
+    //                              h2, refSt, &niter);
+    //            break;
+    //
+    //        case REF_VAR_TN:
+    //            status = msvltplan(y_traj_n, t_traj_n, y_traj_n, t_traj_n,
+    //                               nullvector, 42,
+    //                               man_index, coord_type, inner_prec, false,
+    //                               orbit_EM, orbit_SEM,
+    //                               h2, refSt, &niter);
+    //            break;
+    //        }
+    //        break;
+    //    }
+    //
+    //    Config::configManager().C_PREC_BACK(); //back to initial precision
+    */
+
+    //====================================================================================
+    // Save final solution, only if REF_CONT. The savings of the orbit is FORCED.
+    //====================================================================================
+    if(refSt.type == REF_CONT)
+    {
+        // If !refSt.isSaved, this is the first solution to be solved, hence label = 0
+        double label = (refSt.isSaved)? kn+1:0;
+
+        // Intersection with the Pk section
+        xpkemlisemli(ye, &te, t_traj_n, y_traj_n, man_index, refSt);
+
+        // Main parameters
+        writeCONT_txt(orbit_EM, orbit_SEM, &te, ye, true);
+
+        // Entire trajectory
+        writeCONT_bin(refSt, filename_traj, dcs, coord_type,
+                      y_traj_n, t_traj_n, man_index, mPlot,
+                      orbit_EM, orbit_SEM, label, !refSt.isSaved, 1, 1);
+    }
+
+
+    //====================================================================================
+    // Display final solution
+    //====================================================================================
+    if(status)
+    {
+        cerr << fname << ". Error during the continuation procedure. ref_errno = " << ref_strerror(status) << endl;
+        return FTC_FAILURE;
+    }
+    else
+    {
+        //================================================================================
+        // Final trajectory, on a grid
+        //================================================================================
+        cout << fname << ". Final trajectory, on a grid.                    "  << endl;
+        cout << "-----------------------------------------------------------"  << endl;
+
+
+        //--------------------------------------------------------------------------------
+        // Initialization
+        //--------------------------------------------------------------------------------
+        double** ymc   = dmatrix(0, 5, 0, mPlot);
+        double* tmc    = dvector(0, mPlot);
+        double yv[6];
+        int ode78coll;
+
+        //--------------------------------------------------------------------------------
+        //Final trajectory on lines, segment by segment
+        //--------------------------------------------------------------------------------
+        for(int k = 0; k < man_index; k++)
+        {
+            //Integration segment by segment
+            for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
+            status = ode78(ymc, tmc, &ode78coll, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+
+            //Checks and warnings, if necessary
+            if(status != FTC_SUCCESS)
+            {
+                //At this step (final plot), a simple warning is issued
+                cout << fname << ". Warning: ode78 returned a flag." << endl;
+                cout << "A collision may have occured during the transfer." << endl;
+            }
+
+            if(ode78coll)
+            {
+                //At this step (plot), a simple warning is issued
+                cout << "plottrajsegbyseg. Warning: a collision with a primary has occurred." << endl;
+            }
+
+            //Plot on h2
+            if(k == 0)
+                gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"Final.", "lines", "1", "2", 0);
+            else
+                gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"", "lines", "1", "2", 0);
+        }
+
+        //--------------------------------------------------------------------------------
+        // Free
+        //--------------------------------------------------------------------------------
+        free_dmatrix(ymc, 0, 5, 0, mPlot);
+        free_dvector(tmc, 0, mPlot);
+    }
+
+
+    //====================================================================================
+    // 9. Update the orbits for next step
+    //====================================================================================
+    if(status)
+    {
+        cerr << fname << ". Error during the plotting procedure. ref_errno = " << ref_strerror(status) << endl;
+        return FTC_FAILURE;
+    }
+    else
+    {
+        //================================================================================
+        // Finally, copy y_traj/t_traj if necessary for the next step.
+        //================================================================================
+        for(int k = 0; k <= man_index; k++)
+        {
+            for(int i = 0; i < 6; i++) y_traj[i][k] = y_traj_n[i][k];
+            t_traj[k] = t_traj_n[k];
+        }
+
+        //================================================================================
+        // At EML2. The first 4 RCM components are good, as well as the initial time.
+        // Hence, we need to update:
+        // 1. The last RCM component (unstable part),
+        // 2. The final time.
+        //================================================================================
+        orbit_EM.setSi(PROJ_EPSILON, 4);
+        orbit_EM.setTf(t_traj_n[man_index]/SEML.us_em.ns);
+
+        //--------------------------------------------------------------------------------
+        // Update the initial state in the orbit, with the RCM coordinates
+        //--------------------------------------------------------------------------------
+        orbit_EM.update_ic(orbit_EM.getSi(), orbit_EM.getT0());
+
+        //================================================================================
+        // At SEMLi. The first 5 RCM components are good.
+        // Hence, we need to update:
+        // 1. The initial time.
+        //================================================================================
+        orbit_SEM.setT0(t_traj_n[man_index]);
+
+        //--------------------------------------------------------------------------------
+        // Update the initial state in the orbit, with the RCM coordinates
+        //--------------------------------------------------------------------------------
+        orbit_SEM.update_ic(orbit_SEM.getSi(), orbit_SEM.getT0());
+    }
+
+    cout << fname << ". "                                                  << endl;
+    cout << "          End of computation.                              "  << endl;
+    cout << "-----------------------------------------------------------"  << endl;
+    pressEnter(refSt.isFlagOn);
+
+    //====================================================================================
+    // 10. Free
+    //====================================================================================
+    if(refSt.isCont())
+    {
+        switch(refSt.time)
+        {
+        case REF_VAR_TIME:
+        case REF_VAR_TN:
+
+            gnuplot_close(h5);
+            break;
+
+        case REF_FIXED_TIME:
+
+            gnuplot_close(h3);
+            gnuplot_close(h4);
+            gnuplot_close(h5);
+
+            if(refSt.type == REF_3D)
+            {
+                gnuplot_close(h6);
+            }
+
+            if(refSt.is3D())
+            {
+                gnuplot_close(h7);
+            }
+
+            break;
+        }
+    }
+
+    free_dmatrix(y_man_NCEM, 0, 5, 0, mPlot);
+    free_dmatrix(y_man_NCSEM, 0, 5, 0, mPlot);
+    free_dvector(t_man_EM, 0, mPlot);
+    free_dvector(t_man_SEM, 0, mPlot);
+    free_dmatrix(y_man_coord_plot, 0, 5, 0, mPlot);
+    free_dvector(t_man_coord_plot, 0, mPlot);
+
+    //free_dmatrix(y_traj, 0, 41, 0, man_grid_size+2*nnew);
+    //free_dvector(t_traj, 0, man_grid_size+2*nnew);
+    free_dmatrix(y_traj_n, 0, 41, 0, man_grid_size+2*nnew);
+    free_dvector(t_traj_n, 0, man_grid_size+2*nnew);
+
+    gsl_matrix_complex_free(CCM_R_RCM_EM);
+    gsl_matrix_complex_free(CCM_R_RCM_SEM);
+
+
+    free_dmatrix(ymt, 0, 5, 0, nnew);
+    free_dvector(tmt, 0, nnew);
+
+    return FTC_SUCCESS;
+}
+
+
+//----------------------------------------------------------------------------------------
+//         Brick A: select the good IC for EML2-to-SEMli connections in data files
+//----------------------------------------------------------------------------------------
+/**
+ *  \brief Selects good initial conditions for EML2-to-SEMLi connections, searching
+ *         through data files produced by int_proj_CMU_EM_on_CM_SEM_3D or
+ *         int_proj_CMU_EM_on_CM_SEM.
+ **/
+int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM[2],
+                  double* t0_SEM, double* pmin_dist_SEM_out)
+{
+    //====================================================================================
+    // 0. Splash screen
+    //====================================================================================
+    cout << "-------------------------------------------------------------------" << endl;
+    cout << "   selectemlisemli. Selects good IC for EML2-SEMLi arc"                << endl;
+    cout << "-------------------------------------------------------------------" << endl;
+    //====================================================================================
+    // 1. Init the data containers
+    //====================================================================================
+    //------------------------------------------------------------------------------------
+    //To store data from the data file
+    //------------------------------------------------------------------------------------
+    vector<double> t0_EM;
+    vector<double> tf_EM;
+    vector<double> s1_CMU_EM;
+    vector<double> s2_CMU_EM;
+    vector<double> s3_CMU_EM;
+    vector<double> s4_CMU_EM;
+    vector<double> s5_CMU_EM;
+    vector<double> pmin_dist_SEM;
+    vector<double> s1_CM_SEM;
+    vector<double> s2_CM_SEM;
+    vector<double> s3_CM_SEM;
+    vector<double> s4_CM_SEM;
+    vector<size_t> sortId;
+
+    //------------------------------------------------------------------------------------
+    //To store data from a sub selection of the previous elements
+    //------------------------------------------------------------------------------------
+    vector<double> t0_EM_R;
+    vector<double> tf_EM_R;
+    vector<double> s1_CMU_EM_R;
+    vector<double> s2_CMU_EM_R;
+    vector<double> s3_CMU_EM_R;
+    vector<double> s4_CMU_EM_R;
+    vector<double> s5_CMU_EM_R;
+    vector<double> pmin_dist_SEM_R;
+    vector<double> s1_CM_SEM_R;
+    vector<double> s2_CM_SEM_R;
+    vector<double> s3_CM_SEM_R;
+    vector<double> s4_CM_SEM_R;
+    vector<size_t> sortId_R;
+
+
+    //====================================================================================
+    // 2. Getting back the data
+    //====================================================================================
+    string filename;
+    if(refSt.isFromServer)
+    {
+        //Getting the desired t0 as a fraction of T
+        double t0_des_mod = fmod(refSt.t0xT_des, 1.0);
+
+        //Getting the name of the data file, depending on the parameters in refSt
+        switch(refSt.dim)
+        {
+
+            case REF_PLANAR:
+            {
+                if(SEML.li_EM == 2)
+                {
+                    if(SEML.li_SEM == 2) filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_dest_L2_tspan_";
+                    else filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_dest_L1_tspan_";
+
+                    if(t0_des_mod >= 0 && t0_des_mod < 0.25)
+                    {
+                        filename += "0T_025T_FINAL.bin";
+                    }
+                    else if(t0_des_mod >= 0.25 && t0_des_mod < 0.5)
+                    {
+                        filename += "025T_05T_FINAL.bin";
+                    }
+                    else if(t0_des_mod >= 0.5 && t0_des_mod < 0.75)
+                    {
+                        filename += "05T_075T_FINAL.bin";
+                    }
+                    else
+                    {
+                        filename += "075T_T_FINAL.bin";
+                    }
+
+                    //filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_t0_099T.bin";
+                }
+                else
+                {
+                    if(SEML.li_SEM == 2) filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_dest_L2.bin";
+                    else filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_dest_L1.bin";
+                }
+
+            break;
+            }
+
+        case REF_3D:
+        case REF_MIXED:
+        {
+
+            if(SEML.li_SEM == 2) filename = SEML.cs_em.F_PLOT+"Serv/projcu_3d_order_20_dest_L2_t0_0995T.bin";
+            else filename = SEML.cs_em.F_PLOT+"Serv/projcu_3d_order_20_dest_L1_t0_0995T.bin";
+
+            break;
+        }
+
+        }
+
+
+        cout << "selectemlisemli. The data will be retrieved from the server-computed file named:" << endl;
+        cout << filename << endl;
+
+        readClosestIntProjCU_bin(filename, refSt.t0_des, t0_EM, tf_EM,
+                                        s1_CMU_EM, s2_CMU_EM, s3_CMU_EM, s4_CMU_EM, s5_CMU_EM,
+                                        pmin_dist_SEM, s1_CM_SEM, s2_CM_SEM, s3_CM_SEM, s4_CM_SEM,
+                                        sortId);
+    }
+    else
+    {
+        int type = TYPE_MAN_PROJ;
+        switch(refSt.dim)
+        {
+        case REF_PLANAR:
+            //type = refSt.isFromServer? TYPE_MAN_PROJ_FROM_SERVER:TYPE_MAN_PROJ;
+            type = TYPE_MAN_PROJ;
+            break;
+
+        case REF_3D:
+        case REF_MIXED:
+            //type = refSt.isFromServer? TYPE_MAN_PROJ_3D_FROM_SERVER:TYPE_MAN_PROJ_3D;
+            type = TYPE_MAN_PROJ_3D;
+            break;
+        }
+        filename = filenameCUM(OFTS_ORDER, type, SEML.li_SEM);
+        readIntProjCU_bin(filename, t0_EM, tf_EM,
+                          s1_CMU_EM, s2_CMU_EM, s3_CMU_EM, s4_CMU_EM, s5_CMU_EM,
+                          pmin_dist_SEM, s1_CM_SEM, s2_CM_SEM, s3_CM_SEM, s4_CM_SEM,
+                          sortId);
+    }
+
+
+
+    //====================================================================================
+    // 3. Select given intervals for the inputs
+    //====================================================================================
+    double s1_CMU_EM_MIN, s1_CMU_EM_MAX;
+    double s3_CMU_EM_MIN, s3_CMU_EM_MAX;
+    double s2_CMU_EM_MIN, s2_CMU_EM_MAX;
+    double s4_CMU_EM_MIN, s4_CMU_EM_MAX;
+    double tof_MIN, tof_MAX;
+
+    if(refSt.isLimUD)
+    {
+        cout << "-----------------------------------------------------" << endl;
+        cout << "   selectemlisemli. User-defined interval of research  " << endl;
+        cout << "-----------------------------------------------------" << endl;
+        cout << "Enter a value for s1_CMU_EM_MIN: ";
+        cin >> s1_CMU_EM_MIN;
+        cout << "Enter a value for s1_CMU_EM_MAX: ";
+        cin >> s1_CMU_EM_MAX;
+        cout << "Enter a value for s3_CMU_EM_MIN: ";
+        cin >> s3_CMU_EM_MIN;
+        cout << "Enter a value for s3_CMU_EM_MAX: ";
+        cin >> s3_CMU_EM_MAX;
+
+        cout << "Enter a value for tof_MIN (% of T, -1 if no use): ";
+        cin >> tof_MIN;
+        tof_MIN *= SEML.us.T;
+        cout << "Enter a value for tof_MAX (% of T, -1 if no use): ";
+        cin >> tof_MAX;
+        tof_MAX *= SEML.us.T;
+    }
+    else
+    {
+        s1_CMU_EM_MIN = refSt.s1_CMU_EM_MIN;
+        s1_CMU_EM_MAX = refSt.s1_CMU_EM_MAX;
+        s3_CMU_EM_MIN = refSt.s3_CMU_EM_MIN;
+        s3_CMU_EM_MAX = refSt.s3_CMU_EM_MAX;
+        tof_MIN = refSt.tof_MIN;
+        tof_MAX = refSt.tof_MAX;
+    }
+
+    s2_CMU_EM_MIN = refSt.s2_CMU_EM_MIN;
+    s2_CMU_EM_MAX = refSt.s2_CMU_EM_MAX;
+    s4_CMU_EM_MIN = refSt.s4_CMU_EM_MIN;
+    s4_CMU_EM_MAX = refSt.s4_CMU_EM_MAX;
+
+
+
+    //------------------------------------------------------------------------------------
+    // Subselection
+    //------------------------------------------------------------------------------------
+    int kpor  = 0;
+    bool cst  = 0;
+    bool flag = 0;
+    for(int kpos = 0; kpos < (int) sortId.size(); kpos++)
+    {
+        kpor = sortId[kpos];
+
+        //--------------------------------------------------------------------------------
+        // Limit in the reduced coordinates (s1, s2, s3, s4)
+        //--------------------------------------------------------------------------------
+        cst  = (s1_CMU_EM[kpor] >= s1_CMU_EM_MIN) & (s1_CMU_EM[kpor] <= s1_CMU_EM_MAX);
+        cst  = cst & (s3_CMU_EM[kpor] >= s3_CMU_EM_MIN) & (s3_CMU_EM[kpor] <= s3_CMU_EM_MAX);
+
+        cst  = cst & (s2_CMU_EM[kpor] >= s2_CMU_EM_MIN) & (s2_CMU_EM[kpor] <= s2_CMU_EM_MAX);
+        cst  = cst & (s4_CMU_EM[kpor] >= s4_CMU_EM_MIN) & (s4_CMU_EM[kpor] <= s4_CMU_EM_MAX);
+
+        //--------------------------------------------------------------------------------
+        // Limits in the time of flight (TOF) if necessary
+        //--------------------------------------------------------------------------------
+        if(tof_MIN > 0) cst = cst & ( (tf_EM[kpor] - t0_EM[kpor]) > tof_MIN );
+        if(tof_MAX > 0) cst = cst & ( (tf_EM[kpor] - t0_EM[kpor]) < tof_MAX );
+
+        if(cst)
+        {
+            flag = 1;
+            t0_EM_R.push_back(t0_EM[kpor]);
+            tf_EM_R.push_back(tf_EM[kpor]);
+            s1_CMU_EM_R.push_back(s1_CMU_EM[kpor]);
+            s2_CMU_EM_R.push_back(s2_CMU_EM[kpor]);
+            s3_CMU_EM_R.push_back(s3_CMU_EM[kpor]);
+            s4_CMU_EM_R.push_back(s4_CMU_EM[kpor]);
+            s5_CMU_EM_R.push_back(s5_CMU_EM[kpor]);
+            pmin_dist_SEM_R.push_back(pmin_dist_SEM[kpor]);
+            s1_CM_SEM_R.push_back(s1_CM_SEM[kpor]);
+            s2_CM_SEM_R.push_back(s2_CM_SEM[kpor]);
+            s3_CM_SEM_R.push_back(s3_CM_SEM[kpor]);
+            s4_CM_SEM_R.push_back(s4_CM_SEM[kpor]);
+        }
+    }
+
+    //====================================================================================
+    // If there at least one solution that satisfies all the criteria
+    //====================================================================================
+    if(flag)
+    {
+        //--------------------------------------------------------------------------------
+        //Sort the subselection in sortId_R
+        //--------------------------------------------------------------------------------
+        sortId_R = sort_indexes(pmin_dist_SEM_R);
+
+        //================================================================================
+        // 5. The best solution in the subselection will serve as the first guess.
+        //================================================================================
+        int kpos = sortId_R[0];
+
+        //================================================================================
+        // 6. Initialize local variables: EM
+        //================================================================================
+        //RCM coordinates
+        st_EM[0] = s1_CMU_EM_R[kpos];
+        st_EM[1] = s2_CMU_EM_R[kpos];
+        st_EM[2] = s3_CMU_EM_R[kpos];
+        st_EM[3] = s4_CMU_EM_R[kpos];
+        st_EM[4] = PROJ_EPSILON;
+        //Time
+        t_EM[0] = t0_EM_R[kpos];
+        t_EM[1] = tf_EM_R[kpos];
+
+
+        //================================================================================
+        // 7. Initialize local variables: SEM
+        //================================================================================
+        //RCM coordinates
+        st_SEM[0] = s1_CM_SEM_R[kpos];
+        st_SEM[1] = s2_CM_SEM_R[kpos];
+        st_SEM[2] = s3_CM_SEM_R[kpos];
+        st_SEM[3] = s4_CM_SEM_R[kpos];
+        st_SEM[4] = 0.0;
+        //Initial time in SEM units
+        *t0_SEM = tf_EM_R[kpos]*SEML.us_em.ns;
+
+        //Minimum projection distance
+        *pmin_dist_SEM_out = pmin_dist_SEM_R[kpos];
+
+
+        return FTC_SUCCESS;
+    }
+    else
+    {
+        //================================================================================
+        // Else, we return a failure
+        //================================================================================
+        return FTC_FAILURE;
+
+    }
+}
+
+//----------------------------------------------------------------------------------------
+//         Brick B: generate a first guess (either a single unstable manifold leg or
+//              a complete trajectory EML2 orbit + man leg + SEMLi orbit).
+//----------------------------------------------------------------------------------------
+/**
+ *  \brief Computing the first guess for the connection leg between the orbit orbit_EM and
+ *         and the orbit orbit_SEM. Only the manifold leg is computed.
+ *         The grid size is returned.
+ **/
+int icmanemlisemli(double** y_traj, double* t_traj,
+                    Orbit& orbit_EM, Orbit& orbit_SEM,
+                    int dcs, int coord_type, int man_grid_size,
+                    RefSt& refSt)
+{
+    //====================================================================================
+    // 1.  Initialization
+    //====================================================================================
+    //------------------------------------------------------------------------------------
+    //Local variables to store the manifold leg
+    //------------------------------------------------------------------------------------
+    double** y_man_coord  = dmatrix(0, 5, 0, man_grid_size);
+    double*  t_man_coord  = dvector(0, man_grid_size);
+
+    //====================================================================================
+    // 2.  Compute the manifold leg
+    //====================================================================================
+    cout << " icmanemlisemli. Compute the manifold leg..."  << endl;
+    //------------------------------------------------------------------------------------
+    // Integration: from orbit_EM.t0 to orbit_EM.tf
+    // Note that the collisionner is not used at this step. It is used later, after
+    // the refinement procedures
+    //------------------------------------------------------------------------------------
+    int man_index = man_grid_size;
+    int ode78coll;
+
+    switch(refSt.grid)
+    {
+    case REF_FIXED_GRID:
+    {
+        //----------------------------------------------------------------------------
+        // Integration using ode78
+        //----------------------------------------------------------------------------
+        ode78(y_man_coord, t_man_coord, &ode78coll, orbit_EM.getT0(), orbit_EM.getTf(),
+              orbit_EM.getZ0(), 6, man_grid_size, dcs, NCEM, coord_type);
+
+        //----------------------------------------------------------------------------
+        // Save All BUT the last point
+        //----------------------------------------------------------------------------
+        for(int kman = 0; kman < man_index; kman++)
+        {
+            for(int i = 0; i < 6; i++) y_traj[i][kman] = y_man_coord[i][kman];
+            t_traj[kman] = t_man_coord[kman];
+        }
+        break;
+    }
+
+    case REF_VAR_GRID:
+    {
+        //----------------------------------------------------------------------------
+        // Integration using ode78_qbcp_vg (variable grid)
+        //----------------------------------------------------------------------------
+        man_index = ode78_qbcp_vg(y_man_coord, t_man_coord, &ode78coll, orbit_EM.getT0(),
+                                  orbit_EM.getTf(), orbit_EM.getZ0(), 6, man_grid_size,
+                                  dcs, NCEM, coord_type, man_grid_size);
+        //----------------------------------------------------------------------------
+        // Save All BUT the last point
+        //----------------------------------------------------------------------------
+        for(int kman = 0; kman < man_index; kman++)
+        {
+            for(int i = 0; i < 6; i++) y_traj[i][kman] = y_man_coord[i][kman];
+            t_traj[kman] = t_man_coord[kman];
+        }
+        break;
+    }
+
+    case REF_GIVEN_GRID:
+    {
+        //----------------------------------------------------------------------------
+        // Nothing to do here, since a previous computation has been performed
+        //----------------------------------------------------------------------------
+        //            double *t_traj_loc = dvector(0, man_grid_size);
+        //            qbcp_coc_time(t_traj, t_traj_loc, man_grid_size, coord_type, NCEM);
+        //
+        //            cout << "orbit_EM.getT0() = " << orbit_EM.getT0() << endl;
+        //            cout << "t_traj[0] = " <<  t_traj_loc[0]  << endl;
+        //
+        //            ode78_qbcp_gg(y_man_coord, t_man_coord, &ode78coll, t_traj_loc, orbit_EM.getZ0(),
+        //                          6, man_grid_size, dcs, NCEM, coord_type);
+        //
+        //            free_dvector(t_traj_loc, 0, man_grid_size);
+        break;
+    }
+    }
+
+
+    //====================================================================================
+    // 5. Compute the first point of the final SEMLi orbit and add it to the manifold leg
+    //====================================================================================
+    cout << " icmanemlisemli. Compute the first point of the final SEMLi orbit..."<< endl;
+
+    //------------------------------------------------------------------------------------
+    // Save the last point at position man_index
+    //------------------------------------------------------------------------------------
+    double yout[6], tout;
+    qbcp_coc(orbit_SEM.getT0(), orbit_SEM.getZ0(), yout, &tout, NCSEM, coord_type);
+
+    for(int i = 0; i < 6; i++) y_traj[i][man_index] = yout[i];
+    t_traj[man_index] = tout;
+
+
+    //====================================================================================
+    // Free
+    //====================================================================================
+    free_dmatrix(y_man_coord, 0, 5, 0, man_grid_size);
+    free_dvector(t_man_coord, 0, man_grid_size);
+
+    //The (true) grid size is returned
+    return man_index;
+}
+
+/**
+ *  \brief Computing the first guess for the connection leg between the orbit orbit_EM and
+ *         and the orbit orbit_SEM. The complete trajectory (EML2 + man leg + SEMLi)
+ *         is computed. The grid size is returned.
+ **/
+int iccompemlisemli(double** y_traj, double* t_traj,
+                 double** y_traj_comp, double* t_traj_comp,
+                 Orbit& orbit_EM, Orbit& orbit_SEM,
+                 int dcs, int coord_type, int grid_points_des[3],
+                 int grid_points_eff[3], int max_grid,
+                 RefSt& refSt, gnuplot_ctrl* h2, gnuplot_ctrl* h3)
+{
+    //====================================================================================
+    // 1. Initialize local variables
+    //====================================================================================
+    string fname = "iccompemlisemli";
+
+    //Maximum number of points on ONE leg
+    int grid_points_eff_max = max(grid_points_eff[0], max(grid_points_eff[1], grid_points_eff[2]));
+
+    //------------------------------------------------------------------------------------
+    // Local variables to store the manifold leg
+    //------------------------------------------------------------------------------------
+    double** y_man_NCEM  = dmatrix(0, 5, 0, grid_points_eff[0]);
+    double* t_man_EM     = dvector(0, grid_points_eff[0]);
+
+    double** y_man_NCSEM = dmatrix(0, 5, 0, grid_points_eff[2]);
+    double* t_man_SEM    = dvector(0, grid_points_eff[2]);
+
+    double** y_man_coord = dmatrix(0, 5, 0, grid_points_eff_max);
+    double** y_man_comp  = dmatrix(0, 5, 0, grid_points_eff_max);
+    double* t_man_coord  = dvector(0, grid_points_eff_max);
+    double* t_man_comp   = dvector(0, grid_points_eff_max);
+
+    //----------------------------------------------------------
+    // Define the time of flight on each orbit
+    //----------------------------------------------------------
+    double tof_eml_EM   = refSt.tspan_EM;    //TOF on EML2 orbit
+    double tof_seml_SEM = refSt.tspan_SEM;   //TOF on SEMLi orbit
+
+    //----------------------------------------------------------
+    //Complementary coordinate type
+    //----------------------------------------------------------
+    int comp_type = comp_coord_typ(coord_type);
+
+    //====================================================================================
+    // 2. Compute the initial orbit
+    //====================================================================================
+    cout << fname << ". Compute the initial orbit..."  << endl;
+    //------------------------------------------------------------------------------------
+    //For the computation of the initial orbit, we kill the unstable part.
+    //------------------------------------------------------------------------------------
+    orbit_EM.setSi(0.0, 4);
+
+    //------------------------------------------------------------------------------------
+    // Update the initial state in the orbit, with the RCM coordinates
+    //------------------------------------------------------------------------------------
+    orbit_EM.update_ic(orbit_EM.getSi());
+
+    //------------------------------------------------------------------------------------
+    //Integration on des_grid_size+1 fixed grid
+    //------------------------------------------------------------------------------------
+    int em_index = grid_points_eff[0];
+    switch(refSt.grid)
+    {
+    case REF_FIXED_GRID:
+    case REF_GIVEN_GRID:
+    {
+        int output = orbit_EM.traj_int_grid(orbit_EM.getT0()-tof_eml_EM, y_man_NCEM, t_man_EM, grid_points_eff[0], true);
+        //--------------------------------------------------------------------------------
+        //If output is strictly greater than 0, then the projection procedure inside
+        //the integration went wrong, and the new indix is output.
+        //It output == ORBIT_EPROJ, the projection procedure failed so bad that there
+        //is no point stored in the data, except the first one, and the new indix is zero
+        //--------------------------------------------------------------------------------
+        if(output == ORBIT_EPROJ) em_index = 0;
+        else if(output > 0) em_index = output;
+        break;
+    }
+
+    case REF_VAR_GRID:
+    {
+        em_index = orbit_EM.traj_int_var_grid(orbit_EM.getT0()-tof_eml_EM, y_man_NCEM, t_man_EM, grid_points_eff[0], true);
+        break;
+    }
+
+    }
+
+    //------------------------------------------------------------------------------------
+    //To coord_type coordinates
+    //------------------------------------------------------------------------------------
+    qbcp_coc_vec(y_man_NCEM, t_man_EM, y_man_coord, t_man_coord, em_index, NCEM, coord_type);
+    qbcp_coc_vec(y_man_NCEM, t_man_EM, y_man_comp,  t_man_comp,  em_index, NCEM, comp_type);
+
+    //------------------------------------------------------------------------------------
+    // Save All BUT the last point
+    //------------------------------------------------------------------------------------
+    for(int kman = 0; kman < em_index; kman++)
+    {
+        for(int i = 0; i < 6; i++) y_traj[i][kman] = y_man_coord[i][em_index-kman];
+        t_traj[kman] = t_man_coord[em_index-kman];
+    }
+
+    //------------------------------------------------------------------------------------
+    //Plot
+    //------------------------------------------------------------------------------------
+    gnuplot_plot_X(h2, y_man_coord, em_index+1, (char*)"", "points", "5", "3", 5);
+    gnuplot_plot_X(h3, y_man_comp, em_index+1, (char*)"", "points", "5", "3", 5);
+
+    //====================================================================================
+    // 4.3 Compute the manifold leg
+    //====================================================================================
+    cout << fname << ". Compute the manifold leg..."  << endl;
+
+    double tf_EM = orbit_SEM.getT0()/SEML.us_em.ns; //the end time is the starting time of the final orbit, in EM units
+
+    //------------------------------------------------------------------------------------
+    //For the computation of the initial orbit, we update the unstable part.
+    //------------------------------------------------------------------------------------
+    orbit_EM.setSi(PROJ_EPSILON, 4);
+
+    //------------------------------------------------------------------------------------
+    // Update the initial state in the orbit, with the RCM coordinates
+    //------------------------------------------------------------------------------------
+    orbit_EM.update_ic(orbit_EM.getSi());
+
+    //------------------------------------------------------------------------------------
+    // Integration
+    // Note that the collisionner is not used at this step. It is used later, after
+    // the refinement procedures
+    //------------------------------------------------------------------------------------
+    int ode78coll;
+    int man_index = grid_points_eff[1];
+
+    switch(refSt.grid)
+    {
+    case REF_FIXED_GRID:
+    case REF_GIVEN_GRID:
+    {
+        ode78(y_man_coord, t_man_coord, &ode78coll, orbit_EM.getT0(), tf_EM, orbit_EM.getZ0(), 6, grid_points_eff[1], dcs, NCEM, coord_type);
+        break;
+    }
+
+    case REF_VAR_GRID:
+    {
+        man_index = ode78_qbcp_vg(y_man_coord, t_man_coord, &ode78coll, orbit_EM.getT0(), tf_EM, orbit_EM.getZ0(), 6, grid_points_eff[1], dcs, NCEM, coord_type, -1);
+        break;
+    }
+
+    }
+
+    //------------------------------------------------------------------------------------
+    //To comp_type coordinates
+    //------------------------------------------------------------------------------------
+    qbcp_coc_vec(y_man_coord, t_man_coord, y_man_comp, t_man_comp, man_index, coord_type, comp_type);
+
+
+    //------------------------------------------------------------------------------------
+    // Save All BUT the last point
+    //------------------------------------------------------------------------------------
+    for(int kman = 0; kman < man_index; kman++)
+    {
+        for(int i = 0; i < 6; i++) y_traj[i][em_index + kman] = y_man_coord[i][kman];
+        t_traj[em_index + kman] = t_man_coord[kman];
+    }
+
+    //------------------------------------------------------------------------------------
+    //Plot
+    //------------------------------------------------------------------------------------
+    gnuplot_plot_X(h2, y_man_coord, man_index+1, (char*)"Man", "points", "1", "3", 4);
+    gnuplot_plot_X(h3, y_man_comp, man_index+1, (char*)"", "points", "1", "3", 4);
+
+    //====================================================================================
+    // 4.4 Compute the final SEMLi orbit
+    //====================================================================================
+    cout << fname << ". Compute the final SEMLi orbit..."  << endl;
+    //------------------------------------------------------------------------------------
+    // Initialize the initial conditions (both NC and RCM coordinates)
+    // We also need to kill the stable part.
+    //------------------------------------------------------------------------------------
+    orbit_SEM.setSi(0.0, 4);
+    orbit_SEM.update_ic(orbit_SEM.getSi());
+
+
+    //------------------------------------------------------------------------------------
+    //Integration on man_grid_size+1 fixed grid
+    //------------------------------------------------------------------------------------
+    int sem_index = grid_points_eff[2];
+
+    switch(refSt.grid)
+    {
+    case REF_FIXED_GRID:
+    case REF_GIVEN_GRID:
+    {
+        int output = orbit_SEM.traj_int_grid(orbit_SEM.getT0()+tof_seml_SEM, y_man_NCSEM, t_man_SEM, grid_points_eff[2], true);
+        //--------------------------------------------------------------------------------
+        //If output is strictly greater than 0, then the projection procedure inside
+        //the integration went wrong, and the new indix is output.
+        //It output == ORBIT_EPROJ, the projection procedure failed so bad that there
+        //is no point stored in the data, except the first one, and the new indix is zero
+        //--------------------------------------------------------------------------------
+        if(output == ORBIT_EPROJ) sem_index = 0;
+        else if(output > 0) sem_index = output;
+        break;
+    }
+
+    case REF_VAR_GRID:
+    {
+        sem_index = orbit_SEM.traj_int_var_grid(orbit_SEM.getT0()+tof_seml_SEM, y_man_NCSEM, t_man_SEM, grid_points_eff[2], 1);
+        break;
+    }
+    }
+
+
+    //------------------------------------------------------------------------------------
+    //To coord_type coordinates
+    //------------------------------------------------------------------------------------
+    qbcp_coc_vec(y_man_NCSEM, t_man_SEM, y_man_coord, t_man_coord, sem_index, NCSEM, coord_type);
+    qbcp_coc_vec(y_man_NCSEM, t_man_SEM, y_man_comp, t_man_comp, sem_index, NCSEM, comp_type);
+
+
+    //------------------------------------------------------------------------------------
+    // Save ALL points
+    //------------------------------------------------------------------------------------
+    for(int kman = 0; kman <= sem_index; kman++)
+    {
+        for(int i = 0; i < 6; i++) y_traj[i][em_index + man_index + kman] = y_man_coord[i][kman];
+        t_traj[em_index + man_index + kman] = t_man_coord[kman];
+    }
+
+    //------------------------------------------------------------------------------------
+    //Plot
+    //------------------------------------------------------------------------------------
+    gnuplot_plot_X(h2, y_man_coord, sem_index+1, (char*)"SEMLi", "points", "1", "3", 6);
+    gnuplot_plot_X(h3, y_man_comp, sem_index+1, (char*)"", "points", "1", "3", 6);
+
+    //====================================================================================
+    // Entire size is: no more than sum(grid_points_des) points or so.
+    //====================================================================================
+    int final_index = 0;
+    if(refSt.grid == REF_VAR_GRID)
+    {
+        final_index = em_index + man_index + sem_index;
+        int freq = final_index/(grid_points_des[0]+grid_points_des[1]+grid_points_des[2]);
+        cout << "----------------------------------"<< endl;
+        cout << "Number of MSD points:        "     << endl;
+        cout << "At EML:           " << em_index    << endl;
+        cout << "During coast arc: " << man_index   << endl;
+        cout << "At SEML:          " << sem_index   << endl;
+        cout << "Total:            " << final_index << endl;
+        cout << "Selecting 1/" << freq << " points" << endl;
+        cout << "Subtotal:         " << (int) floor(final_index/freq) << endl;
+        cout << "----------------------------------"<< endl;
+
+        //------------------------------------------------------------------------------------
+        // Subset of points in y_traj_comp/t_traj_comp
+        //------------------------------------------------------------------------------------
+        for(int kman = 0; kman <= floor(final_index/freq); kman++)
+        {
+            for(int i = 0; i < 6; i++) y_traj_comp[i][kman] = y_traj[i][freq*kman];
+            t_traj_comp[kman] = t_traj[freq*kman];
+        }
+
+        //New final index
+        final_index = floor(final_index/freq);
+
+        //------------------------------------------------------------------------------------
+        // Subset of points back in y_traj/t_traj
+        //------------------------------------------------------------------------------------
+        for(int kman = 0; kman <= final_index; kman++)
+        {
+            for(int i = 0; i < 6; i++) y_traj[i][kman] = y_traj_comp[i][kman];
+            t_traj[kman] = t_traj_comp[kman];
+        }
+    }
+    else
+    {
+        //If the grid size is fixed, we still return the sum of the variable indices, because
+        //some integration procedure could have gone wrong so that the returned indices
+        //are smaller than their optimal desired value
+        final_index = em_index + man_index + sem_index;
+    }
+
+    //====================================================================================
+    // Free
+    //====================================================================================
+    free_dmatrix(y_man_NCEM, 0, 5, 0, grid_points_eff[0]);
+    free_dmatrix(y_man_NCSEM, 0, 5, 0, grid_points_eff[2]);
+    free_dmatrix(y_man_coord, 0, 5, 0, grid_points_eff_max);
+    free_dmatrix(y_man_comp, 0, 5, 0, grid_points_eff_max);
+    free_dvector(t_man_EM, 0, grid_points_eff[0]);
+    free_dvector(t_man_SEM, 0, grid_points_eff[2]);
+    free_dvector(t_man_coord, 0, grid_points_eff_max);
+    free_dvector(t_man_comp, 0, grid_points_eff_max);
+
+    return final_index;
+}
+
+//----------------------------------------------------------------------------------------
+//         Brick C: Find the intersection of a EML2-SEMLi connection
+//                     with a certain Pk section x = cst
+//----------------------------------------------------------------------------------------
+/**
+ *  \brief Find the intersection of a EML2-SEMLi connection contained in
+ *         y_traj_n/t_traj_n with a certain Pk section x = cst defined by refSt.
+ **/
+int xpkemlisemli(double ye[6], double* te, double* t_traj_n, double** y_traj_n,
+                  int man_index, RefSt& refSt)
+{
+    double yv[42];
+    //Get the default coordinates system from the coord_type
+    int dcs  = default_coordinate_system(NCSEM);
+
+    //====================================================================================
+    //1. Find, from the end, the couple of patch points before and after the PS
+    //====================================================================================
+    int k2 = man_index;
+    int k1 = man_index-1;
+    bool test = false;
+    do
+    {
+        k1--;
+        k2--;
+        test = (y_traj_n[0][k2] > refSt.xps && y_traj_n[0][k1] < refSt.xps) ||
+               (y_traj_n[0][k2] < refSt.xps && y_traj_n[0][k1] > refSt.xps);
+    }
+    while(!test && k1 >= 0);
+
+
+    //====================================================================================
+    //2. If a solution has been found:
+    //====================================================================================
+    if(test && k1 >= 0)
+    {
+        cout << "xpkemlisemli. Range accross the PS found:" << endl;
+        cout << y_traj_n[0][k1] << " < " << refSt.xps << " < " << y_traj_n[0][k2] << endl;
+
+
+        //====================================================================================
+        //2. Integrate until x = xps
+        //====================================================================================
+        double center[3];
+        struct value_params val_par;
+        val_par.max_events = 1;
+        val_par.direction  = 0;
+        val_par.dim        = 0;
+        val_par.value      = refSt.xps;
+        val_par.center     = center;
+        val_par.type       = 'X';
+
+        double** ye_NCSEM = dmatrix(0, 5, 0, 1);
+        double* te_NCSEM  = dvector(0, 1);
+
+        //====================================================================================
+        //3. After this step: ye_NCSEM[*][0] & te_NCSEM[0] contains the intersection
+        //   Note: the (possible) collisions with the primaries are not taken into account here:
+        //   We suppose that for this particular application (intersection with a Pk section
+        //   far away from any primary), such collision are very unlikely!
+        //====================================================================================
+        int ode78coll;
+        for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k1];
+        ode78_qbcp_event(ye_NCSEM, te_NCSEM, &ode78coll, t_traj_n[k1], t_traj_n[k2], yv, 6, dcs,
+                         NCSEM, NCSEM, &val_par);
+
+        //====================================================================================
+        //4. Store
+        //====================================================================================
+        *te = te_NCSEM[0];
+        for(int i = 0; i < 6; i++) ye[i] = ye_NCSEM[i][0];
+
+        //====================================================================================
+        //5. Free
+        //====================================================================================
+        free_dmatrix(ye_NCSEM, 0, 5, 0, 1);
+        free_dvector(te_NCSEM, 0, 1);
+
+        return FTC_SUCCESS;
+    }
+    else
+    {
+        *te = -1;
+        for(int i = 0; i < 6; i++) ye[i] = 0.0;
+        return FTC_FAILURE;
+    }
+}
+
+
+/**
+ *  \brief Get the complementary coordinates associated to the coordinates coord_type.
+ **/
+int comp_coord_typ(int coord_type)
+{
+    int comp_type = 0;
+    switch(coord_type)
+    {
+    case PSEM:
+        comp_type = PEM;
+        break;
+    case NCSEM:
+    case VNCSEM:
+        comp_type = NCEM;
+        break;
+    case PEM:
+        comp_type = PSEM;
+        break;
+    case NCEM:
+    case VNCEM:
+        comp_type = NCSEM;
+        break;
+    }
+    return comp_type;
+}
+
+//========================================================================================
+//
+//         Refining trajectories from continuation procedures
+//
+//========================================================================================
+/**
+ *  \brief Refine complete EMLi-SEMLi connections from semi-analyticalcontinuation results
+ *         The orbits at both ends are included in the refinement process. Each trajectory
+ *         is then refined in a higher-fidelity model (JPL DE430).
+ **/
+int reffromcontemlisemli(RefSt& refSt)
+{
+    //====================================================================================
+    // 1. Get the default coordinates system from the coord_type
+    //====================================================================================
+    int coord_type = refSt.coord_type;
+    int status = 0;
+
+    //====================================================================================
+    //         Initialization of the containers
+    //====================================================================================
+    //Name
+    string fname = "reffromcontemlisemli";
+
+    // Get size of the data file
+    int fsize = getLengthCONT_txt(refSt.t0xT_des);
+
+    // Init the vectors
+    double* t0_CMU_EM     = dvector(0, fsize-1);
+    double* tf_CMU_EM     = dvector(0, fsize-1);
+    double** si_CMU_EM    = dmatrix(0, 4, 0, fsize-1);
+    double** si_CMS_SEM   = dmatrix(0, 4, 0, fsize-1);
+    double** z0_CMU_NCEM  = dmatrix(0, 5, 0, fsize-1);
+    double** z0_CMS_NCSEM = dmatrix(0, 5, 0, fsize-1);
+    double* thetae        = dvector(0, fsize-1);
+    double** ze_NCSEM     = dmatrix(0, 5, 0, fsize-1);
+    double* H0_NCEM       = dvector(0, fsize-1);
+    double* He_NCEM       = dvector(0, fsize-1);
+    double* H0_NCSEM      = dvector(0, fsize-1);
+    double* He_NCSEM      = dvector(0, fsize-1);
+
+    //====================================================================================
+    //         Read
+    //====================================================================================
+    status = readCONT_txt(t0_CMU_EM, tf_CMU_EM, si_CMU_EM, si_CMS_SEM,
+                          z0_CMU_NCEM, z0_CMS_NCSEM, thetae, ze_NCSEM, H0_NCEM, He_NCEM,
+                          H0_NCSEM, He_NCSEM, refSt.t0xT_des, fsize);
+
+    if(status)
+    {
+        cerr << fname << ". Data reading went wrong." << endl;
+        return FTC_FAILURE;
+    }
+
+    //====================================================================================
+    //         Display
+    //====================================================================================
+    //for(int k = 0; k < fsize; k++) cout << ze_NCSEM[0][k] << endl;
+
+    //====================================================================================
+    // 2. Structures to compute the invariant manifolds
+    //====================================================================================
+    Invman invman_EM(OFTS_ORDER, OFS_ORDER, SEML.cs);
+    Invman invman_SEM(OFTS_ORDER, OFS_ORDER, SEML_SEM.cs);
+
+    //====================================================================================
+    // Select the parameters
+    //====================================================================================
+    int isFirst = 1;
+    for(int k = 0; k < fsize; k+=50)
+    {
+        double t_EM[2] = {t0_CMU_EM[k], tf_CMU_EM[k]};
+        double st_EM[5]  = {si_CMU_EM[0][k], si_CMU_EM[1][k], si_CMU_EM[2][k], si_CMU_EM[3][k], si_CMU_EM[4][k]};
+
+        double t0_SEM = tf_CMU_EM[k]*SEML.us_em.ns;
+        double st_SEM[5] = {si_CMS_SEM[0][k], si_CMS_SEM[1][k], si_CMS_SEM[2][k], si_CMS_SEM[3][k], si_CMS_SEM[4][k]};
+
+        //================================================================================
+        // Initialize local variables: EM
+        //================================================================================
+        //--------------------------------------------------------------------------------
+        // Initialisation of the orbit structure
+        //--------------------------------------------------------------------------------
+        OdeStruct driver_EM;
+        //Root-finding
+        const gsl_root_fsolver_type* T_root = gsl_root_fsolver_brent;
+        //Stepper
+        const gsl_odeiv2_step_type* T = gsl_odeiv2_step_rk8pd;
+        //Parameters
+        int coll_EM;
+        OdeParams odeParams_EM(&coll_EM, &SEML_EM);
+        //Init ode structure
+        init_ode_structure(&driver_EM, T, T_root, 6, qbcp_vfn, &odeParams_EM);
+        //Init routine
+        Orbit orbit_EM(&invman_EM, &SEML_EM, &driver_EM, OFTS_ORDER, OFS_ORDER, t_EM[0], t_EM[1]);
+
+        //--------------------------------------------------------------------------------
+        // Update the initial state in the orbit_EM, with the RCM coordinates
+        //--------------------------------------------------------------------------------
+        orbit_EM.update_ic(st_EM,  t_EM[0]);
+
+        //================================================================================
+        // Initialize local variables: SEM
+        //================================================================================
+
+        //--------------------------------------------------------------------------------
+        // Initialisation of the orbit structure
+        //--------------------------------------------------------------------------------
+        OdeStruct driver_SEM;
+        //Parameters
+        int coll_SEM;
+        OdeParams odeParams_SEM(&coll_SEM, &SEML_SEM);
+        //Init ode structure
+        init_ode_structure(&driver_SEM, T, T_root, 6, qbcp_vfn, &odeParams_SEM);
+        //Init routine
+        Orbit orbit_SEM(&invman_SEM, &SEML_SEM, &driver_SEM, OFTS_ORDER, OFS_ORDER,
+                        t0_SEM, t0_SEM+5*SEML.us_sem.T);
+
+        //--------------------------------------------------------------------------------
+        // Update the initial state in the orbit_SEM, with the RCM coordinates
+        //--------------------------------------------------------------------------------
+        orbit_SEM.update_ic(st_SEM, t0_SEM);
+
+        //--------------------------------------------------------------------------------
+        // We can advance to REF_COMP for the rest of the computation
+        //--------------------------------------------------------------------------------
+        refSt.type = REF_COMP;
+        int sampfreq[3] = {refSt.sf_eml2, refSt.sf_man, refSt.sf_seml2};
+        status = comprefemlisemli3d(sampfreq, coord_type, orbit_EM, orbit_SEM, refSt, k, isFirst);
+
+        if(status)
+        {
+            cerr << fname << ". Error during the continuation procedure on the whole trajectory. ref_errno = " << ref_strerror(status) << endl;
+            return FTC_FAILURE;
+        }
+
+        if(isFirst) isFirst = 0;
+
+    }
+
+    return FTC_SUCCESS;
+}
+
+//========================================================================================
+//
+//         Refinement of solutions: Complete trajectory
+//
+//========================================================================================
+/**
+ *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM.
+ *         A multiple_shooting_direct is applied on the WHOLE trajectory
+ *         (EML2 orbit + manifold leg + SEMLi orbit).
+ **/
+int comprefemlisemli3d(int grid_freq_days[3], int coord_type,
+                  Orbit& orbit_EM, Orbit& orbit_SEM,
+                  RefSt& refSt, int label, int isFirst)
+
+{
+    //====================================================================================
+    // 1. Initialize local variables
+    //====================================================================================
+    string fname = "comprefemlisemli3d";
+    cout << fname << ". Initialization of the local variables..."  << endl;
+
+    // Status along the computation
+    int status = 0;
+
+    //------------------------------------------------------------------------------------
+    //Get the default coordinates system from the coord_type
+    //------------------------------------------------------------------------------------
+    int dcs  = default_coordinate_system(coord_type);
+
+    //------------------------------------------------------------------------------------
+    //Complementary coordinate type
+    //------------------------------------------------------------------------------------
+    int comp_type = comp_coord_typ(coord_type);
+
+    //====================================================================================
+    // 2. Init the gnuplot
+    //====================================================================================
+    //------------------------------------------------------------------------------------
+    //Gnuplot window
+    //------------------------------------------------------------------------------------
+    gnuplot_ctrl* h2, *h3;
+    h2 = gnuplot_init();
+    h3 = gnuplot_init();
+
+    gnuplot_cmd(h2, "set title \"Computation coordinates\" ");
+    gnuplot_cmd(h3, "set title \"Complementary coordinates\" ");
+    //gnuplot_cmd(h2, "set view equal xyz");
+    //gnuplot_cmd(h3, "set view equal xyz");
+    gnuplot_cmd(h2, "set grid");
+    gnuplot_cmd(h3, "set grid");
+
+    //------------------------------------------------------------------------------------
+    //Notable points in SEM & EM systems
+    //------------------------------------------------------------------------------------
+    notablePoints(h2, h3, coord_type);
+
+    //====================================================================================
+    // 3. Init the data containers
+    //====================================================================================
+    //------------------------------------------------------------------------------------
+    // Initialize the number of points on the grids. If the number of points is fixed,
+    // the solution is straightforward. If the number of points is desired variable,
+    // the default number are set to an arbitrarily high number of points.
+    //------------------------------------------------------------------------------------
+    cout << " comprefemlisemli3d. Initialize the number of points on the grids..."  << endl;
+    int max_grid    = 50000;
+    int grid_points_des[3];
+
+    //Desired number of points
+    grid_points_des[0] = refSt.tspan_EM/(2*M_PI*86400*grid_freq_days[0]/SEML.cs_em.cr3bp.T);
+    grid_points_des[1] = (orbit_SEM.getT0()/SEML.us_em.ns - orbit_EM.getT0())/(2*M_PI*86400*grid_freq_days[1]/SEML.cs_em.cr3bp.T);
+    grid_points_des[2] = refSt.tspan_SEM/(2*M_PI*86400*grid_freq_days[2]/SEML.cs_sem.cr3bp.T);
+
+    cout << "Desired frequency on leg 1: "  << grid_freq_days[0]  << "days " << endl;
+    cout << "==> the number of points  = "  << grid_points_des[0] << endl    << endl;
+    cout << "Desired frequency on leg 2: "  << grid_freq_days[1]  << "days " << endl;
+    cout << "==> the number of points  = "  << grid_points_des[1] << endl    << endl;
+    cout << "Desired frequency on leg 3: "  << grid_freq_days[2]  << "days " << endl;
+    cout << "==> the number of points  = "  << grid_points_des[2] << endl    << endl;
+
+
+    //Effective number of points for the following computation: equal to grid_points_des
+    //if the number of points if fixed, equal to max_grid otherwise
+    int grid_points_eff[3];
+    grid_points_eff[0]  = (refSt.grid == REF_VAR_GRID) ? max_grid:grid_points_des[0];
+    grid_points_eff[1]  = (refSt.grid == REF_VAR_GRID) ? max_grid:grid_points_des[1];
+    grid_points_eff[2]  = (refSt.grid == REF_VAR_GRID) ? max_grid:grid_points_des[2];
+
+    //Number of points on the entire trajectory
+    int traj_grid_eff   = grid_points_eff[0]+grid_points_eff[1]+grid_points_eff[2];
+
+    //------------------------------------------------------------------------------------
+    //To store final data
+    //------------------------------------------------------------------------------------
+    double** y_traj  = dmatrix(0, 41, 0, traj_grid_eff);
+    double*  t_traj  = dvector(0, traj_grid_eff);
+
+    double** y_traj_comp  = dmatrix(0, 41, 0, traj_grid_eff);
+    double*  t_traj_comp  = dvector(0, traj_grid_eff);
+
+    //------------------------------------------------------------------------------------
+    //Local variables to store the refined trajectory
+    //------------------------------------------------------------------------------------
+    double** y_traj_n   = dmatrix(0, 41, 0, traj_grid_eff);
+    double* t_traj_n    = dvector(0, traj_grid_eff);
+
+    //====================================================================================
+    // 4. Build the trajectory
+    //====================================================================================
+    int final_index = iccompemlisemli(y_traj, t_traj, y_traj_comp, t_traj_comp,
+                                   orbit_EM, orbit_SEM, dcs, coord_type,
+                                   grid_points_des,
+                                   grid_points_eff,
+                                   max_grid,
+                                   refSt, h2, h3);
+
+
+    //====================================================================================
+    // Initial trajectory, on a grid
+    //====================================================================================
+    cout << " comprefemlisemli3d. Initial trajectory, on a grid..."  << endl;
+    int mPlot = 100;
+
+    double** ymc        = dmatrix(0, 5, 0, mPlot);
+    double* tmc         = dvector(0, mPlot);
+    double** ymc_comp   = dmatrix(0, 5, 0, mPlot);
+    double* tmc_comp    = dvector(0, mPlot);
+
+    double** ymc_v      = dmatrix(0, 5, 0, mPlot*final_index);
+    double* tmc_v       = dvector(0, mPlot*final_index);
+    double** ymc_comp_v = dmatrix(0, 5, 0, mPlot*final_index);
+    double* tmc_comp_v  = dvector(0, mPlot*final_index);
+
+    //Initial trajectory on lines, segment by segment
+    plottrajsegbyseg(y_traj, t_traj, final_index, mPlot, coord_type, 0.0, 0.0,
+                     coord_type, h2, comp_type,  h3, 7, "Initial guess");
+
+
+    //====================================================================================
+    // 5. Differential correction & final trajectory
+    //====================================================================================
+    cout << fname << ". Differential correction procedure.              "  << endl;
+    cout << "-----------------------------------------------------------"  << endl;
+    pressEnter(refSt.isFlagOn);
+
+    int isPlotted   = 0;
+    status = multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, h2);
+    //status =multiple_shooting_direct_variable_time(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, isTimeFixed, h2);
+
+    //------------------------------------------------------------------------------------
+    // If something went bad, an error is returned
+    //------------------------------------------------------------------------------------
+    if(status)
+    {
+        cerr << fname << ". Error during the differential correction procedure.";
+        cerr << " ref_errno = " << ref_strerror(status) << endl;
+        return FTC_FAILURE;
+    }
+
+
+    //------------------------------------------------------------------------------------
+    // Final trajectory, on a grid
+    //------------------------------------------------------------------------------------
+    cout << fname << ". Final trajectory, on a grid..."  << endl;
+    //Final trajectory on lines, segment by segment
+    plottrajsegbyseg(y_traj_n, t_traj_n, final_index, mPlot, coord_type, 0.0, 0.0,
+                     coord_type, h2, comp_type, h3, 3, "Final guess");
+
+    //====================================================================================
+    // 6. Store the data, in sys units
+    //====================================================================================
+    cout << fname << ". Storing the refined solution in system units "  << endl;
+    cout << " The solution will be stored in " << filenameCUM(OFTS_ORDER, TYPE_COMP_FOR_JPL, SEML.li_SEM) << endl;
+    cout << "-----------------------------------------------------------"  << endl;
+    writeCOMP_txt(t_traj_n, y_traj_n, final_index);
+
+
+    //====================================================================================
+    // 7. JPL refinement
+    //====================================================================================
+    if(refSt.isJPL)
+    {
+        status = jplref3d(coord_type, refSt, label, isFirst);
+
+        //--------------------------------------------------------------------------------
+        // If something went bad, an error is returned
+        //--------------------------------------------------------------------------------
+        if(status)
+        {
+            cerr << fname << ". Error during the differential correction procedure.";
+            cerr << " ref_errno = " << ref_strerror(status) << endl;
+            return FTC_FAILURE;
+        }
+    }
+
+
+
+    //------------------------------------------------------------------------------------
+    //Gnuplot window
+    //------------------------------------------------------------------------------------
+    pressEnter(refSt.isFlagOn);
+    gnuplot_close(h2);
+    gnuplot_close(h3);
+
+
+    //====================================================================================
+    // Free the data containers
+    //====================================================================================
+    free_dmatrix(y_traj, 0, 41, 0, traj_grid_eff);
+    free_dvector(t_traj, 0, traj_grid_eff);
+    free_dmatrix(y_traj_comp, 0, 41, 0, traj_grid_eff);
+    free_dvector(t_traj_comp, 0, traj_grid_eff);
+    free_dmatrix(y_traj_n, 0, 41, 0, traj_grid_eff);
+    free_dvector(t_traj_n, 0, traj_grid_eff);
+
+    free_dmatrix(ymc, 0, 5, 0, mPlot);
+    free_dvector(tmc, 0, mPlot);
+    free_dmatrix(ymc_comp, 0, 5, 0, mPlot);
+    free_dvector(tmc_comp, 0, mPlot);
+
+    free_dmatrix(ymc_v, 0, 5, 0, mPlot*final_index);
+    free_dvector(tmc_v, 0, mPlot*final_index);
+    free_dmatrix(ymc_comp_v, 0, 5, 0, mPlot*final_index);
+    free_dvector(tmc_comp_v  , 0, mPlot*final_index);
+
+    return FTC_SUCCESS;
+}
+
+//========================================================================================
+//
+//         Refinement of solutions: to JPL
+//
+//========================================================================================
+/**
+ *  \brief Refine a given output of comprefemlisemli3d into JPL ephemerides.
+ **/
+int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst)
+{
+    //====================================================================================
+    // 1. Read the data, in sys units
+    //====================================================================================
+    string fname = "jplref3d";
+    cout << " jplref3d. Read the data, in sys units..."  << endl;
+    int status = 0;
+
+    //------------------------------------------------------------------------------------
+    //Local variables to store the refined trajectory
+    //------------------------------------------------------------------------------------
+    int final_index = getLengthCOMP_txt();
+    double** y_traj_n   = dmatrix(0, 41, 0, final_index);
+    double* t_traj_n    = dvector(0, final_index);
+
+    //------------------------------------------------------------------------------------
+    //Read the data stored in a data file
+    //------------------------------------------------------------------------------------
+    readCOMP_txt(t_traj_n, y_traj_n, final_index);
+
+    //====================================================================================
+    // 2. Local parameters
+    //====================================================================================
+    //------------------------------------------------------------------------------------
+    //Complementary coordinate type
+    //------------------------------------------------------------------------------------
+    int comp_type = comp_coord_typ(coord_type);
+
+    //------------------------------------------------------------------------------------
+    // State and time vectors
+    //------------------------------------------------------------------------------------
+    int mPlot = refSt.mplot;
+    double** ymc        = dmatrix(0, 5, 0, mPlot);
+    double* tmc         = dvector(0, mPlot);
+    double** ymc_comp   = dmatrix(0, 5, 0, mPlot);
+    double* tmc_comp    = dvector(0, mPlot);
+
+    double** ymc_v      = dmatrix(0, 5, 0, mPlot*final_index);
+    double* tmc_v       = dvector(0, mPlot*final_index);
+    double** ymc_comp_v = dmatrix(0, 5, 0, mPlot*final_index);
+    double* tmc_comp_v  = dvector(0, mPlot*final_index);
+
+    //------------------------------------------------------------------------------------
+    //Get the default coordinates system from the coord_type
+    //Get the default framework from the coord_type
+    //------------------------------------------------------------------------------------
+    //int dcs  = default_coordinate_system(coord_type);
+    int fwrk = default_framework(coord_type);
+
+    //Filename for saving
+    string filename = filenameCUM(OFTS_ORDER, TYPE_CONT_JPL_TRAJ, SEML.li_SEM, refSt.t0xT_des);
+
+    //====================================================================================
+    // 3. Init the gnuplot
+    //====================================================================================
+    //------------------------------------------------------------------------------------
+    //Gnuplot window
+    //------------------------------------------------------------------------------------
+    gnuplot_ctrl* h2, *h3;
+    h2 = gnuplot_init();
+    h3 = gnuplot_init();
+
+    gnuplot_cmd(h2, "set title \"Computation coordinates\" ");
+    gnuplot_cmd(h3, "set title \"Complementary coordinates\" ");
+    //gnuplot_cmd(h2, "set view equal xyz");
+    //gnuplot_cmd(h3, "set view equal xyz");
+    gnuplot_cmd(h2, "set grid");
+    gnuplot_cmd(h3, "set grid");
+
+    //------------------------------------------------------------------------------------
+    //Notable points in SEM & EM systems
+    //------------------------------------------------------------------------------------
+    notablePoints(h2, h3, coord_type);
+
+    //====================================================================================
+    // 5. Initial trajectory, on a grid
+    //====================================================================================
+    cout << " jplref3d. Initial trajectory, on a grid..."  << endl;
+    //Final trajectory on lines, segment by segment
+    plottrajsegbyseg(y_traj_n, t_traj_n, final_index, mPlot, coord_type, 0.0, 0.0,
+                     coord_type, h2, comp_type, h3, 3, "Initial trajectory");
+
+
+    if(refSt.isSaved)
+    {
+        cout << "The initial trajectory is saved in " << filename << endl;
+        savetrajsegbyseg(y_traj_n, t_traj_n, final_index, mPlot, coord_type, 0.0, 0.0, coord_type, comp_type, filename, label, isFirst);
+    }
+
+    //------------------------------------------------------------------------------------
+    //Free at this point, because final_index is gonna change
+    //------------------------------------------------------------------------------------
+    free_dmatrix(ymc_v, 0, 5, 0, mPlot*final_index);
+    free_dvector(tmc_v, 0, mPlot*final_index);
+    free_dmatrix(ymc_comp_v, 0, 5, 0, mPlot*final_index);
+    free_dvector(tmc_comp_v, 0, mPlot*final_index);
+
+    //====================================================================================
+    // 5. JPL refinement
+    //====================================================================================
+    pressEnter(refSt.isFlagOn);
+
+    //====================================================================================
+    // Select between VECLI and J2000
+    //====================================================================================
+    int choice = 0;
+    //If refSt.djplcoord does not contain a valid choice (e.g. -1), we ask the user
+    if(refSt.djplcoord != 0 && refSt.djplcoord != 1  && refSt.djplcoord != 2)
+    {
+        cout << "Enter 0 for VECLI, 1 for J2000, 2 for NJ2000: ";
+        cin >> choice;
+    }
+    else
+    {
+        choice = refSt.djplcoord;
+    }
+
+    int coord_int = 0, fwrk_int = 0;
+    switch(choice)
+    {
+    case 0:
+        coord_int = VECLI;
+        fwrk_int  = I_ECLI;
+        break;
+    case 1:
+        coord_int = J2000;
+        fwrk_int  = I_J2000;
+        break;
+    case 2:
+        coord_int = NJ2000;
+        fwrk_int  = I_NJ2000;
+        changeDCS(SEML, fwrk);
+        cout << "NJ2000 has been chosen: changeDCS is applied to match " << endl;
+        cout << " the framework associated to coord_type.";
+        break;
+    default:
+        cout << "wrong input. NJ2000 is used by default." << endl;
+        cout << "NJ2000 has been chosen: changeDCS is applied to match " << endl;
+        cout << " the framework associated to coord_type.";
+        coord_int = NJ2000;
+        fwrk_int  = I_NJ2000;
+        changeDCS(SEML, fwrk);
+        break;
+    }
+
+    //====================================================================================
+    // Initialize SPICE kernerls & VF
+    //====================================================================================
+    gnuplot_ctrl* h4 = gnuplot_init();
+    cout << fname << ". Initialize SPICE kernerls..." << endl;
+    furnsh_c("spice/kernels/metakernel.furnsh");
+    int shift = 0;
+
+
+    //====================================================================================
+    // Search for best fit in  JPL ephemerides
+    //====================================================================================
+    cout << fname << ". Search for best fit in JPL DE430..." << endl;
+
+    //----------------------------------------------------------
+    //Get the best fit at t = t_traj_n[shift]. et0 is in seconds
+    //----------------------------------------------------------
+    double et0, et;
+    double tsys0 = t_traj_n[shift];
+    qbcp2jpl(tsys0, &et0, coord_type);
+
+    //----------------------------------------------------------
+    //Display the value in "D" format
+    //----------------------------------------------------------
+    //ConstSpiceChar*  picture  = "Wkd Mon DD HH:MN:SC PDT YYYY ::UTC-7";
+    SpiceChar output[50];
+    et2utc_c (et0, "C", 6, 51, output);
+    cout << fname << ". The best fit has been obtained for the following date:" << endl;
+    printf ( "%s\n", output);
+    cout << "tsys0 = " << tsys0 << endl;
+    cout << "et0 = "   << et0   << endl;
+
+    //------------------------------------------------------------------------------------
+    // Complementary value ot tsys0
+    //------------------------------------------------------------------------------------
+    double tsys0_comp = tsys0;
+    switch(eph_coord(comp_type))
+    {
+    case VEM:
+        tsys0_comp /= SEML.us_em.ns;
+        break;
+
+    case VSEM:
+        tsys0_comp *= SEML.us_em.ns;
+        break;
+    }
+
+    //====================================================================================
+    // Change of coordinates
+    //====================================================================================
+    cout << fname << ". Change of coordinates syn -> ecliptic..." << endl;
+
+    //------------------------------------------------------------------------------------
+    //Initialize the vectors that will be used throughout the computation
+    //------------------------------------------------------------------------------------
+    double** y_traj_jpl = dmatrix(0, 41, 0, final_index);
+    double* t_traj_jpl  = dvector(0, final_index);
+
+    //------------------------------------------------------------------------------------
+    //    Computes a first guess in ephemerides coordinates, switching between the
+    //    Earth-Moon and Sun-Earth plane of motion when the discrepancy between the two
+    //    coordinates system is minimal.
+    //------------------------------------------------------------------------------------
+    //    final_index = jplfg3d_switch(y_traj_n, t_traj_n, y_traj_jpl, t_traj_jpl, final_index,
+    //                                   coord_type, comp_type, coord_int,
+    //                                   et0, tsys0, tsys0_comp);
+
+
+    //------------------------------------------------------------------------------------
+    //Same as jplfg3d_switch, with a refinement of the position of the minimum.
+    //------------------------------------------------------------------------------------
+    //    int mRef = 50;
+    //    final_index = jplfg3d_super_switch(y_traj_n, t_traj_n, y_traj_jpl, t_traj_jpl, final_index,
+    //                                   coord_type, comp_type, coord_int, mRef,
+    //                                   et0, tsys0, tsys0_comp);
+
+
+    //------------------------------------------------------------------------------------
+    //Same as jplfg3d_switch, with an interpolation before & after the switching point.
+    //------------------------------------------------------------------------------------
+    int mRef = 5;
+    final_index = jplfg3d_interpolation(y_traj_n, t_traj_n, &y_traj_jpl, &t_traj_jpl, final_index,
+                                          coord_type, comp_type, coord_int, mRef,
+                                          et0, tsys0, tsys0_comp);
+    cout << "final_index = " << final_index << endl;
+
+    //------------------------------------------------------------------------------------
+    //   Once the first guess is computed, we can safely initialize the other vectors and
+    //   matrices, since final_index will not change anymore.
+    //------------------------------------------------------------------------------------
+    double** y_traj_jpl_n = dmatrix(0, 41, 0, final_index);
+    double* t_traj_jpl_n  = dvector(0, final_index);
+
+    double** y_jpl_temp   = dmatrix(0, 41, 0, final_index);
+    double* t_jpl_temp    = dvector(0, final_index);
+
+    double* et_traj_jpl   = dvector(0, final_index);
+
+    double** y_earth_spice = dmatrix(0, 5, 0, final_index);
+    double** y_moon_spice  = dmatrix(0, 5, 0, final_index);
+    double** y_l2_spice    = dmatrix(0, 5, 0, final_index);
+
+    ymc_v       = dmatrix(0, 5, 0, mPlot*final_index);
+    tmc_v       = dvector(0, mPlot*final_index);
+    ymc_comp_v  = dmatrix(0, 5, 0, mPlot*final_index);
+    tmc_comp_v  = dvector(0, mPlot*final_index);
+
+
+    //------------------------------------------------------------------------------------
+    //Time in seconds: €€TODO: adapt the other cases, only NJ2000 for now!!
+    //------------------------------------------------------------------------------------
+    for(int p = 0; p <= final_index; p++)
+    {
+        et_traj_jpl[p] = t_traj_jpl[p]/SEML.ss.n;
+    }
+
+    //====================================================================================
+    // Plotting Moon +  Earth + L2
+    //====================================================================================
+    cout << fname << ". Plotting Moon +  Earth + L2..." << endl;
+
+    //------------------------------------------------------------------------------------
+    //Position of the Moon +  Earth + L2
+    //------------------------------------------------------------------------------------
+    double lt, YV[6];
+    for(int p = 0; p <= final_index; p++)
+    {
+        //Current time in seconds
+        et = et_traj_jpl[p];
+        //EARTH
+        spkezr_c ("EARTH", et, DEFFRAME,  "NONE", DEFOBS, YV, &lt);
+        for(int i = 0; i < 6; i++) y_earth_spice[i][p] = YV[i];
+        //MOON
+        spkezr_c ("MOON", et, DEFFRAME,  "NONE", DEFOBS, YV, &lt);
+        for(int i = 0; i < 6; i++) y_moon_spice[i][p] = YV[i];
+        //L2
+        spkez_c (392, et, DEFFRAME,  "NONE", 0, YV, &lt);
+        for(int i = 0; i < 6; i++) y_l2_spice[i][p] = YV[i];
+    }
+
+    //------------------------------------------------------------------------------------
+    //Position of the Sun +  Earth + Initial guess in coord_type coordinates
+    //------------------------------------------------------------------------------------
+    ecl2coordstate_vec(y_earth_spice, et_traj_jpl, y_jpl_temp, t_jpl_temp, final_index, coord_type, et0, tsys0, eph_coord(coord_type));
+    gnuplot_plot_X(h2, y_jpl_temp, final_index+1, (char*) "EARTH", "points", "3", "2", 8);
+
+    ecl2coordstate_vec(y_moon_spice, et_traj_jpl, y_jpl_temp, t_jpl_temp, final_index, coord_type, et0, tsys0, eph_coord(coord_type));
+    gnuplot_plot_X(h2, y_jpl_temp, final_index+1, (char*) "MOON", "points", "4", "2", 8);
+
+    ecl2coordstate_vec(y_l2_spice, et_traj_jpl, y_jpl_temp, t_jpl_temp, final_index, coord_type, et0, tsys0, eph_coord(coord_type));
+    gnuplot_plot_X(h2, y_jpl_temp, final_index+1, (char*) "SEMLi", "points", "5", "2", 8);
+
+    //====================================================================================
+    // Plotting Initial Guess
+    //====================================================================================
+    pressEnter(refSt.isFlagOn);
+    cout << fname << ". Plotting Initial Guess..." << endl;
+
+    //------------------------------------------------------------------------------------
+    //Initial trajectory on lines, segment by segment
+    //------------------------------------------------------------------------------------
+    plottrajsegbyseg(y_traj_jpl, t_traj_jpl, final_index, mPlot, coord_int,
+                     et0, tsys0, coord_type, h2, comp_type,  h3, 6,
+                     "Initial guess in JPL ephemerides");
+
+
+    //====================================================================================
+    // 6.5 Differential correction
+    //====================================================================================
+    pressEnter(refSt.isFlagOn);
+    cout << fname << ". Refine trajectory in JPL ephemerides..." << endl;
+    status  = multiple_shooting_direct_variable_time(y_traj_jpl, t_traj_jpl, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, coord_int,  5e-10, true, h4);
+    //status  = multiple_shooting_direct(y_traj_jpl, t_traj_jpl, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, coord_int, true, h4);
+    //Plot
+    gnuplot_plot_X(h4, y_traj_jpl_n, final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
+
+    //------------------------------------------------------------------------------------
+    // If something went bad, an error is returned
+    //------------------------------------------------------------------------------------
+    if(status)
+    {
+        cerr << fname << ". Error during the differential correction procedure.";
+        cerr << " ref_errno = " << ref_strerror(status) << endl;
+        return FTC_FAILURE;
+    }
+
+
+    //====================================================================================
+    //Final trajectory on lines, segment by segment
+    //====================================================================================
+    plottrajsegbyseg(y_traj_jpl_n, t_traj_jpl_n, final_index, mPlot, coord_int,
+                     et0, tsys0, coord_type, h2, comp_type,  h3, 2,
+                     "Final guess in JPL ephemerides");
+
+    if(refSt.isSaved)
+    {
+        cout << "The final trajectory is saved in " << filename << endl;
+        savetrajsegbyseg(y_traj_jpl_n, t_traj_jpl_n, final_index, mPlot, coord_int, et0, tsys0, coord_type, comp_type, filename, label, 0);
+    }
+
+
+    //------------------------------------------------------------------------------------
+    //Gnuplot window
+    //------------------------------------------------------------------------------------
+    pressEnter(refSt.isFlagOn);
+    gnuplot_close(h2);
+    gnuplot_close(h3);
+    gnuplot_close(h4);
+
+    //====================================================================================
+    // Free the data containers
+    //====================================================================================
+    free_dmatrix(y_traj_n, 0, 41, 0, final_index);
+    free_dvector(t_traj_n, 0, final_index);
+
+    free_dmatrix(ymc, 0, 5, 0, mPlot);
+    free_dvector(tmc, 0, mPlot);
+    free_dmatrix(ymc_comp, 0, 5, 0, mPlot);
+    free_dvector(tmc_comp, 0, mPlot);
+
+    free_dmatrix(y_jpl_temp, 0, 41, 0, final_index);
+    free_dvector(t_jpl_temp, 0, final_index);
+    free_dmatrix(y_traj_jpl_n, 0, 41, 0, final_index);
+    free_dvector(t_traj_jpl_n, 0, final_index);
+    free_dvector(et_traj_jpl, 0, final_index);
+
+    return FTC_SUCCESS;
+}
+
+
+/**
+ *  \brief Refine a given output of comprefemlisemli3d into Inertial Coordinates, then into
+ *         JPL coordinates.
+ **/
+int comptojplref3d(int coord_type, RefSt& refSt)
+{
+    //====================================================================================
+    // 1. Read the data, in coord_type units
+    //====================================================================================
+    string fname = "ooinrefft3d";
+    cout << fname << ". Read the data, in coord_type units..."  << endl;
+    int status = 0;
+
+    //------------------------------------------------------------------------------------
+    //Local variables to store the refined trajectory
+    //------------------------------------------------------------------------------------
+    int final_index = getLengthCOMP_txt();
+    double** y_traj_n   = dmatrix(0, 41, 0, final_index);
+    double* t_traj_n    = dvector(0, final_index);
+
+    //------------------------------------------------------------------------------------
+    //Read the data stored in a data file
+    //------------------------------------------------------------------------------------
+    readCOMP_txt(t_traj_n, y_traj_n, final_index);
+
+    //------------------------------------------------------------------------------------
+    //Arbitrarily reduce the number of points by a factor
+    //------------------------------------------------------------------------------------
+    cout << fname << ". Reduce the number of points..."  << endl;
+    int factor = 3;
+    final_index = final_index/factor;
+
+    for(int k = 0; k <= final_index; k++)
+    {
+        for(int i = 0; i <6; i++) y_traj_n[i][k] = y_traj_n[i][factor*k];
+        t_traj_n[k] = t_traj_n[factor*k];
+    }
+
+
+    //====================================================================================
+    // 2. Local parameters
+    //====================================================================================
+    //Complementary coordinate type
+    int comp_type = comp_coord_typ(coord_type);
+
+    //------------------------------------------------------------------------------------
+    // State and time vectors
+    //------------------------------------------------------------------------------------
+    int mPlot = 10;
+    double** ymc        = dmatrix(0, 5, 0, mPlot);
+    double* tmc         = dvector(0, mPlot);
+    double** ymc_comp   = dmatrix(0, 5, 0, mPlot);
+    double* tmc_comp    = dvector(0, mPlot);
+
+    double** y_jpl_temp   = dmatrix(0, 41, 0, final_index);
+    double* t_jpl_temp    = dvector(0, final_index);
+
+    //------------------------------------------------------------------------------------
+    //Get the default coordinates system from the coord_type
+    //Get the default framework from the coord_type
+    //------------------------------------------------------------------------------------
+    //int dcs  = default_coordinate_system(coord_type);
+    int fwrk = default_framework(coord_type);
+
+    //====================================================================================
+    // 3. Init the gnuplot
+    //====================================================================================
+    //Gnuplot window
+    gnuplot_ctrl* h2, *h3, * h4;
+
+    h2 = gnuplot_init();
+    h3 = gnuplot_init();
+    h4 = gnuplot_init();
+
+    gnuplot_cmd(h2, "set title \"Computation coordinates\" ");
+    gnuplot_cmd(h3, "set title \"Complementary coordinates\" ");
+    gnuplot_cmd(h4, "set title \"Continuation steps\" ");
+
+    gnuplot_cmd(h2, "set grid");
+    gnuplot_cmd(h3, "set grid");
+    gnuplot_cmd(h4, "set grid");
+
+    //Notable points in SEM & EM systems
+    notablePoints(h2, h3, coord_type);
+
+    //Color for plots
+    int color = 1;
+
+    //====================================================================================
+    // 5. Initial trajectory, on a grid
+    //====================================================================================
+    cout << " jplref3d. Initial trajectory, on a grid..."  << endl;
+    //Initial trajectory on lines, segment by segment
+    plottrajsegbyseg(y_traj_n, t_traj_n, final_index, mPlot, coord_type,
+                     0.0, 0.0, coord_type, h2, comp_type,  h3,color++,
+                     "Initial guess (NCSEM)");
+
+    //====================================================================================
+    // 5. INERTIAL refinement
+    //====================================================================================
+    //pressEnter(refSt.isFlagOn);
+
+    //====================================================================================
+    // Select ECISEM
+    //====================================================================================
+    int coord_int = ECISEM;
+    //int fwrk_int  = I_ECISEM;
+
+    //====================================================================================
+    // Change FOCUS
+    //====================================================================================
+    cout << "ECISEM has been chosen: changeDCS is applied to match the framework associated to coord_type.";
+    changeDCS(SEML, fwrk);
+
+    //====================================================================================
+    // Change of coordinates
+    //====================================================================================
+    cout << fname << ". Change of coordinates syn -> ecliptic..." << endl;
+
+    //------------------------------------------------------------------------------------
+    //Initialize the vectors that will be used throughout the computation
+    //------------------------------------------------------------------------------------
+    double** y_traj_ecisem = dmatrix(0, 41, 0, final_index);
+    double* t_traj_ecisem  = dvector(0, final_index);
+
+    //------------------------------------------------------------------------------------
+    //COC: coord_type -> coord_int
+    //------------------------------------------------------------------------------------
+    qbcp_coc_vec(y_traj_n, t_traj_n, y_traj_ecisem, t_traj_ecisem, final_index, coord_type, coord_int);
+
+
+    //====================================================================================
+    // Plotting Initial Guess
+    //====================================================================================
+    //pressEnter(refSt.isFlagOn);
+    cout << fname << ". Plotting Initial Guess..." << endl;
+    //------------------------------------------------------------------------------------
+    //Initial trajectory on lines, segment by segment
+    //------------------------------------------------------------------------------------
+    plottrajsegbyseg(y_traj_ecisem, t_traj_ecisem, final_index, mPlot, coord_int,
+                     0.0, 0.0, coord_type, h2, comp_type,  h3, color++,
+                     "Initial guess (ECISEM)");
+
+
+    //====================================================================================
+    // 6.5 Differential correction, in ECISEM framework
+    //====================================================================================
+    //pressEnter(refSt.isFlagOn);
+    cout << fname << ". Refine trajectory in JPL ephemerides..." << endl;
+    //DiffCorr
+    status  = multiple_shooting_direct(y_traj_ecisem, t_traj_ecisem, y_traj_ecisem, t_traj_ecisem, 42, final_index, coord_int, true, h4);
+    //Plot
+    gnuplot_plot_X(h4, y_traj_ecisem, final_index+1, (char*) "Final trajectory", "lines", "2", "2", color);
+
+    //------------------------------------------------------------------------------------
+    // If something went bad, an error is returned
+    //------------------------------------------------------------------------------------
+    if(status)
+    {
+        cerr << fname << ". Error during the differential correction procedure.";
+        cerr << " ref_errno = " << ref_strerror(status) << endl;
+        return FTC_FAILURE;
+    }
+
+
+    //====================================================================================
+    //Final trajectory on lines, segment by segment, saved on txt file
+    //====================================================================================
+    plottrajsegbyseg(y_traj_ecisem, t_traj_ecisem, final_index, mPlot, coord_int,
+                     0.0, 0.0, coord_type, h2, comp_type,  h3, color++,
+                     "Final guess (ECISEM)");
+
+
+    //====================================================================================
+    // JPL: initialization and time selection
+    //====================================================================================
+    cout << fname << ". Initialize SPICE kernerls..." << endl;
+    furnsh_c("spice/kernels/metakernel.furnsh");
+
+    //------------------------------------------------------------------------------------
+    //Get the best fit at tsys0 = 0.0. et0 is in seconds. After this step,
+    //et0 contains the synchronized time defined by:
+    //At epoch et0, the positions of the Sun, Earth and Moon in JPL ephemerides match
+    //as much as possible the position of the Sun, Earth and Moon in the QBCP at tsys0 = 0
+    //------------------------------------------------------------------------------------
+    double et0;
+    double tsys0 = 0.0;//t_traj_ecisem[0];
+    //qbcp2jpl(tsys0, &et0, coord_int);
+    qbcp2jpl_inertial(tsys0, &et0, coord_int);
+
+    //------------------------------------------------------------------------------------
+    //Display the value in "D" format
+    //------------------------------------------------------------------------------------
+    //ConstSpiceChar*  picture  = "Wkd Mon DD HH:MN:SC PDT YYYY ::UTC-7";
+    SpiceChar output[50];
+    et2utc_c (et0, "C", 6, 51, output);
+    cout << fname << ". The best fit has been obtained for the following date:" << endl;
+    printf ( "%s\n", output);
+
+    //------------------------------------------------------------------------------------
+    //We have to define tsys0 in complementary EM units,
+    //------------------------------------------------------------------------------------
+    //double tsys0_comp = tsys0/SEML.us_em.ns;
+
+    //------------------------------------------------------------------------------------
+    //Time shift stored in SEML: it is needed to synchronize the QBCP and the JPL ephemerides
+    //------------------------------------------------------------------------------------
+    SEML.ss.tshift = et0*SEML.ss.n - tsys0;
+
+    //====================================================================================
+    //Compute the equivalent of the state along the trajectory in NJ2000 coordinates, to
+    //compare with ECI QBCP coordinates!
+    //====================================================================================
+    // ECISEM -> NJ2000
+    coord2necistate_vec(y_traj_n, t_traj_n, y_jpl_temp, t_jpl_temp, final_index, coord_type, et0,  tsys0, eph_coord(coord_int), SEML.ss);
+    //Plot
+    gnuplot_plot_X(h4, y_jpl_temp, final_index+1, (char*)"Inertial state (NJ2000)", "lines", "1", "1", color);
+
+    //Moon's position (NJ2000)
+    SpiceDouble lt, RS1[6], RS2[6], RE[6], REM[6];
+    spkezr_c ("MOON",  et0, DEFFRAME,  "NONE",  DEFOBS, RS1, &lt);
+    spkezr_c ("EARTH",  et0, DEFFRAME,  "NONE",  DEFOBS, RE, &lt);
+    spkezr_c ("EARTH MOON BARYCENTER", et0, DEFFRAME,  "NONE",  DEFOBS, REM, &lt);
+    ecl2neci(RS1, REM, RS2, SEML.ss);
+    RS2[2] = 0.0;
+    gnuplot_plot_xyz(h4, RS2, RS2+1, RS2+2, 1, (char*)"Moon (NJ2000, projected)", "points", "3", "5", color);
+
+    //Moon's position (Custom)
+    double me = SEML.us_sem.me;
+    double mm = SEML.us_sem.mm;
+    double n  = SEML.us_sem.n;
+    double ni = SEML.us_sem.ni;
+    double ai = SEML.us_sem.ai;
+    double r1 = creal(evz(SEML.cs_sem.zt, tsys0, n, ni, ai));
+    double r2 = cimag(evz(SEML.cs_sem.zt, tsys0, n, ni, ai));
+    double Pm[3] = {- me/(mm + me)* r1, - me/(mm + me)* r2, 0.0};
+    gnuplot_plot_xyz(h4, Pm, Pm+1, Pm+2, 1, (char*)"Moon (ECISEM)", "points", "4", "5", color++);
+
+
+    //====================================================================================
+    //Initial trajectory on lines, computed from NJ2000 first guess
+    //====================================================================================
+    plottrajsegbyseg(y_jpl_temp, t_jpl_temp, final_index, mPlot, NJ2000,
+                     et0, tsys0, coord_type, h2, comp_type,  h3, color++,
+                     "Initial guess (NJ2000)");
+
+    //====================================================================================
+    //Continutation procedure
+    //====================================================================================
+    cout << "Continuation procedure" << endl;
+    pressEnter(refSt.isFlagOn);
+
+
+    //------------------------------------------------------------------------------------
+    // Initialization of the containers
+    //------------------------------------------------------------------------------------
+    double** y_traj_ecisem_c = dmatrix(0, 47, 0, final_index);
+    double* t_traj_ecisem_c  = dvector(0, final_index);
+    double* t_traj_ecisem_s  = dvector(0, final_index);
+
+
+    for(int k = 0; k <= final_index; k++)
+    {
+        //--------------------------------------------------------------------------------
+        //Copy segment by segment : time and state
+        //--------------------------------------------------------------------------------
+        t_traj_ecisem_c[k] = t_traj_ecisem[k];
+        for(int i = 0; i < 42; i++)
+        {
+            y_traj_ecisem_c[i][k] = y_traj_ecisem[i][k];
+        }
+
+        //Add Identity matrix
+        y_traj_ecisem_c[6][k]  = 1.0;
+        y_traj_ecisem_c[13][k] = 1.0;
+        y_traj_ecisem_c[20][k] = 1.0;
+        y_traj_ecisem_c[27][k] = 1.0;
+        y_traj_ecisem_c[34][k] = 1.0;
+        y_traj_ecisem_c[41][k] = 1.0;
+
+        //--------------------------------------------------------------------------------
+        //The last 6 components the variational equations for epsilon
+        //--------------------------------------------------------------------------------
+        for(int i = 42; i< 48; i++) y_traj_ecisem_c[i][k] = 0.0;
+    }
+
+    //Null vector
+    int nfv = 6*(final_index+1)+1;
+    double nullvector[nfv];
+    double de = 5e-3;
+
+    SEML.epsilon = 0.0;
+    //------------------------------------------------------------------------------------
+    // First differential correction
+    //------------------------------------------------------------------------------------
+    multiple_shooting_direct_deps(y_traj_ecisem_c, t_traj_ecisem_c, y_traj_ecisem_c, t_traj_ecisem_c,
+                                  nullvector, true, 48, final_index, coord_int, true, h4);
+
+
+
+    gnuplot_ctrl* h1;
+    h1 = gnuplot_init();
+
+
+    //------------------------------------------------------------------------------------
+    // Solution with epsilon as a parameter + continuation
+    //------------------------------------------------------------------------------------
+    //Loop
+    int Nmax = 3000;
+    int iter = 0;
+    do
+    {
+        //New de if necessary
+        de = SEML.epsilon+de*nullvector[nfv-1] <= 1.0? de:(1.0-SEML.epsilon)/nullvector[nfv-1];
+
+        //--------------------------------------------------------------------------------
+        //  New state, with a correction from null vector
+        //--------------------------------------------------------------------------------
+        for(int k = 0; k <= final_index; k++)
+        {
+            //----------------------------------------------------------------------------
+            //Copy segment by segment : time and state
+            //----------------------------------------------------------------------------
+            for(int i = 0; i < 6; i++) y_traj_ecisem_c[i][k] += de*nullvector[6*k+i];
+        }
+
+        //--------------------------------------------------------------------------------
+        //  New epsilon
+        //--------------------------------------------------------------------------------
+        cout << "Old epsilon = " << SEML.epsilon << endl;
+        SEML.epsilon = SEML.epsilon+de*nullvector[nfv-1];
+        cout << "New epsilon = " << SEML.epsilon << endl;
+
+        //--------------------------------------------------------------------------------
+        //  Correct the state with a differential correction procedure
+        //--------------------------------------------------------------------------------
+        multiple_shooting_direct_deps(y_traj_ecisem_c, t_traj_ecisem_c, y_traj_ecisem_c, t_traj_ecisem_c, nullvector, false, 48, final_index, coord_int, true, h4);
+
+        //--------------------------------------------------------------------------------
+        //The final time is shifted to be able to be plotted, using the right normalization
+        //--------------------------------------------------------------------------------
+        for(int k = 0; k <= final_index; k++) t_traj_ecisem_s[k] = t_traj_ecisem_c[k] + SEML.ss.tshift;
+
+        //--------------------------------------------------------------------------------
+        //Trajectory on lines, segment by segment, using SHIFTED time
+        //--------------------------------------------------------------------------------
+        if(SEML.epsilon > 0.90)
+            plottrajsegbyseg(y_traj_ecisem_c, t_traj_ecisem_s, final_index, mPlot, NJ2000,
+                             et0, tsys0, coord_type, h2, comp_type,  h3, color+1,
+                             "");
+
+        //--------------------------------------------------------------------------------
+        // Plotting the direction of motion
+        // in the (x, eps) space
+        //--------------------------------------------------------------------------------
+        gnuplot_plot_xy(h1, &y_traj_ecisem_c[0][0], &(SEML.epsilon), 1, "", "points", "7", "3", 1);
+
+
+        //--------------------------------------------------------------------------------
+        //Upload iter
+        //--------------------------------------------------------------------------------
+        iter++;
+
+    }
+    while(iter <= Nmax && SEML.epsilon < 1.0);
+
+
+    //====================================================================================
+    //Final trajectory on lines, segment by segment, using SHIFTED time
+    //====================================================================================
+    plottrajsegbyseg(y_traj_ecisem_c, t_traj_ecisem_s, final_index, mPlot, NJ2000,
+                     et0, tsys0, coord_type, h2, comp_type,  h3, color++,
+                     "Final guess (ecisem -> NJ2000)");
+
+    //------------------------------------------------------------------------------------
+    //Gnuplot window
+    //------------------------------------------------------------------------------------
+    pressEnter(refSt.isFlagOn);
+    gnuplot_close(h2);
+    gnuplot_close(h3);
+    gnuplot_close(h4);
+
+    //====================================================================================
+    // Free the data containers
+    //====================================================================================
+    free_dmatrix(y_traj_n, 0, 41, 0, final_index);
+    free_dvector(t_traj_n, 0, final_index);
+
+    free_dmatrix(ymc, 0, 5, 0, mPlot);
+    free_dvector(tmc, 0, mPlot);
+    free_dmatrix(ymc_comp, 0, 5, 0, mPlot);
+    free_dvector(tmc_comp, 0, mPlot);
+
+    free_dmatrix(y_jpl_temp, 0, 41, 0, final_index);
+    free_dvector(t_jpl_temp, 0, final_index);
+
+    free_dmatrix(y_traj_ecisem_c, 0, 47, 0, final_index);
+    free_dvector(t_traj_ecisem_c, 0, final_index);
+
+    return FTC_SUCCESS;
+}
+
+
+//----------------------------------------------------------------------------------------
+//         Refinement of solutions: to JPL - Subroutines
+//----------------------------------------------------------------------------------------
+/**
+ * \brief Computes a first guess in ephemerides coordinates, switching between the
+ *        Earth-Moon and Sun-Earth plane of motion when the discrepancy between the two
+ *        coordinates system is minimal.
+ **/
+int jplfg3d_switch(double** y_traj_n, double* t_traj_n,
+                     double** y_traj_jpl, double* t_traj_jpl,
+                     int final_index, int coord_type,
+                     int comp_type, int coord_int,
+                     double et0, double tsys0, double tsys0_comp)
+{
+    double** y_traj_jpl_n = dmatrix(0, 41, 0, final_index);
+    double* t_traj_jpl_n  = dvector(0, final_index);
+
+    //====================================================================================
+    //Compute the change of coord: syn -> ecliptic, where we suppose that the current
+    //plane of motion is the one of the primaries associated to coord_type
+    //====================================================================================
+    switch(coord_int)
+    {
+    case VECLI:
+        coord2eclstate_vec(y_traj_n, t_traj_n, y_traj_jpl, t_traj_jpl, final_index, coord_type, et0, tsys0, eph_coord(coord_type));
+        break;
+
+    case J2000:
+        coord2ecistate_vec(y_traj_n, t_traj_n, y_traj_jpl, t_traj_jpl, final_index, coord_type, et0,  tsys0, eph_coord(coord_type));
+        break;
+
+    case NJ2000:
+        coord2necistate_vec(y_traj_n, t_traj_n, y_traj_jpl, t_traj_jpl, final_index, coord_type, et0,  tsys0, eph_coord(coord_type), SEML.ss);
+        break;
+    }
+
+    //====================================================================================
+    //Half of the trajectory will be set in the other plane, i.e we suppose that the
+    //current plane of motion is the one of the primaries associated to comp_type
+    //====================================================================================
+    switch(coord_int)
+    {
+    case VECLI:
+        coord2eclstate_vec(y_traj_n, t_traj_n, y_traj_jpl_n, t_traj_jpl_n, final_index, coord_type, et0,  tsys0_comp, eph_coord(comp_type));
+        break;
+
+    case J2000:
+        coord2ecistate_vec(y_traj_n, t_traj_n, y_traj_jpl_n, t_traj_jpl_n, final_index, coord_type, et0,  tsys0_comp, eph_coord(comp_type));
+        break;
+
+    case NJ2000:
+        coord2necistate_vec(y_traj_n, t_traj_n, y_traj_jpl_n, t_traj_jpl_n, final_index, coord_type, et0,  tsys0_comp, eph_coord(comp_type), SEML.ss);
+        break;
+    }
+
+
+    //====================================================================================
+    //Find the point that minimizes the discrepancy between the to sets of coordinates
+    //The search is performed on the range [p0 p1]
+    //====================================================================================
+    int p0 = final_index/3, p1 = 2*final_index/3;
+    int pmin = p0;
+    int p = p0;
+    double dmin = 0.0, dminmin = 0.0;
+    do
+    {
+        dmin = 0.0;
+
+        //The minimum is computed in 3 consecutive points: on p-1, p, p+1
+        for(int i = 0; i < 6; i++) dmin += (y_traj_jpl[i][p] - y_traj_jpl_n[i][p])*(y_traj_jpl[i][p] - y_traj_jpl_n[i][p]);
+
+        if(p == p0)
+        {
+            pmin = p;
+            dminmin = dmin;
+        }
+        else
+        {
+            if(dmin < dminmin)
+            {
+                pmin = p;
+                dminmin = dmin;
+            }
+        }
+        p++;
+    }
+    while(p <= p1);
+    cout << "jplfg3d_switch. pmin = " << pmin << "/" << final_index << endl;
+
+    //====================================================================================
+    //Store the second half: at the beginning or at the end, depending on
+    //the computation coordinates
+    //====================================================================================
+    int begind = 0, endind = 0;
+    switch(eph_coord(coord_type))
+    {
+    case VEM:
+        begind = pmin;
+        endind = final_index;
+        break;
+
+    case VSEM:
+        begind = 0;
+        endind = pmin;
+        break;
+    }
+
+    for(int p = begind; p <= endind; p++)
+    {
+        for(int i = 0; i <6; i++) y_traj_jpl[i][p] =  y_traj_jpl_n[i][p];
+    }
+
+    //====================================================================================
+    //Free
+    //====================================================================================
+    free_dmatrix(y_traj_jpl_n, 0, 41, 0, final_index);
+    free_dvector(t_traj_jpl_n, 0, final_index);
+
+
+    return final_index;
+}
+
+/**
+ * \brief Same as jplfg3d_switch, with a refinement of the position of the minimum.
+ **/
+int jplfg3d_super_switch(double** y_traj_n, double* t_traj_n,
+                           double** y_traj_jpl, double* t_traj_jpl,
+                           int final_index, int coord_type,
+                           int comp_type, int coord_int,
+                           int mRef,
+                           double et0, double tsys0, double tsys0_comp)
+{
+    //====================================================================================
+    //Initialize
+    //====================================================================================
+    double** y_traj_jpl_n = dmatrix(0, 41, 0, final_index);
+    double* t_traj_jpl_n  = dvector(0, final_index);
+
+    double** yms          = dmatrix(0, 5, 0, mRef);
+    double* tms           = dvector(0, mRef);
+    double** ymc          = dmatrix(0, 5, 0, mRef);
+    double* tmc           = dvector(0, mRef);
+    double** ymc_comp     = dmatrix(0, 5, 0, mRef);
+    double* tmc_comp      = dvector(0, mRef);
+
+    //Get the default coordinates system from the coord_type
+    int dcs  = default_coordinate_system(coord_type);
+
+    //====================================================================================
+    //Compute the change of coord: syn -> ecliptic, where we suppose that the current
+    //plane of motion is the one of the primaries associated to coord_type
+    //====================================================================================
+    switch(coord_int)
+    {
+    case VECLI:
+        coord2eclstate_vec(y_traj_n, t_traj_n, y_traj_jpl, t_traj_jpl, final_index, coord_type, et0,  tsys0, eph_coord(coord_type));
+        break;
+
+    case J2000:
+        coord2ecistate_vec(y_traj_n, t_traj_n, y_traj_jpl, t_traj_jpl, final_index, coord_type, et0,  tsys0, eph_coord(coord_type));
+        break;
+
+    case NJ2000:
+        coord2necistate_vec(y_traj_n, t_traj_n, y_traj_jpl, t_traj_jpl, final_index, coord_type, et0,  tsys0, eph_coord(coord_type), SEML.ss);
+        break;
+    }
+
+    //====================================================================================
+    //Half of the trajectory will be set in the other plane, i.e we suppose that the
+    //current plane of motion is the one of the primaries associated to comp_type
+    //====================================================================================
+    switch(coord_int)
+    {
+    case VECLI:
+        coord2eclstate_vec(y_traj_n, t_traj_n, y_traj_jpl_n, t_traj_jpl_n, final_index, coord_type, et0,  tsys0_comp, eph_coord(comp_type));
+        break;
+
+    case J2000:
+        coord2ecistate_vec(y_traj_n, t_traj_n, y_traj_jpl_n, t_traj_jpl_n, final_index, coord_type, et0,  tsys0_comp, eph_coord(comp_type));
+        break;
+
+    case NJ2000:
+        coord2necistate_vec(y_traj_n, t_traj_n, y_traj_jpl_n, t_traj_jpl_n, final_index, coord_type, et0,  tsys0_comp, eph_coord(comp_type), SEML.ss);
+        break;
+    }
+
+
+    //====================================================================================
+    //Find the point that minimizes the discrepancy between the to sets of coordinates
+    //The search is performed on the range [p0 p1]
+    //====================================================================================
+    int p0 = final_index/3, p1 = 2*final_index/3;
+    int pmin = p0;
+    int p = p0;
+    double dmin = 0.0, dminmin = 0.0;
+    do
+    {
+        dmin = 0.0;
+        for(int i = 0; i < 6; i++) dmin += (y_traj_jpl[i][p] - y_traj_jpl_n[i][p])*(y_traj_jpl[i][p] - y_traj_jpl_n[i][p]);
+
+        if(p == p0)
+        {
+            pmin = p;
+            dminmin = dmin;
+        }
+        else
+        {
+            if(dmin < dminmin)
+            {
+                pmin = p;
+                dminmin = dmin;
+            }
+        }
+        p++;
+    }
+    while(p <= p1);
+    cout << "jplfg3d_super_switch. pmin = " << pmin << "/" << final_index << endl;
+
+
+    //====================================================================================
+    //Once we have the point, we refine it by integration between pmin-1 and pmin+1
+    //====================================================================================
+    double tmin;
+    double ymin[6], yv[6];
+    int ode78coll;
+
+    //------------------------------------------------------------------------------------
+    // First subsearch range: pmin-1 to pmin
+    //------------------------------------------------------------------------------------
+    //Integration segment by segment, in coord_type coordinates
+    for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][pmin-1];
+    ode78(yms, tms, &ode78coll, t_traj_n[pmin-1], t_traj_n[pmin], yv, 6, mRef, dcs, coord_type, coord_type);
+
+    //In ecliptic coordinates, in the plane associated to coord_type
+    switch(coord_int)
+    {
+    case VECLI:
+        coord2eclstate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0, tsys0, eph_coord(coord_type));
+        break;
+
+    case J2000:
+        coord2ecistate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0, tsys0, eph_coord(coord_type));
+        break;
+
+    case NJ2000:
+        coord2necistate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0, tsys0, eph_coord(coord_type), SEML.ss);
+        break;
+    }
+
+    //In ecliptic coordinates, in the plane associated to comp_type
+    switch(coord_int)
+    {
+    case VECLI:
+        coord2eclstate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0,  tsys0_comp, eph_coord(comp_type));
+        break;
+
+    case J2000:
+        coord2ecistate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0,  tsys0_comp, eph_coord(comp_type));
+        break;
+
+    case NJ2000:
+        coord2necistate_vec(yms, tms, ymc_comp, tmc_comp, mRef, coord_type, et0, tsys0_comp, eph_coord(comp_type), SEML.ss);
+        break;
+    }
+
+
+    //Compute the minimum discrepancy
+    for(p = 0; p <= mRef; p++)
+    {
+        dmin = 0.0;
+        for(int i = 0; i < 3; i++) dmin += (ymc[i][p] - ymc_comp[i][p])*(ymc[i][p] - ymc_comp[i][p]);
+
+        if(p == final_index/3)
+        {
+            dminmin = dmin;
+            tmin = tmc[p];
+            for(int i = 0; i <6; i++) ymin[i] = ymc[i][p];
+        }
+        else
+        {
+            if(dmin < dminmin)
+            {
+                dminmin = dmin;
+                tmin = tmc[p];
+                for(int i = 0; i <6; i++) ymin[i] = ymc[i][p];
+            }
+        }
+    }
+
+    //------------------------------------------------------------------------------------
+    // Second subsearch range: pmin-1 to pmin
+    //------------------------------------------------------------------------------------
+    //Integration segment by segment, in coord_type coordinates
+    for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][pmin];
+    ode78(yms, tms, &ode78coll, t_traj_n[pmin], t_traj_n[pmin+1], yv, 6, mRef, dcs, coord_type, coord_type);
+
+    //In ecliptic coordinates, in the plane associated to coord_type
+    switch(coord_int)
+    {
+    case VECLI:
+        coord2eclstate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0, tsys0, eph_coord(coord_type));
+        break;
+
+    case J2000:
+        coord2ecistate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0, tsys0, eph_coord(coord_type));
+        break;
+
+    case NJ2000:
+        coord2necistate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0, tsys0, eph_coord(coord_type), SEML.ss);
+        break;
+    }
+
+    //In ecliptic coordinates, in the plane associated to comp_type
+    switch(coord_int)
+    {
+    case VECLI:
+        coord2eclstate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0,  tsys0_comp, eph_coord(comp_type));
+        break;
+
+    case J2000:
+        coord2ecistate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0,  tsys0_comp, eph_coord(comp_type));
+        break;
+
+    case NJ2000:
+        coord2necistate_vec(yms, tms, ymc_comp, tmc_comp, mRef, coord_type, et0, tsys0_comp, eph_coord(comp_type), SEML.ss);
+        break;
+    }
+
+
+    //Compute the minimum discrepancy
+    tmin = tmc[0];
+    for(p = 0; p <= mRef; p++)
+    {
+        dmin = 0.0;
+        for(int i = 0; i < 3; i++) dmin += (ymc[i][p] - ymc_comp[i][p])*(ymc[i][p] - ymc_comp[i][p]);
+
+        if(dmin < dminmin)
+        {
+            dminmin = dmin;
+            tmin = tmc[p];
+            for(int i = 0; i <6; i++) ymin[i] = ymc[i][p];
+        }
+
+    }
+
+    cout << "-----------------------------------------------------------" << endl;
+    cout << "jplfg3d_super_switch. Switch part before refinment       " << endl;
+    cout << "-----------------------------------------------------------" << endl;
+    for(int p = pmin-1; p <= pmin+1; p++)
+    {
+        cout << t_traj_jpl[p] << "  " << y_traj_jpl[0][p] << "   " << y_traj_jpl[1][p] <<  "   " << y_traj_jpl[2][p] << endl;
+    }
+
+    //The best fit replace the old point, both in position in time
+    for(int i = 0; i <6; i++) y_traj_jpl_n[i][pmin] = ymin[i];
+    t_traj_jpl[pmin] = tmin;
+
+    cout << "-----------------------------------------------------------" << endl;
+    cout << "jplfg3d_super_switch. Switch part after refinment        " << endl;
+    cout << "-----------------------------------------------------------" << endl;
+    for(int p = pmin-1; p <= pmin+1; p++)
+    {
+        cout << t_traj_jpl[p] << "  " << y_traj_jpl_n[0][p] << "   " << y_traj_jpl_n[1][p] <<  "   " << y_traj_jpl_n[2][p] << endl;
+    }
+
+    //====================================================================================
+    //Store the second half: at the beginning or at the end, depending on
+    //the computation coordinates
+    //====================================================================================
+    int begind = 0, endind = 0;
+    switch(eph_coord(coord_type))
+    {
+    case VEM:
+        begind = pmin;
+        endind = final_index;
+        break;
+
+    case VSEM:
+        begind = 0;
+        endind = pmin;
+        break;
+    }
+
+    for(int p = begind; p <= endind; p++)
+    {
+        for(int i = 0; i <6; i++) y_traj_jpl[i][p] =  y_traj_jpl_n[i][p];
+    }
+
+
+    //====================================================================================
+    //Free
+    //====================================================================================
+    free_dmatrix(y_traj_jpl_n, 0, 41, 0, final_index);
+    free_dvector(t_traj_jpl_n, 0, final_index);
+
+    free_dmatrix(yms, 0, 5, 0, mRef);
+    free_dvector(tms, 0, mRef);
+    free_dmatrix(ymc, 0, 5, 0, mRef);
+    free_dvector(tmc, 0, mRef);
+    free_dmatrix(ymc_comp, 0, 5, 0, mRef);
+    free_dvector(tmc_comp, 0, mRef);
+
+    return final_index;
+}
+
+
+/**
+ * \brief Same as jplfg3d_switch, with an interpolation before and after the switching
+ *        point.
+ **/
+int jplfg3d_interpolation(double** y_traj_n, double* t_traj_n,
+                            double** * y_traj_jpl, double** t_traj_jpl,
+                            int final_index, int coord_type,
+                            int comp_type, int coord_int,
+                            int mRef,
+                            double et0, double tsys0, double tsys0_comp)
+{
+    //====================================================================================
+    //Initialize
+    //====================================================================================
+    double** y_traj_jpl_n = dmatrix(0, 41, 0, final_index);
+    double* t_traj_jpl_n  = dvector(0, final_index);
+
+    double** yms          = dmatrix(0, 5, 0, mRef);
+    double* tms           = dvector(0, mRef);
+    double** ymc          = dmatrix(0, 5, 0, mRef);
+    double* tmc           = dvector(0, mRef);
+    double** ymc_comp     = dmatrix(0, 5, 0, mRef);
+    double* tmc_comp      = dvector(0, mRef);
+
+    //Get the default coordinates system from the coord_type
+    int dcs  = default_coordinate_system(coord_type);
+
+    //====================================================================================
+    //Compute the change of coord: syn -> ecliptic, where we suppose that the current
+    //plane of motion is the one of the primaries associated to coord_type
+    //====================================================================================
+    switch(coord_int)
+    {
+    case VECLI:
+        coord2eclstate_vec(y_traj_n, t_traj_n, *y_traj_jpl, *t_traj_jpl, final_index, coord_type, et0,  tsys0, eph_coord(coord_type));
+        break;
+
+    case J2000:
+        coord2ecistate_vec(y_traj_n, t_traj_n, *y_traj_jpl, *t_traj_jpl, final_index, coord_type, et0,  tsys0, eph_coord(coord_type));
+        break;
+
+    case NJ2000:
+        coord2necistate_vec(y_traj_n, t_traj_n, *y_traj_jpl, *t_traj_jpl, final_index, coord_type, et0,  tsys0, eph_coord(coord_type), SEML.ss);
+        break;
+    }
+
+    //====================================================================================
+    //Half of the trajectory will be set in the other plane, i.e we suppose that the
+    //current plane of motion is the one of the primaries associated to comp_type
+    //====================================================================================
+    switch(coord_int)
+    {
+    case VECLI:
+        coord2eclstate_vec(y_traj_n, t_traj_n, y_traj_jpl_n, t_traj_jpl_n, final_index, coord_type, et0,  tsys0_comp, eph_coord(comp_type));
+        break;
+
+    case J2000:
+        coord2ecistate_vec(y_traj_n, t_traj_n, y_traj_jpl_n, t_traj_jpl_n, final_index, coord_type, et0,  tsys0_comp, eph_coord(comp_type));
+        break;
+
+    case NJ2000:
+        coord2necistate_vec(y_traj_n, t_traj_n, y_traj_jpl_n, t_traj_jpl_n, final_index, coord_type, et0,  tsys0_comp, eph_coord(comp_type), SEML.ss);
+        break;
+    }
+
+
+    //====================================================================================
+    //Find the point that minimizes the discrepancy between the to sets of coordinates
+    //The search is performed on the range [p0 p1]
+    //====================================================================================
+    //gnuplot_ctrl *h4 = gnuplot_init();
+    int p0 = 0, p1 = final_index;
+    int pmin = p0;
+    int p = p0;
+    double dmin = 0.0, dminmin = 0.0;
+    bool start = true, dte = false;
+    double distanceToEarth = 0.0;
+    double pe[3];
+    do
+    {
+        //--------------------------------------------------------------------------------
+        //Distance to Earth in NCSEM coordinates
+        //--------------------------------------------------------------------------------
+        distanceToEarth = 0.0;
+        evaluateCoef(pe, t_traj_n[p], SEML.us_sem.n, SEML.nf, SEML.cs_sem.pe, 3);
+        for(int i = 0; i < 3; i++) distanceToEarth += (y_traj_n[i][p] - pe[i])*(y_traj_n[i][p] - pe[i]);
+        distanceToEarth = sqrt(distanceToEarth);
+        dte = distanceToEarth > 0.4;
+
+        //--------------------------------------------------------------------------------
+        //Find best fit for a distance to Earth sufficiently large (dte == true)
+        //--------------------------------------------------------------------------------
+        dmin = 0.0;
+        for(int i = 0; i < 6; i++) dmin += ((*y_traj_jpl)[i][p] - y_traj_jpl_n[i][p])*((*y_traj_jpl)[i][p] - y_traj_jpl_n[i][p]);
+        if(start && dte)
+        {
+            pmin = p;
+            dminmin = dmin;
+            start = false;
+        }
+        else
+        {
+            //            if(dmin < dminmin && dte)
+            //            {
+            //                //cout << "Min! y_traj_n[0][p] = " << y_traj_n[0][p] << endl;
+            //                pmin = p;
+            //                dminmin = dmin;
+            //            }
+        }
+        p++;
+
+    }
+    while(p <= p1);
+
+    cout << "jplfg3d_interpolation. pmin = " << pmin << "/" << final_index << endl;
+
+    //    cout << "-----------------------------------------------------------" << endl;
+    //    cout << "jplfg3d_interpolation. Switch part before refinment      " << endl;
+    //    cout << "-----------------------------------------------------------" << endl;
+    //    for(int p = pmin-2; p <= pmin+1; p++)
+    //    {
+    //        cout << (*t_traj_jpl)[p] << "  " << (*y_traj_jpl)[0][p] << "   " << (*y_traj_jpl)[1][p] <<  "   " << (*y_traj_jpl)[2][p] << endl;
+    //    }
+
+    //pressEnter(true);
+
+    //====================================================================================
+    //Once we have the point, we interpolate it by integration between pmin-nsh and pmin+nsh
+    //====================================================================================
+    int nsh0 = 1;
+    int nsh1 = 3;
+    int nshs = nsh0+nsh1;
+
+    double** y_traj_jpl_x   = dmatrix(0, 41, 0, final_index+nshs*mRef);
+    double* t_traj_jpl_x    = dvector(0, final_index+nshs*mRef);
+    double yv[6];
+    int ode78coll;
+
+    for(int nn = -nsh0; nn < nsh1; nn++)
+    {
+        //--------------------------------------------------------------------------------
+        // First interpolation range: pmin-1 to pmin
+        //--------------------------------------------------------------------------------
+        //Integration segment by segment, in coord_type coordinates
+        for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][pmin+nn];
+        ode78(yms, tms, &ode78coll, t_traj_n[pmin+nn], t_traj_n[pmin+nn+1], yv, 6, mRef, dcs, coord_type, coord_type);
+
+        //In ecliptic coordinates, in the plane associated to coord_type
+        switch(coord_int)
+        {
+        case VECLI:
+            coord2eclstate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0, tsys0, eph_coord(coord_type));
+            break;
+
+        case J2000:
+            coord2ecistate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0, tsys0, eph_coord(coord_type));
+            break;
+
+        case NJ2000:
+            coord2necistate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0, tsys0, eph_coord(coord_type), SEML.ss);
+            break;
+        }
+
+        //In ecliptic coordinates, in the plane associated to comp_type
+        switch(coord_int)
+        {
+        case VECLI:
+            coord2eclstate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0,  tsys0_comp, eph_coord(comp_type));
+            break;
+
+        case J2000:
+            coord2ecistate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0,  tsys0_comp, eph_coord(comp_type));
+            break;
+
+        case NJ2000:
+            coord2necistate_vec(yms, tms, ymc_comp, tmc_comp, mRef, coord_type, et0, tsys0_comp, eph_coord(comp_type), SEML.ss);
+            break;
+        }
+
+        //Interpolation from pmin-1 to pmin-1+mRef-1
+        //cout << "- Storing from " << pmin-nsh0+(nsh0+nn)*mRef << "to " << pmin-nsh0+(nsh0+nn)*mRef+mRef-1 << endl;
+        double epsilon = 0.0;
+        for(p = 0; p <= mRef-1; p++)
+        {
+            epsilon = (1.0*p+(nsh0+nn)*mRef)/(nshs*(mRef)-1);
+            //cout << "epsilon = " << epsilon << endl;
+            for(int i = 0; i <6; i++) y_traj_jpl_x[i][p+pmin-nsh0+(nsh0+nn)*mRef] = epsilon*ymc[i][p] + (1-epsilon)*ymc_comp[i][p];
+            t_traj_jpl_x[p+pmin-nsh0+(nsh0+nn)*mRef] = tmc[p];
+        }
+    }
+
+
+    //====================================================================================
+    //Store the parts before and after the interpolation part.
+    //====================================================================================
+    switch(eph_coord(coord_type))
+    {
+    case VEM:
+        //--------------------------------------------------------------------------------
+        // If we compute in VEM coordinates, the beginning of the trajectory is already
+        // good, that last part should be set in the SE plane.
+        //--------------------------------------------------------------------------------
+        //Store the first part of the trajectory
+        //cout << "- Storing from " << 0 << "to " << pmin-nsh0-1 << endl;
+        for(p = 0; p <= pmin-nsh0-1; p++)
+        {
+            for(int i = 0; i <6; i++) y_traj_jpl_x[i][p] = (*y_traj_jpl)[i][p];
+            t_traj_jpl_x[p] = (*t_traj_jpl)[p];
+        }
+
+
+        //Store the last part of the trajectory
+        //cout << "- Storing from " << pmin-nsh0+nshs*mRef << "to " << final_index+nshs*mRef-nshs<< endl;
+        for(p = pmin+nsh1; p <= final_index; p++)
+        {
+            for(int i = 0; i < 6; i++) y_traj_jpl_x[i][p+nshs*mRef-nshs] = y_traj_jpl_n[i][p];
+            t_traj_jpl_x[p+nshs*mRef-nshs] = t_traj_jpl_n[p];
+        }
+        break;
+
+    case VSEM:
+
+        //--------------------------------------------------------------------------------
+        // If we compute in VSEM coordinates, the end of the trajectory is already
+        // good, that first part should be set in the EM plane.
+        //--------------------------------------------------------------------------------
+        //Store the first part of the trajectory
+        //cout << "- Storing from " << 0 << "to " << pmin-nsh0-1 << endl;
+        for(p = 0; p <= pmin-nsh0-1; p++)
+        {
+            for(int i = 0; i <6; i++) y_traj_jpl_x[i][p] = y_traj_jpl_n[i][p];
+            t_traj_jpl_x[p] = t_traj_jpl_n[p];
+        }
+
+
+        //Store the last part of the trajectory
+        //cout << "- Storing from " << pmin-nsh0+nshs*mRef << "to " << final_index+nshs*mRef-nshs<< endl;
+        for(p = pmin+nsh1; p <= final_index; p++)
+        {
+            for(int i = 0; i < 6; i++) y_traj_jpl_x[i][p+nshs*mRef-nshs] = (*y_traj_jpl)[i][p];
+            t_traj_jpl_x[p+nshs*mRef-nshs] = (*t_traj_jpl)[p];
+        }
+        break;
+    }
+
+    //====================================================================================
+    //Free, before final_index is changed
+    //====================================================================================
+    free_dmatrix(y_traj_jpl_n, 0, 41, 0, final_index);
+    free_dvector(t_traj_jpl_n, 0, final_index);
+
+    free_dmatrix(yms, 0, 5, 0, mRef);
+    free_dvector(tms, 0, mRef);
+    free_dmatrix(ymc, 0, 5, 0, mRef);
+    free_dvector(tmc, 0, mRef);
+    free_dmatrix(ymc_comp, 0, 5, 0, mRef);
+    free_dvector(tmc_comp, 0, mRef);
+
+    //====================================================================================
+    //New init. Once the previous computation has been done, we need to define again:
+    //final_index, y_traj_jpl, and t_traj_jpl, so that the final trajectory incorporates
+    //the interpolated part.
+    //====================================================================================
+    //Free from previous initialization
+    free_dmatrix(*y_traj_jpl, 0, 41, 0, final_index);
+    free_dvector(*t_traj_jpl, 0, final_index);
+
+    //Redefinition of final_index
+    int final_index_0 = final_index +nshs*(mRef-1);
+
+    //Init again
+    *y_traj_jpl  = dmatrix(0, 41, 0, final_index_0);
+    *t_traj_jpl  = dvector(0, final_index_0);
+
+    //Store
+    for(p = 0; p <= final_index_0; p++)
+    {
+        for(int i = 0; i < 6; i++) (*y_traj_jpl)[i][p] = y_traj_jpl_x[i][p];
+        (*t_traj_jpl)[p] = t_traj_jpl_x[p];
+    }
+
+
+    //    cout << "-----------------------------------------------------------" << endl;
+    //    cout << "jplfg3d_interpolation. Switch part after refinement      " << endl;
+    //    cout << "-----------------------------------------------------------" << endl;
+    //    for(int p = pmin-2; p <= pmin+2*mRef+1; p++)
+    //    {
+    //        cout << (*t_traj_jpl)[p] << "  " << (*y_traj_jpl)[0][p] << "   " << (*y_traj_jpl)[1][p] <<  "   " << (*y_traj_jpl)[2][p] << endl;
+    //    }
+
+    //====================================================================================
+    //Return final_index_0
+    //====================================================================================
+    return final_index_0;
+}
+
+//----------------------------------------------------------------------------------------
+//         Refinement of solutions: to JPL - Tests
+//----------------------------------------------------------------------------------------
+/**
+ *  \brief Computes only a SEMLi orbit and test a JPL refinement.
+ **/
+int compref3d_test_seml_synjpl(int man_grid_size_t,
+                                   int coord_type,
+                                   Orbit& orbit_SEM,
+                                   RefSt refSt)
+
+{
+    //====================================================================================
+    // 1. Initialize local variables
+    //====================================================================================
+    string fname = "compref3d_test_seml_synjpl";
+    cout << fname << ". Initialization of the local variables..."  << endl;
+
+    //----------------------------------------------------------
+    //Get the default coordinates system from the coord_type
+    //----------------------------------------------------------
+    int dcs  = default_coordinate_system(coord_type);
+
+    //----------------------------------------------------------
+    // Define the time of flight on each orbit
+    //----------------------------------------------------------
+    double tof_seml_SEM = refSt.tspan_SEM;   //TOF on SEMLi orbit
+
+    //====================================================================================
+    // 2. Init the gnuplot
+    //====================================================================================
+    //----------------------------------------------------------
+    //Gnuplot window
+    //----------------------------------------------------------
+    gnuplot_ctrl* h2, *h3;
+    h2 = gnuplot_init();
+    h3 = gnuplot_init();
+
+    gnuplot_cmd(h2, "set title \"Computation coordinates\" ");
+    gnuplot_cmd(h3, "set title \"Complementary coordinates\" ");
+
+    //gnuplot_cmd(h2, "set view equal xyz");
+    //gnuplot_cmd(h3, "set view equal xyz");
+    gnuplot_cmd(h2, "set grid");
+    gnuplot_cmd(h3, "set grid");
+
+    //----------------------------------------------------------
+    //Notable points in SEM & EM systems
+    //----------------------------------------------------------
+    notablePoints(h2, h3, coord_type);
+
+    //----------------------------------------------------------
+    //Complementary coordinate type
+    //----------------------------------------------------------
+    int comp_type = comp_coord_typ(coord_type);
+
+    //====================================================================================
+    // 3. Init the data containers
+    //====================================================================================
+    int max_grid    = 3000;
+    int man_grid_2  = (refSt.grid == REF_VAR_GRID) ? max_grid:man_grid_size_t;
+    int traj_grid_2 = (refSt.grid == REF_VAR_GRID) ? max_grid:man_grid_size_t;
+
+    //------------------------------------------------------------------------------------
+    //To store final data
+    //------------------------------------------------------------------------------------
+    double** y_traj  = dmatrix(0, 41, 0, traj_grid_2);
+    double*  t_traj  = dvector(0, traj_grid_2);
+
+    double** y_traj_comp  = dmatrix(0, 41, 0, traj_grid_2);
+    double*  t_traj_comp  = dvector(0, traj_grid_2);
+
+    //------------------------------------------------------------------------------------
+    //Local variables to store the refined trajectory
+    //------------------------------------------------------------------------------------
+    double** y_traj_n   = dmatrix(0, 41, 0, traj_grid_2);
+    double* t_traj_n    = dvector(0, traj_grid_2);
+
+    //====================================================================================
+    // 4. Build the trajectory
+    //====================================================================================
+
+    //====================================================================================
+    // 4.1 Initialize local variables
+    //====================================================================================
+    //------------------------------------------------------------------------------------
+    //Local variables to store the manifold leg
+    //------------------------------------------------------------------------------------
+    double** y_man_NCEM   = dmatrix(0, 5, 0, man_grid_2);
+    double** y_man_NCSEM  = dmatrix(0, 5, 0, man_grid_2);
+    double** y_man_coord  = dmatrix(0, 5, 0, man_grid_2);
+    double** y_man_comp   = dmatrix(0, 5, 0, man_grid_2);
+    double* t_man_EM      = dvector(0, man_grid_2);
+    double* t_man_SEM     = dvector(0, man_grid_2);
+    double* t_man_coord   = dvector(0, man_grid_2);
+    double* t_man_comp    = dvector(0, man_grid_2);
+
+    //====================================================================================
+    // 6.4 Compute the final SEMLi orbit
+    //====================================================================================
+    cout << fname << ". Compute the final SEMLi orbit..."  << endl;
+    //------------------------------------------------------------------------------------
+    // Initialize the initial conditions (both NC and RCM coordinates)
+    // We also need to kill the stable part.
+    //------------------------------------------------------------------------------------
+    orbit_SEM.setSi(0.0, 4);
+    orbit_SEM.update_ic(orbit_SEM.getSi());
+
+
+    //------------------------------------------------------------------------------------
+    //Integration on man_grid_size+1 fixed grid
+    //------------------------------------------------------------------------------------
+    int sem_index = man_grid_2;
+
+    switch(refSt.grid)
+    {
+    case REF_FIXED_GRID:
+    case REF_GIVEN_GRID:
+    {
+        int output = orbit_SEM.traj_int_grid(orbit_SEM.getT0()+tof_seml_SEM, y_man_NCSEM, t_man_SEM, man_grid_2, true);
+        //--------------------------------------------------------------------------------
+        //If output is strictly greater than 0, then the projection procedure inside
+        //the integration went wrong, and the new indix is output.
+        //It output == ORBIT_EPROJ, the projection procedure failed so bad that there
+        //is no point stored in the data, except the first one, and the new indix is zero
+        //--------------------------------------------------------------------------------
+        if(output == ORBIT_EPROJ) sem_index = 0;
+        else if(output > 0) sem_index = output;
+        break;
+    }
+
+    case REF_VAR_GRID:
+    {
+        sem_index = orbit_SEM.traj_int_var_grid(orbit_SEM.getT0()+tof_seml_SEM, y_man_NCSEM, t_man_SEM, man_grid_2, 1);
+        break;
+    }
+    }
+
+    //------------------------------------------------------------------------------------
+    //To coord_type coordinates
+    //------------------------------------------------------------------------------------
+    qbcp_coc_vec(y_man_NCSEM, t_man_SEM, y_man_coord, t_man_coord, sem_index, NCSEM, coord_type);
+    qbcp_coc_vec(y_man_NCSEM, t_man_SEM, y_man_comp, t_man_comp, sem_index, NCSEM, comp_type);
+
+
+    //------------------------------------------------------------------------------------
+    // Save ALL points
+    //------------------------------------------------------------------------------------
+    for(int kman = 0; kman <= sem_index; kman++)
+    {
+        for(int i = 0; i < 6; i++) y_traj[i][kman] = y_man_coord[i][kman];
+        t_traj[kman] = t_man_coord[kman];
+    }
+
+    //------------------------------------------------------------------------------------
+    //Plot
+    //------------------------------------------------------------------------------------
+    gnuplot_plot_X(h2, y_man_coord, sem_index+1, (char*)"SEMLi", "points", "1", "3", 6);
+    gnuplot_plot_X(h3, y_man_comp, sem_index+1, (char*)"", "points", "1", "3", 6);
+
+    //====================================================================================
+    // Entire size is: no more than 3*man_grid_size_t points or so.
+    //====================================================================================
+    int final_index = 0;
+    if(refSt.grid == REF_VAR_GRID)
+    {
+        final_index = sem_index;
+        int freq = final_index/(3*man_grid_size_t);
+        cout << "----------------------------------"<< endl;
+        cout << "Number of MSD points:        "     << endl;
+        cout << "At SEML:          " << sem_index   << endl;
+        cout << "Total:            " << final_index << endl;
+        cout << "Selecting 1/" << freq << " points" << endl;
+        cout << "Subtotal:         " << (int) floor(final_index/freq) << endl;
+        cout << "----------------------------------"<< endl;
+
+        //------------------------------------------------------------------------------------
+        // Subset of points in y_traj_comp/t_traj_comp
+        //------------------------------------------------------------------------------------
+        for(int kman = 0; kman <= floor(final_index/freq); kman++)
+        {
+            for(int i = 0; i < 6; i++) y_traj_comp[i][kman] = y_traj[i][freq*kman];
+            t_traj_comp[kman] = t_traj[freq*kman];
+        }
+
+        //New final index
+        final_index = floor(final_index/freq);
+
+        //------------------------------------------------------------------------------------
+        // Subset of points back in y_traj/t_traj
+        //------------------------------------------------------------------------------------
+        for(int kman = 0; kman <= final_index; kman++)
+        {
+            for(int i = 0; i < 6; i++) y_traj[i][kman] = y_traj_comp[i][kman];
+            t_traj[kman] = t_traj_comp[kman];
+        }
+    }
+    else
+    {
+        //If the grid size is fixed, we still return the variable indix, because
+        //some integration procedure could have gone wrong so that the returned indices
+        //are smaller than their optimal desired value
+        final_index = sem_index;
+    }
+
+    //====================================================================================
+    // Initial trajectory, on a grid
+    //====================================================================================
+    cout << fname << ". Initial trajectory, on a grid..."  << endl;
+    int mPlot = 10;
+    double** ymc        = dmatrix(0, 5, 0, mPlot);
+    double* tmc         = dvector(0, mPlot);
+    double** ymc_comp   = dmatrix(0, 5, 0, mPlot);
+    double* tmc_comp    = dvector(0, mPlot);
+    double** ymc_v      = dmatrix(0, 5, 0, mPlot*final_index);
+    double* tmc_v       = dvector(0, mPlot*final_index);
+    double** ymc_comp_v = dmatrix(0, 5, 0, mPlot*final_index);
+    double* tmc_comp_v  = dvector(0, mPlot*final_index);
+
+    //Initial trajectory on lines, segment by segment
+    double yv[6];
+    int ode78coll;
+
+    for(int k = 0; k < final_index; k++)
+    {
+        //Integration segment by segment
+        for(int i = 0; i < 6; i++) yv[i] = y_traj[i][k];
+        ode78(ymc, tmc, &ode78coll, t_traj[k], t_traj[k+1], yv, 6, mPlot, NCEM, coord_type, coord_type);
+
+        //Store
+        for(int p = 0; p <= mPlot; p++)
+        {
+            for(int i = 0; i < 6; i++) ymc_v[i][k*mPlot + p] = ymc[i][p];
+            tmc_v[k*mPlot + p] = tmc[p];
+        }
+    }
+    //To complementary coordinates
+    qbcp_coc_vec(ymc_v, tmc_v, ymc_comp_v, tmc_comp_v, mPlot*final_index, coord_type, comp_type);
+
+    //Plot on h2: lines
+    gnuplot_plot_X(h2, ymc_v, mPlot*final_index+1, (char*)"Initial guess", "lines", "1", "2", 7);
+    //Plot on h2: points
+    gnuplot_plot_X(h2, y_traj, final_index+1, (char*)"", "points", "1", "2", 7);
+    //Plot on h3: lines
+    gnuplot_plot_X(h3, ymc_comp_v, mPlot*final_index+1, (char*)"Initial guess", "lines", "1", "2", 7);
+
+
+    //====================================================================================
+    // 6.5 Differential correction & final trajectory
+    //====================================================================================
+    cout << fname << ". Differential correction procedure.          "  << endl;
+    cout << "-----------------------------------------------------------"  << endl;
+    pressEnter(refSt.isFlagOn);
+
+    int isPlotted   = 0;
+    multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, h2);
+    //multiple_shooting_direct_variable_time(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, isTimeFixed, h2);
+
+    //------------------------------------------------------------------------------------
+    // Final trajectory, on a grid
+    //------------------------------------------------------------------------------------
+    cout << fname << ". Final trajectory, on a grid..."  << endl;
+    //Final trajectory on lines, segment by segment
+    for(int k = 0; k < final_index; k++)
+    {
+        //Integration segment by segment
+        for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
+        ode78(ymc, tmc, &ode78coll, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+
+        //Store
+        for(int p = 0; p <= mPlot; p++)
+        {
+            for(int i = 0; i < 6; i++) ymc_v[i][k*mPlot + p] = ymc[i][p];
+            tmc_v[k*mPlot + p] = tmc[p];
+        }
+    }
+
+    //To complementary coordinates
+    qbcp_coc_vec(ymc_v, tmc_v, ymc_comp_v, tmc_comp_v, mPlot*final_index, coord_type, comp_type);
+    //Plot on h2
+    gnuplot_plot_X(h2, ymc_v, mPlot*final_index+1, (char*)"Final guess", "lines", "1", "2", 3);
+    gnuplot_plot_X(h2, y_traj_n, final_index+1, (char*)"", "points", "1", "2", 3);
+    //Plot on h3
+    gnuplot_plot_X(h3, ymc_comp_v, mPlot*final_index+1, (char*)"Final guess", "lines", "1", "2", 3);
+
+    //====================================================================================
+    // JPL
+    //====================================================================================
+    if(refSt.isJPL)
+    {
+        //----------------------------------------------------------
+        //Go on
+        //----------------------------------------------------------
+        pressEnter(refSt.isFlagOn);
+
+        //====================================================================================
+        // Initialize SPICE kernerls
+        //====================================================================================
+        gnuplot_ctrl* h4 = gnuplot_init();
+        cout << fname << ". Initialize SPICE kernerls..." << endl;
+        furnsh_c("spice/kernels/metakernel.furnsh");
+
+        //====================================================================================
+        // Initialize VF
+        //====================================================================================
+        cout << fname << ". Initialize associated VF..." << endl;
+        int shift = 0;
+        OdeStruct driver_JPL;
+        //Root-finding
+        const gsl_root_fsolver_type* T_root = gsl_root_fsolver_brent;
+        //Stepper
+        const gsl_odeiv2_step_type* T = gsl_odeiv2_step_rk8pd;
+        //Parameters
+        int coll;
+        OdeParams odeParams(&coll, &SEML);
+        //Init ode structure
+        init_ode_structure(&driver_JPL, T, T_root, 6, jpl_vf_syn, &odeParams);
+
+        //====================================================================================
+        // Search for best fit in  JPL ephemerides
+        //====================================================================================
+        cout << fname << ". Search for best fit in JPL DE430..." << endl;
+
+        //----------------------------------------------------------
+        //Get the best fit at t = t_traj_n[shift]. et0 is in seconds
+        //----------------------------------------------------------
+        double et0;
+        double tsys0 = t_traj_n[shift];
+        double tsys0_comp = tsys0;
+        switch(eph_coord(comp_type))
+        {
+        case VEM:
+            tsys0_comp /= SEML.us_em.ns;
+            break;
+
+        case VSEM:
+            tsys0_comp *= SEML.us_em.ns;
+            break;
+        }
+        //Best fit
+        qbcp2jpl(tsys0, &et0, coord_type);
+
+        //----------------------------------------------------------
+        //Update the SEML
+        //----------------------------------------------------------
+        SEML.ss.et0 = et0;
+        SEML.ss.t0  = tsys0;
+
+        cout << "best fit (s) = " << et0 << endl;
+
+        //====================================================================================
+        // Change of coordinates
+        //====================================================================================
+        cout << fname << ". Change of coordinates syn -> ecliptic..." << endl;
+        //------------------------------------------------------------------------------------
+        //Local variables to store the refined trajectory
+        //------------------------------------------------------------------------------------
+        double** y_traj_syn   = dmatrix(0, 41, 0, final_index);
+        double* t_traj_syn    = dvector(0, final_index);
+        double* et_traj_jpl   = dvector(0, final_index);
+
+        double** y_traj_jpl_n = dmatrix(0, 41, 0, final_index);
+        double* t_traj_jpl_n  = dvector(0, final_index);
+
+        //------------------------------------------------------------------------------------
+        //Compute the change of coord: syn -> ecliptic
+        //------------------------------------------------------------------------------------
+        qbcp_coc_vec(y_traj_n, t_traj_n, y_traj_syn, t_traj_syn, final_index, coord_type, eph_coord(coord_type));
+        for(int p = 0; p <= final_index; p++)
+        {
+            et_traj_jpl[p] = et0 + (t_traj_n[p]-tsys0)/mean_motion(eph_coord(coord_type));
+        }
+
+        //====================================================================================
+        // Plotting Initial Guess
+        //====================================================================================
+        pressEnter(refSt.isFlagOn);
+        cout << fname << ". Plotting Initial Guess..." << endl;
+        //------------------------------------------------------------------------------------
+        //Initial trajectory on lines, segment by segment
+        //------------------------------------------------------------------------------------
+        for(int k = 0; k < final_index; k++)
+        {
+            //----------------------------------------------------
+            //Integration segment by segment
+            //----------------------------------------------------
+            for(int i = 0; i < 6; i++) yv[i] = y_traj_syn[i][k];
+            ode78_jpl(ymc_comp, tmc_comp, &ode78coll, t_traj_syn[k], t_traj_syn[k+1], yv, 6, mPlot, eph_fwrk(coord_type), eph_coord(coord_type), eph_coord(coord_type));
+
+            //----------------------------------------------------
+            //Back to coord_type coordinates
+            //----------------------------------------------------
+            qbcp_coc_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, eph_coord(coord_type), coord_type);
+
+            //Plot on h2
+            if(k == 0) gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"Initial guess in JPL", "lines", "1", "2", 1);
+            else gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"", "lines", "1", "2", 1);
+
+            //----------------------------------------------------
+            //Back to comp_type coordinates
+            //----------------------------------------------------
+            //qbcp_coc_vec(ymc, tmc, ymc_comp, tmc_comp, mPlot, coord_type, comp_type);
+            //OR
+            //coord_type  -> ECLIPTIC -> comp_type
+            syn2eclstate_vec(ymc_comp, tmc_comp, ymc, tmc,  mPlot, et0, tsys0, eph_coord(coord_type));
+            ecl2coordstate_vec(ymc, tmc, ymc_comp, tmc_comp, mPlot, comp_type, et0, tsys0_comp, eph_coord(comp_type));
+
+            //Plot on h3
+            if(k == 0) gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"Initial guess in JPL", "lines", "1", "2", 1);
+            else gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"", "lines", "1", "2", 1);
+        }
+
+        //====================================================================================
+        // 6.5 Differential correction & final trajectory
+        //====================================================================================
+        pressEnter(refSt.isFlagOn);
+        cout << fname << ". Refine trajectory in JPL ephemerides..." << endl;
+
+        isPlotted   = 1;
+        multiple_shooting_direct(y_traj_syn, t_traj_syn, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, eph_coord(coord_type), isPlotted, h4);
+        //Plot
+        gnuplot_plot_X(h4, y_traj_jpl_n, final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
+
+
+        //--------------------------------------------------------------------------------
+        //Final trajectory on lines, segment by segment
+        //--------------------------------------------------------------------------------
+        for(int k = 0; k < final_index; k++)
+        {
+            //----------------------------------------------------
+            //Integration segment by segment
+            //----------------------------------------------------
+            for(int i = 0; i < 6; i++) yv[i] = y_traj_jpl_n[i][k];
+            ode78_jpl(ymc_comp, tmc_comp, &ode78coll, t_traj_jpl_n[k], t_traj_jpl_n[k+1], yv, 6, mPlot, eph_fwrk(coord_type), eph_coord(coord_type), eph_coord(coord_type));
+
+            //----------------------------------------------------
+            //Back to coord_type coordinates
+            //----------------------------------------------------
+            qbcp_coc_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, eph_coord(coord_type), coord_type);
+
+            //Plot on h2
+            if(k == 0) gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"Final traj in JPL", "lines", "1", "2", 2);
+            else gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"", "lines", "1", "2", 2);
+
+            //----------------------------------------------------
+            //Back to comp_type coordinates
+            //----------------------------------------------------
+            //qbcp_coc_vec(ymc, tmc, ymc_comp, tmc_comp, mPlot, coord_type, comp_type);
+            //OR
+            //coord_type  -> ECLIPTIC -> comp_type
+            syn2eclstate_vec(ymc_comp, tmc_comp, ymc, tmc,  mPlot, et0, tsys0, eph_coord(coord_type));
+            ecl2coordstate_vec(ymc, tmc, ymc_comp, tmc_comp, mPlot, comp_type, et0, tsys0_comp, eph_coord(comp_type));
+
+            //Plot on h3
+            if(k == 0) gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"Final traj in JPL", "lines", "1", "2", 2);
+            else gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"", "lines", "1", "2", 2);
+        }
+
+        //----------------------------------------------------------
+        //Gnuplot window
+        //----------------------------------------------------------
+        pressEnter(refSt.isFlagOn);
+        gnuplot_close(h4);
+    }
+
+    //----------------------------------------------------------
+    //Gnuplot window
+    //----------------------------------------------------------
+    pressEnter(refSt.isFlagOn);
+    gnuplot_close(h2);
+    gnuplot_close(h3);
+
+
+    //====================================================================================
+    // Free the data containers
+    //====================================================================================
+    free_dmatrix(y_traj, 0, 41, 0, traj_grid_2);
+    free_dvector(t_traj, 0, traj_grid_2);
+    free_dmatrix(y_traj_comp, 0, 41, 0, traj_grid_2);
+    free_dvector(t_traj_comp, 0, traj_grid_2);
+    free_dmatrix(y_traj_n, 0, 41, 0, traj_grid_2);
+    free_dvector(t_traj_n, 0, traj_grid_2);
+
+    free_dmatrix(y_man_NCEM, 0, 5, 0, man_grid_2);
+    free_dmatrix(y_man_NCSEM, 0, 5, 0, man_grid_2);
+    free_dmatrix(y_man_coord, 0, 5, 0, man_grid_2);
+    free_dvector(t_man_EM, 0, man_grid_2);
+    free_dvector(t_man_SEM, 0, man_grid_2);
+    free_dvector(t_man_coord, 0, man_grid_2);
+
+    free_dmatrix(ymc, 0, 5, 0, mPlot);
+    free_dvector(tmc, 0, mPlot);
+    free_dmatrix(ymc_comp, 0, 5, 0, mPlot);
+    free_dvector(tmc_comp, 0, mPlot);
+
+    free_dmatrix(ymc_v, 0, 5, 0, mPlot*final_index);
+    free_dvector(tmc_v, 0, mPlot*final_index);
+    free_dmatrix(ymc_comp_v, 0, 5, 0, mPlot*final_index);
+    free_dvector(tmc_comp_v  , 0, mPlot*final_index);
+
+    return FTC_SUCCESS;
+}
+
+
+/**
+ *  \brief Computes only an EML2 orbit and test a JPL refinement.
+ **/
+int compref3d_test_eml_synjpl(int man_grid_size_t,
+                                  int coord_type,
+                                  Orbit& orbit_EM,
+                                  RefSt refSt)
+{
+    //====================================================================================
+    // 1. Initialize local variables
+    //====================================================================================
+    string fname = "compref3d_test_eml_synjpl";
+    cout << fname << ". Initialization of the local variables..."  << endl;
+
+    //----------------------------------------------------------
+    //Get the default coordinates system from the coord_type
+    //----------------------------------------------------------
+    int dcs  = default_coordinate_system(coord_type);
+
+    //----------------------------------------------------------
+    // Define the time of flight on each orbit
+    //----------------------------------------------------------
+    double tof_eml_EM = refSt.tspan_EM;   //TOF on EML2 orbit
+    //    double tof_seml_SEM = refSt.tspan_SEM;   //TOF on SEMLi orbit
+
+    //====================================================================================
+    // 2. Init the gnuplot
+    //====================================================================================
+    //----------------------------------------------------------
+    //Gnuplot window
+    //----------------------------------------------------------
+    gnuplot_ctrl* h2, *h3;
+    h2 = gnuplot_init();
+    h3 = gnuplot_init();
+
+    gnuplot_cmd(h2, "set title \"Computation coordinates\" ");
+    gnuplot_cmd(h3, "set title \"Complementary coordinates\" ");
+
+    //gnuplot_cmd(h2, "set view equal xyz");
+    //gnuplot_cmd(h3, "set view equal xyz");
+    gnuplot_cmd(h2, "set grid");
+    gnuplot_cmd(h3, "set grid");
+
+    //----------------------------------------------------------
+    //Notable points in SEM & EM systems
+    //----------------------------------------------------------
+    notablePoints(h2, h3, coord_type);
+
+    //----------------------------------------------------------
+    //Complementary coordinate type
+    //----------------------------------------------------------
+    int comp_type = comp_coord_typ(coord_type);
+
+    //====================================================================================
+    // 3. Init the data containers
+    //====================================================================================
+    int max_grid    = 3000;
+    int man_grid_2  = (refSt.grid == REF_VAR_GRID) ? max_grid:man_grid_size_t;
+    int traj_grid_2 = (refSt.grid == REF_VAR_GRID) ? max_grid:man_grid_size_t;
+
+    //------------------------------------------------------------------------------------
+    //To store final data
+    //------------------------------------------------------------------------------------
+    double** y_traj  = dmatrix(0, 41, 0, traj_grid_2);
+    double*  t_traj  = dvector(0, traj_grid_2);
+
+    double** y_traj_comp  = dmatrix(0, 41, 0, traj_grid_2);
+    double*  t_traj_comp  = dvector(0, traj_grid_2);
+
+    //------------------------------------------------------------------------------------
+    //Local variables to store the refined trajectory
+    //------------------------------------------------------------------------------------
+    double** y_traj_n   = dmatrix(0, 41, 0, traj_grid_2);
+    double* t_traj_n    = dvector(0, traj_grid_2);
+
+    //====================================================================================
+    // 4. Build the trajectory
+    //====================================================================================
+
+    //====================================================================================
+    // 4.1 Initialize local variables
+    //====================================================================================
+    //------------------------------------------------------------------------------------
+    //Local variables to store the manifold leg
+    //------------------------------------------------------------------------------------
+    double** y_man_NCEM   = dmatrix(0, 5, 0, man_grid_2);
+    double** y_man_NCSEM  = dmatrix(0, 5, 0, man_grid_2);
+    double** y_man_coord  = dmatrix(0, 5, 0, man_grid_2);
+    double** y_man_comp   = dmatrix(0, 5, 0, man_grid_2);
+    double* t_man_EM      = dvector(0, man_grid_2);
+    double* t_man_SEM     = dvector(0, man_grid_2);
+    double* t_man_coord   = dvector(0, man_grid_2);
+    double* t_man_comp    = dvector(0, man_grid_2);
+
+
+    //====================================================================================
+    // 4.2 Compute the initial orbit
+    //====================================================================================
+    cout << fname << ". Compute the initial orbit..."  << endl;
+    //------------------------------------------------------------------------------------
+    //For the computation of the initial orbit, we kill the unstable part.
+    //------------------------------------------------------------------------------------
+    orbit_EM.setSi(0.0, 4);
+
+    //------------------------------------------------------------------------------------
+    // Update the initial state in the orbit, with the RCM coordinates
+    //------------------------------------------------------------------------------------
+    orbit_EM.update_ic(orbit_EM.getSi());
+
+    //------------------------------------------------------------------------------------
+    //Integration on man_grid_size+1 fixed grid
+    //------------------------------------------------------------------------------------
+    int em_index = man_grid_2;
+
+    switch(refSt.grid)
+    {
+    case REF_FIXED_GRID:
+    case REF_GIVEN_GRID:
+    {
+        int output = orbit_EM.traj_int_grid(orbit_EM.getT0()-tof_eml_EM, y_man_NCEM, t_man_EM, man_grid_2, true);
+        //--------------------------------------------------------------------------------
+        //If output is strictly greater than 0, then the projection procedure inside
+        //the integration went wrong, and the new indix is output.
+        //It output == ORBIT_EPROJ, the projection procedure failed so bad that there
+        //is no point stored in the data, except the first one, and the new indix is zero
+        //--------------------------------------------------------------------------------
+        if(output == ORBIT_EPROJ) em_index = 0;
+        else if(output > 0) em_index = output;
+        break;
+    }
+
+    case REF_VAR_GRID:
+    {
+        em_index = orbit_EM.traj_int_var_grid(orbit_EM.getT0()-tof_eml_EM, y_man_NCEM, t_man_EM, man_grid_2, true);
+        break;
+    }
+    }
+
+    //------------------------------------------------------------------------------------
+    //To coord_type coordinates
+    //------------------------------------------------------------------------------------
+    qbcp_coc_vec(y_man_NCEM, t_man_EM, y_man_coord, t_man_coord, em_index, NCEM, coord_type);
+    qbcp_coc_vec(y_man_NCEM, t_man_EM, y_man_comp,  t_man_comp,  em_index, NCEM, comp_type);
+
+    //------------------------------------------------------------------------------------
+    // Save All points
+    //------------------------------------------------------------------------------------
+    for(int kman = 0; kman <= em_index; kman++)
+    {
+        for(int i = 0; i < 6; i++) y_traj[i][kman] = y_man_coord[i][em_index-kman];
+        t_traj[kman] = t_man_coord[em_index-kman];
+    }
+
+    //------------------------------------------------------------------------------------
+    //Plot
+    //------------------------------------------------------------------------------------
+    gnuplot_plot_X(h2, y_man_coord, em_index+1, (char*)"", "lines", "5", "3", 5);
+    gnuplot_plot_X(h3, y_man_comp, em_index+1, (char*)"", "lines", "5", "3", 5);
+
+
+    //====================================================================================
+    // Entire size is: no more than 3*man_grid_size_t points or so.
+    //====================================================================================
+    int final_index = 0;
+    if(refSt.grid == REF_VAR_GRID)
+    {
+        final_index = em_index;
+        int freq = final_index/(3*man_grid_size_t);
+        cout << "----------------------------------"<< endl;
+        cout << "Number of MSD points:        "     << endl;
+        cout << "At EML:          " << em_index   << endl;
+        cout << "Total:            " << final_index << endl;
+        cout << "Selecting 1/" << freq << " points" << endl;
+        cout << "Subtotal:         " << (int) floor(final_index/freq) << endl;
+        cout << "----------------------------------"<< endl;
+
+        //------------------------------------------------------------------------------------
+        // Subset of points in y_traj_comp/t_traj_comp
+        //------------------------------------------------------------------------------------
+        for(int kman = 0; kman <= floor(final_index/freq); kman++)
+        {
+            for(int i = 0; i < 6; i++) y_traj_comp[i][kman] = y_traj[i][freq*kman];
+            t_traj_comp[kman] = t_traj[freq*kman];
+        }
+
+        //New final index
+        final_index = floor(final_index/freq);
+
+        //------------------------------------------------------------------------------------
+        // Subset of points back in y_traj/t_traj
+        //------------------------------------------------------------------------------------
+        for(int kman = 0; kman <= final_index; kman++)
+        {
+            for(int i = 0; i < 6; i++) y_traj[i][kman] = y_traj_comp[i][kman];
+            t_traj[kman] = t_traj_comp[kman];
+        }
+    }
+    else
+    {
+        //If the grid size is fixed, we still return the variable indix, because
+        //some integration procedure could have gone wrong so that the returned indices
+        //are smaller than their optimal desired value
+        final_index = em_index;
+    }
+
+    //====================================================================================
+    // Initial trajectory, on a grid
+    //====================================================================================
+    cout << fname << ". Initial trajectory, on a grid..."  << endl;
+    int mPlot = 10;
+    double** ymc        = dmatrix(0, 5, 0, mPlot);
+    double* tmc         = dvector(0, mPlot);
+    double** ymc_comp   = dmatrix(0, 5, 0, mPlot);
+    double* tmc_comp    = dvector(0, mPlot);
+    double** ymc_v      = dmatrix(0, 5, 0, mPlot*final_index);
+    double* tmc_v       = dvector(0, mPlot*final_index);
+    double** ymc_comp_v = dmatrix(0, 5, 0, mPlot*final_index);
+    double* tmc_comp_v  = dvector(0, mPlot*final_index);
+
+    //Initial trajectory on lines, segment by segment
+    double yv[6];
+    int ode78coll;
+    for(int k = 0; k < final_index; k++)
+    {
+        //Integration segment by segment
+        for(int i = 0; i < 6; i++) yv[i] = y_traj[i][k];
+        ode78(ymc, tmc, &ode78coll, t_traj[k], t_traj[k+1], yv, 6, mPlot, NCEM, coord_type, coord_type);
+
+        //Store
+        for(int p = 0; p <= mPlot; p++)
+        {
+            for(int i = 0; i < 6; i++) ymc_v[i][k*mPlot + p] = ymc[i][p];
+            tmc_v[k*mPlot + p] = tmc[p];
+        }
+    }
+    //To complementary coordinates
+    qbcp_coc_vec(ymc_v, tmc_v, ymc_comp_v, tmc_comp_v, mPlot*final_index, coord_type, comp_type);
+
+    //Plot on h2: lines
+    gnuplot_plot_X(h2, ymc_v, mPlot*final_index+1, (char*)"Initial guess", "lines", "1", "2", 7);
+    //Plot on h2: points
+    gnuplot_plot_X(h2, y_traj, final_index+1, (char*)"", "points", "1", "2", 7);
+    //Plot on h3: lines
+    gnuplot_plot_X(h3, ymc_comp_v, mPlot*final_index+1, (char*)"Initial guess", "lines", "1", "2", 7);
+
+
+    //====================================================================================
+    // 6.5 Differential correction & final trajectory
+    //====================================================================================
+    cout << fname << ". Differential correction procedure.          "  << endl;
+    cout << "-----------------------------------------------------------"  << endl;
+    char ch;
+    printf("Press ENTER to go on\n");
+    scanf("%c",&ch);
+
+    int isPlotted   = 0;
+    multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, h2);
+    //multiple_shooting_direct_variable_time(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, isTimeFixed, h2);
+
+    //------------------------------------------------------------------------------------
+    // Final trajectory, on a grid
+    //------------------------------------------------------------------------------------
+    cout << fname << ". Final trajectory, on a grid..."  << endl;
+    //Final trajectory on lines, segment by segment
+    for(int k = 0; k < final_index; k++)
+    {
+        //Integration segment by segment
+        for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
+        ode78(ymc, tmc, &ode78coll, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+
+        //Store
+        for(int p = 0; p <= mPlot; p++)
+        {
+            for(int i = 0; i < 6; i++) ymc_v[i][k*mPlot + p] = ymc[i][p];
+            tmc_v[k*mPlot + p] = tmc[p];
+        }
+    }
+
+    //To complementary coordinates
+    qbcp_coc_vec(ymc_v, tmc_v, ymc_comp_v, tmc_comp_v, mPlot*final_index, coord_type, comp_type);
+    //Plot on h2
+    gnuplot_plot_X(h2, ymc_v, mPlot*final_index+1, (char*)"Final guess", "lines", "1", "2", 3);
+    gnuplot_plot_X(h2, y_traj_n, final_index+1, (char*)"", "points", "1", "2", 3);
+    //Plot on h3
+    gnuplot_plot_X(h3, ymc_comp_v, mPlot*final_index+1, (char*)"Final guess", "lines", "1", "2", 3);
+
+    //====================================================================================
+    // JPL
+    //====================================================================================
+    if(refSt.isJPL)
+    {
+        //----------------------------------------------------------
+        //Go on
+        //----------------------------------------------------------
+        printf("Press ENTER to go on with the JPL ref");
+        scanf("%c",&ch);
+
+
+        //====================================================================================
+        // Initialize SPICE kernerls
+        //====================================================================================
+        gnuplot_ctrl* h4 = gnuplot_init();
+        cout << fname << ". Initialize SPICE kernerls..." << endl;
+        furnsh_c("spice/kernels/metakernel.furnsh");
+
+        //====================================================================================
+        // Initialize VF
+        //====================================================================================
+        cout << fname << ". Initialize associated VF..." << endl;
+        int shift = 0;
+        OdeStruct driver_JPL;
+        //Root-finding
+        const gsl_root_fsolver_type* T_root = gsl_root_fsolver_brent;
+        //Stepper
+        const gsl_odeiv2_step_type* T = gsl_odeiv2_step_rk8pd;
+        //Parameters
+        int coll;
+        OdeParams odeParams(&coll, &SEML);
+        //Init ode structure
+        init_ode_structure(&driver_JPL, T, T_root, 6, jpl_vf_syn, &odeParams);
+
+        //====================================================================================
+        // Search for best fit in  JPL ephemerides
+        //====================================================================================
+        cout << fname << ". Search for best fit in JPL DE430..." << endl;
+
+        //----------------------------------------------------------
+        //Get the best fit at t = t_traj_n[shift]. et0 is in seconds
+        //----------------------------------------------------------
+        double et0;
+        double tsys0 = t_traj_n[shift];
+        double tsys0_comp = tsys0;
+        switch(eph_coord(comp_type))
+        {
+        case VEM:
+            tsys0_comp /= SEML.us_em.ns;
+            break;
+
+        case VSEM:
+            tsys0_comp *= SEML.us_em.ns;
+            break;
+        }
+        //Best fit
+        qbcp2jpl(tsys0, &et0, coord_type);
+
+        //----------------------------------------------------------
+        //Update the SEML
+        //----------------------------------------------------------
+        SEML.ss.et0 = et0;
+        SEML.ss.t0  = tsys0;
+
+        //====================================================================================
+        // Change of coordinates
+        //====================================================================================
+        cout << fname << ". Change of coordinates syn -> ecliptic..." << endl;
+        //------------------------------------------------------------------------------------
+        //Local variables to store the refined trajectory
+        //------------------------------------------------------------------------------------
+        double** y_traj_syn   = dmatrix(0, 41, 0, final_index);
+        double* t_traj_syn    = dvector(0, final_index);
+        double* et_traj_jpl   = dvector(0, final_index);
+
+        double** y_traj_jpl_n = dmatrix(0, 41, 0, final_index);
+        double* t_traj_jpl_n  = dvector(0, final_index);
+
+        //------------------------------------------------------------------------------------
+        //Compute the change of coord: syn -> ecliptic
+        //------------------------------------------------------------------------------------
+        qbcp_coc_vec(y_traj_n, t_traj_n, y_traj_syn, t_traj_syn, final_index, coord_type, eph_coord(coord_type));
+        for(int p = 0; p <= final_index; p++)
+        {
+            et_traj_jpl[p] = et0 + (t_traj_n[p]-tsys0)/mean_motion(eph_coord(coord_type));
+        }
+
+        //================================================================================
+        // Plotting Initial Guess
+        //================================================================================
+        printf("Press ENTER to plot the Initial Guess\n");
+        scanf("%c",&ch);
+        cout << fname << ". Plotting Initial Guess..." << endl;
+        //--------------------------------------------------------------------------------
+        //Initial trajectory on lines, segment by segment
+        //--------------------------------------------------------------------------------
+        for(int k = 0; k < final_index; k++)
+        {
+            //----------------------------------------------------
+            //Integration segment by segment
+            //----------------------------------------------------
+            for(int i = 0; i < 6; i++) yv[i] = y_traj_syn[i][k];
+            ode78_jpl(ymc_comp, tmc_comp, &ode78coll, t_traj_syn[k], t_traj_syn[k+1], yv, 6, mPlot, eph_fwrk(coord_type), eph_coord(coord_type), eph_coord(coord_type));
+
+            //----------------------------------------------------
+            //Back to coord_type coordinates
+            //----------------------------------------------------
+            qbcp_coc_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, eph_coord(coord_type), coord_type);
+
+            //Plot on h2
+            if(k == 0) gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"Initial guess in JPL", "lines", "1", "2", 1);
+            else gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"", "lines", "1", "2", 1);
+
+            //----------------------------------------------------
+            //Back to comp_type coordinates
+            //----------------------------------------------------
+            //qbcp_coc_vec(ymc, tmc, ymc_comp, tmc_comp, mPlot, coord_type, comp_type);
+            //OR
+            //coord_type  -> ECLIPTIC -> comp_type
+            syn2eclstate_vec(ymc_comp, tmc_comp, ymc, tmc,  mPlot, et0, tsys0, eph_coord(coord_type));
+            ecl2coordstate_vec(ymc, tmc, ymc_comp, tmc_comp, mPlot, comp_type, et0, tsys0_comp, eph_coord(comp_type));
+
+            //Plot on h3
+            if(k == 0) gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"Initial guess in JPL", "lines", "1", "2", 1);
+            else gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"", "lines", "1", "2", 1);
+
+        }
+
+        //====================================================================================
+        // 6.5 Differential correction & final trajectory
+        //====================================================================================
+        printf("Press ENTER to refine\n");
+        scanf("%c",&ch);
+        cout << fname << ". Refine trajectory in JPL ephemerides..." << endl;
+
+        isPlotted   = 1;
+        multiple_shooting_direct(y_traj_syn, t_traj_syn, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, eph_coord(coord_type), isPlotted, h4);
+        //Plot
+        gnuplot_plot_X(h4, y_traj_jpl_n, final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
+
+
+        //--------------------------------------------------------------------------------
+        //Final trajectory on lines, segment by segment
+        //--------------------------------------------------------------------------------
+        for(int k = 0; k < final_index; k++)
+        {
+            //----------------------------------------------------
+            //Integration segment by segment
+            //----------------------------------------------------
+            for(int i = 0; i < 6; i++) yv[i] = y_traj_jpl_n[i][k];
+            ode78_jpl(ymc_comp, tmc_comp, &ode78coll, t_traj_jpl_n[k], t_traj_jpl_n[k+1], yv, 6, mPlot, eph_fwrk(coord_type), eph_coord(coord_type), eph_coord(coord_type));
+
+            //----------------------------------------------------
+            //Back to coord_type coordinates
+            //----------------------------------------------------
+            qbcp_coc_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, eph_coord(coord_type), coord_type);
+
+            //Plot on h2
+            if(k == 0) gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"Final traj in JPL", "lines", "1", "2", 2);
+            else gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"", "lines", "1", "2", 2);
+
+            //----------------------------------------------------
+            //Back to comp_type coordinates
+            //----------------------------------------------------
+            //qbcp_coc_vec(ymc, tmc, ymc_comp, tmc_comp, mPlot, coord_type, comp_type);
+            //OR
+            //coord_type  -> ECLIPTIC -> comp_type
+            syn2eclstate_vec(ymc_comp, tmc_comp, ymc, tmc,  mPlot, et0, tsys0, eph_coord(coord_type));
+            ecl2coordstate_vec(ymc, tmc, ymc_comp, tmc_comp, mPlot, comp_type, et0, tsys0_comp, eph_coord(comp_type));
+
+            //Plot on h3
+            if(k == 0) gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"Final traj in JPL", "lines", "1", "2", 2);
+            else gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"", "lines", "1", "2", 2);
+        }
+
+        //----------------------------------------------------------
+        //Gnuplot window
+        //----------------------------------------------------------
+        printf("Press ENTER to go on\n");
+        scanf("%c",&ch);
+        gnuplot_close(h4);
+    }
+
+    //----------------------------------------------------------
+    //Gnuplot window
+    //----------------------------------------------------------
+    printf("Press ENTER to go on\n");
+    scanf("%c",&ch);
+    gnuplot_close(h2);
+    gnuplot_close(h3);
+
+
+    //====================================================================================
+    // Free the data containers
+    //====================================================================================
+    free_dmatrix(y_traj, 0, 41, 0, traj_grid_2);
+    free_dvector(t_traj, 0, traj_grid_2);
+    free_dmatrix(y_traj_comp, 0, 41, 0, traj_grid_2);
+    free_dvector(t_traj_comp, 0, traj_grid_2);
+    free_dmatrix(y_traj_n, 0, 41, 0, traj_grid_2);
+    free_dvector(t_traj_n, 0, traj_grid_2);
+
+    free_dmatrix(y_man_NCEM, 0, 5, 0, man_grid_2);
+    free_dmatrix(y_man_NCSEM, 0, 5, 0, man_grid_2);
+    free_dmatrix(y_man_coord, 0, 5, 0, man_grid_2);
+    free_dvector(t_man_EM, 0, man_grid_2);
+    free_dvector(t_man_SEM, 0, man_grid_2);
+    free_dvector(t_man_coord, 0, man_grid_2);
+
+    free_dmatrix(ymc, 0, 5, 0, mPlot);
+    free_dvector(tmc, 0, mPlot);
+    free_dmatrix(ymc_comp, 0, 5, 0, mPlot);
+    free_dvector(tmc_comp, 0, mPlot);
+
+    free_dmatrix(ymc_v, 0, 5, 0, mPlot*final_index);
+    free_dvector(tmc_v, 0, mPlot*final_index);
+    free_dmatrix(ymc_comp_v, 0, 5, 0, mPlot*final_index);
+    free_dvector(tmc_comp_v  , 0, mPlot*final_index);
+
+    return FTC_SUCCESS;
+}
+
+
+/**
+ *  \brief Computes only a EML2-SEMLi connection and test a JPL refinement, in synodical coordinates
+ **/
+int compref3d_test_eml2seml_synjpl(int coord_type)
+{
+    //====================================================================================
+    // 1. Read the data, in sys units
+    //====================================================================================
+    string fname = "compref3d_test_eml2seml_synjpl";
+    cout << fname << ". Read the data, in sys units..."  << endl;
+
+    //------------------------------------------------------------------------------------
+    //Local variables to store the refined trajectory
+    //------------------------------------------------------------------------------------
+    int final_index = getLengthCOMP_txt();
+    double** y_traj_n   = dmatrix(0, 41, 0, final_index);
+    double* t_traj_n    = dvector(0, final_index);
+
+    //------------------------------------------------------------------------------------
+    //Read the data stored in a data file
+    //------------------------------------------------------------------------------------
+    readCOMP_txt(t_traj_n, y_traj_n, final_index);
+
+    //====================================================================================
+    // 2. Local parameters
+    //====================================================================================
+    //----------------------------------------------------------
+    //Complementary coordinate type
+    //----------------------------------------------------------
+    int comp_type = comp_coord_typ(coord_type);
+
+    //----------------------------------------------------------
+    // State and time vectors
+    //----------------------------------------------------------
+    int mPlot = 100;
+
+    double** ymc        = dmatrix(0, 5, 0, mPlot);
+    double* tmc         = dvector(0, mPlot);
+    double** ymc_comp   = dmatrix(0, 5, 0, mPlot);
+    double* tmc_comp    = dvector(0, mPlot);
+
+    double** ymc_v      = dmatrix(0, 5, 0, mPlot*final_index);
+    double* tmc_v       = dvector(0, mPlot*final_index);
+    double** ymc_comp_v = dmatrix(0, 5, 0, mPlot*final_index);
+    double* tmc_comp_v  = dvector(0, mPlot*final_index);
+
+    //----------------------------------------------------------
+    //Get the default coordinates system from the coord_type
+    //----------------------------------------------------------
+    int dcs  = default_coordinate_system(coord_type);
+
+    //====================================================================================
+    // 3. Init the gnuplot
+    //====================================================================================
+    //----------------------------------------------------------
+    //Gnuplot window
+    //----------------------------------------------------------
+    gnuplot_ctrl* h2, *h3;
+    h2 = gnuplot_init();
+    h3 = gnuplot_init();
+
+    gnuplot_cmd(h2, "set title \"Computation coordinates\" ");
+    gnuplot_cmd(h3, "set title \"Complementary coordinates\" ");
+    //gnuplot_cmd(h2, "set view equal xyz");
+    //gnuplot_cmd(h3, "set view equal xyz");
+    gnuplot_cmd(h2, "set grid");
+    gnuplot_cmd(h3, "set grid");
+
+    //----------------------------------------------------------
+    //Notable points in SEM & EM systems
+    //----------------------------------------------------------
+    notablePoints(h2, h3, coord_type);
+
+    //====================================================================================
+    // Initial trajectory, on a grid
+    //====================================================================================
+    double yv[6];
+    int ode78coll;
+
+    cout << fname << ". Initial trajectory, on a grid..."  << endl;
+    //Final trajectory on lines, segment by segment
+    for(int k = 0; k < final_index; k++)
+    {
+        //Integration segment by segment
+        for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
+        ode78(ymc, tmc, &ode78coll, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+
+        //Store
+        for(int p = 0; p <= mPlot; p++)
+        {
+            for(int i = 0; i < 6; i++) ymc_v[i][k*mPlot + p] = ymc[i][p];
+            tmc_v[k*mPlot + p] = tmc[p];
+        }
+    }
+
+    //To complementary coordinates
+    qbcp_coc_vec(ymc_v, tmc_v, ymc_comp_v, tmc_comp_v, mPlot*final_index, coord_type, comp_type);
+    //Plot on h2
+    gnuplot_plot_X(h2, ymc_v, mPlot*final_index+1, (char*)"Final guess", "lines", "1", "2", 3);
+    gnuplot_plot_X(h2, y_traj_n, final_index+1, (char*)"", "points", "1", "2", 3);
+    //Plot on h3
+    gnuplot_plot_X(h3, ymc_comp_v, mPlot*final_index+1, (char*)"Final guess", "lines", "1", "2", 3);
+
+    //====================================================================================
+    // JPL
+    //====================================================================================
+    //----------------------------------------------------------
+    //Go on
+    //----------------------------------------------------------
+    char ch;
+    printf("Press ENTER to go on with the JPL ref");
+    scanf("%c",&ch);
+
+
+    //====================================================================================
+    // Initialize SPICE kernerls
+    //====================================================================================
+    gnuplot_ctrl* h4 = gnuplot_init();
+    cout << fname << ". Initialize SPICE kernerls..." << endl;
+    furnsh_c("spice/kernels/metakernel.furnsh");
+
+    //====================================================================================
+    // Initialize VF
+    //====================================================================================
+    cout << fname << ". Initialize associated VF..." << endl;
+    int shift = 0;
+    OdeStruct driver_JPL;
+    //Root-finding
+    const gsl_root_fsolver_type* T_root = gsl_root_fsolver_brent;
+    //Stepper
+    const gsl_odeiv2_step_type* T = gsl_odeiv2_step_rk8pd;
+    //Parameters
+    int coll;
+    OdeParams odeParams(&coll, &SEML);
+    //Init ode structure
+    init_ode_structure(&driver_JPL, T, T_root, 6, jpl_vf_syn, &odeParams);
+
+    //====================================================================================
+    // Search for best fit in  JPL ephemerides
+    //====================================================================================
+    cout << fname << ". Search for best fit in JPL DE430..." << endl;
+
+    //----------------------------------------------------------
+    //Get the best fit at t = t_traj_n[shift]. et0 is in seconds
+    //----------------------------------------------------------
+    double et0;
+    double tsys0      = t_traj_n[shift];
+    double tsys0_comp = tsys0;
+    switch(eph_coord(comp_type))
+    {
+    case VEM:
+        tsys0_comp /= SEML.us_em.ns;
+        break;
+
+    case VSEM:
+        tsys0_comp *= SEML.us_em.ns;
+        break;
+    }
+    qbcp2jpl(tsys0, &et0, coord_type);
+
+    //----------------------------------------------------------
+    //Update the SEML
+    //----------------------------------------------------------
+    SEML.ss.et0 = et0;
+    SEML.ss.t0  = tsys0;
+
+    //====================================================================================
+    // Change of coordinates
+    //====================================================================================
+    cout << fname << ". Change of coordinates syn -> ecliptic..." << endl;
+    //------------------------------------------------------------------------------------
+    //Local variables to store the refined trajectory
+    //------------------------------------------------------------------------------------
+    double** y_traj_syn   = dmatrix(0, 41, 0, final_index);
+    double* t_traj_syn    = dvector(0, final_index);
+    //double* et_traj_jpl   = dvector(0, final_index);
+    double** y_traj_jpl   = dmatrix(0, 41, 0, final_index);
+    double* t_traj_jpl    = dvector(0, final_index);
+    double** y_traj_syn_n = dmatrix(0, 41, 0, final_index);
+    double* t_traj_syn_n  = dvector(0, final_index);
+
+    //------------------------------------------------------------------------------------
+    //Compute the change of coord: syn -> ecliptic
+    //------------------------------------------------------------------------------------
+    //qbcp_coc_vec(y_traj_n, t_traj_n, y_traj_syn, t_traj_syn, final_index, coord_type, eph_coord(coord_type));
+    coord2eclstate_vec(y_traj_n, t_traj_n, y_traj_jpl, t_traj_jpl, final_index, coord_type, et0,  tsys0, eph_coord(coord_type));
+
+    cout << "-----------------------------------------------------------" << endl;
+    cout << "Trajectory  before refinment                               " << endl;
+    cout << "-----------------------------------------------------------" << endl;
+    for(int p = 0; p <= final_index; p++)
+    {
+        cout << y_traj_jpl[0][p] << "   " << y_traj_jpl[1][p] <<  "   " << y_traj_jpl[2][p] << endl;
+    }
+
+    //====================================================================================
+    //Half of the trajectory is set in the other plane
+    //====================================================================================
+    double** y_traj_jpl_n = dmatrix(0, 41, 0, final_index);
+    double* t_traj_jpl_n  = dvector(0, final_index);
+    coord2eclstate_vec(y_traj_n, t_traj_n, y_traj_jpl_n, t_traj_jpl_n, final_index, coord_type, et0, tsys0_comp, eph_coord(comp_type));
+
+    //----------------------------------------------------------
+    //Find the point that minimizes the discrepancy
+    //----------------------------------------------------------
+    int pmin = final_index/3;
+    int p = final_index/3;
+    double dmin = 0.0, dminmin = 0.0;
+    do
+    {
+        dmin = 0.0;
+        for(int i = 0; i < 6; i++) dmin += (y_traj_jpl[i][p] - y_traj_jpl_n[i][p])*(y_traj_jpl[i][p] - y_traj_jpl_n[i][p]);
+
+        if(p == final_index/3)
+        {
+            pmin = p;
+            dminmin = dmin;
+        }
+        else
+        {
+            if(dmin < dminmin)
+            {
+                pmin = p;
+                dminmin = dmin;
+            }
+        }
+        p++;
+    }
+    while(p <= 2*final_index/3);
+
+    cout << "pmin = " << pmin << "/" << final_index << endl;
+
+    //----------------------------------------------------------
+    //Store the second half: at the beginning or at the end, depending on the computation coordinates
+    //----------------------------------------------------------
+    int begind = 0, endind = 0;
+    switch(eph_coord(coord_type))
+    {
+    case VEM:
+        begind = pmin;
+        endind = final_index;
+        break;
+
+    case VSEM:
+        begind = 0;
+        endind = pmin;
+        break;
+    }
+
+    for(int p = begind; p <= endind; p++)
+    {
+        for(int i = 0; i <6; i++) y_traj_jpl[i][p] =  y_traj_jpl_n[i][p];
+    }
+
+
+    cout << "-----------------------------------------------------------" << endl;
+    cout << "Trajectory  before refinment                               " << endl;
+    cout << "-----------------------------------------------------------" << endl;
+    for(int p = 0; p <= final_index; p++)
+    {
+        cout << y_traj_jpl[0][p] << "   " << y_traj_jpl[1][p] <<  "   " << y_traj_jpl[2][p] << endl;
+    }
+
+    //====================================================================================
+    //Whole trajectory back in syn coordinates
+    //====================================================================================
+    ecl2synstate_vec(y_traj_jpl, t_traj_jpl, y_traj_syn, t_traj_syn, final_index, et0, tsys0, eph_coord(coord_type));
+
+    cout << "-----------------------------------------------------------" << endl;
+    cout << "Trajectory (y_traj_syn)  before refinment                               " << endl;
+    cout << "-----------------------------------------------------------" << endl;
+    for(int p = 0; p <= final_index; p++)
+    {
+        cout << y_traj_syn[0][p] << "   " << y_traj_syn[1][p] <<  "   " << y_traj_syn[2][p] << endl;
+    }
+
+    final_index = pmin;
+    //------------------------------------------------------------------------------------
+    //Time in seconds
+    //------------------------------------------------------------------------------------
+    //for(int p = 0; p <= final_index; p++)
+    //{
+    //        et_traj_jpl[p] = et0 + (t_traj_n[p]-tsys0)/mean_motion(eph_coord(coord_type));
+    //}
+
+    //====================================================================================
+    // Plotting Initial Guess
+    //====================================================================================
+    printf("Press ENTER to plot the Initial Guess\n");
+    scanf("%c",&ch);
+    cout << fname << ". Plotting Initial Guess..." << endl;
+    //------------------------------------------------------------------------------------
+    //Initial trajectory on lines, segment by segment
+    //------------------------------------------------------------------------------------
+    for(int k = 0; k < final_index; k++)
+    {
+        //Integration segment by segment
+        for(int i = 0; i < 6; i++) yv[i] = y_traj_syn[i][k];
+        ode78_jpl(ymc_comp, tmc_comp, &ode78coll, t_traj_syn[k], t_traj_syn[k+1], yv, 6, mPlot, eph_fwrk(coord_type), eph_coord(coord_type), eph_coord(coord_type));
+
+        //To ecl, then to NCSEM
+        qbcp_coc_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, eph_coord(coord_type), coord_type);
+
+        //Plot on h2
+        if(k == 0) gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"Initial guess in JPL", "lines", "1", "2", 1);
+        else gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"", "lines", "1", "2", 1);
+
+        if(k == 0 || k == final_index-1)
+        {
+            for(int p = 0; p <= mPlot; p++)
+            {
+                cout << ymc[0][p] << "   " << ymc[1][p] <<  "   " << ymc[2][p] << endl;
+            }
+            cout << "--------------------------------------" << endl;
+        }
+
+        //Back to comp_type coordinates
+        // @todo: put it NCEM  -> ECLIPTIC -> NCSEM, using ecl2coordstate_vec and its counterpart
+        syn2eclstate_vec(ymc_comp, tmc_comp, ymc, tmc,  mPlot, et0, tsys0, eph_coord(coord_type));
+        ecl2coordstate_vec(ymc, tmc, ymc_comp, tmc_comp, mPlot, comp_type, et0, tsys0_comp, eph_coord(comp_type));
+
+        //Plot on h3
+        if(k == 0) gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"Initial guess in JPL", "lines", "1", "2", 1);
+        else gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"", "lines", "1", "2", 1);
+    }
+
+    //====================================================================================
+    // 6.5 Differential correction & final trajectory
+    //====================================================================================
+    printf("Press ENTER to refine\n");
+    scanf("%c",&ch);
+    cout << fname << ". Refine trajectory in JPL ephemerides..." << endl;
+
+    int isPlotted   = 1;
+    multiple_shooting_direct(y_traj_syn, t_traj_syn, y_traj_syn_n, t_traj_syn_n, 42, final_index, eph_coord(coord_type), isPlotted, h4);
+    //multiple_shooting_direct_variable_time(y_traj_syn, t_traj_syn, y_traj_syn_n, t_traj_syn_n,  42, final_index, eph_coord(coord_type), 5e-9, isPlotted, h4);
+    //Plot
+    gnuplot_plot_X(h4, y_traj_syn_n, final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
+
+
+    //------------------------------------------------------------------------------------
+    //Final trajectory on lines, segment by segment
+    //------------------------------------------------------------------------------------
+    for(int k = 0; k < final_index; k++)
+    {
+        //Integration segment by segment
+        for(int i = 0; i < 6; i++) yv[i] = y_traj_syn_n[i][k];
+        ode78_jpl(ymc_comp, tmc_comp, &ode78coll, t_traj_syn_n[k], t_traj_syn_n[k+1], yv, 6, mPlot,
+                  eph_fwrk(coord_type), eph_coord(coord_type), eph_coord(coord_type));
+
+
+        //Back to coord_type coordinates
+        qbcp_coc_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, eph_coord(coord_type), coord_type);
+
+        //Plot on h2
+        if(k == 0) gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"Final traj in JPL", "lines", "1", "2", 2);
+        else gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"", "lines", "1", "2", 2);
+
+        //Back to comp_type coordinates
+        //qbcp_coc_vec(ymc, tmc, ymc_comp, tmc_comp, mPlot, coord_type, comp_type);
+        syn2eclstate_vec(ymc_comp, tmc_comp, ymc, tmc,  mPlot, et0, tsys0, eph_coord(coord_type));
+        ecl2coordstate_vec(ymc, tmc, ymc_comp, tmc_comp, mPlot, comp_type, et0, tsys0_comp, eph_coord(comp_type));
+
+        //Plot on h3
+        if(k == 0) gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"Final traj in JPL", "lines", "1", "2", 2);
+        else gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"", "lines", "1", "2", 2);
+    }
+
+    //----------------------------------------------------------
+    //Gnuplot window
+    //----------------------------------------------------------
+    printf("Press ENTER to go on\n");
+    scanf("%c",&ch);
+    gnuplot_close(h4);
+
+
+    //----------------------------------------------------------
+    //Gnuplot window
+    //----------------------------------------------------------
+    printf("Press ENTER to go on\n");
+    scanf("%c",&ch);
+    gnuplot_close(h2);
+    gnuplot_close(h3);
+
+
+    //====================================================================================
+    // Free the data containers
+    //====================================================================================
+    free_dmatrix(y_traj_n, 0, 41, 0, final_index);
+    free_dvector(t_traj_n, 0, final_index);
+
+    free_dmatrix(ymc, 0, 5, 0, mPlot);
+    free_dvector(tmc, 0, mPlot);
+    free_dmatrix(ymc_comp, 0, 5, 0, mPlot);
+    free_dvector(tmc_comp, 0, mPlot);
+
+    free_dmatrix(ymc_v, 0, 5, 0, mPlot*final_index);
+    free_dvector(tmc_v, 0, mPlot*final_index);
+    free_dmatrix(ymc_comp_v, 0, 5, 0, mPlot*final_index);
+    free_dvector(tmc_comp_v  , 0, mPlot*final_index);
+
+    return FTC_SUCCESS;
+}
+
 
 //========================================================================================
 //
@@ -1664,618 +6761,453 @@ int plottrajsegbyseg(double** y_traj, double* t_traj,
     return FTC_SUCCESS;
 }
 
-//========================================================================================
-//
-//         REFINING TRAJECTORIES
-//
-//========================================================================================
-int ooconteml2seml(RefSt& refSt)
+
+/**
+ *  \brief Save a trajectory, segment by segment, in to complementary coordinate systems.
+ **/
+int savetrajsegbyseg(double** y_traj, double* t_traj,
+                     int final_index, int mPlot,
+                     int coord_int,
+                     double et0,      double tsys0,
+                     int coordsys1,   int coordsys2,
+                     string filename, int label, bool isFirst)
 {
-    //====================================================================================
-    // 1. Get the default coordinates system from the coord_type
-    //====================================================================================
-    int coord_type = refSt.coord_type;
-    int status = 0;
+    //------------------------------------------------------------------------------------
+    //Initialize local variables
+    //------------------------------------------------------------------------------------
+    double yv[6];
+    double** ymc        = dmatrix(0, 5, 0, mPlot);
+    double* tmc         = dvector(0, mPlot);
 
-    //====================================================================================
-    //         Initialization of the containers
-    //====================================================================================
-    //Name
-    string fname = "ooconteml2seml";
+    double** ymc_comp   = dmatrix(0, 5, 0, mPlot);
+    double* tmc_comp    = dvector(0, mPlot);
 
-    // Get size of the data file
-    double tr0 = refSt.t0_des/SEML.us_em.T;
-    int fsize = getLengthCONT_txt(tr0);
+    double** ymc_v      = dmatrix(0, 5, 0, mPlot*final_index);
+    double* tmc_v       = dvector(0, mPlot*final_index);
+    double** ymc_comp_v = dmatrix(0, 5, 0, mPlot*final_index);
+    double* tmc_comp_v  = dvector(0, mPlot*final_index);
 
-    // Init the vectors
-    double* t0_CMU_EM     = dvector(0, fsize-1);
-    double* tf_CMU_EM     = dvector(0, fsize-1);
-    double** si_CMU_EM    = dmatrix(0, 4, 0, fsize-1);
-    double** si_CMS_SEM   = dmatrix(0, 4, 0, fsize-1);
-    double** z0_CMU_NCEM  = dmatrix(0, 5, 0, fsize-1);
-    double** z0_CMS_NCSEM = dmatrix(0, 5, 0, fsize-1);
-    double* thetae        = dvector(0, fsize-1);
-    double** ze_NCSEM     = dmatrix(0, 5, 0, fsize-1);
-    double* H0_NCEM       = dvector(0, fsize-1);
-    double* He_NCEM       = dvector(0, fsize-1);
-    double* H0_NCSEM      = dvector(0, fsize-1);
-    double* He_NCSEM      = dvector(0, fsize-1);
+    double* tmc_original_v  = dvector(0, mPlot*final_index);
 
-    //====================================================================================
-    //         Read
-    //====================================================================================
-    status = readCONT_txt(t0_CMU_EM, tf_CMU_EM, si_CMU_EM, si_CMS_SEM,
-                          z0_CMU_NCEM, z0_CMS_NCSEM, thetae, ze_NCSEM, H0_NCEM, He_NCEM,
-                          H0_NCSEM, He_NCSEM, tr0, fsize);
+    //Choosing the dcs
+    int dcs_int  = default_coordinate_system(coord_int);
 
-    if(status)
+    //tsys0 in the second coordinate system
+    double tsys0_comp = tsys0;
+    if(eph_coord(coordsys1) != eph_coord(coordsys2))
     {
-        cerr << fname << ". Data reading went wrong." << endl;
-        return FTC_FAILURE;
+        switch(eph_coord(coordsys2))
+        {
+        case VEM:
+            tsys0_comp /= SEML.us_em.ns;
+            break;
+
+        case VSEM:
+            tsys0_comp *= SEML.us_em.ns;
+            break;
+        }
     }
 
-    //====================================================================================
-    //         Display
-    //====================================================================================
-    //for(int k = 0; k < fsize; k++) cout << ze_NCSEM[0][k] << endl;
-
-    //====================================================================================
-    // 2. Structures to compute the invariant manifolds
-    //====================================================================================
-    Invman invman_EM(OFTS_ORDER, OFS_ORDER, SEML.cs);
-    Invman invman_SEM(OFTS_ORDER, OFS_ORDER, SEML_SEM.cs);
-
-    //====================================================================================
-    // Select the parameters
-    //====================================================================================
-    for(int k = 0; k < 1 /*fsize*/; k+=50)
+    //------------------------------------------------------------------------------------
+    //Trajectory on lines, segment by segment
+    //------------------------------------------------------------------------------------
+    int status;
+    int ode78coll;
+    for(int k = 0; k < final_index; k++)
     {
-        double t_EM[2] = {t0_CMU_EM[k], tf_CMU_EM[k]};
-        double st_EM[5]  = {si_CMU_EM[0][k], si_CMU_EM[1][k], si_CMU_EM[2][k], si_CMU_EM[3][k], si_CMU_EM[4][k]};
-
-        double t0_SEM = tf_CMU_EM[k]*SEML.us_em.ns;
-        double st_SEM[5] = {si_CMS_SEM[0][k], si_CMS_SEM[1][k], si_CMS_SEM[2][k], si_CMS_SEM[3][k], si_CMS_SEM[4][k]};
-
-        //================================================================================
-        // Initialize local variables: EM
-        //================================================================================
         //--------------------------------------------------------------------------------
-        // Initialisation of the orbit structure
+        //Integration segment by segment
         //--------------------------------------------------------------------------------
-        OdeStruct driver_EM;
-        //Root-finding
-        const gsl_root_fsolver_type* T_root = gsl_root_fsolver_brent;
-        //Stepper
-        const gsl_odeiv2_step_type* T = gsl_odeiv2_step_rk8pd;
-        //Parameters
-        int coll_EM;
-        OdeParams odeParams_EM(&coll_EM, &SEML_EM);
-        //Init ode structure
-        init_ode_structure(&driver_EM, T, T_root, 6, qbcp_vfn, &odeParams_EM);
-        //Init routine
-        Orbit orbit_EM(&invman_EM, &SEML_EM, &driver_EM, OFTS_ORDER, OFS_ORDER, t_EM[0], t_EM[1]);
+        for(int i = 0; i < 6; i++) yv[i] = y_traj[i][k];
+        status = ode78(ymc_comp, tmc_comp, &ode78coll, t_traj[k], t_traj[k+1], yv, 6, mPlot, dcs_int, coord_int, coord_int);
 
         //--------------------------------------------------------------------------------
-        // Update the initial state in the orbit_EM, with the RCM coordinates
+        //Checks and warnings, if necessary
         //--------------------------------------------------------------------------------
-        orbit_EM.update_ic(st_EM,  t_EM[0]);
-
-        //================================================================================
-        // Initialize local variables: SEM
-        //================================================================================
-
-        //--------------------------------------------------------------------------------
-        // Initialisation of the orbit structure
-        //--------------------------------------------------------------------------------
-        OdeStruct driver_SEM;
-        //Parameters
-        int coll_SEM;
-        OdeParams odeParams_SEM(&coll_SEM, &SEML_SEM);
-        //Init ode structure
-        init_ode_structure(&driver_SEM, T, T_root, 6, qbcp_vfn, &odeParams_SEM);
-        //Init routine
-        Orbit orbit_SEM(&invman_SEM, &SEML_SEM, &driver_SEM, OFTS_ORDER, OFS_ORDER,
-                        t0_SEM, t0_SEM+5*SEML.us_sem.T);
-
-        //--------------------------------------------------------------------------------
-        // Update the initial state in the orbit_SEM, with the RCM coordinates
-        //--------------------------------------------------------------------------------
-        orbit_SEM.update_ic(st_SEM, t0_SEM);
-
-        //--------------------------------------------------------------------------------
-        // We can advance to REF_COMP for the rest of the computation
-        //--------------------------------------------------------------------------------
-        refSt.type = REF_COMP;
-        int sampfreq[3] = {refSt.sf_eml2, refSt.sf_man, refSt.sf_seml2};
-        status = oocomprefft3d(sampfreq, coord_type, orbit_EM, orbit_SEM, refSt);
-
-        if(status)
+        if(status != FTC_SUCCESS)
         {
-            cerr << fname << ". Error during the continuation procedure on the whole trajectory. ref_errno = " << ref_strerror(status) << endl;
-            return FTC_FAILURE;
+            //At this step (plot), a simple warning is issued
+            cout << "plottrajsegbyseg. Warning: ode78 returned a flag." << endl;
+        }
+
+        if(ode78coll)
+        {
+            //At this step (plot), a simple warning is issued
+            cout << "plottrajsegbyseg. Warning: a collision with a primary has occurred." << endl;
+        }
+
+        //--------------------------------------------------------------------------------
+        //Back to coordsys1 coordinates.
+        //--------------------------------------------------------------------------------
+        switch(coord_int)
+        {
+            //----------------------------------------------------------------------------
+            //If the computation was performed using JPL ephemerides, some specific COC
+            //is needed.
+            //----------------------------------------------------------------------------
+        case VECLI:
+            ecl2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coordsys1, et0, tsys0, eph_coord(coordsys1));
+            break;
+
+        case J2000:
+            eci2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coordsys1, et0, tsys0, eph_coord(coordsys1));
+            break;
+
+        case NJ2000:
+            neci2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coordsys1, et0, tsys0, eph_coord(coordsys1), SEML.ss);
+            break;
+
+        default:
+            //----------------------------------------------------------------------------
+            //The default case is QBCP to QBCP, and we can use the usual COC
+            //----------------------------------------------------------------------------
+            qbcp_coc_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coord_int, coordsys1);
+        }
+
+
+        //--------------------------------------------------------------------------------
+        //Store
+        //--------------------------------------------------------------------------------
+        for(int p = 0; p <= mPlot; p++)
+        {
+            for(int i = 0; i < 6; i++) ymc_v[i][k*mPlot + p] = ymc[i][p];
+            tmc_v[k*mPlot + p] = tmc[p];
+            tmc_original_v[k*mPlot + p] = tmc_comp[p];
+        }
+
+        //--------------------------------------------------------------------------------
+        //Back to coordsys2 coordinates
+        //--------------------------------------------------------------------------------
+        switch(coord_int)
+        {
+            //----------------------------------------------------------------------------
+            //If the computation was performed using JPL ephemerides, some specific COC
+            //is needed.
+            //----------------------------------------------------------------------------
+        case VECLI:
+            ecl2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coordsys2, et0, tsys0_comp, eph_coord(coordsys2));
+            break;
+
+        case J2000:
+            eci2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coordsys2, et0, tsys0_comp, eph_coord(coordsys2));
+            break;
+
+        case NJ2000:
+            neci2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coordsys2, et0, tsys0_comp, eph_coord(coordsys2), SEML.ss);
+            break;
+
+        default:
+            //----------------------------------------------------------------------------
+            //The default case is QBCP to QBCP, and we can use the usual COC
+            //----------------------------------------------------------------------------
+            qbcp_coc_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coord_int, coordsys2);
+        }
+
+        //--------------------------------------------------------------------------------
+        //Store
+        //--------------------------------------------------------------------------------
+        for(int p = 0; p <= mPlot; p++)
+        {
+            for(int i = 0; i < 6; i++) ymc_comp_v[i][k*mPlot + p] = ymc[i][p];
+            tmc_comp_v[k*mPlot + p] = tmc[p];
+        }
+    }
+
+    //------------------------------------------------------------------------------------
+    //Save mPlot*final_index+1 points
+    //------------------------------------------------------------------------------------
+    fstream filestream;
+    double res;
+    if(isFirst) filestream.open (filename.c_str(), ios::out | ios::binary);
+    else filestream.open (filename.c_str(), ios::out | ios::binary | ios::app);
+
+    for(int k = 0; k < mPlot*final_index+1; k++)
+    {
+        //1. Label of the solution
+        res = label;
+        filestream.write((char*) &res, sizeof(double));
+
+        //2. coord_int
+        res = coord_int;
+        filestream.write((char*) &res, sizeof(double));
+
+        //3. Time in original units
+        res = tmc_original_v[k];
+        filestream.write((char*) &res, sizeof(double));
+
+        //3. Time in new units (e.g. NCSEM)
+        res = tmc_v[k];
+        filestream.write((char*) &res, sizeof(double));
+
+        //4. Current state in new coordinates (e.g. NCSEM)
+        for(int i = 0; i < 6; i++)
+        {
+            res  = ymc_v[i][k];
+            filestream.write((char*) &res, sizeof(double));
+        }
+
+        //5. Time in comp units (e.g. NCEM)
+        res = tmc_comp_v[k];
+        filestream.write((char*) &res, sizeof(double));
+
+        //6. Current state in comp coordinates (e.g. NCEM)
+        for(int i = 0; i < 6; i++)
+        {
+            res  = ymc_comp_v[i][k];
+            filestream.write((char*) &res, sizeof(double));
         }
 
     }
+    filestream.close();
+
+    //------------------------------------------------------------------------------------
+    //Free
+    //------------------------------------------------------------------------------------
+    free_dmatrix(ymc, 0, 5, 0, mPlot);
+    free_dvector(tmc, 0, mPlot);
+    free_dmatrix(ymc_comp, 0, 5, 0, mPlot);
+    free_dvector(tmc_comp, 0, mPlot);
+    free_dmatrix(ymc_v, 0, 5, 0, mPlot*final_index);
+    free_dvector(tmc_v, 0, mPlot*final_index);
+    free_dmatrix(ymc_comp_v, 0, 5, 0, mPlot*final_index);
+    free_dvector(tmc_comp_v, 0, mPlot*final_index);
 
     return FTC_SUCCESS;
 }
 
 
 //========================================================================================
-//         Refinement of solutions: CMU to CMS - general routines
+//
+//          I/O (to set in oolencon_io.cpp)
+//
 //========================================================================================
 /**
- *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM.
- *         A multiple_shooting_direct is applied on the MANIFOLD trajectory (manifold leg).
- *         The initial conditions vary in the paramerization of the CMU of EML2.
- *         The final conditions vary in the paramerization of the CMS of SEMLi.
- *         The time at each point except the first one is allowed to vary.
- *         A continuation procedure can be performed to get more than one refined solution.
- *
- *         Because of the possible use of msvt3d and msvtplan inside this routine,
- *         the refSt.coord_type must be NCSEM. However, the user can put
- *         other coordinate systems (VNCSEM, PSEM, PEM...), as long as these two routines
- *         are not used.
+ *   \brief Storing the results of the continuation procedure, in txt file.
  **/
-int oorefeml2seml(RefSt& refSt)
+void writeCONT_txt(Orbit& orbit_EM, Orbit& orbit_SEM,
+                   double* te_NCSEM, double* ye_NCSEM,  int isFirst)
 {
     //====================================================================================
-    // 0. Splash screen
+    // Initialize the I/O objects
     //====================================================================================
-    string fname = "oorefeml2seml";
-    cout << "===================================================================" << endl;
-    cout << "   oorefeml2seml. Refinement of EML2-SEMLi arc                     " << endl;
-    cout << "===================================================================" << endl;
+    string filename  = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF, SEML.li_SEM, orbit_EM.getT0xT());
+    fstream filestream;
 
-    //====================================================================================
-    // 1. Get the default coordinates system from the coord_type
-    //====================================================================================
-    int coord_type = refSt.coord_type;
-    int man_grid_size = refSt.gridSize;
-    int dcs  = default_coordinate_system(coord_type);
-    int status = 0;
-
-    //====================================================================================
-    // 2. Structures to compute the invariant manifolds
-    //====================================================================================
-    Invman invman_EM(OFTS_ORDER, OFS_ORDER, SEML.cs);
-    Invman invman_SEM(OFTS_ORDER, OFS_ORDER, SEML_SEM.cs);
-
-    //====================================================================================
-    // 3. User-defined number of continuation steps, if necessary
-    //====================================================================================
-    int cont_steps_MAX = 0;
-    if(refSt.type == REF_CONT || refSt.type == REF_CONT_D ||
-            refSt.type == REF_CONT_D_HARD_CASE ||  refSt.type == REF_COMP)
+    if(isFirst)
     {
-        if(refSt.isLimUD)
-        {
-            cout << "oorefeml2seml. User-defined number of continuation steps" << endl;
-            cout << "Enter a value for cont_steps_MAX: ";
-            cin >> cont_steps_MAX;
-            refSt.cont_step_max    = cont_steps_MAX;
-
-            cout << "oorefeml2seml. User-defined number of continuation steps" << endl;
-            cout << "Enter a value for cont_steps_MAX_vt: ";
-            cin >> cont_steps_MAX;
-            refSt.cont_step_max_vt = cont_steps_MAX;
-        }
+        //====================================================================================
+        // If it is the first entry, the title of the columns are written
+        //====================================================================================
+        filestream.open (filename.c_str(), ios::out);
+        //Title
+        filestream << "t0_CMU_EM  s1_CMU_EM  s2_CMU_EM  s3_CMU_EM  s4_CMU_EM s5_CMU_EM ";
+        filestream << "tf_CMU_EM  s1_CMS_SEM s2_CMS_SEM s3_CMS_SEM s4_CMS_SEM s5_CMS_SEM ";
+        filestream << "x0_CMU_NCEM  y0_CMU_NCEM z0_CMU_NCEM px0_CMU_NCEM py0_CMU_NCEM pz0_CMU_NCEM ";
+        filestream << "x0_CMS_NCSEM y0_CMS_NCSEM z0_CMS_NCSEM px0_CMS_NCSEM py0_CMS_NCSEM pz0_CMS_NCSEM ";
+        filestream << "te_NCSEM xe_CMS_NCSEM ye_CMS_NCSEM ze_CMS_NCSEM pxe_CMS_NCSEM pye_CMS_NCSEM pze_CMS_NCSEM ";
+        filestream << "H0_NCEM He_NCEM H0_NCSEM He_NCSEM";
+        filestream << endl;
     }
     else
     {
-        cout << "oorefeml2seml. No continuation will be performed." << endl;
-        refSt.cont_step_max    = 0;
-        refSt.cont_step_max_vt = 0;
+        //================================================================================
+        // Else, we append
+        //================================================================================
+        filestream.open (filename.c_str(), ios::out | ios::app);
     }
 
     //====================================================================================
-    // 4. Select the good IC for EML2-to-SEMLi connections in data files
+    //Data storage
     //====================================================================================
-    double st_EM[5], st_SEM[5], t_EM[2], t0_SEM = 0.0, pmin_dist_SEM_out = 0.0;
-    status = ooseleml2seml(refSt, st_EM, st_SEM, t_EM, &t0_SEM, &pmin_dist_SEM_out);
-
-    if(status == FTC_FAILURE)
-    {
-        cout << "No solution satisfying all the constraints has been found." << endl;
-        cout << "End of computation." << endl;
-        return FTC_FAILURE;
-    }
-
-    //====================================================================================
-    // Display the selected first guess
-    //====================================================================================
-    coutmp();
-    cout << "===================================================================" << endl;
-    cout << " oorefeml2seml. A solution has been selected,                      " << endl;
-    cout << " with the following characteristics:                               " << endl;
-    cout << " 1. Estimated error at patch point (km):                           " << endl;
-    cout << " ep = " << pmin_dist_SEM_out* SEML.cs_sem.cr3bp.L  << " km, ";
-    cout <<  pmin_dist_SEM_out  << " in SEMSU coord."                             << endl;
-    cout << " 2. Initial conditions at EML2 (RCM):                              " << endl;
-    cout << " s0 = (" << st_EM[0] << ", " << st_EM[1] << ", ";
-    cout              << st_EM[2] << ", " << st_EM[3] << ")"                      << endl;
-    cout << " 3. Final conditions at SEML2 (RCM):                               " << endl;
-    cout << " qf = (" << st_SEM[0] << ", " << st_SEM[1] << ", ";
-    cout              << st_SEM[2] << ", " << st_SEM[3] << ")"                    << endl;
-    cout << " 4. Estimated TOF (x T):                                           " << endl;
-    cout << " TOF = " << (t_EM[1] - t_EM[0])/SEML.us_em.T                         << endl;
-    cout << "===================================================================" << endl;
-    coutlp();
-    pressEnter(refSt.isFlagOn);
-
-    //====================================================================================
-    // 5.1 Initialize local variables: EM
-    //====================================================================================
-    //------------------------------------------------------------------------------------
-    // Initialisation of the orbit structure
-    //------------------------------------------------------------------------------------
-    OdeStruct driver_EM;
-    //Root-finding
-    const gsl_root_fsolver_type* T_root = gsl_root_fsolver_brent;
-    //Stepper
-    const gsl_odeiv2_step_type* T = gsl_odeiv2_step_rk8pd;
-    //Parameters
-    int coll_EM;
-    OdeParams odeParams_EM(&coll_EM, &SEML_EM);
-    //Init ode structure
-    init_ode_structure(&driver_EM, T, T_root, 6, qbcp_vfn, &odeParams_EM);
-    //Init routine
-    Orbit orbit_EM(&invman_EM, &SEML_EM, &driver_EM, OFTS_ORDER, OFS_ORDER, t_EM[0], t_EM[1]);
+    filestream << setprecision(15) <<  setiosflags(ios::scientific) << std::showpos;
 
     //------------------------------------------------------------------------------------
-    // Update the initial state in the orbit_EM, with the RCM coordinates
+    // Store from 1 to 8
     //------------------------------------------------------------------------------------
-    orbit_EM.update_ic(st_EM,  t_EM[0]);
+    //1. t0 in EM units
+    filestream << orbit_EM.getT0() << "  ";
+    //2. s0 in RCM coordinates
+    for(int i = 0; i <5; i++) filestream << orbit_EM.getSi()[i]  << "  ";
+    //3. tf in EM units
+    filestream << orbit_EM.getTf() << "  ";
+    //4. sf in RCM coordinates
+    for(int i = 0; i <5; i++) filestream << orbit_SEM.getSi()[i] << "  ";
+    //5. z0 in NCEM coordinates
+    for(int i = 0; i <6; i++) filestream << orbit_EM.getZ0()[i]  << "  ";
+    //6. zf in NCSEM coordinates
+    for(int i = 0; i <6; i++) filestream << orbit_SEM.getZ0()[i] << "  ";
+    //7. thetae_NCSEM
+    filestream << *te_NCSEM* SEML.us_sem.n << "  ";
+    //8. ze in NCSEM coordinates
+    for(int i = 0; i <6; i++) filestream << ye_NCSEM[i] << "  ";
 
-    //====================================================================================
-    // 5.2 Initialize local variables: SEM
-    //====================================================================================
-
-    //------------------------------------------------------------------------------------
-    // Initialisation of the orbit structure
-    //------------------------------------------------------------------------------------
-    OdeStruct driver_SEM;
-    //Parameters
-    int coll_SEM;
-    OdeParams odeParams_SEM(&coll_SEM, &SEML_SEM);
-    //Init ode structure
-    init_ode_structure(&driver_SEM, T, T_root, 6, qbcp_vfn, &odeParams_SEM);
-    //Init routine
-    Orbit orbit_SEM(&invman_SEM, &SEML_SEM, &driver_SEM, OFTS_ORDER, OFS_ORDER,
-                    t0_SEM, t0_SEM+5*SEML.us_sem.T);
-
-    //------------------------------------------------------------------------------------
-    // Update the initial state in the orbit_SEM, with the RCM coordinates
-    //------------------------------------------------------------------------------------
-    orbit_SEM.update_ic(st_SEM, t0_SEM);
 
     //------------------------------------------------------------------------------------
-    // Time and state vectors (twice the size)
+    // Computing Energies
     //------------------------------------------------------------------------------------
-    double** y_traj  = dmatrix(0, 41, 0, 2*man_grid_size);
-    double*  t_traj  = dvector(0, 2*man_grid_size);
+    double H0_NCEM, He_NCEM, H0_NCSEM, He_NCSEM;
+    double yv_NCEM[6], yv_NCSEM[6];
+    double t0_EM, t0_SEM, te_EM, te_SEM;
 
-    //====================================================================================
-    // 6 Multiple shooting procedure
-    //====================================================================================
-    gnuplot_ctrl* h2;
-    switch(refSt.type)
-    {
-    case REF_CONT:
-    case REF_SINGLE:
-    {
-        //--------------------------------------------------------------------------------
-        //Gnuplot window
-        //--------------------------------------------------------------------------------
-        h2 = gnuplot_init();
+    //t0, z0 in NCEM coordinates
+    t0_EM = orbit_EM.getT0();
+    for(int i = 0; i <6; i++) yv_NCEM[i] = orbit_EM.getZ0()[i];
+    //t0, z0 in NCSEM coordinates
+    qbcp_coc(t0_EM, yv_NCEM, yv_NCSEM, &t0_SEM, NCEM, NCSEM);
 
-        //--------------------------------------------------------------------------------
-        //Notable points in SEM system
-        //--------------------------------------------------------------------------------
-        notablePoints_sem(h2, coord_type);
+    //Initial energy in NCEM coordinates
+    H0_NCEM = qbcp_Hn_EM(t0_EM, yv_NCEM, &SEML);
+    //Initial energy in NCSEM coordinates
+    H0_NCSEM = qbcp_Hn_SEM(t0_SEM, yv_NCSEM, &SEML);
 
-        //--------------------------------------------------------------------------------
-        //Multiple shooting procedure
-        //--------------------------------------------------------------------------------
-        status = oosrefeml2seml(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, &man_grid_size, refSt, h2);
-        gnuplot_close(h2);
-        if(status)
-        {
-            cerr << fname << ". Error during the refinement procedure. ref_errno = " << ref_strerror (status) << endl;
-            return FTC_FAILURE;
-        }
-        break;
-    }
+    //te, ze in NCSEM coordinates
+    te_EM  = orbit_EM.getTf();                  //in EM units
 
-    case REF_CONT_D:
-    {
-        //--------------------------------------------------------------------------------
-        //Gnuplot window
-        //--------------------------------------------------------------------------------
-        h2 = gnuplot_init();
+    te_SEM = orbit_EM.getTf()*SEML.us_em.ns;    //in SEM units
+    for(int i = 0; i <6; i++) yv_NCSEM[i] = orbit_SEM.getZ0()[i];
 
-        //--------------------------------------------------------------------------------
-        //Notable points in SEM system
-        //--------------------------------------------------------------------------------
-        notablePoints_sem(h2, coord_type);
+    //te, ze in NCEM coordinates
+    qbcp_coc(te_SEM, yv_NCSEM, yv_NCEM, &te_EM, NCSEM, NCEM);
 
-        //--------------------------------------------------------------------------------
-        //First step: variable tn
-        //--------------------------------------------------------------------------------
-        refSt.time = REF_VAR_TN;
-
-        //There is no need to save at this point,
-        //since everything is gonna be erased by the second step
-        int isSaved = refSt.isSaved;
-        refSt.isSaved = 0;
-
-        status = oosrefeml2seml(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, &man_grid_size, refSt, h2);
-        if(status)
-        {
-            cerr << fname << ". Error during the continuation procedure with variable time. ref_errno = " << ref_strerror(status) << endl;
-            return FTC_FAILURE;
-        }
-
-
-        //--------------------------------------------------------------------------------
-        //Second step: fixed time + saved, if desired by the user
-        //--------------------------------------------------------------------------------
-        refSt.time    = REF_FIXED_TIME;
-        refSt.isSaved = isSaved;
-
-        status = oosrefeml2seml(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, &man_grid_size, refSt, h2);
-        if(status)
-        {
-            cerr << fname << ". Error during the continuation procedure with fixed time. ref_errno = " << ref_strerror(status) << endl;
-            return FTC_FAILURE;
-        }
-
-        gnuplot_close(h2);
-        break;
-    }
-
-    case REF_CONT_D_HARD_CASE:
-    {
-        //--------------------------------------------------------------------------------
-        //Gnuplot window
-        //--------------------------------------------------------------------------------
-        h2 = gnuplot_init();
-
-        //--------------------------------------------------------------------------------
-        //Notable points in SEM system
-        //--------------------------------------------------------------------------------
-        notablePoints_sem(h2, coord_type);
-
-        //--------------------------------------------------------------------------------
-        //First step: variable tn
-        //--------------------------------------------------------------------------------
-        refSt.time = REF_VAR_TN;
-
-        //There is no need to save at this point,
-        //since everything is gonna be erased by the second step
-        int isSaved = refSt.isSaved;
-        refSt.isSaved = 0;
-
-        status = oosrefeml2seml(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, &man_grid_size, refSt, h2);
-        if(status)
-        {
-            cerr << fname << ". Error during the continuation procedure with variable time. ref_errno = " << ref_strerror(status) << endl;
-            return FTC_FAILURE;
-        }
-
-
-        //--------------------------------------------------------------------------------
-        //Second step: fixed time + given grid + saved, if desired by the user
-        // The main change with respect to REF_CONT_D is REF_GIVEN_GRID: this means
-        // that the time grid used for the first phase is kept for the next phase (fixed time)
-        //--------------------------------------------------------------------------------
-        refSt.time    = REF_FIXED_TIME;
-        refSt.grid    = REF_GIVEN_GRID;
-        refSt.isSaved = isSaved;
-
-        status = oosrefeml2seml(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, &man_grid_size, refSt, h2);
-        if(status)
-        {
-            cerr << fname << ". Error during the continuation procedure with fixed time. ref_errno = " << ref_strerror(status) << endl;
-            return FTC_FAILURE;
-        }
-
-        gnuplot_close(h2);
-        break;
-    }
-
-
-    case REF_COMP:
-    {
-        cout << "===============================================================" << endl;
-        cout << "oorefeml2seml.                                                 " << endl;
-        cout << "The computation of the entire trajectory has been selected.    " << endl;
-        cout << "===============================================================" << endl;
-        cout << "oorefeml2seml. First part: "                                     << endl;
-        cout << "Refinement of the connection leg in the parameterization space." << endl;
-        //--------------------------------------------------------------------------------
-        //First part: REF_CONT with variable tn
-        //--------------------------------------------------------------------------------
-        refSt.type = REF_CONT;
-        refSt.time = REF_VAR_TN;
-
-        //--------------------------------------------------------------------------------
-        //Gnuplot window
-        //--------------------------------------------------------------------------------
-        h2 = gnuplot_init();
-
-        //--------------------------------------------------------------------------------
-        //Notable points in SEM system
-        //--------------------------------------------------------------------------------
-        notablePoints_sem(h2, coord_type);
-
-        //Multiple shooting procedure
-        status = oosrefeml2seml(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, &man_grid_size, refSt, h2);
-
-        if(status)
-        {
-            cerr << fname << ". Error during the continuation procedure with variable time. ref_errno = " << ref_strerror(status) << endl;
-            return FTC_FAILURE;
-        }
-
-        //--------------------------------------------------------------------------------
-        //Second part: REF_SINGLE
-        //--------------------------------------------------------------------------------
-        refSt.type = REF_SINGLE;
-        refSt.time = REF_FIXED_TIME;
-
-
-        //Multiple shooting procedure
-        status = oosrefeml2seml(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, &man_grid_size, refSt, h2);
-        gnuplot_close(h2);
-
-        if(status)
-        {
-            cerr << fname << ". Error during the refinement procedure. ref_errno = " << ref_strerror(status) << endl;
-            return FTC_FAILURE;
-        }
-
-        //--------------------------------------------------------------------------------
-        // After this point, the orbits are updated so that the connection is
-        // truly natural in the parameterization space.
-        // We can then advance to REF_COMP for the rest of the computation
-        //--------------------------------------------------------------------------------
-        refSt.type = REF_COMP;
-        int sf_eml2, sf_man, sf_seml2;
-        cout << "===============================================================" << endl;
-        cout << "oorefeml2seml. Second part: "                                    << endl;
-        cout << "Refinement of the entire trajectory."                            << endl;
-        cout << "This is a 3-legged trajectory: "                                 << endl;
-        cout << "EML2 orbit + manifold leg + SEMLi orbit."                        << endl;
-        cout << "Enter a value for sf_eml2, "                                     << endl;
-        cout << "the sampling frequeny (in days) during the EML2 leg: "           << endl;
-        cin >> sf_eml2;
-        cout << "Enter a value for sf_man, "                                      << endl;
-        cout << "the sampling frequeny (in days) during the man leg: "            << endl;
-        cin >> sf_man;
-        cout << "Enter a value for sf_seml2, "                                    << endl;
-        cout << "the sampling frequeny (in days) during the SEMLi leg: "          << endl;
-        cin >> sf_seml2;
-        char ch;
-        scanf("%c",&ch);
-
-        int sampfreq[3] = {sf_eml2, sf_man, sf_seml2};
-        status = oocomprefft3d(sampfreq, coord_type, orbit_EM, orbit_SEM, refSt);
-
-        if(status)
-        {
-            cerr << fname << ". Error during the continuation procedure on the whole trajectory. ref_errno = " << ref_strerror(status) << endl;
-            return FTC_FAILURE;
-        }
-
-        //--------------------------------------------------------------------------------
-        //CAREFUL!! the rest of the routines are still using msd_grid_size
-        //(a number of points) and NOT the sampling frequencies!! To be adapted...
-        //--------------------------------------------------------------------------------
-        //oocomprefft3d_test_seml_synjpl(msd_grid_size, coord_type, orbit_SEM, refSt);
-        //oocomprefft3d_test_eml_synjpl(msd_grid_size, coord_type, orbit_EM, refSt);
-        //comprefft3d_test_eml2seml_synjpl(msd_grid_size, coord_type, orbit_EM, orbit_SEM, refSt);
-        //comprefft3d_test_eml2seml_insem(msd_grid_size, coord_type, orbit_EM, orbit_SEM, refSt);
-        break;
-    }
-    }
+    //Final energy in NCEM coordinates
+    He_NCEM = qbcp_Hn_EM(te_EM, yv_NCEM, &SEML);
+    //Final energy in NCSEM coordinates
+    He_NCSEM = qbcp_Hn_SEM(te_SEM, yv_NCSEM, &SEML);
 
     //------------------------------------------------------------------------------------
-    //Gnuplot window
+    // Storing Energies
     //------------------------------------------------------------------------------------
-    pressEnter(refSt.isFlagOn);
+    // 9.  Initial energy in NCEM coordinates
+    filestream << H0_NCEM << "  ";
+    // 10. Final energy in NCEM coordinates
+    filestream << He_NCEM << "  ";
+    // 11. Initial energy in NCSEM coordinates
+    filestream << H0_NCSEM << "  ";
+    // 12. Final energy in NCSEM coordinates
+    filestream << He_NCSEM << "  ";
+    filestream << endl;
 
-
-    return FTC_SUCCESS;
+    filestream.close();
 }
 
-//========================================================================================
-//
-//         Refinement of solutions: CMU to CMS - subroutines
-//
-//========================================================================================
 /**
- *  \brief Find the intersection of a EML2-SEMLi connection contained in
- *         y_traj_n/t_traj_n with a certain Pk section x = cst defined by refSt.
+ *  \brief Get the length the results of the continuation procedure, in txt file.
  **/
-int ooxpseml2seml(double ye[6], double* te, double* t_traj_n, double** y_traj_n,
-                  int man_index, RefSt& refSt)
+int getLengthCONT_txt(double t0xT)
 {
-    double yv[42];
-    //Get the default coordinates system from the coord_type
-    int dcs  = default_coordinate_system(NCSEM);
+    //====================================================================================
+    // Initialize the I/O objects
+    //====================================================================================
+    string filename  = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF, SEML.li_SEM, t0xT);
+    fstream filestream;
+    filestream.open (filename.c_str(), ios::in);
 
     //====================================================================================
-    //1. Find, from the end, the couple of patch points before and after the PS
+    // Check the opening
     //====================================================================================
-    int k2 = man_index;
-    int k1 = man_index-1;
-    bool test = false;
-    do
+    if (!filestream.is_open())
     {
-        k1--;
-        k2--;
-        test = (y_traj_n[0][k2] > refSt.xps && y_traj_n[0][k1] < refSt.xps) ||
-               (y_traj_n[0][k2] < refSt.xps && y_traj_n[0][k1] > refSt.xps);
-    }
-    while(!test && k1 >= 0);
-
-
-    //====================================================================================
-    //2. If a solution has been found:
-    //====================================================================================
-    if(test && k1 >= 0)
-    {
-        cout << "ooxpseml2seml. Range accross the PS found:" << endl;
-        cout << y_traj_n[0][k1] << " < " << refSt.xps << " < " << y_traj_n[0][k2] << endl;
-
-
-        //====================================================================================
-        //2. Integrate until x = xps
-        //====================================================================================
-        double center[3];
-        struct value_params val_par;
-        val_par.max_events = 1;
-        val_par.direction  = 0;
-        val_par.dim        = 0;
-        val_par.value      = refSt.xps;
-        val_par.center     = center;
-        val_par.type       = 'X';
-
-        double** ye_NCSEM = dmatrix(0, 5, 0, 1);
-        double* te_NCSEM  = dvector(0, 1);
-
-        //====================================================================================
-        //3. After this step: ye_NCSEM[*][0] & te_NCSEM[0] contains the intersection
-        //   Note: the (possible) collisions with the primaries are not taken into account here:
-        //   We suppose that for this particular application (intersection with a Pk section
-        //   far away from any primary), such collision are very unlikely!
-        //====================================================================================
-        int ode78coll;
-        for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k1];
-        ode78_qbcp_event(ye_NCSEM, te_NCSEM, &ode78coll, t_traj_n[k1], t_traj_n[k2], yv, 6, dcs,
-                         NCSEM, NCSEM, &val_par);
-
-        //====================================================================================
-        //4. Store
-        //====================================================================================
-        *te = te_NCSEM[0];
-        for(int i = 0; i < 6; i++) ye[i] = ye_NCSEM[i][0];
-
-        //====================================================================================
-        //5. Free
-        //====================================================================================
-        free_dmatrix(ye_NCSEM, 0, 5, 0, 1);
-        free_dvector(te_NCSEM, 0, 1);
-
-        return FTC_SUCCESS;
-    }
-    else
-    {
-        *te = -1;
-        for(int i = 0; i < 6; i++) ye[i] = 0.0;
+        cerr << "getLengthCONT_txt. Cannot open file." << endl;
         return FTC_FAILURE;
     }
+
+    //====================================================================================
+    // First value is discarded: these are the column titles
+    //====================================================================================
+    string ct;
+    getline(filestream,  ct);
+
+    //====================================================================================
+    // Get the size of the file
+    //====================================================================================
+    int fsize = 0;
+    while (!filestream.eof())
+    {
+        getline(filestream,  ct);
+        fsize++;
+    }
+    filestream.close();
+
+    return fsize-1;
+}
+
+/**
+ *  \brief Reads the results of the continuation procedure, in txt file.
+ **/
+int readCONT_txt(double*  t0_CMU_EM, double*   tf_CMU_EM,
+                 double** si_CMU_EM, double** si_CMS_SEM,
+                 double** z0_CMU_NCEM, double** z0_CMS_NCSEM,
+                 double* tethae, double** ye_NCSEM,
+                 double* H0_NCEM, double* He_NCEM,
+                 double* H0_NCSEM, double* He_NCSEM,
+                 double tr0, int fsize)
+{
+    //====================================================================================
+    // Get the size of the file
+    //====================================================================================
+    int fsize0 = getLengthCONT_txt(tr0);
+    if(fsize0 != fsize)
+    {
+        cerr << "readCONT_txt. The user-defined file size mismatch the true size." << endl;
+        return FTC_FAILURE;
+    }
+
+    //====================================================================================
+    // Initialize the I/O objects
+    //====================================================================================
+    string filename  = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF, SEML.li_SEM, tr0);
+    fstream filestream;
+    filestream.open (filename.c_str(), ios::in);
+
+    //====================================================================================
+    // Check the opening
+    //====================================================================================
+    if (!filestream.is_open())
+    {
+        cerr << "readCONT_txt. Cannot open file." << endl;
+        return FTC_FAILURE;
+    }
+
+    //====================================================================================
+    // First value is discarded: these are the column titles
+    //====================================================================================
+    string ct;
+    getline(filestream,  ct);
+
+    //====================================================================================
+    // Read the data on each line and close
+    //====================================================================================
+    for(int k = 0; k < fsize; k++)
+    {
+        //1. t0 in EM units
+        filestream >> t0_CMU_EM[k];
+        //2. s0 in RCM coordinates
+        for(int i = 0; i <5; i++) filestream >> si_CMU_EM[i][k];
+        //3. tf in EM units
+        filestream >> tf_CMU_EM[k];
+        //4. sf in RCM coordinates
+        for(int i = 0; i <5; i++) filestream >> si_CMS_SEM[i][k];
+        //5. z0 in NCEM coordinates
+        for(int i = 0; i <6; i++) filestream >> z0_CMU_NCEM[i][k];
+        //6. zf in NCEM coordinates
+        for(int i = 0; i <6; i++) filestream >> z0_CMS_NCSEM[i][k];
+        //7. tethae
+        filestream >> tethae[k];
+        //8. ze in NCSEM coordinates
+        for(int i = 0; i <6; i++) filestream >> ye_NCSEM[i][k];
+        // 9.  Initial energy in NCEM coordinates
+        filestream >> H0_NCEM[k];
+        // 10. Final energy in NCEM coordinates
+        filestream >> He_NCEM[k];
+        // 11. Initial energy in NCSEM coordinates
+        filestream >> H0_NCSEM[k];
+        // 12. Final energy in NCSEM coordinates
+        filestream >> He_NCSEM[k];
+    }
+
+    filestream.close();
+
+    return FTC_SUCCESS;
 }
 
 /**
@@ -2788,4702 +7720,6 @@ int writeCONT_bin(RefSt& refSt, string filename_traj, int dcs, int coord_type,
     return FTC_SUCCESS;
 }
 
-/**
- *  \brief Continuation of a single of EML2-to-SEMLi connection, between orbit_EM and
- *         orbit_SEM.
- *
- *         Because of the possible use of msvt3d and msvtplan inside this routine,the
- *         coord_type must be NCSEM. However, the user can put other
- *         coordinate systems (VNCSEM, PSEM, PEM...), as long as these two routines are
- *         not used.
- *
- *         In general, we recommend to use NCSEM at least for precision
- *         reasons. In this way, a warning is issued when coord_type is different
- *         from NCSEM.
- **/
-int oosrefeml2seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* t_traj,
-                   int dcs, int coord_type, int* man_grid_size_t,
-                   RefSt& refSt, gnuplot_ctrl* h2)
-{
-    //====================================================================================
-    // 0. Check on  coord_type (for now)
-    //====================================================================================
-    if(coord_type !=  NCSEM)
-    {
-        cout << "oosrefeml2seml. WARNING: the coord_type inside refSt is different  " << endl;
-        cout << "from NCSEM, which means that the variable-time capability cannot   " << endl;
-        cout << "be used. If you still wish to continue, press enter.               " << endl;
-        cout << "===================================================================" << endl;
-        char ch;
-        scanf("%c",&ch);
-    }
-
-    //====================================================================================
-    // 1. Initialize local variables
-    //====================================================================================
-    string fname = "oosrefeml2seml";
-    cout << fname << ". Initialization of the local variables..."  << endl;
-
-    //We keep the number of points below 10% of the maximum gnuplot temp file.
-    int plotfreq = 2;//floor((double)refSt.cont_step_max/floor(0.1*GP_MAX_TMP_FILES))+1;
-
-    //------------------------------------------------------------------------------------
-    //If the grid is fixed, then we use the user-provided size. Else, we use a
-    //big value (max_grid_size) so that the arrays would not be saturated.
-    //------------------------------------------------------------------------------------
-    int max_grid_size = 1000;
-    int man_grid_size = (refSt.grid == REF_VAR_GRID) ? max_grid_size:*man_grid_size_t;
-
-    //------------------------------------------------------------------------------------
-    //Local variables for plotting
-    //------------------------------------------------------------------------------------
-    int mPlot = refSt.mplot;
-    double** y_man_NCEM        = dmatrix(0, 5, 0, mPlot);
-    double** y_man_NCSEM       = dmatrix(0, 5, 0, mPlot);
-    double*  t_man_EM          = dvector(0, mPlot);
-    double*  t_man_SEM         = dvector(0, mPlot);
-    double** y_man_coord_plot  = dmatrix(0, 5, 0, mPlot);
-    double*  t_man_coord_plot  = dvector(0, mPlot);
-
-    //Number of potential new points, during the continuation procedure with variable time
-    int nnew = 4;
-    int ode78coll = 0;
-
-    //------------------------------------------------------------------------------------
-    //Local variables to store the refined trajectory
-    //------------------------------------------------------------------------------------
-    double** ymt   = dmatrix(0, 5, 0, nnew);
-    double* tmt    = dvector(0, nnew);
-    //double** y_traj       = dmatrix(0, 41, 0, man_grid_size+2*nnew);
-    //double*  t_traj       = dvector(0, man_grid_size+2*nnew);
-
-    //------------------------------------------------------------------------------------
-    //Type of corrector & predictor
-    //------------------------------------------------------------------------------------
-    diffcorrptr  diffcorr  = ftc_select_diffcorr(refSt);
-    predictorptr predictor = ftc_select_predictor(refSt);
-
-    //------------------------------------------------------------------------------------
-    //To store final data
-    //------------------------------------------------------------------------------------
-    double** y_traj_n   = dmatrix(0, 41, 0, man_grid_size+2*nnew);
-    double* t_traj_n    = dvector(0, man_grid_size+2*nnew);
-
-    //------------------------------------------------------------------------------------
-    // Initialize the COC matrices
-    //------------------------------------------------------------------------------------
-    //CCM_R_RCM_EM: RCM to CCM in R(4,4), about EML2
-    gsl_matrix_complex* CCM_R_RCM_EM  = gsl_matrix_complex_calloc(4, 4);
-    rotmat_CC_R_RCM_CENTER(CCM_R_RCM_EM);
-
-    //CCM_R_RCM_SEM: RCM to CCM in R(5,5), about SEMLi
-    gsl_matrix_complex* CCM_R_RCM_SEM  = gsl_matrix_complex_calloc(5, 5);
-    rotmat_CC_R_RCM_CENTER_HYP(CCM_R_RCM_SEM);
-
-    //====================================================================================
-    // 2.  Compute first guess
-    //====================================================================================
-    int man_index = oomanfgeml2seml(y_traj, t_traj, orbit_EM, orbit_SEM, dcs, coord_type, man_grid_size, refSt);
-
-    // Plot the resulting trajectory
-    gnuplot_plot_X(h2, y_traj, man_index,   (char*)"", "lines", "1", "1", 4);
-    gnuplot_plot_X(h2, y_traj, man_index+1, (char*)"", "points", "1", "1", 4);
-
-
-    //====================================================================================
-    // 3.  Differential correction
-    //====================================================================================
-    cout << fname << ". Differential correction procedure.          "  << endl;
-    pressEnter(refSt.isFlagOn);
-
-    //------------------------------------------------------------------------------------
-    //Free variables
-    //------------------------------------------------------------------------------------
-    int nfv = nfreevariables(refSt, man_index);
-    double* nullvector = dvector(0, nfv-1);
-
-    //------------------------------------------------------------------------------------
-    //GNUPLOT:
-    //  1. if there is a continuation procedure based on variable time,
-    //     the component s5 at SEML is plotted.
-    //  2. if there is a continuation procedure based on fixed time,
-    //     several computations are produced.
-    //------------------------------------------------------------------------------------
-    gnuplot_ctrl* h3 = 0, *h4 = 0, *h5 = 0, *h6 = 0, *h7 = 0;
-    if(refSt.isCont())
-    {
-        switch(refSt.time)
-        {
-        case REF_VAR_TIME:
-        case REF_VAR_TN:
-
-            h5 = gnuplot_init();
-            gnuplot_cmd(h5,  "set title \"s5_SEM vs steps\" ");
-            gnuplot_cmd(h5, "set grid");
-            break;
-
-
-        case REF_FIXED_TIME:
-
-            h3 = gnuplot_init();
-            gnuplot_cmd(h3,  "set title \"s3_EM vs s1_EM\" ");
-            gnuplot_cmd(h3, "set grid");
-
-            h4 = gnuplot_init();
-            gnuplot_cmd(h4,  "set title \"s3_SEM vs s1_SEM\" ");
-            gnuplot_cmd(h4, "set grid");
-
-            h5 = gnuplot_init();
-            gnuplot_cmd(h5,  "set title \"s5_SEM vs steps\" ");
-            gnuplot_cmd(h5, "set grid");
-
-            if(refSt.type == REF_3D)
-            {
-                h6 = gnuplot_init();
-                gnuplot_cmd(h6,  "set title \"s4_EM vs s2_EM\" ");
-                gnuplot_cmd(h6, "set grid");
-            }
-
-            if(refSt.is3D())
-            {
-                h7 = gnuplot_init();
-                gnuplot_cmd(h7,  "set title \"s4_SEM vs s2_SEM\" ");
-                gnuplot_cmd(h7, "set grid");
-            }
-
-            break;
-
-
-        }
-    }
-
-
-    //====================================================================================
-    //6.1. First step of the continuation procedure.
-    //====================================================================================
-    int status = 0;
-    double inner_prec = 5e-8;
-    int niter = 1;
-
-    status = diffcorr(y_traj, t_traj, y_traj_n, t_traj_n, nullvector, 42,
-                      man_index, coord_type, inner_prec, true, orbit_EM, orbit_SEM,
-                      h2, refSt, &niter);
-
-
-
-
-    //====================================================================================
-    // If it is not a success, we print the value, and we return
-    //====================================================================================
-    if(status)
-    {
-        cerr << fname << ". Error during the first refinement procedure. ref_errno = " << ref_strerror(status) << endl;
-        return FTC_FAILURE;
-    }
-
-    //====================================================================================
-    // If it is a sucess, we go on.
-    //====================================================================================
-    //------------------------------------------------------------------------------------
-    // Some inner variables
-    //------------------------------------------------------------------------------------
-    double yv[6];
-    int kn = 0;
-
-    //====================================================================================
-    // Find the intersection with a certain Poincaré Section (PS)
-    //====================================================================================
-    double ye[6], te = 0.0;
-    ooxpseml2seml(ye, &te, t_traj_n, y_traj_n, man_index, refSt);
-
-    //====================================================================================
-    // Save first entry if the continuation process is on
-    //====================================================================================
-    string filename_traj = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF_TRAJ,
-                                       SEML.li_SEM, orbit_EM.getT0()/SEML.us_em.T);
-
-    if(refSt.isSaved && refSt.isCont())
-    {
-        cout << "-----------------------------------------------------------"  << endl;
-        cout << fname << ". Save first entry in " << filename_traj             << endl;
-        cout << "-----------------------------------------------------------"  << endl;
-
-        // Main parameters
-        writeCONT_txt(orbit_EM, orbit_SEM, &te, ye, true);
-
-        // Entire trajectory
-        writeCONT_bin(refSt, filename_traj, dcs, coord_type,
-                       y_traj_n, t_traj_n, man_index, mPlot,
-                       orbit_EM, orbit_SEM, kn++, true,
-                       refSt.isSaved_EM, refSt.isSaved_SEM);
-    }
-
-    //====================================================================================
-    //Continuation procedure
-    //====================================================================================
-    if(refSt.isCont())
-    {
-        cout << fname << ". Continuation procedure.                         "  << endl;
-        cout << "-----------------------------------------------------------"  << endl;
-
-        //================================================================================
-        // Initialization
-        //================================================================================
-
-        //--------------------------------------------------------------------------------
-        // Initialize the stepper & desired number of iterations in Newton's method
-        //--------------------------------------------------------------------------------
-        double ds0    = 5e-2;
-        double niterd = 4;
-        double dsmin  = refSt.dsmin, dsmax = refSt.dsmax;
-
-        switch(refSt.time)
-        {
-        case REF_VAR_TIME:
-        case REF_VAR_TN:
-            ds0    = refSt.ds0_vt;
-            niterd = refSt.nu0_vt;
-            dsmin  = refSt.dsmin_vt;
-            dsmax  = refSt.dsmax_vt;
-            break;
-        case REF_FIXED_TIME:
-            ds0    = refSt.ds0;
-            niterd = refSt.nu0;
-            dsmin  = refSt.dsmin;
-            dsmax  = refSt.dsmax;
-            break;
-        }
-
-        double ds  = ds0;
-        double dkn = 0.0;
-
-        //--------------------------------------------------------------------------------
-        //An additional condition can be set:
-        //
-        // REF_COND_S5: if the time is not fixed, we want to decrease the
-        //s5 component at SEMLi. Therefore, we add a stopping condition on the loop.
-        //
-        // REF_COND_T: we want to make enough "turns" about SEMLi
-        //--------------------------------------------------------------------------------
-        bool addCondition = true;
-        double theta_acc  = 0.0, theta_old = 0.0, theta_max  = refSt.thetaMax;
-        int mani_old = man_index;
-        switch(refSt.termination)
-        {
-        case REF_COND_S5:
-        {
-            switch(refSt.time)
-            {
-            case REF_VAR_TIME:
-            case REF_VAR_TN:
-                addCondition = fabs(orbit_SEM.getSi()[4]) > ORBIT_SEM_UNSTABLE_MIN;
-                break;
-
-
-            case REF_FIXED_TIME:
-                addCondition =  true;
-                break;
-            }
-            break;
-        }
-
-        case REF_COND_T:
-        {
-            addCondition =  true;
-            break;
-        }
-        }
-
-        //================================================================================
-        // Continuation loop
-        //================================================================================
-
-        //--------------------------------------------------------------------------------
-        // The maximum number of steps depends on the strategy
-        //--------------------------------------------------------------------------------
-        int cont_step_max_local = refSt.cont_step_max;
-        switch(refSt.time)
-        {
-        case REF_VAR_TIME:
-        case REF_VAR_TN:
-            cont_step_max_local = refSt.cont_step_max_vt;
-            break;
-
-
-        case REF_FIXED_TIME:
-            cont_step_max_local = refSt.cont_step_max;
-            break;
-        }
-
-        //--------------------------------------------------------------------------------
-        //Loop
-        //--------------------------------------------------------------------------------
-        while(kn < cont_step_max_local && status == GSL_SUCCESS && addCondition)
-        {
-            //============================================================================
-            // Updating the free variables via the predictor
-            //============================================================================
-            predictor(y_traj_n, t_traj_n, &ds, ds, nullvector,
-                      orbit_EM, orbit_SEM, man_index, coord_type, refSt);
-
-            //============================================================================
-            // Diff correction
-            //============================================================================
-            status = diffcorr(y_traj_n, t_traj_n, y_traj_n, t_traj_n,
-                              nullvector, 42, man_index, coord_type, inner_prec,
-                              false, orbit_EM, orbit_SEM, h2, refSt, &niter);
-
-            //============================================================================
-            // Find the intersection with a certain Poincaré Section (PS)
-            //============================================================================
-            double ye[6], te = 0.0;
-            if(status == GSL_SUCCESS) ooxpseml2seml(ye, &te, t_traj_n, y_traj_n, man_index, refSt);
-
-            //============================================================================
-            // Save
-            //============================================================================
-            if(refSt.isSaved && status == GSL_SUCCESS)
-            {
-                // Main parameters
-                writeCONT_txt(orbit_EM, orbit_SEM, &te, ye, false);
-
-                // Entire trajectory
-                writeCONT_bin(refSt, filename_traj, dcs, coord_type,
-                               y_traj_n, t_traj_n, man_index, mPlot,
-                               orbit_EM, orbit_SEM, kn, false,
-                               refSt.isSaved_EM, refSt.isSaved_SEM);
-            }
-
-
-            //============================================================================
-            // Display
-            //============================================================================
-            dkn = (double) kn;
-            //double t0 = orbit_EM.getT0()/SEML.us_sem.T;//t_traj_n[0]/SEML.us_sem.T;
-            if(refSt.isCont() && status == GSL_SUCCESS && kn % plotfreq == 0)
-            {
-                switch(refSt.time)
-                {
-                case REF_VAR_TIME:
-                case REF_VAR_TN:
-                {
-                    gnuplot_plotc_xy(h5, &dkn, &orbit_SEM.getSi()[4], 1, (char*)"", "points", "1", "2", 0);
-                    break;
-                }
-
-                case REF_FIXED_TIME:
-                {
-                    gnuplot_plotc_xy(h3, &orbit_EM.getSi()[0],  &orbit_EM.getSi()[2], 1, (char*)"", "points", "1", "2", 0);
-                    gnuplot_plotc_xy(h4, &orbit_SEM.getSi()[0],  &orbit_SEM.getSi()[2], 1, (char*)"", "points", "1", "2", 0);
-                    gnuplot_plotc_xy(h5, &dkn, &orbit_SEM.getSi()[4], 1, (char*)"", "points", "1", "2", 0);
-
-                    if(refSt.type == REF_3D)
-                    {
-                        gnuplot_plotc_xy(h6, &orbit_EM.getSi()[1],  &orbit_EM.getSi()[3], 1, (char*)"", "points", "1", "2", 0);
-                    }
-
-                    if(refSt.is3D())
-                    {
-                        gnuplot_plotc_xy(h7, &orbit_SEM.getSi()[1],  &orbit_SEM.getSi()[3], 1, (char*)"", "points", "1", "2", 0);
-                    }
-
-                    break;
-                }
-
-                }
-            }
-
-            //============================================================================
-            // Update the additionnal condition, if necessary
-            //============================================================================
-            switch(refSt.termination)
-            {
-            case REF_COND_S5:
-            {
-                //------------------------------------------------------------------------
-                // First type of condition: stop when we are close enough to the
-                // center manifold (unstable component is small enough)
-                // note: this condition is not used when all the times are fixed.
-                //------------------------------------------------------------------------
-                switch(refSt.time)
-                {
-                case REF_VAR_TIME:
-                case REF_VAR_TN:
-                    addCondition = fabs(orbit_SEM.getSi()[4]) > ORBIT_SEM_UNSTABLE_MIN;
-                    break;
-                case REF_FIXED_TIME:
-                    addCondition = true;
-                    break;
-                }
-                break;
-            }
-            case REF_COND_T:
-            {
-                //------------------------------------------------------------------------
-                // Another possible condition: enough turns around SEMLi.
-                //------------------------------------------------------------------------
-                double det, dot, theta;
-
-                //Compute the angle between the last point (entry in the manifold)
-                // and the second last, at the beginning of the procedure
-                dot = y_traj_n[0][man_index]*y_traj_n[0][mani_old-1] +
-                      y_traj_n[1][man_index]*y_traj_n[1][mani_old-1];  // dot product
-                det = y_traj_n[0][man_index]*y_traj_n[1][mani_old-1] -
-                      y_traj_n[1][man_index]*y_traj_n[0][mani_old-1];  // determinant
-
-                theta = 180/M_PI*atan(det/dot);//180/M_PI*atan2(det, dot);  // atan2(sin, cos) or tan(sin/cos)
-
-                //We save the value
-                if(kn == 0)
-                {
-                    theta_old = theta;
-                }
-                else
-                {
-                    //--------------------------------------------------------------------
-                    // Each time that theta_old*theta < 0, it means that we have made
-                    // about 180° around the last point. We then do 2 actions:
-                    //  1. We update the accumulated angle (+90°)
-                    //  2. We add a few patch points, to ensure numerical stability.
-                    //--------------------------------------------------------------------
-                    if(theta_old*theta < 0)
-                    {
-                        //  1. We update the accumulated angle (+90°)
-                        theta_acc += 90;
-                    }
-
-                    theta_old = theta;
-                }
-
-                //------------------------------------------------------------------------
-                // The condition is only applied when some times are left free to vary
-                //------------------------------------------------------------------------
-                switch(refSt.time)
-                {
-                case REF_VAR_TIME:
-                case REF_VAR_TN:
-                    cout << fname << ". theta     = " << theta << endl;
-                    cout << fname << ". theta_acc = " << theta_acc << endl;
-                    cout << fname << ". theta_max = " << theta_max << endl;
-                    addCondition = theta_acc < theta_max;
-                    break;
-                case REF_FIXED_TIME:
-                    addCondition = true;
-                    break;
-                }
-
-                break;
-            }
-            }
-
-
-            //============================================================================
-            // Advance
-            //============================================================================
-            kn++;
-            cout << "Step n°" << kn << "/" << cont_step_max_local << " complete"  << endl;
-            cout << "----------------------------------------------------------"  << endl;
-
-
-            //============================================================================
-            // Update the stepper. For now, only in the REF_VAR_TIME case !
-            //============================================================================
-            cout << "Updating the stepper:                                     "  << endl;
-            cout << "ds_old = " << ds                                             << endl;
-
-            switch(refSt.time)
-            {
-            case REF_VAR_TIME:
-            case REF_VAR_TN:
-                ds = min(dsmax, max(dsmin, ds*niterd/niter));
-                break;
-            case REF_FIXED_TIME:
-                ds = min(dsmax, max(dsmin, ds*niterd/niter));
-                break;
-            }
-
-            cout << "ds_new = " << ds                                             << endl;
-            cout << "----------------------------------------------------------"  << endl;
-        }
-
-        //================================================================================
-        // If the trajectory has been extended... We add a few points.
-        // Careful with this piece of code: if nnew is big, then a big number of points
-        // is added to the state vectors, which can make the Newton procedure unstable.
-        //
-        // Consequently, this option is taken only if refSt.type = REF_CONT_D_HARD_CASE
-        // i.e. basically if the user has tried refSt.type = REF_CONT_D before
-        // but it did not work...
-        //
-        // IMPORTANT: after this step, the number of points man_grid_size_t is changed!
-        // this means that any further use of this routine with man_grid_size_t will
-        // take into account this change.
-        //
-        //================================================================================
-        if(theta_acc >= theta_max && refSt.type == REF_CONT_D_HARD_CASE)
-        {
-            //  Add a few patch points
-            for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][man_index-1];
-            status = ode78(ymt, tmt, &ode78coll, t_traj_n[man_index-1],
-                           t_traj_n[man_index], yv, 6, nnew, dcs, coord_type,
-                           coord_type);
-
-            //Copy y_traj_n/t_traj_n in y_traj/t_traj
-            for(int k = 0; k <= man_index; k++)
-            {
-                for(int i = 0; i < 6; i++) y_traj[i][k] = y_traj_n[i][k];
-                t_traj[k] = t_traj_n[k];
-            }
-
-            //Copy y_traj/t_traj back in y_traj_n/t_traj_n, except the last point
-            for(int k = 0; k < man_index; k++)
-            {
-                for(int i = 0; i < 6; i++) y_traj_n[i][k] = y_traj[i][k];
-                t_traj_n[k] = t_traj[k];
-            }
-
-            //Copy additionnal points, except the first one
-            for(int k = 1; k <= nnew; k++)
-            {
-                for(int i = 0; i < 6; i++) y_traj_n[i][k+man_index-1] = ymt[i][k];
-                t_traj_n[k+man_index-1] = tmt[k];
-            }
-
-            //////////////////////////////////////////////////////////////////////////
-            //New size is man_index+nnew-1 +
-            //IMPORTANT: we also update *man_grid_size_t for
-            //next continuation !!!
-            //////////////////////////////////////////////////////////////////////////
-            man_index += nnew-1;
-            *man_grid_size_t = man_index;
-
-            //Plot the new distribution
-            gnuplot_plot_X(h2, y_traj_n, man_index+1, (char*)"", "points", "1", "1", 8);
-        }
-    }
-
-    //====================================================================================
-    // Final correction with better precision
-    // CAREFUL: it is NOT done for now because some elements depends on man_index for their size,
-    // and man_index CAN move if REF_CONT_D_HARD_CASE is used !!
-    // TODO: make a check on who is using man_index...
-    //====================================================================================
-    /*
-    //    inner_prec = 1e-10;                    //harder precision in diff corr procedures
-    //    Config::configManager().C_PREC_HARD(); //harder precision in numerical integration
-    //    switch(refSt.dim)
-    //    {
-    //    case REF_3D:
-    //        switch(refSt.time)
-    //        {
-    //        case REF_FIXED_TIME:
-    //            status = msft3d(y_traj_n, t_traj_n, y_traj_n, t_traj_n,
-    //                            nullvector, 42,
-    //                            man_index, coord_type, inner_prec, false,
-    //                            orbit_EM, orbit_SEM,
-    //                            h2, refSt, &niter);
-    //            break;
-    //
-    //        case REF_VAR_TIME:
-    //        case REF_VAR_TN:
-    //            status = msvt3d(y_traj_n, t_traj_n, y_traj_n, t_traj_n,
-    //                            nullvector, 42,
-    //                            man_index, coord_type, inner_prec, false,
-    //                            orbit_EM, orbit_SEM,
-    //                            h2, refSt, &niter);
-    //            break;
-    //        }
-    //        break;
-    //    case REF_PLANAR:
-    //        switch(refSt.time)
-    //        {
-    //        case REF_FIXED_TIME:
-    //            status = msftplan(y_traj_n, t_traj_n, y_traj_n, t_traj_n,
-    //                              nullvector, 42,
-    //                              man_index, coord_type, inner_prec, false,
-    //                              orbit_EM, orbit_SEM,
-    //                              h2, refSt, &niter);
-    //            break;
-    //
-    //        case REF_VAR_TIME:
-    //            status = msvtplan(y_traj_n, t_traj_n, y_traj_n, t_traj_n,
-    //                              nullvector, 42,
-    //                              man_index, coord_type, inner_prec, false,
-    //                              orbit_EM, orbit_SEM,
-    //                              h2, refSt, &niter);
-    //            break;
-    //
-    //        case REF_VAR_TN:
-    //            status = msvltplan(y_traj_n, t_traj_n, y_traj_n, t_traj_n,
-    //                               nullvector, 42,
-    //                               man_index, coord_type, inner_prec, false,
-    //                               orbit_EM, orbit_SEM,
-    //                               h2, refSt, &niter);
-    //            break;
-    //        }
-    //        break;
-    //    }
-    //
-    //    Config::configManager().C_PREC_BACK(); //back to initial precision
-    */
-
-    //====================================================================================
-    // Save final solution, only if REF_CONT. The savings of the orbit is FORCED.
-    //====================================================================================
-    if(refSt.type == REF_CONT)
-    {
-        // If !refSt.isSaved, this is the first solution to be solved, hence label = 0
-        double label = (refSt.isSaved)? kn+1:0;
-
-        // Intersection with the Pk section
-        ooxpseml2seml(ye, &te, t_traj_n, y_traj_n, man_index, refSt);
-
-        // Main parameters
-        writeCONT_txt(orbit_EM, orbit_SEM, &te, ye, true);
-
-        // Entire trajectory
-        writeCONT_bin(refSt, filename_traj, dcs, coord_type,
-                      y_traj_n, t_traj_n, man_index, mPlot,
-                      orbit_EM, orbit_SEM, label, !refSt.isSaved, 1, 1);
-    }
-
-
-    //====================================================================================
-    // Display final solution
-    //====================================================================================
-    if(status)
-    {
-        cerr << fname << ". Error during the continuation procedure. ref_errno = " << ref_strerror(status) << endl;
-        return FTC_FAILURE;
-    }
-    else
-    {
-        //================================================================================
-        // Final trajectory, on a grid
-        //================================================================================
-        cout << fname << ". Final trajectory, on a grid.                    "  << endl;
-        cout << "-----------------------------------------------------------"  << endl;
-
-
-        //--------------------------------------------------------------------------------
-        // Initialization
-        //--------------------------------------------------------------------------------
-        double** ymc   = dmatrix(0, 5, 0, mPlot);
-        double* tmc    = dvector(0, mPlot);
-        double yv[6];
-        int ode78coll;
-
-        //--------------------------------------------------------------------------------
-        //Final trajectory on lines, segment by segment
-        //--------------------------------------------------------------------------------
-        for(int k = 0; k < man_index; k++)
-        {
-            //Integration segment by segment
-            for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
-            status = ode78(ymc, tmc, &ode78coll, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
-
-            //Checks and warnings, if necessary
-            if(status != FTC_SUCCESS)
-            {
-                //At this step (final plot), a simple warning is issued
-                cout << fname << ". Warning: ode78 returned a flag." << endl;
-                cout << "A collision may have occured during the transfer." << endl;
-            }
-
-            if(ode78coll)
-            {
-                //At this step (plot), a simple warning is issued
-                cout << "plottrajsegbyseg. Warning: a collision with a primary has occurred." << endl;
-            }
-
-            //Plot on h2
-            if(k == 0)
-                gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"Final.", "lines", "1", "2", 0);
-            else
-                gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"", "lines", "1", "2", 0);
-        }
-
-        //--------------------------------------------------------------------------------
-        // Free
-        //--------------------------------------------------------------------------------
-        free_dmatrix(ymc, 0, 5, 0, mPlot);
-        free_dvector(tmc, 0, mPlot);
-    }
-
-
-    //====================================================================================
-    // 9. Update the orbits for next step
-    //====================================================================================
-    if(status)
-    {
-        cerr << fname << ". Error during the plotting procedure. ref_errno = " << ref_strerror(status) << endl;
-        return FTC_FAILURE;
-    }
-    else
-    {
-        //================================================================================
-        // Finally, copy y_traj/t_traj if necessary for the next step.
-        //================================================================================
-        for(int k = 0; k <= man_index; k++)
-        {
-            for(int i = 0; i < 6; i++) y_traj[i][k] = y_traj_n[i][k];
-            t_traj[k] = t_traj_n[k];
-        }
-
-        //================================================================================
-        // At EML2. The first 4 RCM components are good, as well as the initial time.
-        // Hence, we need to update:
-        // 1. The last RCM component (unstable part),
-        // 2. The final time.
-        //================================================================================
-        orbit_EM.setSi(PROJ_EPSILON, 4);
-        orbit_EM.setTf(t_traj_n[man_index]/SEML.us_em.ns);
-
-        //--------------------------------------------------------------------------------
-        // Update the initial state in the orbit, with the RCM coordinates
-        //--------------------------------------------------------------------------------
-        orbit_EM.update_ic(orbit_EM.getSi(), orbit_EM.getT0());
-
-        //================================================================================
-        // At SEMLi. The first 5 RCM components are good.
-        // Hence, we need to update:
-        // 1. The initial time.
-        //================================================================================
-        orbit_SEM.setT0(t_traj_n[man_index]);
-
-        //--------------------------------------------------------------------------------
-        // Update the initial state in the orbit, with the RCM coordinates
-        //--------------------------------------------------------------------------------
-        orbit_SEM.update_ic(orbit_SEM.getSi(), orbit_SEM.getT0());
-    }
-
-    cout << fname << ". "                                                  << endl;
-    cout << "          End of computation.                              "  << endl;
-    cout << "-----------------------------------------------------------"  << endl;
-    pressEnter(refSt.isFlagOn);
-
-    //====================================================================================
-    // 10. Free
-    //====================================================================================
-    if(refSt.isCont())
-    {
-        switch(refSt.time)
-        {
-        case REF_VAR_TIME:
-        case REF_VAR_TN:
-
-            gnuplot_close(h5);
-            break;
-
-        case REF_FIXED_TIME:
-
-            gnuplot_close(h3);
-            gnuplot_close(h4);
-            gnuplot_close(h5);
-
-            if(refSt.type == REF_3D)
-            {
-                gnuplot_close(h6);
-            }
-
-            if(refSt.is3D())
-            {
-                gnuplot_close(h7);
-            }
-
-            break;
-        }
-    }
-
-    free_dmatrix(y_man_NCEM, 0, 5, 0, mPlot);
-    free_dmatrix(y_man_NCSEM, 0, 5, 0, mPlot);
-    free_dvector(t_man_EM, 0, mPlot);
-    free_dvector(t_man_SEM, 0, mPlot);
-    free_dmatrix(y_man_coord_plot, 0, 5, 0, mPlot);
-    free_dvector(t_man_coord_plot, 0, mPlot);
-
-    //free_dmatrix(y_traj, 0, 41, 0, man_grid_size+2*nnew);
-    //free_dvector(t_traj, 0, man_grid_size+2*nnew);
-    free_dmatrix(y_traj_n, 0, 41, 0, man_grid_size+2*nnew);
-    free_dvector(t_traj_n, 0, man_grid_size+2*nnew);
-
-    gsl_matrix_complex_free(CCM_R_RCM_EM);
-    gsl_matrix_complex_free(CCM_R_RCM_SEM);
-
-
-    free_dmatrix(ymt, 0, 5, 0, nnew);
-    free_dvector(tmt, 0, nnew);
-
-    return FTC_SUCCESS;
-}
-
-
-//----------------------------------------------------------------------------------------
-//         Brick A: select the good IC for EML2-to-SEMli connections in data files
-//----------------------------------------------------------------------------------------
-/**
- *  \brief Selects good initial conditions for EML2-to-SEMLi connections, searching
- *         through data files produced by oo_int_proj_CMU_EM_on_CM_SEM_3D or
- *         oo_int_proj_CMU_EM_on_CM_SEM.
- **/
-int ooseleml2seml(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM[2],
-                  double* t0_SEM, double* pmin_dist_SEM_out)
-{
-    //====================================================================================
-    // 0. Splash screen
-    //====================================================================================
-    cout << "-------------------------------------------------------------------" << endl;
-    cout << "   ooseleml2seml. Selects good IC for EML2-SEMLi arc"                << endl;
-    cout << "-------------------------------------------------------------------" << endl;
-    //====================================================================================
-    // 1. Init the data containers
-    //====================================================================================
-    //------------------------------------------------------------------------------------
-    //To store data from the data file
-    //------------------------------------------------------------------------------------
-    vector<double> t0_EM;
-    vector<double> tf_EM;
-    vector<double> s1_CMU_EM;
-    vector<double> s2_CMU_EM;
-    vector<double> s3_CMU_EM;
-    vector<double> s4_CMU_EM;
-    vector<double> s5_CMU_EM;
-    vector<double> pmin_dist_SEM;
-    vector<double> s1_CM_SEM;
-    vector<double> s2_CM_SEM;
-    vector<double> s3_CM_SEM;
-    vector<double> s4_CM_SEM;
-    vector<size_t> sortId;
-
-    //------------------------------------------------------------------------------------
-    //To store data from a sub selection of the previous elements
-    //------------------------------------------------------------------------------------
-    vector<double> t0_EM_R;
-    vector<double> tf_EM_R;
-    vector<double> s1_CMU_EM_R;
-    vector<double> s2_CMU_EM_R;
-    vector<double> s3_CMU_EM_R;
-    vector<double> s4_CMU_EM_R;
-    vector<double> s5_CMU_EM_R;
-    vector<double> pmin_dist_SEM_R;
-    vector<double> s1_CM_SEM_R;
-    vector<double> s2_CM_SEM_R;
-    vector<double> s3_CM_SEM_R;
-    vector<double> s4_CM_SEM_R;
-    vector<size_t> sortId_R;
-
-
-    //====================================================================================
-    // 2. Getting back the data
-    //====================================================================================
-    string filename;
-    if(refSt.isFromServer)
-    {
-        //Getting the desired t0 as a fraction of T
-        double t0_des_mod = fmod(refSt.t0_des/SEML.us_em.T, 1.0);
-
-        //Getting the name of the data file, depending on the parameters in refSt
-        switch(refSt.dim)
-        {
-
-            case REF_PLANAR:
-            {
-                if(SEML.li_EM == 2)
-                {
-                    if(SEML.li_SEM == 2) filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_tspan_";
-                    else filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_dest_L1_tspan_";
-
-                    if(t0_des_mod >= 0 && t0_des_mod < 0.25)
-                    {
-                        filename += "0T_025T_FINAL.bin";
-                    }
-                    else if(t0_des_mod >= 0.25 && t0_des_mod < 0.5)
-                    {
-                        filename += "025T_05T_FINAL.bin";
-                    }
-                    else if(t0_des_mod >= 0.5 && t0_des_mod < 0.75)
-                    {
-                        filename += "05T_075T_FINAL.bin";
-                    }
-                    else
-                    {
-                        filename += "075T_T_FINAL.bin";
-                    }
-
-                    //filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_t0_099T.bin";
-                }
-                else
-                {
-                    if(SEML.li_SEM == 2) filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_dest_L2.bin";
-                    else filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_dest_L1.bin";
-                }
-
-            break;
-            }
-
-        case REF_3D:
-        case REF_MIXED:
-        {
-
-            if(SEML.li_SEM == 2) filename = SEML.cs_em.F_PLOT+"Serv/projcu_3d_order_20_dest_L2_t0_0995T.bin";
-            else filename = SEML.cs_em.F_PLOT+"Serv/projcu_3d_order_20_dest_L1_t0_0995T.bin";
-
-            break;
-        }
-
-        }
-
-
-        cout << "ooseleml2seml. The data will be retrieved from the server-computed file named:" << endl;
-        cout << filename << endl;
-
-        readAndInterpolateIntProjCU_bin(filename, refSt.t0_des, t0_EM, tf_EM,
-                                        s1_CMU_EM, s2_CMU_EM, s3_CMU_EM, s4_CMU_EM, s5_CMU_EM,
-                                        pmin_dist_SEM, s1_CM_SEM, s2_CM_SEM, s3_CM_SEM, s4_CM_SEM,
-                                        sortId);
-    }
-    else
-    {
-        int type = TYPE_MAN_PROJ;
-        switch(refSt.dim)
-        {
-        case REF_PLANAR:
-            //type = refSt.isFromServer? TYPE_MAN_PROJ_FROM_SERVER:TYPE_MAN_PROJ;
-            type = TYPE_MAN_PROJ;
-            break;
-
-        case REF_3D:
-        case REF_MIXED:
-            //type = refSt.isFromServer? TYPE_MAN_PROJ_3D_FROM_SERVER:TYPE_MAN_PROJ_3D;
-            type = TYPE_MAN_PROJ_3D;
-            break;
-        }
-        filename = filenameCUM(OFTS_ORDER, type, SEML.li_SEM);
-        readIntProjCU_bin(filename, t0_EM, tf_EM,
-                          s1_CMU_EM, s2_CMU_EM, s3_CMU_EM, s4_CMU_EM, s5_CMU_EM,
-                          pmin_dist_SEM, s1_CM_SEM, s2_CM_SEM, s3_CM_SEM, s4_CM_SEM,
-                          sortId);
-    }
-
-
-
-    //====================================================================================
-    // 3. Select given intervals for the inputs
-    //====================================================================================
-    double s1_CMU_EM_MIN, s1_CMU_EM_MAX;
-    double s3_CMU_EM_MIN, s3_CMU_EM_MAX;
-    double s2_CMU_EM_MIN, s2_CMU_EM_MAX;
-    double s4_CMU_EM_MIN, s4_CMU_EM_MAX;
-    double tof_MIN, tof_MAX;
-
-    if(refSt.isLimUD)
-    {
-        cout << "-----------------------------------------------------" << endl;
-        cout << "   ooseleml2seml. User-defined interval of research  " << endl;
-        cout << "-----------------------------------------------------" << endl;
-        cout << "Enter a value for s1_CMU_EM_MIN: ";
-        cin >> s1_CMU_EM_MIN;
-        cout << "Enter a value for s1_CMU_EM_MAX: ";
-        cin >> s1_CMU_EM_MAX;
-        cout << "Enter a value for s3_CMU_EM_MIN: ";
-        cin >> s3_CMU_EM_MIN;
-        cout << "Enter a value for s3_CMU_EM_MAX: ";
-        cin >> s3_CMU_EM_MAX;
-
-        cout << "Enter a value for tof_MIN (% of T, -1 if no use): ";
-        cin >> tof_MIN;
-        tof_MIN *= SEML.us.T;
-        cout << "Enter a value for tof_MAX (% of T, -1 if no use): ";
-        cin >> tof_MAX;
-        tof_MAX *= SEML.us.T;
-    }
-    else
-    {
-        s1_CMU_EM_MIN = refSt.s1_CMU_EM_MIN;
-        s1_CMU_EM_MAX = refSt.s1_CMU_EM_MAX;
-        s3_CMU_EM_MIN = refSt.s3_CMU_EM_MIN;
-        s3_CMU_EM_MAX = refSt.s3_CMU_EM_MAX;
-        tof_MIN = refSt.tof_MIN;
-        tof_MAX = refSt.tof_MAX;
-    }
-
-    s2_CMU_EM_MIN = refSt.s2_CMU_EM_MIN;
-    s2_CMU_EM_MAX = refSt.s2_CMU_EM_MAX;
-    s4_CMU_EM_MIN = refSt.s4_CMU_EM_MIN;
-    s4_CMU_EM_MAX = refSt.s4_CMU_EM_MAX;
-
-
-
-    //------------------------------------------------------------------------------------
-    // Subselection
-    //------------------------------------------------------------------------------------
-    int kpor  = 0;
-    bool cst  = 0;
-    bool flag = 0;
-    for(int kpos = 0; kpos < (int) sortId.size(); kpos++)
-    {
-        kpor = sortId[kpos];
-
-        //--------------------------------------------------------------------------------
-        // Limit in the reduced coordinates (s1, s2, s3, s4)
-        //--------------------------------------------------------------------------------
-        cst  = (s1_CMU_EM[kpor] >= s1_CMU_EM_MIN) & (s1_CMU_EM[kpor] <= s1_CMU_EM_MAX);
-        cst  = cst & (s3_CMU_EM[kpor] >= s3_CMU_EM_MIN) & (s3_CMU_EM[kpor] <= s3_CMU_EM_MAX);
-
-        cst  = cst & (s2_CMU_EM[kpor] >= s2_CMU_EM_MIN) & (s2_CMU_EM[kpor] <= s2_CMU_EM_MAX);
-        cst  = cst & (s4_CMU_EM[kpor] >= s4_CMU_EM_MIN) & (s4_CMU_EM[kpor] <= s4_CMU_EM_MAX);
-
-        //--------------------------------------------------------------------------------
-        // Limits in the time of flight (TOF) if necessary
-        //--------------------------------------------------------------------------------
-        if(tof_MIN > 0) cst = cst & ( (tf_EM[kpor] - t0_EM[kpor]) > tof_MIN );
-        if(tof_MAX > 0) cst = cst & ( (tf_EM[kpor] - t0_EM[kpor]) < tof_MAX );
-
-        if(cst)
-        {
-            flag = 1;
-            t0_EM_R.push_back(t0_EM[kpor]);
-            tf_EM_R.push_back(tf_EM[kpor]);
-            s1_CMU_EM_R.push_back(s1_CMU_EM[kpor]);
-            s2_CMU_EM_R.push_back(s2_CMU_EM[kpor]);
-            s3_CMU_EM_R.push_back(s3_CMU_EM[kpor]);
-            s4_CMU_EM_R.push_back(s4_CMU_EM[kpor]);
-            s5_CMU_EM_R.push_back(s5_CMU_EM[kpor]);
-            pmin_dist_SEM_R.push_back(pmin_dist_SEM[kpor]);
-            s1_CM_SEM_R.push_back(s1_CM_SEM[kpor]);
-            s2_CM_SEM_R.push_back(s2_CM_SEM[kpor]);
-            s3_CM_SEM_R.push_back(s3_CM_SEM[kpor]);
-            s4_CM_SEM_R.push_back(s4_CM_SEM[kpor]);
-        }
-    }
-
-    //====================================================================================
-    // If there at least one solution that satisfies all the criteria
-    //====================================================================================
-    if(flag)
-    {
-        //--------------------------------------------------------------------------------
-        //Sort the subselection in sortId_R
-        //--------------------------------------------------------------------------------
-        sortId_R = sort_indexes(pmin_dist_SEM_R);
-
-        //================================================================================
-        // 5. The best solution in the subselection will serve as the first guess.
-        //================================================================================
-        int kpos = sortId_R[0];
-
-        //================================================================================
-        // 6. Initialize local variables: EM
-        //================================================================================
-        //RCM coordinates
-        st_EM[0] = s1_CMU_EM_R[kpos];
-        st_EM[1] = s2_CMU_EM_R[kpos];
-        st_EM[2] = s3_CMU_EM_R[kpos];
-        st_EM[3] = s4_CMU_EM_R[kpos];
-        st_EM[4] = PROJ_EPSILON;
-        //Time
-        t_EM[0] = t0_EM_R[kpos];
-        t_EM[1] = tf_EM_R[kpos];
-
-
-        //================================================================================
-        // 7. Initialize local variables: SEM
-        //================================================================================
-        //RCM coordinates
-        st_SEM[0] = s1_CM_SEM_R[kpos];
-        st_SEM[1] = s2_CM_SEM_R[kpos];
-        st_SEM[2] = s3_CM_SEM_R[kpos];
-        st_SEM[3] = s4_CM_SEM_R[kpos];
-        st_SEM[4] = 0.0;
-        //Initial time in SEM units
-        *t0_SEM = tf_EM_R[kpos]*SEML.us_em.ns;
-
-        //Minimum projection distance
-        *pmin_dist_SEM_out = pmin_dist_SEM_R[kpos];
-
-
-        return FTC_SUCCESS;
-    }
-    else
-    {
-        //================================================================================
-        // Else, we return a failure
-        //================================================================================
-        return FTC_FAILURE;
-
-    }
-}
-
-//----------------------------------------------------------------------------------------
-//         Brick B: generate a first guess (either a single unstable manifold leg or
-//              a complete trajectory EML2 orbit + man leg + SEMLi orbit).
-//----------------------------------------------------------------------------------------
-/**
- *  \brief Computing the first guess for the connection leg between the orbit orbit_EM and
- *         and the orbit orbit_SEM. Only the manifold leg is computed.
- *         The grid size is returned.
- **/
-int oomanfgeml2seml(double** y_traj, double* t_traj,
-                    Orbit& orbit_EM, Orbit& orbit_SEM,
-                    int dcs, int coord_type, int man_grid_size,
-                    RefSt& refSt)
-{
-    //====================================================================================
-    // 1.  Initialization
-    //====================================================================================
-    //------------------------------------------------------------------------------------
-    //Local variables to store the manifold leg
-    //------------------------------------------------------------------------------------
-    double** y_man_coord  = dmatrix(0, 5, 0, man_grid_size);
-    double*  t_man_coord  = dvector(0, man_grid_size);
-
-    //====================================================================================
-    // 2.  Compute the manifold leg
-    //====================================================================================
-    cout << " oomanfgeml2seml. Compute the manifold leg..."  << endl;
-    //------------------------------------------------------------------------------------
-    // Integration: from orbit_EM.t0 to orbit_EM.tf
-    // Note that the collisionner is not used at this step. It is used later, after
-    // the refinement procedures
-    //------------------------------------------------------------------------------------
-    int man_index = man_grid_size;
-    int ode78coll;
-
-    switch(refSt.grid)
-    {
-    case REF_FIXED_GRID:
-    {
-        //----------------------------------------------------------------------------
-        // Integration using ode78
-        //----------------------------------------------------------------------------
-        ode78(y_man_coord, t_man_coord, &ode78coll, orbit_EM.getT0(), orbit_EM.getTf(),
-              orbit_EM.getZ0(), 6, man_grid_size, dcs, NCEM, coord_type);
-
-        //----------------------------------------------------------------------------
-        // Save All BUT the last point
-        //----------------------------------------------------------------------------
-        for(int kman = 0; kman < man_index; kman++)
-        {
-            for(int i = 0; i < 6; i++) y_traj[i][kman] = y_man_coord[i][kman];
-            t_traj[kman] = t_man_coord[kman];
-        }
-        break;
-    }
-
-    case REF_VAR_GRID:
-    {
-        //----------------------------------------------------------------------------
-        // Integration using ode78_qbcp_vg (variable grid)
-        //----------------------------------------------------------------------------
-        man_index = ode78_qbcp_vg(y_man_coord, t_man_coord, &ode78coll, orbit_EM.getT0(),
-                                  orbit_EM.getTf(), orbit_EM.getZ0(), 6, man_grid_size,
-                                  dcs, NCEM, coord_type, man_grid_size);
-        //----------------------------------------------------------------------------
-        // Save All BUT the last point
-        //----------------------------------------------------------------------------
-        for(int kman = 0; kman < man_index; kman++)
-        {
-            for(int i = 0; i < 6; i++) y_traj[i][kman] = y_man_coord[i][kman];
-            t_traj[kman] = t_man_coord[kman];
-        }
-        break;
-    }
-
-    case REF_GIVEN_GRID:
-    {
-        //----------------------------------------------------------------------------
-        // Nothing to do here, since a previous computation has been performed
-        //----------------------------------------------------------------------------
-        //            double *t_traj_loc = dvector(0, man_grid_size);
-        //            qbcp_coc_time(t_traj, t_traj_loc, man_grid_size, coord_type, NCEM);
-        //
-        //            cout << "orbit_EM.getT0() = " << orbit_EM.getT0() << endl;
-        //            cout << "t_traj[0] = " <<  t_traj_loc[0]  << endl;
-        //
-        //            ode78_qbcp_gg(y_man_coord, t_man_coord, &ode78coll, t_traj_loc, orbit_EM.getZ0(),
-        //                          6, man_grid_size, dcs, NCEM, coord_type);
-        //
-        //            free_dvector(t_traj_loc, 0, man_grid_size);
-        break;
-    }
-    }
-
-
-    //====================================================================================
-    // 5. Compute the first point of the final SEMLi orbit and add it to the manifold leg
-    //====================================================================================
-    cout << " oomanfgeml2seml. Compute the first point of the final SEMLi orbit..."<< endl;
-
-    //------------------------------------------------------------------------------------
-    // Save the last point at position man_index
-    //------------------------------------------------------------------------------------
-    double yout[6], tout;
-    qbcp_coc(orbit_SEM.getT0(), orbit_SEM.getZ0(), yout, &tout, NCSEM, coord_type);
-
-    for(int i = 0; i < 6; i++) y_traj[i][man_index] = yout[i];
-    t_traj[man_index] = tout;
-
-
-    //====================================================================================
-    // Free
-    //====================================================================================
-    free_dmatrix(y_man_coord, 0, 5, 0, man_grid_size);
-    free_dvector(t_man_coord, 0, man_grid_size);
-
-    //The (true) grid size is returned
-    return man_index;
-}
-
-/**
- *  \brief Computing the first guess for the connection leg between the orbit orbit_EM and
- *         and the orbit orbit_SEM. The complete trajectory (EML2 + man leg + SEMLi)
- *         is computed.
- *         The grid size is returned.
- **/
-int oofgeml2seml(double** y_traj, double* t_traj,
-                 double** y_traj_comp, double* t_traj_comp,
-                 Orbit& orbit_EM, Orbit& orbit_SEM,
-                 int dcs, int coord_type, int grid_points_des[3], int grid_points_eff[3], int max_grid,
-                 RefSt& refSt, gnuplot_ctrl* h2, gnuplot_ctrl* h3)
-{
-    //====================================================================================
-    // 1. Initialize local variables
-    //====================================================================================
-    string fname = "oofgeml2seml";
-
-    //Maximum number of points on ONE leg
-    int grid_points_eff_max = max(grid_points_eff[0], max(grid_points_eff[1], grid_points_eff[2]));
-
-    //------------------------------------------------------------------------------------
-    // Local variables to store the manifold leg
-    //------------------------------------------------------------------------------------
-    double** y_man_NCEM  = dmatrix(0, 5, 0, grid_points_eff[0]);
-    double* t_man_EM     = dvector(0, grid_points_eff[0]);
-
-    double** y_man_NCSEM = dmatrix(0, 5, 0, grid_points_eff[2]);
-    double* t_man_SEM    = dvector(0, grid_points_eff[2]);
-
-    double** y_man_coord = dmatrix(0, 5, 0, grid_points_eff_max);
-    double** y_man_comp  = dmatrix(0, 5, 0, grid_points_eff_max);
-    double* t_man_coord  = dvector(0, grid_points_eff_max);
-    double* t_man_comp   = dvector(0, grid_points_eff_max);
-
-    //----------------------------------------------------------
-    // Define the time of flight on each orbit
-    //----------------------------------------------------------
-    double tof_eml_EM   = refSt.tspan_EM;    //TOF on EML2 orbit
-    double tof_seml_SEM = refSt.tspan_SEM;   //TOF on SEMLi orbit
-
-    //----------------------------------------------------------
-    //Complementary coordinate type
-    //----------------------------------------------------------
-    int comp_type = comp_coord_typ(coord_type);
-
-    //====================================================================================
-    // 2. Compute the initial orbit
-    //====================================================================================
-    cout << fname << ". Compute the initial orbit..."  << endl;
-    //------------------------------------------------------------------------------------
-    //For the computation of the initial orbit, we kill the unstable part.
-    //------------------------------------------------------------------------------------
-    orbit_EM.setSi(0.0, 4);
-
-    //------------------------------------------------------------------------------------
-    // Update the initial state in the orbit, with the RCM coordinates
-    //------------------------------------------------------------------------------------
-    orbit_EM.update_ic(orbit_EM.getSi());
-
-    //------------------------------------------------------------------------------------
-    //Integration on des_grid_size+1 fixed grid
-    //------------------------------------------------------------------------------------
-    int em_index = grid_points_eff[0];
-    switch(refSt.grid)
-    {
-    case REF_FIXED_GRID:
-    case REF_GIVEN_GRID:
-    {
-        int output = orbit_EM.traj_int_grid(orbit_EM.getT0()-tof_eml_EM, y_man_NCEM, t_man_EM, grid_points_eff[0], true);
-        //--------------------------------------------------------------------------------
-        //If output is strictly greater than 0, then the projection procedure inside
-        //the integration went wrong, and the new indix is output.
-        //It output == ORBIT_EPROJ, the projection procedure failed so bad that there
-        //is no point stored in the data, except the first one, and the new indix is zero
-        //--------------------------------------------------------------------------------
-        if(output == ORBIT_EPROJ) em_index = 0;
-        else if(output > 0) em_index = output;
-        break;
-    }
-
-    case REF_VAR_GRID:
-    {
-        em_index = orbit_EM.traj_int_var_grid(orbit_EM.getT0()-tof_eml_EM, y_man_NCEM, t_man_EM, grid_points_eff[0], true);
-        break;
-    }
-
-    }
-
-    //------------------------------------------------------------------------------------
-    //To coord_type coordinates
-    //------------------------------------------------------------------------------------
-    qbcp_coc_vec(y_man_NCEM, t_man_EM, y_man_coord, t_man_coord, em_index, NCEM, coord_type);
-    qbcp_coc_vec(y_man_NCEM, t_man_EM, y_man_comp,  t_man_comp,  em_index, NCEM, comp_type);
-
-    //------------------------------------------------------------------------------------
-    // Save All BUT the last point
-    //------------------------------------------------------------------------------------
-    for(int kman = 0; kman < em_index; kman++)
-    {
-        for(int i = 0; i < 6; i++) y_traj[i][kman] = y_man_coord[i][em_index-kman];
-        t_traj[kman] = t_man_coord[em_index-kman];
-    }
-
-    //------------------------------------------------------------------------------------
-    //Plot
-    //------------------------------------------------------------------------------------
-    gnuplot_plot_X(h2, y_man_coord, em_index+1, (char*)"", "points", "5", "3", 5);
-    gnuplot_plot_X(h3, y_man_comp, em_index+1, (char*)"", "points", "5", "3", 5);
-
-    //====================================================================================
-    // 4.3 Compute the manifold leg
-    //====================================================================================
-    cout << fname << ". Compute the manifold leg..."  << endl;
-
-    double tf_EM = orbit_SEM.getT0()/SEML.us_em.ns; //the end time is the starting time of the final orbit, in EM units
-
-    //------------------------------------------------------------------------------------
-    //For the computation of the initial orbit, we update the unstable part.
-    //------------------------------------------------------------------------------------
-    orbit_EM.setSi(PROJ_EPSILON, 4);
-
-    //------------------------------------------------------------------------------------
-    // Update the initial state in the orbit, with the RCM coordinates
-    //------------------------------------------------------------------------------------
-    orbit_EM.update_ic(orbit_EM.getSi());
-
-    //------------------------------------------------------------------------------------
-    // Integration
-    // Note that the collisionner is not used at this step. It is used later, after
-    // the refinement procedures
-    //------------------------------------------------------------------------------------
-    int ode78coll;
-    int man_index = grid_points_eff[1];
-
-    switch(refSt.grid)
-    {
-    case REF_FIXED_GRID:
-    case REF_GIVEN_GRID:
-    {
-        ode78(y_man_coord, t_man_coord, &ode78coll, orbit_EM.getT0(), tf_EM, orbit_EM.getZ0(), 6, grid_points_eff[1], dcs, NCEM, coord_type);
-        break;
-    }
-
-    case REF_VAR_GRID:
-    {
-        man_index = ode78_qbcp_vg(y_man_coord, t_man_coord, &ode78coll, orbit_EM.getT0(), tf_EM, orbit_EM.getZ0(), 6, grid_points_eff[1], dcs, NCEM, coord_type, -1);
-        break;
-    }
-
-    }
-
-    //------------------------------------------------------------------------------------
-    //To comp_type coordinates
-    //------------------------------------------------------------------------------------
-    qbcp_coc_vec(y_man_coord, t_man_coord, y_man_comp, t_man_comp, man_index, coord_type, comp_type);
-
-
-    //------------------------------------------------------------------------------------
-    // Save All BUT the last point
-    //------------------------------------------------------------------------------------
-    for(int kman = 0; kman < man_index; kman++)
-    {
-        for(int i = 0; i < 6; i++) y_traj[i][em_index + kman] = y_man_coord[i][kman];
-        t_traj[em_index + kman] = t_man_coord[kman];
-    }
-
-    //------------------------------------------------------------------------------------
-    //Plot
-    //------------------------------------------------------------------------------------
-    gnuplot_plot_X(h2, y_man_coord, man_index+1, (char*)"Man", "points", "1", "3", 4);
-    gnuplot_plot_X(h3, y_man_comp, man_index+1, (char*)"", "points", "1", "3", 4);
-
-    //====================================================================================
-    // 4.4 Compute the final SEMLi orbit
-    //====================================================================================
-    cout << fname << ". Compute the final SEMLi orbit..."  << endl;
-    //------------------------------------------------------------------------------------
-    // Initialize the initial conditions (both NC and RCM coordinates)
-    // We also need to kill the stable part.
-    //------------------------------------------------------------------------------------
-    orbit_SEM.setSi(0.0, 4);
-    orbit_SEM.update_ic(orbit_SEM.getSi());
-
-
-    //------------------------------------------------------------------------------------
-    //Integration on man_grid_size+1 fixed grid
-    //------------------------------------------------------------------------------------
-    int sem_index = grid_points_eff[2];
-
-    switch(refSt.grid)
-    {
-    case REF_FIXED_GRID:
-    case REF_GIVEN_GRID:
-    {
-        int output = orbit_SEM.traj_int_grid(orbit_SEM.getT0()+tof_seml_SEM, y_man_NCSEM, t_man_SEM, grid_points_eff[2], true);
-        //--------------------------------------------------------------------------------
-        //If output is strictly greater than 0, then the projection procedure inside
-        //the integration went wrong, and the new indix is output.
-        //It output == ORBIT_EPROJ, the projection procedure failed so bad that there
-        //is no point stored in the data, except the first one, and the new indix is zero
-        //--------------------------------------------------------------------------------
-        if(output == ORBIT_EPROJ) sem_index = 0;
-        else if(output > 0) sem_index = output;
-        break;
-    }
-
-    case REF_VAR_GRID:
-    {
-        sem_index = orbit_SEM.traj_int_var_grid(orbit_SEM.getT0()+tof_seml_SEM, y_man_NCSEM, t_man_SEM, grid_points_eff[2], 1);
-        break;
-    }
-    }
-
-
-    //------------------------------------------------------------------------------------
-    //To coord_type coordinates
-    //------------------------------------------------------------------------------------
-    qbcp_coc_vec(y_man_NCSEM, t_man_SEM, y_man_coord, t_man_coord, sem_index, NCSEM, coord_type);
-    qbcp_coc_vec(y_man_NCSEM, t_man_SEM, y_man_comp, t_man_comp, sem_index, NCSEM, comp_type);
-
-
-    //------------------------------------------------------------------------------------
-    // Save ALL points
-    //------------------------------------------------------------------------------------
-    for(int kman = 0; kman <= sem_index; kman++)
-    {
-        for(int i = 0; i < 6; i++) y_traj[i][em_index + man_index + kman] = y_man_coord[i][kman];
-        t_traj[em_index + man_index + kman] = t_man_coord[kman];
-    }
-
-    //------------------------------------------------------------------------------------
-    //Plot
-    //------------------------------------------------------------------------------------
-    gnuplot_plot_X(h2, y_man_coord, sem_index+1, (char*)"SEMLi", "points", "1", "3", 6);
-    gnuplot_plot_X(h3, y_man_comp, sem_index+1, (char*)"", "points", "1", "3", 6);
-
-    //====================================================================================
-    // Entire size is: no more than sum(grid_points_des) points or so.
-    //====================================================================================
-    int final_index = 0;
-    if(refSt.grid == REF_VAR_GRID)
-    {
-        final_index = em_index + man_index + sem_index;
-        int freq = final_index/(grid_points_des[0]+grid_points_des[1]+grid_points_des[2]);
-        cout << "----------------------------------"<< endl;
-        cout << "Number of MSD points:        "     << endl;
-        cout << "At EML:           " << em_index    << endl;
-        cout << "During coast arc: " << man_index   << endl;
-        cout << "At SEML:          " << sem_index   << endl;
-        cout << "Total:            " << final_index << endl;
-        cout << "Selecting 1/" << freq << " points" << endl;
-        cout << "Subtotal:         " << (int) floor(final_index/freq) << endl;
-        cout << "----------------------------------"<< endl;
-
-        //------------------------------------------------------------------------------------
-        // Subset of points in y_traj_comp/t_traj_comp
-        //------------------------------------------------------------------------------------
-        for(int kman = 0; kman <= floor(final_index/freq); kman++)
-        {
-            for(int i = 0; i < 6; i++) y_traj_comp[i][kman] = y_traj[i][freq*kman];
-            t_traj_comp[kman] = t_traj[freq*kman];
-        }
-
-        //New final index
-        final_index = floor(final_index/freq);
-
-        //------------------------------------------------------------------------------------
-        // Subset of points back in y_traj/t_traj
-        //------------------------------------------------------------------------------------
-        for(int kman = 0; kman <= final_index; kman++)
-        {
-            for(int i = 0; i < 6; i++) y_traj[i][kman] = y_traj_comp[i][kman];
-            t_traj[kman] = t_traj_comp[kman];
-        }
-    }
-    else
-    {
-        //If the grid size is fixed, we still return the sum of the variable indices, because
-        //some integration procedure could have gone wrong so that the returned indices
-        //are smaller than their optimal desired value
-        final_index = em_index + man_index + sem_index;
-    }
-
-    //====================================================================================
-    // Free
-    //====================================================================================
-    free_dmatrix(y_man_NCEM, 0, 5, 0, grid_points_eff[0]);
-    free_dmatrix(y_man_NCSEM, 0, 5, 0, grid_points_eff[2]);
-    free_dmatrix(y_man_coord, 0, 5, 0, grid_points_eff_max);
-    free_dmatrix(y_man_comp, 0, 5, 0, grid_points_eff_max);
-    free_dvector(t_man_EM, 0, grid_points_eff[0]);
-    free_dvector(t_man_SEM, 0, grid_points_eff[2]);
-    free_dvector(t_man_coord, 0, grid_points_eff_max);
-    free_dvector(t_man_comp, 0, grid_points_eff_max);
-
-    return final_index;
-}
-
-/**
- *  \brief Get the complementary coordinates associated to the coordinates coord_type.
- **/
-int comp_coord_typ(int coord_type)
-{
-    int comp_type = 0;
-    switch(coord_type)
-    {
-    case PSEM:
-        comp_type = PEM;
-        break;
-    case NCSEM:
-    case VNCSEM:
-        comp_type = NCEM;
-        break;
-    case PEM:
-        comp_type = PSEM;
-        break;
-    case NCEM:
-    case VNCEM:
-        comp_type = NCSEM;
-        break;
-    }
-    return comp_type;
-
-}
-
-
-//========================================================================================
-//
-//         Refinement of solutions: Complete trajectory
-//
-//========================================================================================
-/**
- *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM.
- *         A multiple_shooting_direct is applied on the WHOLE trajectory
- *         (EML2 orbit + manifold leg + SEMLi orbit).
- **/
-int oocomprefft3d(int grid_freq_days[3], int coord_type,
-                  Orbit& orbit_EM, Orbit& orbit_SEM,
-                  RefSt& refSt)
-
-{
-    //====================================================================================
-    // 1. Initialize local variables
-    //====================================================================================
-    string fname = "oocomprefft3d";
-    cout << fname << ". Initialization of the local variables..."  << endl;
-
-    // Status along the computation
-    int status = 0;
-
-    //------------------------------------------------------------------------------------
-    //Get the default coordinates system from the coord_type
-    //------------------------------------------------------------------------------------
-    int dcs  = default_coordinate_system(coord_type);
-
-    //------------------------------------------------------------------------------------
-    //Complementary coordinate type
-    //------------------------------------------------------------------------------------
-    int comp_type = comp_coord_typ(coord_type);
-
-    //====================================================================================
-    // 2. Init the gnuplot
-    //====================================================================================
-    //------------------------------------------------------------------------------------
-    //Gnuplot window
-    //------------------------------------------------------------------------------------
-    gnuplot_ctrl* h2, *h3;
-    h2 = gnuplot_init();
-    h3 = gnuplot_init();
-
-    gnuplot_cmd(h2, "set title \"Computation coordinates\" ");
-    gnuplot_cmd(h3, "set title \"Complementary coordinates\" ");
-    //gnuplot_cmd(h2, "set view equal xyz");
-    //gnuplot_cmd(h3, "set view equal xyz");
-    gnuplot_cmd(h2, "set grid");
-    gnuplot_cmd(h3, "set grid");
-
-    //------------------------------------------------------------------------------------
-    //Notable points in SEM & EM systems
-    //------------------------------------------------------------------------------------
-    notablePoints(h2, h3, coord_type);
-
-    //====================================================================================
-    // 3. Init the data containers
-    //====================================================================================
-    //------------------------------------------------------------------------------------
-    // Initialize the number of points on the grids. If the number of points is fixed,
-    // the solution is straightforward. If the number of points is desired variable,
-    // the default number are set to an arbitrarily high number of points.
-    //------------------------------------------------------------------------------------
-    cout << " oocomprefft3d. Initialize the number of points on the grids..."  << endl;
-    int max_grid    = 50000;
-    int grid_points_des[3];
-
-    //Desired number of points
-    grid_points_des[0] = refSt.tspan_EM/(2*M_PI*86400*grid_freq_days[0]/SEML.cs_em.cr3bp.T);
-    grid_points_des[1] = (orbit_SEM.getT0()/SEML.us_em.ns - orbit_EM.getT0())/(2*M_PI*86400*grid_freq_days[1]/SEML.cs_em.cr3bp.T);
-    grid_points_des[2] = refSt.tspan_SEM/(2*M_PI*86400*grid_freq_days[2]/SEML.cs_sem.cr3bp.T);
-
-    cout << "Desired frequency on leg 1: "  << grid_freq_days[0]  << "days " << endl;
-    cout << "==> the number of points  = "  << grid_points_des[0] << endl    << endl;
-    cout << "Desired frequency on leg 2: "  << grid_freq_days[1]  << "days " << endl;
-    cout << "==> the number of points  = "  << grid_points_des[1] << endl    << endl;
-    cout << "Desired frequency on leg 3: "  << grid_freq_days[2]  << "days " << endl;
-    cout << "==> the number of points  = "  << grid_points_des[2] << endl    << endl;
-
-
-    //Effective number of points for the following computation: equal to grid_points_des
-    //if the number of points if fixed, equal to max_grid otherwise
-    int grid_points_eff[3];
-    grid_points_eff[0]  = (refSt.grid == REF_VAR_GRID) ? max_grid:grid_points_des[0];
-    grid_points_eff[1]  = (refSt.grid == REF_VAR_GRID) ? max_grid:grid_points_des[1];
-    grid_points_eff[2]  = (refSt.grid == REF_VAR_GRID) ? max_grid:grid_points_des[2];
-
-    //Number of points on the entire trajectory
-    int traj_grid_eff   = grid_points_eff[0]+grid_points_eff[1]+grid_points_eff[2];
-
-    //------------------------------------------------------------------------------------
-    //To store final data
-    //------------------------------------------------------------------------------------
-    double** y_traj  = dmatrix(0, 41, 0, traj_grid_eff);
-    double*  t_traj  = dvector(0, traj_grid_eff);
-
-    double** y_traj_comp  = dmatrix(0, 41, 0, traj_grid_eff);
-    double*  t_traj_comp  = dvector(0, traj_grid_eff);
-
-    //------------------------------------------------------------------------------------
-    //Local variables to store the refined trajectory
-    //------------------------------------------------------------------------------------
-    double** y_traj_n   = dmatrix(0, 41, 0, traj_grid_eff);
-    double* t_traj_n    = dvector(0, traj_grid_eff);
-
-    //====================================================================================
-    // 4. Build the trajectory
-    //====================================================================================
-    int final_index = oofgeml2seml(y_traj, t_traj, y_traj_comp, t_traj_comp,
-                                   orbit_EM, orbit_SEM, dcs, coord_type,
-                                   grid_points_des,
-                                   grid_points_eff,
-                                   max_grid,
-                                   refSt, h2, h3);
-
-
-    //====================================================================================
-    // Initial trajectory, on a grid
-    //====================================================================================
-    cout << " oocomprefft3d. Initial trajectory, on a grid..."  << endl;
-    int mPlot = 100;
-
-    double** ymc        = dmatrix(0, 5, 0, mPlot);
-    double* tmc         = dvector(0, mPlot);
-    double** ymc_comp   = dmatrix(0, 5, 0, mPlot);
-    double* tmc_comp    = dvector(0, mPlot);
-
-    double** ymc_v      = dmatrix(0, 5, 0, mPlot*final_index);
-    double* tmc_v       = dvector(0, mPlot*final_index);
-    double** ymc_comp_v = dmatrix(0, 5, 0, mPlot*final_index);
-    double* tmc_comp_v  = dvector(0, mPlot*final_index);
-
-    //Initial trajectory on lines, segment by segment
-    plottrajsegbyseg(y_traj, t_traj, final_index, mPlot, coord_type, 0.0, 0.0,
-                     coord_type, h2, comp_type,  h3, 7, "Initial guess");
-
-
-    //====================================================================================
-    // 5. Differential correction & final trajectory
-    //====================================================================================
-    cout << fname << ". Differential correction procedure.              "  << endl;
-    cout << "-----------------------------------------------------------"  << endl;
-    pressEnter(refSt.isFlagOn);
-
-    int isPlotted   = 0;
-    status = multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, h2);
-    //status =multiple_shooting_direct_variable_time(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, isTimeFixed, h2);
-
-    //------------------------------------------------------------------------------------
-    // If something went bad, an error is returned
-    //------------------------------------------------------------------------------------
-    if(status)
-    {
-        cerr << fname << ". Error during the differential correction procedure.";
-        cerr << " ref_errno = " << ref_strerror(status) << endl;
-        return FTC_FAILURE;
-    }
-
-
-    //------------------------------------------------------------------------------------
-    // Final trajectory, on a grid
-    //------------------------------------------------------------------------------------
-    cout << fname << ". Final trajectory, on a grid..."  << endl;
-    //Final trajectory on lines, segment by segment
-    plottrajsegbyseg(y_traj_n, t_traj_n, final_index, mPlot, coord_type, 0.0, 0.0,
-                     coord_type, h2, comp_type, h3, 3, "Final guess");
-
-    //====================================================================================
-    // 6. Store the data, in sys units
-    //====================================================================================
-    cout << fname << ". Storing the refined solution in system units "  << endl;
-    cout << " The solution will be stored in " << filenameCUM(OFTS_ORDER, TYPE_COMP_FOR_JPL, SEML.li_SEM) << endl;
-    cout << "-----------------------------------------------------------"  << endl;
-    writeCOMP_txt(t_traj_n, y_traj_n, final_index);
-
-
-    //====================================================================================
-    // 7. JPL refinement
-    //====================================================================================
-    if(refSt.isJPL)
-    {
-        status = oojplrefft3d(coord_type, refSt);
-
-        //--------------------------------------------------------------------------------
-        // If something went bad, an error is returned
-        //--------------------------------------------------------------------------------
-        if(status)
-        {
-            cerr << fname << ". Error during the differential correction procedure.";
-            cerr << " ref_errno = " << ref_strerror(status) << endl;
-            return FTC_FAILURE;
-        }
-    }
-
-
-
-    //------------------------------------------------------------------------------------
-    //Gnuplot window
-    //------------------------------------------------------------------------------------
-    pressEnter(refSt.isFlagOn);
-    gnuplot_close(h2);
-    gnuplot_close(h3);
-
-
-    //====================================================================================
-    // Free the data containers
-    //====================================================================================
-    free_dmatrix(y_traj, 0, 41, 0, traj_grid_eff);
-    free_dvector(t_traj, 0, traj_grid_eff);
-    free_dmatrix(y_traj_comp, 0, 41, 0, traj_grid_eff);
-    free_dvector(t_traj_comp, 0, traj_grid_eff);
-    free_dmatrix(y_traj_n, 0, 41, 0, traj_grid_eff);
-    free_dvector(t_traj_n, 0, traj_grid_eff);
-
-    free_dmatrix(ymc, 0, 5, 0, mPlot);
-    free_dvector(tmc, 0, mPlot);
-    free_dmatrix(ymc_comp, 0, 5, 0, mPlot);
-    free_dvector(tmc_comp, 0, mPlot);
-
-    free_dmatrix(ymc_v, 0, 5, 0, mPlot*final_index);
-    free_dvector(tmc_v, 0, mPlot*final_index);
-    free_dmatrix(ymc_comp_v, 0, 5, 0, mPlot*final_index);
-    free_dvector(tmc_comp_v  , 0, mPlot*final_index);
-
-    return FTC_SUCCESS;
-}
-
-//========================================================================================
-//
-//         Refinement of solutions: to JPL
-//
-//========================================================================================
-/**
- *  \brief Refine a given output of oocomprefft3d into JPL ephemerides.
- **/
-int oojplrefft3d(int coord_type, RefSt& refSt)
-{
-    //====================================================================================
-    // 1. Read the data, in sys units
-    //====================================================================================
-    string fname = "oojplrefft3d";
-    cout << " oojplrefft3d. Read the data, in sys units..."  << endl;
-    int status = 0;
-
-    //------------------------------------------------------------------------------------
-    //Local variables to store the refined trajectory
-    //------------------------------------------------------------------------------------
-    int final_index = getLengthCOMP_txt();
-    double** y_traj_n   = dmatrix(0, 41, 0, final_index);
-    double* t_traj_n    = dvector(0, final_index);
-
-    //------------------------------------------------------------------------------------
-    //Read the data stored in a data file
-    //------------------------------------------------------------------------------------
-    readCOMP_txt(t_traj_n, y_traj_n, final_index);
-
-    //====================================================================================
-    // 2. Local parameters
-    //====================================================================================
-    //------------------------------------------------------------------------------------
-    //Complementary coordinate type
-    //------------------------------------------------------------------------------------
-    int comp_type = comp_coord_typ(coord_type);
-
-    //------------------------------------------------------------------------------------
-    // State and time vectors
-    //------------------------------------------------------------------------------------
-    int mPlot = 10;
-    double** ymc        = dmatrix(0, 5, 0, mPlot);
-    double* tmc         = dvector(0, mPlot);
-    double** ymc_comp   = dmatrix(0, 5, 0, mPlot);
-    double* tmc_comp    = dvector(0, mPlot);
-
-    double** ymc_v      = dmatrix(0, 5, 0, mPlot*final_index);
-    double* tmc_v       = dvector(0, mPlot*final_index);
-    double** ymc_comp_v = dmatrix(0, 5, 0, mPlot*final_index);
-    double* tmc_comp_v  = dvector(0, mPlot*final_index);
-
-    //------------------------------------------------------------------------------------
-    //Get the default coordinates system from the coord_type
-    //Get the default framework from the coord_type
-    //------------------------------------------------------------------------------------
-    //int dcs  = default_coordinate_system(coord_type);
-    int fwrk = default_framework(coord_type);
-
-    //====================================================================================
-    // 3. Init the gnuplot
-    //====================================================================================
-    //------------------------------------------------------------------------------------
-    //Gnuplot window
-    //------------------------------------------------------------------------------------
-    gnuplot_ctrl* h2, *h3;
-    h2 = gnuplot_init();
-    h3 = gnuplot_init();
-
-    gnuplot_cmd(h2, "set title \"Computation coordinates\" ");
-    gnuplot_cmd(h3, "set title \"Complementary coordinates\" ");
-    //gnuplot_cmd(h2, "set view equal xyz");
-    //gnuplot_cmd(h3, "set view equal xyz");
-    gnuplot_cmd(h2, "set grid");
-    gnuplot_cmd(h3, "set grid");
-
-    //------------------------------------------------------------------------------------
-    //Notable points in SEM & EM systems
-    //------------------------------------------------------------------------------------
-    notablePoints(h2, h3, coord_type);
-
-    //====================================================================================
-    // 5. Initial trajectory, on a grid
-    //====================================================================================
-    cout << " oojplrefft3d. Initial trajectory, on a grid..."  << endl;
-    //Final trajectory on lines, segment by segment
-    plottrajsegbyseg(y_traj_n, t_traj_n, final_index, mPlot, coord_type, 0.0, 0.0,
-                     coord_type, h2, comp_type, h3, 3, "Initial trajectory");
-
-    //------------------------------------------------------------------------------------
-    //Free at this point, because final_index is gonna change
-    //------------------------------------------------------------------------------------
-    free_dmatrix(ymc_v, 0, 5, 0, mPlot*final_index);
-    free_dvector(tmc_v, 0, mPlot*final_index);
-    free_dmatrix(ymc_comp_v, 0, 5, 0, mPlot*final_index);
-    free_dvector(tmc_comp_v, 0, mPlot*final_index);
-
-    //====================================================================================
-    // 5. JPL refinement
-    //====================================================================================
-    pressEnter(refSt.isFlagOn);
-
-    //====================================================================================
-    // Select between VECLI and J2000
-    //====================================================================================
-    int choice = 0;
-    //If refSt.djplcoord does not contain a valid choice (e.g. -1), we ask the user
-    if(refSt.djplcoord != 0 && refSt.djplcoord != 1  && refSt.djplcoord != 2)
-    {
-        cout << "Enter 0 for VECLI, 1 for J2000, 2 for NJ2000: ";
-        cin >> choice;
-    }
-    else
-    {
-        choice = refSt.djplcoord;
-    }
-
-    int coord_int = 0, fwrk_int = 0;
-    switch(choice)
-    {
-    case 0:
-        coord_int = VECLI;
-        fwrk_int  = I_ECLI;
-        break;
-    case 1:
-        coord_int = J2000;
-        fwrk_int  = I_J2000;
-        break;
-    case 2:
-        coord_int = NJ2000;
-        fwrk_int  = I_NJ2000;
-        changeDCS(SEML, fwrk);
-        cout << "NJ2000 has been chosen: changeDCS is applied to match " << endl;
-        cout << " the framework associated to coord_type.";
-        break;
-    default:
-        cout << "wrong input. NJ2000 is used by default." << endl;
-        cout << "NJ2000 has been chosen: changeDCS is applied to match " << endl;
-        cout << " the framework associated to coord_type.";
-        coord_int = NJ2000;
-        fwrk_int  = I_NJ2000;
-        changeDCS(SEML, fwrk);
-        break;
-    }
-
-    //====================================================================================
-    // Initialize SPICE kernerls & VF
-    //====================================================================================
-    gnuplot_ctrl* h4 = gnuplot_init();
-    cout << fname << ". Initialize SPICE kernerls..." << endl;
-    furnsh_c("spice/kernels/metakernel.furnsh");
-    int shift = 0;
-
-
-    //====================================================================================
-    // Search for best fit in  JPL ephemerides
-    //====================================================================================
-    cout << fname << ". Search for best fit in JPL DE430..." << endl;
-
-    //----------------------------------------------------------
-    //Get the best fit at t = t_traj_n[shift]. et0 is in seconds
-    //----------------------------------------------------------
-    double et0, et;
-    double tsys0 = t_traj_n[shift];
-    qbcp2jpl(tsys0, &et0, coord_type);
-
-    //----------------------------------------------------------
-    //Display the value in "D" format
-    //----------------------------------------------------------
-    //ConstSpiceChar*  picture  = "Wkd Mon DD HH:MN:SC PDT YYYY ::UTC-7";
-    SpiceChar output[50];
-    et2utc_c (et0, "C", 6, 51, output);
-    cout << fname << ". The best fit has been obtained for the following date:" << endl;
-    printf ( "%s\n", output);
-    cout << "tsys0 = " << tsys0 << endl;
-    cout << "et0 = "   << et0   << endl;
-
-    //------------------------------------------------------------------------------------
-    // Complementary value ot tsys0
-    //------------------------------------------------------------------------------------
-    double tsys0_comp = tsys0;
-    switch(eph_coord(comp_type))
-    {
-    case VEM:
-        tsys0_comp /= SEML.us_em.ns;
-        break;
-
-    case VSEM:
-        tsys0_comp *= SEML.us_em.ns;
-        break;
-    }
-
-    //====================================================================================
-    // Change of coordinates
-    //====================================================================================
-    cout << fname << ". Change of coordinates syn -> ecliptic..." << endl;
-
-    //------------------------------------------------------------------------------------
-    //Initialize the vectors that will be used throughout the computation
-    //------------------------------------------------------------------------------------
-    double** y_traj_jpl = dmatrix(0, 41, 0, final_index);
-    double* t_traj_jpl  = dvector(0, final_index);
-
-    //------------------------------------------------------------------------------------
-    //    Computes a first guess in ephemerides coordinates, switching between the
-    //    Earth-Moon and Sun-Earth plane of motion when the discrepancy between the two
-    //    coordinates system is minimal.
-    //------------------------------------------------------------------------------------
-    //    final_index = oojplfg3d_switch(y_traj_n, t_traj_n, y_traj_jpl, t_traj_jpl, final_index,
-    //                                   coord_type, comp_type, coord_int,
-    //                                   et0, tsys0, tsys0_comp);
-
-
-    //------------------------------------------------------------------------------------
-    //Same as oojplfg3d_switch, with a refinement of the position of the minimum.
-    //------------------------------------------------------------------------------------
-    //    int mRef = 50;
-    //    final_index = oojplfg3d_super_switch(y_traj_n, t_traj_n, y_traj_jpl, t_traj_jpl, final_index,
-    //                                   coord_type, comp_type, coord_int, mRef,
-    //                                   et0, tsys0, tsys0_comp);
-
-
-    //------------------------------------------------------------------------------------
-    //Same as oojplfg3d_switch, with an interpolation before & after the switching point.
-    //------------------------------------------------------------------------------------
-    int mRef = 5;
-    final_index = oojplfg3d_interpolation(y_traj_n, t_traj_n, &y_traj_jpl, &t_traj_jpl, final_index,
-                                          coord_type, comp_type, coord_int, mRef,
-                                          et0, tsys0, tsys0_comp);
-    cout << "final_index = " << final_index << endl;
-
-    //------------------------------------------------------------------------------------
-    //   Once the first guess is computed, we can safely initialize the other vectors and
-    //   matrices, since final_index will not change anymore.
-    //------------------------------------------------------------------------------------
-    double** y_traj_jpl_n = dmatrix(0, 41, 0, final_index);
-    double* t_traj_jpl_n  = dvector(0, final_index);
-
-    double** y_jpl_temp   = dmatrix(0, 41, 0, final_index);
-    double* t_jpl_temp    = dvector(0, final_index);
-
-    double* et_traj_jpl   = dvector(0, final_index);
-
-    double** y_earth_spice = dmatrix(0, 5, 0, final_index);
-    double** y_moon_spice  = dmatrix(0, 5, 0, final_index);
-    double** y_l2_spice    = dmatrix(0, 5, 0, final_index);
-
-    ymc_v       = dmatrix(0, 5, 0, mPlot*final_index);
-    tmc_v       = dvector(0, mPlot*final_index);
-    ymc_comp_v  = dmatrix(0, 5, 0, mPlot*final_index);
-    tmc_comp_v  = dvector(0, mPlot*final_index);
-
-
-    //------------------------------------------------------------------------------------
-    //Time in seconds: €€TODO: adapt the other cases, only NJ2000 for now!!
-    //------------------------------------------------------------------------------------
-    for(int p = 0; p <= final_index; p++)
-    {
-        et_traj_jpl[p] = t_traj_jpl[p]/SEML.ss.n;
-    }
-
-    //====================================================================================
-    // Plotting Moon +  Earth + L2
-    //====================================================================================
-    cout << fname << ". Plotting Moon +  Earth + L2..." << endl;
-
-    //------------------------------------------------------------------------------------
-    //Position of the Moon +  Earth + L2
-    //------------------------------------------------------------------------------------
-    double lt, YV[6];
-    for(int p = 0; p <= final_index; p++)
-    {
-        //Current time in seconds
-        et = et_traj_jpl[p];
-        //EARTH
-        spkezr_c ("EARTH", et, DEFFRAME,  "NONE", DEFOBS, YV, &lt);
-        for(int i = 0; i < 6; i++) y_earth_spice[i][p] = YV[i];
-        //MOON
-        spkezr_c ("MOON", et, DEFFRAME,  "NONE", DEFOBS, YV, &lt);
-        for(int i = 0; i < 6; i++) y_moon_spice[i][p] = YV[i];
-        //L2
-        spkez_c (392, et, DEFFRAME,  "NONE", 0, YV, &lt);
-        for(int i = 0; i < 6; i++) y_l2_spice[i][p] = YV[i];
-    }
-
-    //------------------------------------------------------------------------------------
-    //Position of the Sun +  Earth + Initial guess in coord_type coordinates
-    //------------------------------------------------------------------------------------
-    ecl2coordstate_vec(y_earth_spice, et_traj_jpl, y_jpl_temp, t_jpl_temp, final_index, coord_type, et0, tsys0, eph_coord(coord_type));
-    gnuplot_plot_X(h2, y_jpl_temp, final_index+1, (char*) "EARTH", "points", "3", "2", 8);
-
-    ecl2coordstate_vec(y_moon_spice, et_traj_jpl, y_jpl_temp, t_jpl_temp, final_index, coord_type, et0, tsys0, eph_coord(coord_type));
-    gnuplot_plot_X(h2, y_jpl_temp, final_index+1, (char*) "MOON", "points", "4", "2", 8);
-
-    ecl2coordstate_vec(y_l2_spice, et_traj_jpl, y_jpl_temp, t_jpl_temp, final_index, coord_type, et0, tsys0, eph_coord(coord_type));
-    gnuplot_plot_X(h2, y_jpl_temp, final_index+1, (char*) "SEMLi", "points", "5", "2", 8);
-
-    //====================================================================================
-    // Plotting Initial Guess
-    //====================================================================================
-    pressEnter(refSt.isFlagOn);
-    cout << fname << ". Plotting Initial Guess..." << endl;
-
-    //------------------------------------------------------------------------------------
-    //Initial trajectory on lines, segment by segment
-    //------------------------------------------------------------------------------------
-    plottrajsegbyseg(y_traj_jpl, t_traj_jpl, final_index, mPlot, coord_int,
-                     et0, tsys0, coord_type, h2, comp_type,  h3, 6,
-                     "Initial guess in JPL ephemerides");
-
-    //====================================================================================
-    // 6.5 Differential correction
-    //====================================================================================
-    pressEnter(refSt.isFlagOn);
-    cout << fname << ". Refine trajectory in JPL ephemerides..." << endl;
-    status  = multiple_shooting_direct_variable_time(y_traj_jpl, t_traj_jpl, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, coord_int,  5e-10, true, h4);
-    //status  = multiple_shooting_direct(y_traj_jpl, t_traj_jpl, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, coord_int, true, h4);
-    //Plot
-    gnuplot_plot_X(h4, y_traj_jpl_n, final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
-
-    //------------------------------------------------------------------------------------
-    // If something went bad, an error is returned
-    //------------------------------------------------------------------------------------
-    if(status)
-    {
-        cerr << fname << ". Error during the differential correction procedure.";
-        cerr << " ref_errno = " << ref_strerror(status) << endl;
-        return FTC_FAILURE;
-    }
-
-
-    //====================================================================================
-    //Final trajectory on lines, segment by segment
-    //====================================================================================
-    plottrajsegbyseg(y_traj_jpl_n, t_traj_jpl_n, final_index, mPlot, coord_int,
-                     et0, tsys0, coord_type, h2, comp_type,  h3, 2,
-                     "Final guess in JPL ephemerides");
-
-
-    //------------------------------------------------------------------------------------
-    //Gnuplot window
-    //------------------------------------------------------------------------------------
-    pressEnter(refSt.isFlagOn);
-    gnuplot_close(h2);
-    gnuplot_close(h3);
-    gnuplot_close(h4);
-
-    //====================================================================================
-    // Free the data containers
-    //====================================================================================
-    free_dmatrix(y_traj_n, 0, 41, 0, final_index);
-    free_dvector(t_traj_n, 0, final_index);
-
-    free_dmatrix(ymc, 0, 5, 0, mPlot);
-    free_dvector(tmc, 0, mPlot);
-    free_dmatrix(ymc_comp, 0, 5, 0, mPlot);
-    free_dvector(tmc_comp, 0, mPlot);
-
-    free_dmatrix(y_jpl_temp, 0, 41, 0, final_index);
-    free_dvector(t_jpl_temp, 0, final_index);
-    free_dmatrix(y_traj_jpl_n, 0, 41, 0, final_index);
-    free_dvector(t_traj_jpl_n, 0, final_index);
-    free_dvector(et_traj_jpl, 0, final_index);
-
-    return FTC_SUCCESS;
-}
-
-
-/**
- *  \brief Refine a given output of oocomprefft3d into Inertial Coordinates, then into
- *         JPL coordinates.
- **/
-int oointojplrefft3d(int coord_type, RefSt& refSt)
-{
-    //====================================================================================
-    // 1. Read the data, in coord_type units
-    //====================================================================================
-    string fname = "ooinrefft3d";
-    cout << fname << ". Read the data, in coord_type units..."  << endl;
-    int status = 0;
-
-    //------------------------------------------------------------------------------------
-    //Local variables to store the refined trajectory
-    //------------------------------------------------------------------------------------
-    int final_index = getLengthCOMP_txt();
-    double** y_traj_n   = dmatrix(0, 41, 0, final_index);
-    double* t_traj_n    = dvector(0, final_index);
-
-    //------------------------------------------------------------------------------------
-    //Read the data stored in a data file
-    //------------------------------------------------------------------------------------
-    readCOMP_txt(t_traj_n, y_traj_n, final_index);
-
-    //------------------------------------------------------------------------------------
-    //Arbitrarily reduce the number of points by a factor
-    //------------------------------------------------------------------------------------
-    cout << fname << ". Reduce the number of points..."  << endl;
-    int factor = 3;
-    final_index = final_index/factor;
-
-    for(int k = 0; k <= final_index; k++)
-    {
-        for(int i = 0; i <6; i++) y_traj_n[i][k] = y_traj_n[i][factor*k];
-        t_traj_n[k] = t_traj_n[factor*k];
-    }
-
-
-    //====================================================================================
-    // 2. Local parameters
-    //====================================================================================
-    //Complementary coordinate type
-    int comp_type = comp_coord_typ(coord_type);
-
-    //------------------------------------------------------------------------------------
-    // State and time vectors
-    //------------------------------------------------------------------------------------
-    int mPlot = 10;
-    double** ymc        = dmatrix(0, 5, 0, mPlot);
-    double* tmc         = dvector(0, mPlot);
-    double** ymc_comp   = dmatrix(0, 5, 0, mPlot);
-    double* tmc_comp    = dvector(0, mPlot);
-
-    double** y_jpl_temp   = dmatrix(0, 41, 0, final_index);
-    double* t_jpl_temp    = dvector(0, final_index);
-
-    //------------------------------------------------------------------------------------
-    //Get the default coordinates system from the coord_type
-    //Get the default framework from the coord_type
-    //------------------------------------------------------------------------------------
-    //int dcs  = default_coordinate_system(coord_type);
-    int fwrk = default_framework(coord_type);
-
-    //====================================================================================
-    // 3. Init the gnuplot
-    //====================================================================================
-    //Gnuplot window
-    gnuplot_ctrl* h2, *h3, * h4;
-
-    h2 = gnuplot_init();
-    h3 = gnuplot_init();
-    h4 = gnuplot_init();
-
-    gnuplot_cmd(h2, "set title \"Computation coordinates\" ");
-    gnuplot_cmd(h3, "set title \"Complementary coordinates\" ");
-    gnuplot_cmd(h4, "set title \"Continuation steps\" ");
-
-    gnuplot_cmd(h2, "set grid");
-    gnuplot_cmd(h3, "set grid");
-    gnuplot_cmd(h4, "set grid");
-
-    //Notable points in SEM & EM systems
-    notablePoints(h2, h3, coord_type);
-
-    //Color for plots
-    int color = 1;
-
-    //====================================================================================
-    // 5. Initial trajectory, on a grid
-    //====================================================================================
-    cout << " oojplrefft3d. Initial trajectory, on a grid..."  << endl;
-    //Initial trajectory on lines, segment by segment
-    plottrajsegbyseg(y_traj_n, t_traj_n, final_index, mPlot, coord_type,
-                     0.0, 0.0, coord_type, h2, comp_type,  h3,color++,
-                     "Initial guess (NCSEM)");
-
-    //====================================================================================
-    // 5. INERTIAL refinement
-    //====================================================================================
-    //pressEnter(refSt.isFlagOn);
-
-    //====================================================================================
-    // Select ECISEM
-    //====================================================================================
-    int coord_int = ECISEM;
-    //int fwrk_int  = I_ECISEM;
-
-    //====================================================================================
-    // Change FOCUS
-    //====================================================================================
-    cout << "ECISEM has been chosen: changeDCS is applied to match the framework associated to coord_type.";
-    changeDCS(SEML, fwrk);
-
-    //====================================================================================
-    // Change of coordinates
-    //====================================================================================
-    cout << fname << ". Change of coordinates syn -> ecliptic..." << endl;
-
-    //------------------------------------------------------------------------------------
-    //Initialize the vectors that will be used throughout the computation
-    //------------------------------------------------------------------------------------
-    double** y_traj_ecisem = dmatrix(0, 41, 0, final_index);
-    double* t_traj_ecisem  = dvector(0, final_index);
-
-    //------------------------------------------------------------------------------------
-    //COC: coord_type -> coord_int
-    //------------------------------------------------------------------------------------
-    qbcp_coc_vec(y_traj_n, t_traj_n, y_traj_ecisem, t_traj_ecisem, final_index, coord_type, coord_int);
-
-
-    //====================================================================================
-    // Plotting Initial Guess
-    //====================================================================================
-    //pressEnter(refSt.isFlagOn);
-    cout << fname << ". Plotting Initial Guess..." << endl;
-    //------------------------------------------------------------------------------------
-    //Initial trajectory on lines, segment by segment
-    //------------------------------------------------------------------------------------
-    plottrajsegbyseg(y_traj_ecisem, t_traj_ecisem, final_index, mPlot, coord_int,
-                     0.0, 0.0, coord_type, h2, comp_type,  h3, color++,
-                     "Initial guess (ECISEM)");
-
-
-    //====================================================================================
-    // 6.5 Differential correction, in ECISEM framework
-    //====================================================================================
-    //pressEnter(refSt.isFlagOn);
-    cout << fname << ". Refine trajectory in JPL ephemerides..." << endl;
-    //DiffCorr
-    status  = multiple_shooting_direct(y_traj_ecisem, t_traj_ecisem, y_traj_ecisem, t_traj_ecisem, 42, final_index, coord_int, true, h4);
-    //Plot
-    gnuplot_plot_X(h4, y_traj_ecisem, final_index+1, (char*) "Final trajectory", "lines", "2", "2", color);
-
-    //------------------------------------------------------------------------------------
-    // If something went bad, an error is returned
-    //------------------------------------------------------------------------------------
-    if(status)
-    {
-        cerr << fname << ". Error during the differential correction procedure.";
-        cerr << " ref_errno = " << ref_strerror(status) << endl;
-        return FTC_FAILURE;
-    }
-
-
-    //====================================================================================
-    //Final trajectory on lines, segment by segment, saved on txt file
-    //====================================================================================
-    plottrajsegbyseg(y_traj_ecisem, t_traj_ecisem, final_index, mPlot, coord_int,
-                     0.0, 0.0, coord_type, h2, comp_type,  h3, color++,
-                     "Final guess (ECISEM)");
-
-
-    //====================================================================================
-    // JPL: initialization and time selection
-    //====================================================================================
-    cout << fname << ". Initialize SPICE kernerls..." << endl;
-    furnsh_c("spice/kernels/metakernel.furnsh");
-
-    //------------------------------------------------------------------------------------
-    //Get the best fit at tsys0 = 0.0. et0 is in seconds. After this step,
-    //et0 contains the synchronized time defined by:
-    //At epoch et0, the positions of the Sun, Earth and Moon in JPL ephemerides match
-    //as much as possible the position of the Sun, Earth and Moon in the QBCP at tsys0 = 0
-    //------------------------------------------------------------------------------------
-    double et0;
-    double tsys0 = 0.0;//t_traj_ecisem[0];
-    //qbcp2jpl(tsys0, &et0, coord_int);
-    qbcp2jpl_inertial(tsys0, &et0, coord_int);
-
-    //------------------------------------------------------------------------------------
-    //Display the value in "D" format
-    //------------------------------------------------------------------------------------
-    //ConstSpiceChar*  picture  = "Wkd Mon DD HH:MN:SC PDT YYYY ::UTC-7";
-    SpiceChar output[50];
-    et2utc_c (et0, "C", 6, 51, output);
-    cout << fname << ". The best fit has been obtained for the following date:" << endl;
-    printf ( "%s\n", output);
-
-    //------------------------------------------------------------------------------------
-    //We have to define tsys0 in complementary EM units,
-    //------------------------------------------------------------------------------------
-    //double tsys0_comp = tsys0/SEML.us_em.ns;
-
-    //------------------------------------------------------------------------------------
-    //Time shift stored in SEML: it is needed to synchronize the QBCP and the JPL ephemerides
-    //------------------------------------------------------------------------------------
-    SEML.ss.tshift = et0*SEML.ss.n - tsys0;
-
-    //====================================================================================
-    //Compute the equivalent of the state along the trajectory in NJ2000 coordinates, to
-    //compare with ECI QBCP coordinates!
-    //====================================================================================
-    // ECISEM -> NJ2000
-    coord2necistate_vec(y_traj_n, t_traj_n, y_jpl_temp, t_jpl_temp, final_index, coord_type, et0,  tsys0, eph_coord(coord_int), SEML.ss);
-    //Plot
-    gnuplot_plot_X(h4, y_jpl_temp, final_index+1, (char*)"Inertial state (NJ2000)", "lines", "1", "1", color);
-
-    //Moon's position (NJ2000)
-    SpiceDouble lt, RS1[6], RS2[6], RE[6], REM[6];
-    spkezr_c ("MOON",  et0, DEFFRAME,  "NONE",  DEFOBS, RS1, &lt);
-    spkezr_c ("EARTH",  et0, DEFFRAME,  "NONE",  DEFOBS, RE, &lt);
-    spkezr_c ("EARTH MOON BARYCENTER", et0, DEFFRAME,  "NONE",  DEFOBS, REM, &lt);
-    ecl2neci(RS1, REM, RS2, SEML.ss);
-    RS2[2] = 0.0;
-    gnuplot_plot_xyz(h4, RS2, RS2+1, RS2+2, 1, (char*)"Moon (NJ2000, projected)", "points", "3", "5", color);
-
-    //Moon's position (Custom)
-    double me = SEML.us_sem.me;
-    double mm = SEML.us_sem.mm;
-    double n  = SEML.us_sem.n;
-    double ni = SEML.us_sem.ni;
-    double ai = SEML.us_sem.ai;
-    double r1 = creal(evz(SEML.cs_sem.zt, tsys0, n, ni, ai));
-    double r2 = cimag(evz(SEML.cs_sem.zt, tsys0, n, ni, ai));
-    double Pm[3] = {- me/(mm + me)* r1, - me/(mm + me)* r2, 0.0};
-    gnuplot_plot_xyz(h4, Pm, Pm+1, Pm+2, 1, (char*)"Moon (ECISEM)", "points", "4", "5", color++);
-
-
-    //====================================================================================
-    //Initial trajectory on lines, computed from NJ2000 first guess
-    //====================================================================================
-    plottrajsegbyseg(y_jpl_temp, t_jpl_temp, final_index, mPlot, NJ2000,
-                     et0, tsys0, coord_type, h2, comp_type,  h3, color++,
-                     "Initial guess (NJ2000)");
-
-    //====================================================================================
-    //Continutation procedure
-    //====================================================================================
-    cout << "Continuation procedure" << endl;
-    pressEnter(refSt.isFlagOn);
-
-
-    //------------------------------------------------------------------------------------
-    // Initialization of the containers
-    //------------------------------------------------------------------------------------
-    double** y_traj_ecisem_c = dmatrix(0, 47, 0, final_index);
-    double* t_traj_ecisem_c  = dvector(0, final_index);
-    double* t_traj_ecisem_s  = dvector(0, final_index);
-
-
-    for(int k = 0; k <= final_index; k++)
-    {
-        //--------------------------------------------------------------------------------
-        //Copy segment by segment : time and state
-        //--------------------------------------------------------------------------------
-        t_traj_ecisem_c[k] = t_traj_ecisem[k];
-        for(int i = 0; i < 42; i++)
-        {
-            y_traj_ecisem_c[i][k] = y_traj_ecisem[i][k];
-        }
-
-        //Add Identity matrix
-        y_traj_ecisem_c[6][k]  = 1.0;
-        y_traj_ecisem_c[13][k] = 1.0;
-        y_traj_ecisem_c[20][k] = 1.0;
-        y_traj_ecisem_c[27][k] = 1.0;
-        y_traj_ecisem_c[34][k] = 1.0;
-        y_traj_ecisem_c[41][k] = 1.0;
-
-        //--------------------------------------------------------------------------------
-        //The last 6 components the variational equations for epsilon
-        //--------------------------------------------------------------------------------
-        for(int i = 42; i< 48; i++) y_traj_ecisem_c[i][k] = 0.0;
-    }
-
-    //Null vector
-    int nfv = 6*(final_index+1)+1;
-    double nullvector[nfv];
-    double de = 5e-3;
-
-    SEML.epsilon = 0.0;
-    //------------------------------------------------------------------------------------
-    // First differential correction
-    //------------------------------------------------------------------------------------
-    multiple_shooting_direct_deps(y_traj_ecisem_c, t_traj_ecisem_c, y_traj_ecisem_c, t_traj_ecisem_c,
-                                  nullvector, true, 48, final_index, coord_int, true, h4);
-
-
-
-    gnuplot_ctrl* h1;
-    h1 = gnuplot_init();
-
-
-    //------------------------------------------------------------------------------------
-    // Solution with epsilon as a parameter + continuation
-    //------------------------------------------------------------------------------------
-    //Loop
-    int Nmax = 3000;
-    int iter = 0;
-    do
-    {
-        //New de if necessary
-        de = SEML.epsilon+de*nullvector[nfv-1] <= 1.0? de:(1.0-SEML.epsilon)/nullvector[nfv-1];
-
-        //--------------------------------------------------------------------------------
-        //  New state, with a correction from null vector
-        //--------------------------------------------------------------------------------
-        for(int k = 0; k <= final_index; k++)
-        {
-            //----------------------------------------------------------------------------
-            //Copy segment by segment : time and state
-            //----------------------------------------------------------------------------
-            for(int i = 0; i < 6; i++) y_traj_ecisem_c[i][k] += de*nullvector[6*k+i];
-        }
-
-        //--------------------------------------------------------------------------------
-        //  New epsilon
-        //--------------------------------------------------------------------------------
-        cout << "Old epsilon = " << SEML.epsilon << endl;
-        SEML.epsilon = SEML.epsilon+de*nullvector[nfv-1];
-        cout << "New epsilon = " << SEML.epsilon << endl;
-
-        //--------------------------------------------------------------------------------
-        //  Correct the state with a differential correction procedure
-        //--------------------------------------------------------------------------------
-        multiple_shooting_direct_deps(y_traj_ecisem_c, t_traj_ecisem_c, y_traj_ecisem_c, t_traj_ecisem_c, nullvector, false, 48, final_index, coord_int, true, h4);
-
-        //--------------------------------------------------------------------------------
-        //The final time is shifted to be able to be plotted, using the right normalization
-        //--------------------------------------------------------------------------------
-        for(int k = 0; k <= final_index; k++) t_traj_ecisem_s[k] = t_traj_ecisem_c[k] + SEML.ss.tshift;
-
-        //--------------------------------------------------------------------------------
-        //Trajectory on lines, segment by segment, using SHIFTED time
-        //--------------------------------------------------------------------------------
-        if(SEML.epsilon > 0.90)
-            plottrajsegbyseg(y_traj_ecisem_c, t_traj_ecisem_s, final_index, mPlot, NJ2000,
-                             et0, tsys0, coord_type, h2, comp_type,  h3, color+1,
-                             "");
-
-        //--------------------------------------------------------------------------------
-        // Plotting the direction of motion
-        // in the (x, eps) space
-        //--------------------------------------------------------------------------------
-        gnuplot_plot_xy(h1, &y_traj_ecisem_c[0][0], &(SEML.epsilon), 1, "", "points", "7", "3", 1);
-
-
-        //--------------------------------------------------------------------------------
-        //Upload iter
-        //--------------------------------------------------------------------------------
-        iter++;
-
-    }
-    while(iter <= Nmax && SEML.epsilon < 1.0);
-
-
-    //====================================================================================
-    //Final trajectory on lines, segment by segment, using SHIFTED time
-    //====================================================================================
-    plottrajsegbyseg(y_traj_ecisem_c, t_traj_ecisem_s, final_index, mPlot, NJ2000,
-                     et0, tsys0, coord_type, h2, comp_type,  h3, color++,
-                     "Final guess (ecisem -> NJ2000)");
-
-    //------------------------------------------------------------------------------------
-    //Gnuplot window
-    //------------------------------------------------------------------------------------
-    pressEnter(refSt.isFlagOn);
-    gnuplot_close(h2);
-    gnuplot_close(h3);
-    gnuplot_close(h4);
-
-    //====================================================================================
-    // Free the data containers
-    //====================================================================================
-    free_dmatrix(y_traj_n, 0, 41, 0, final_index);
-    free_dvector(t_traj_n, 0, final_index);
-
-    free_dmatrix(ymc, 0, 5, 0, mPlot);
-    free_dvector(tmc, 0, mPlot);
-    free_dmatrix(ymc_comp, 0, 5, 0, mPlot);
-    free_dvector(tmc_comp, 0, mPlot);
-
-    free_dmatrix(y_jpl_temp, 0, 41, 0, final_index);
-    free_dvector(t_jpl_temp, 0, final_index);
-
-    free_dmatrix(y_traj_ecisem_c, 0, 47, 0, final_index);
-    free_dvector(t_traj_ecisem_c, 0, final_index);
-
-    return FTC_SUCCESS;
-}
-
-
-//----------------------------------------------------------------------------------------
-//         Refinement of solutions: to JPL - Subroutines
-//----------------------------------------------------------------------------------------
-/**
- * \brief Computes a first guess in ephemerides coordinates, switching between the
- *        Earth-Moon and Sun-Earth plane of motion when the discrepancy between the two
- *        coordinates system is minimal.
- **/
-int oojplfg3d_switch(double** y_traj_n, double* t_traj_n,
-                     double** y_traj_jpl, double* t_traj_jpl,
-                     int final_index, int coord_type,
-                     int comp_type, int coord_int,
-                     double et0, double tsys0, double tsys0_comp)
-{
-    double** y_traj_jpl_n = dmatrix(0, 41, 0, final_index);
-    double* t_traj_jpl_n  = dvector(0, final_index);
-
-    //====================================================================================
-    //Compute the change of coord: syn -> ecliptic, where we suppose that the current
-    //plane of motion is the one of the primaries associated to coord_type
-    //====================================================================================
-    switch(coord_int)
-    {
-    case VECLI:
-        coord2eclstate_vec(y_traj_n, t_traj_n, y_traj_jpl, t_traj_jpl, final_index, coord_type, et0, tsys0, eph_coord(coord_type));
-        break;
-
-    case J2000:
-        coord2ecistate_vec(y_traj_n, t_traj_n, y_traj_jpl, t_traj_jpl, final_index, coord_type, et0,  tsys0, eph_coord(coord_type));
-        break;
-
-    case NJ2000:
-        coord2necistate_vec(y_traj_n, t_traj_n, y_traj_jpl, t_traj_jpl, final_index, coord_type, et0,  tsys0, eph_coord(coord_type), SEML.ss);
-        break;
-    }
-
-    //====================================================================================
-    //Half of the trajectory will be set in the other plane, i.e we suppose that the
-    //current plane of motion is the one of the primaries associated to comp_type
-    //====================================================================================
-    switch(coord_int)
-    {
-    case VECLI:
-        coord2eclstate_vec(y_traj_n, t_traj_n, y_traj_jpl_n, t_traj_jpl_n, final_index, coord_type, et0,  tsys0_comp, eph_coord(comp_type));
-        break;
-
-    case J2000:
-        coord2ecistate_vec(y_traj_n, t_traj_n, y_traj_jpl_n, t_traj_jpl_n, final_index, coord_type, et0,  tsys0_comp, eph_coord(comp_type));
-        break;
-
-    case NJ2000:
-        coord2necistate_vec(y_traj_n, t_traj_n, y_traj_jpl_n, t_traj_jpl_n, final_index, coord_type, et0,  tsys0_comp, eph_coord(comp_type), SEML.ss);
-        break;
-    }
-
-
-    //====================================================================================
-    //Find the point that minimizes the discrepancy between the to sets of coordinates
-    //The search is performed on the range [p0 p1]
-    //====================================================================================
-    int p0 = final_index/3, p1 = 2*final_index/3;
-    int pmin = p0;
-    int p = p0;
-    double dmin = 0.0, dminmin = 0.0;
-    do
-    {
-        dmin = 0.0;
-
-        //The minimum is computed in 3 consecutive points: on p-1, p, p+1
-        for(int i = 0; i < 6; i++) dmin += (y_traj_jpl[i][p] - y_traj_jpl_n[i][p])*(y_traj_jpl[i][p] - y_traj_jpl_n[i][p]);
-
-        if(p == p0)
-        {
-            pmin = p;
-            dminmin = dmin;
-        }
-        else
-        {
-            if(dmin < dminmin)
-            {
-                pmin = p;
-                dminmin = dmin;
-            }
-        }
-        p++;
-    }
-    while(p <= p1);
-    cout << "oojplfg3d_switch. pmin = " << pmin << "/" << final_index << endl;
-
-    //====================================================================================
-    //Store the second half: at the beginning or at the end, depending on
-    //the computation coordinates
-    //====================================================================================
-    int begind = 0, endind = 0;
-    switch(eph_coord(coord_type))
-    {
-    case VEM:
-        begind = pmin;
-        endind = final_index;
-        break;
-
-    case VSEM:
-        begind = 0;
-        endind = pmin;
-        break;
-    }
-
-    for(int p = begind; p <= endind; p++)
-    {
-        for(int i = 0; i <6; i++) y_traj_jpl[i][p] =  y_traj_jpl_n[i][p];
-    }
-
-    //====================================================================================
-    //Free
-    //====================================================================================
-    free_dmatrix(y_traj_jpl_n, 0, 41, 0, final_index);
-    free_dvector(t_traj_jpl_n, 0, final_index);
-
-
-    return final_index;
-}
-
-/**
- * \brief Same as oojplfg3d_switch, with a refinement of the position of the minimum.
- **/
-int oojplfg3d_super_switch(double** y_traj_n, double* t_traj_n,
-                           double** y_traj_jpl, double* t_traj_jpl,
-                           int final_index, int coord_type,
-                           int comp_type, int coord_int,
-                           int mRef,
-                           double et0, double tsys0, double tsys0_comp)
-{
-    //====================================================================================
-    //Initialize
-    //====================================================================================
-    double** y_traj_jpl_n = dmatrix(0, 41, 0, final_index);
-    double* t_traj_jpl_n  = dvector(0, final_index);
-
-    double** yms          = dmatrix(0, 5, 0, mRef);
-    double* tms           = dvector(0, mRef);
-    double** ymc          = dmatrix(0, 5, 0, mRef);
-    double* tmc           = dvector(0, mRef);
-    double** ymc_comp     = dmatrix(0, 5, 0, mRef);
-    double* tmc_comp      = dvector(0, mRef);
-
-    //Get the default coordinates system from the coord_type
-    int dcs  = default_coordinate_system(coord_type);
-
-    //====================================================================================
-    //Compute the change of coord: syn -> ecliptic, where we suppose that the current
-    //plane of motion is the one of the primaries associated to coord_type
-    //====================================================================================
-    switch(coord_int)
-    {
-    case VECLI:
-        coord2eclstate_vec(y_traj_n, t_traj_n, y_traj_jpl, t_traj_jpl, final_index, coord_type, et0,  tsys0, eph_coord(coord_type));
-        break;
-
-    case J2000:
-        coord2ecistate_vec(y_traj_n, t_traj_n, y_traj_jpl, t_traj_jpl, final_index, coord_type, et0,  tsys0, eph_coord(coord_type));
-        break;
-
-    case NJ2000:
-        coord2necistate_vec(y_traj_n, t_traj_n, y_traj_jpl, t_traj_jpl, final_index, coord_type, et0,  tsys0, eph_coord(coord_type), SEML.ss);
-        break;
-    }
-
-    //====================================================================================
-    //Half of the trajectory will be set in the other plane, i.e we suppose that the
-    //current plane of motion is the one of the primaries associated to comp_type
-    //====================================================================================
-    switch(coord_int)
-    {
-    case VECLI:
-        coord2eclstate_vec(y_traj_n, t_traj_n, y_traj_jpl_n, t_traj_jpl_n, final_index, coord_type, et0,  tsys0_comp, eph_coord(comp_type));
-        break;
-
-    case J2000:
-        coord2ecistate_vec(y_traj_n, t_traj_n, y_traj_jpl_n, t_traj_jpl_n, final_index, coord_type, et0,  tsys0_comp, eph_coord(comp_type));
-        break;
-
-    case NJ2000:
-        coord2necistate_vec(y_traj_n, t_traj_n, y_traj_jpl_n, t_traj_jpl_n, final_index, coord_type, et0,  tsys0_comp, eph_coord(comp_type), SEML.ss);
-        break;
-    }
-
-
-    //====================================================================================
-    //Find the point that minimizes the discrepancy between the to sets of coordinates
-    //The search is performed on the range [p0 p1]
-    //====================================================================================
-    int p0 = final_index/3, p1 = 2*final_index/3;
-    int pmin = p0;
-    int p = p0;
-    double dmin = 0.0, dminmin = 0.0;
-    do
-    {
-        dmin = 0.0;
-        for(int i = 0; i < 6; i++) dmin += (y_traj_jpl[i][p] - y_traj_jpl_n[i][p])*(y_traj_jpl[i][p] - y_traj_jpl_n[i][p]);
-
-        if(p == p0)
-        {
-            pmin = p;
-            dminmin = dmin;
-        }
-        else
-        {
-            if(dmin < dminmin)
-            {
-                pmin = p;
-                dminmin = dmin;
-            }
-        }
-        p++;
-    }
-    while(p <= p1);
-    cout << "oojplfg3d_super_switch. pmin = " << pmin << "/" << final_index << endl;
-
-
-    //====================================================================================
-    //Once we have the point, we refine it by integration between pmin-1 and pmin+1
-    //====================================================================================
-    double tmin;
-    double ymin[6], yv[6];
-    int ode78coll;
-
-    //------------------------------------------------------------------------------------
-    // First subsearch range: pmin-1 to pmin
-    //------------------------------------------------------------------------------------
-    //Integration segment by segment, in coord_type coordinates
-    for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][pmin-1];
-    ode78(yms, tms, &ode78coll, t_traj_n[pmin-1], t_traj_n[pmin], yv, 6, mRef, dcs, coord_type, coord_type);
-
-    //In ecliptic coordinates, in the plane associated to coord_type
-    switch(coord_int)
-    {
-    case VECLI:
-        coord2eclstate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0, tsys0, eph_coord(coord_type));
-        break;
-
-    case J2000:
-        coord2ecistate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0, tsys0, eph_coord(coord_type));
-        break;
-
-    case NJ2000:
-        coord2necistate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0, tsys0, eph_coord(coord_type), SEML.ss);
-        break;
-    }
-
-    //In ecliptic coordinates, in the plane associated to comp_type
-    switch(coord_int)
-    {
-    case VECLI:
-        coord2eclstate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0,  tsys0_comp, eph_coord(comp_type));
-        break;
-
-    case J2000:
-        coord2ecistate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0,  tsys0_comp, eph_coord(comp_type));
-        break;
-
-    case NJ2000:
-        coord2necistate_vec(yms, tms, ymc_comp, tmc_comp, mRef, coord_type, et0, tsys0_comp, eph_coord(comp_type), SEML.ss);
-        break;
-    }
-
-
-    //Compute the minimum discrepancy
-    for(p = 0; p <= mRef; p++)
-    {
-        dmin = 0.0;
-        for(int i = 0; i < 3; i++) dmin += (ymc[i][p] - ymc_comp[i][p])*(ymc[i][p] - ymc_comp[i][p]);
-
-        if(p == final_index/3)
-        {
-            dminmin = dmin;
-            tmin = tmc[p];
-            for(int i = 0; i <6; i++) ymin[i] = ymc[i][p];
-        }
-        else
-        {
-            if(dmin < dminmin)
-            {
-                dminmin = dmin;
-                tmin = tmc[p];
-                for(int i = 0; i <6; i++) ymin[i] = ymc[i][p];
-            }
-        }
-    }
-
-    //------------------------------------------------------------------------------------
-    // Second subsearch range: pmin-1 to pmin
-    //------------------------------------------------------------------------------------
-    //Integration segment by segment, in coord_type coordinates
-    for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][pmin];
-    ode78(yms, tms, &ode78coll, t_traj_n[pmin], t_traj_n[pmin+1], yv, 6, mRef, dcs, coord_type, coord_type);
-
-    //In ecliptic coordinates, in the plane associated to coord_type
-    switch(coord_int)
-    {
-    case VECLI:
-        coord2eclstate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0, tsys0, eph_coord(coord_type));
-        break;
-
-    case J2000:
-        coord2ecistate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0, tsys0, eph_coord(coord_type));
-        break;
-
-    case NJ2000:
-        coord2necistate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0, tsys0, eph_coord(coord_type), SEML.ss);
-        break;
-    }
-
-    //In ecliptic coordinates, in the plane associated to comp_type
-    switch(coord_int)
-    {
-    case VECLI:
-        coord2eclstate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0,  tsys0_comp, eph_coord(comp_type));
-        break;
-
-    case J2000:
-        coord2ecistate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0,  tsys0_comp, eph_coord(comp_type));
-        break;
-
-    case NJ2000:
-        coord2necistate_vec(yms, tms, ymc_comp, tmc_comp, mRef, coord_type, et0, tsys0_comp, eph_coord(comp_type), SEML.ss);
-        break;
-    }
-
-
-    //Compute the minimum discrepancy
-    tmin = tmc[0];
-    for(p = 0; p <= mRef; p++)
-    {
-        dmin = 0.0;
-        for(int i = 0; i < 3; i++) dmin += (ymc[i][p] - ymc_comp[i][p])*(ymc[i][p] - ymc_comp[i][p]);
-
-        if(dmin < dminmin)
-        {
-            dminmin = dmin;
-            tmin = tmc[p];
-            for(int i = 0; i <6; i++) ymin[i] = ymc[i][p];
-        }
-
-    }
-
-    cout << "-----------------------------------------------------------" << endl;
-    cout << "oojplfg3d_super_switch. Switch part before refinment       " << endl;
-    cout << "-----------------------------------------------------------" << endl;
-    for(int p = pmin-1; p <= pmin+1; p++)
-    {
-        cout << t_traj_jpl[p] << "  " << y_traj_jpl[0][p] << "   " << y_traj_jpl[1][p] <<  "   " << y_traj_jpl[2][p] << endl;
-    }
-
-    //The best fit replace the old point, both in position in time
-    for(int i = 0; i <6; i++) y_traj_jpl_n[i][pmin] = ymin[i];
-    t_traj_jpl[pmin] = tmin;
-
-    cout << "-----------------------------------------------------------" << endl;
-    cout << "oojplfg3d_super_switch. Switch part after refinment        " << endl;
-    cout << "-----------------------------------------------------------" << endl;
-    for(int p = pmin-1; p <= pmin+1; p++)
-    {
-        cout << t_traj_jpl[p] << "  " << y_traj_jpl_n[0][p] << "   " << y_traj_jpl_n[1][p] <<  "   " << y_traj_jpl_n[2][p] << endl;
-    }
-
-    //====================================================================================
-    //Store the second half: at the beginning or at the end, depending on
-    //the computation coordinates
-    //====================================================================================
-    int begind = 0, endind = 0;
-    switch(eph_coord(coord_type))
-    {
-    case VEM:
-        begind = pmin;
-        endind = final_index;
-        break;
-
-    case VSEM:
-        begind = 0;
-        endind = pmin;
-        break;
-    }
-
-    for(int p = begind; p <= endind; p++)
-    {
-        for(int i = 0; i <6; i++) y_traj_jpl[i][p] =  y_traj_jpl_n[i][p];
-    }
-
-
-    //====================================================================================
-    //Free
-    //====================================================================================
-    free_dmatrix(y_traj_jpl_n, 0, 41, 0, final_index);
-    free_dvector(t_traj_jpl_n, 0, final_index);
-
-    free_dmatrix(yms, 0, 5, 0, mRef);
-    free_dvector(tms, 0, mRef);
-    free_dmatrix(ymc, 0, 5, 0, mRef);
-    free_dvector(tmc, 0, mRef);
-    free_dmatrix(ymc_comp, 0, 5, 0, mRef);
-    free_dvector(tmc_comp, 0, mRef);
-
-    return final_index;
-}
-
-
-/**
- * \brief Same as oojplfg3d_switch, with an interpolation before and after the switching
- *        point.
- **/
-int oojplfg3d_interpolation(double** y_traj_n, double* t_traj_n,
-                            double** * y_traj_jpl, double** t_traj_jpl,
-                            int final_index, int coord_type,
-                            int comp_type, int coord_int,
-                            int mRef,
-                            double et0, double tsys0, double tsys0_comp)
-{
-    //====================================================================================
-    //Initialize
-    //====================================================================================
-    double** y_traj_jpl_n = dmatrix(0, 41, 0, final_index);
-    double* t_traj_jpl_n  = dvector(0, final_index);
-
-    double** yms          = dmatrix(0, 5, 0, mRef);
-    double* tms           = dvector(0, mRef);
-    double** ymc          = dmatrix(0, 5, 0, mRef);
-    double* tmc           = dvector(0, mRef);
-    double** ymc_comp     = dmatrix(0, 5, 0, mRef);
-    double* tmc_comp      = dvector(0, mRef);
-
-    //Get the default coordinates system from the coord_type
-    int dcs  = default_coordinate_system(coord_type);
-
-    //====================================================================================
-    //Compute the change of coord: syn -> ecliptic, where we suppose that the current
-    //plane of motion is the one of the primaries associated to coord_type
-    //====================================================================================
-    switch(coord_int)
-    {
-    case VECLI:
-        coord2eclstate_vec(y_traj_n, t_traj_n, *y_traj_jpl, *t_traj_jpl, final_index, coord_type, et0,  tsys0, eph_coord(coord_type));
-        break;
-
-    case J2000:
-        coord2ecistate_vec(y_traj_n, t_traj_n, *y_traj_jpl, *t_traj_jpl, final_index, coord_type, et0,  tsys0, eph_coord(coord_type));
-        break;
-
-    case NJ2000:
-        coord2necistate_vec(y_traj_n, t_traj_n, *y_traj_jpl, *t_traj_jpl, final_index, coord_type, et0,  tsys0, eph_coord(coord_type), SEML.ss);
-        break;
-    }
-
-    //====================================================================================
-    //Half of the trajectory will be set in the other plane, i.e we suppose that the
-    //current plane of motion is the one of the primaries associated to comp_type
-    //====================================================================================
-    switch(coord_int)
-    {
-    case VECLI:
-        coord2eclstate_vec(y_traj_n, t_traj_n, y_traj_jpl_n, t_traj_jpl_n, final_index, coord_type, et0,  tsys0_comp, eph_coord(comp_type));
-        break;
-
-    case J2000:
-        coord2ecistate_vec(y_traj_n, t_traj_n, y_traj_jpl_n, t_traj_jpl_n, final_index, coord_type, et0,  tsys0_comp, eph_coord(comp_type));
-        break;
-
-    case NJ2000:
-        coord2necistate_vec(y_traj_n, t_traj_n, y_traj_jpl_n, t_traj_jpl_n, final_index, coord_type, et0,  tsys0_comp, eph_coord(comp_type), SEML.ss);
-        break;
-    }
-
-
-    //====================================================================================
-    //Find the point that minimizes the discrepancy between the to sets of coordinates
-    //The search is performed on the range [p0 p1]
-    //====================================================================================
-    //gnuplot_ctrl *h4 = gnuplot_init();
-    int p0 = 0, p1 = final_index;
-    int pmin = p0;
-    int p = p0;
-    double dmin = 0.0, dminmin = 0.0;
-    bool start = true, dte = false;
-    double distanceToEarth = 0.0;
-    double pe[3];
-    do
-    {
-        //--------------------------------------------------------------------------------
-        //Distance to Earth in NCSEM coordinates
-        //--------------------------------------------------------------------------------
-        distanceToEarth = 0.0;
-        evaluateCoef(pe, t_traj_n[p], SEML.us_sem.n, SEML.nf, SEML.cs_sem.pe, 3);
-        for(int i = 0; i < 3; i++) distanceToEarth += (y_traj_n[i][p] - pe[i])*(y_traj_n[i][p] - pe[i]);
-        distanceToEarth = sqrt(distanceToEarth);
-        dte = distanceToEarth > 0.4;
-
-        //--------------------------------------------------------------------------------
-        //Find best fit for a distance to Earth sufficiently large (dte == true)
-        //--------------------------------------------------------------------------------
-        dmin = 0.0;
-        for(int i = 0; i < 6; i++) dmin += ((*y_traj_jpl)[i][p] - y_traj_jpl_n[i][p])*((*y_traj_jpl)[i][p] - y_traj_jpl_n[i][p]);
-        if(start && dte)
-        {
-            pmin = p;
-            dminmin = dmin;
-            start = false;
-        }
-        else
-        {
-            //            if(dmin < dminmin && dte)
-            //            {
-            //                //cout << "Min! y_traj_n[0][p] = " << y_traj_n[0][p] << endl;
-            //                pmin = p;
-            //                dminmin = dmin;
-            //            }
-        }
-        p++;
-
-    }
-    while(p <= p1);
-
-    cout << "oojplfg3d_interpolation. pmin = " << pmin << "/" << final_index << endl;
-
-    //    cout << "-----------------------------------------------------------" << endl;
-    //    cout << "oojplfg3d_interpolation. Switch part before refinment      " << endl;
-    //    cout << "-----------------------------------------------------------" << endl;
-    //    for(int p = pmin-2; p <= pmin+1; p++)
-    //    {
-    //        cout << (*t_traj_jpl)[p] << "  " << (*y_traj_jpl)[0][p] << "   " << (*y_traj_jpl)[1][p] <<  "   " << (*y_traj_jpl)[2][p] << endl;
-    //    }
-
-    //pressEnter(true);
-
-    //====================================================================================
-    //Once we have the point, we interpolate it by integration between pmin-nsh and pmin+nsh
-    //====================================================================================
-    int nsh0 = 1;
-    int nsh1 = 3;
-    int nshs = nsh0+nsh1;
-
-    double** y_traj_jpl_x   = dmatrix(0, 41, 0, final_index+nshs*mRef);
-    double* t_traj_jpl_x    = dvector(0, final_index+nshs*mRef);
-    double yv[6];
-    int ode78coll;
-
-    for(int nn = -nsh0; nn < nsh1; nn++)
-    {
-        //--------------------------------------------------------------------------------
-        // First interpolation range: pmin-1 to pmin
-        //--------------------------------------------------------------------------------
-        //Integration segment by segment, in coord_type coordinates
-        for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][pmin+nn];
-        ode78(yms, tms, &ode78coll, t_traj_n[pmin+nn], t_traj_n[pmin+nn+1], yv, 6, mRef, dcs, coord_type, coord_type);
-
-        //In ecliptic coordinates, in the plane associated to coord_type
-        switch(coord_int)
-        {
-        case VECLI:
-            coord2eclstate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0, tsys0, eph_coord(coord_type));
-            break;
-
-        case J2000:
-            coord2ecistate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0, tsys0, eph_coord(coord_type));
-            break;
-
-        case NJ2000:
-            coord2necistate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0, tsys0, eph_coord(coord_type), SEML.ss);
-            break;
-        }
-
-        //In ecliptic coordinates, in the plane associated to comp_type
-        switch(coord_int)
-        {
-        case VECLI:
-            coord2eclstate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0,  tsys0_comp, eph_coord(comp_type));
-            break;
-
-        case J2000:
-            coord2ecistate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0,  tsys0_comp, eph_coord(comp_type));
-            break;
-
-        case NJ2000:
-            coord2necistate_vec(yms, tms, ymc_comp, tmc_comp, mRef, coord_type, et0, tsys0_comp, eph_coord(comp_type), SEML.ss);
-            break;
-        }
-
-        //Interpolation from pmin-1 to pmin-1+mRef-1
-        //cout << "- Storing from " << pmin-nsh0+(nsh0+nn)*mRef << "to " << pmin-nsh0+(nsh0+nn)*mRef+mRef-1 << endl;
-        double epsilon = 0.0;
-        for(p = 0; p <= mRef-1; p++)
-        {
-            epsilon = (1.0*p+(nsh0+nn)*mRef)/(nshs*(mRef)-1);
-            //cout << "epsilon = " << epsilon << endl;
-            for(int i = 0; i <6; i++) y_traj_jpl_x[i][p+pmin-nsh0+(nsh0+nn)*mRef] = epsilon*ymc[i][p] + (1-epsilon)*ymc_comp[i][p];
-            t_traj_jpl_x[p+pmin-nsh0+(nsh0+nn)*mRef] = tmc[p];
-        }
-    }
-
-
-    //====================================================================================
-    //Store the parts before and after the interpolation part.
-    //====================================================================================
-    switch(eph_coord(coord_type))
-    {
-    case VEM:
-        //--------------------------------------------------------------------------------
-        // If we compute in VEM coordinates, the beginning of the trajectory is already
-        // good, that last part should be set in the SE plane.
-        //--------------------------------------------------------------------------------
-        //Store the first part of the trajectory
-        //cout << "- Storing from " << 0 << "to " << pmin-nsh0-1 << endl;
-        for(p = 0; p <= pmin-nsh0-1; p++)
-        {
-            for(int i = 0; i <6; i++) y_traj_jpl_x[i][p] = (*y_traj_jpl)[i][p];
-            t_traj_jpl_x[p] = (*t_traj_jpl)[p];
-        }
-
-
-        //Store the last part of the trajectory
-        //cout << "- Storing from " << pmin-nsh0+nshs*mRef << "to " << final_index+nshs*mRef-nshs<< endl;
-        for(p = pmin+nsh1; p <= final_index; p++)
-        {
-            for(int i = 0; i < 6; i++) y_traj_jpl_x[i][p+nshs*mRef-nshs] = y_traj_jpl_n[i][p];
-            t_traj_jpl_x[p+nshs*mRef-nshs] = t_traj_jpl_n[p];
-        }
-        break;
-
-    case VSEM:
-
-        //--------------------------------------------------------------------------------
-        // If we compute in VSEM coordinates, the end of the trajectory is already
-        // good, that first part should be set in the EM plane.
-        //--------------------------------------------------------------------------------
-        //Store the first part of the trajectory
-        //cout << "- Storing from " << 0 << "to " << pmin-nsh0-1 << endl;
-        for(p = 0; p <= pmin-nsh0-1; p++)
-        {
-            for(int i = 0; i <6; i++) y_traj_jpl_x[i][p] = y_traj_jpl_n[i][p];
-            t_traj_jpl_x[p] = t_traj_jpl_n[p];
-        }
-
-
-        //Store the last part of the trajectory
-        //cout << "- Storing from " << pmin-nsh0+nshs*mRef << "to " << final_index+nshs*mRef-nshs<< endl;
-        for(p = pmin+nsh1; p <= final_index; p++)
-        {
-            for(int i = 0; i < 6; i++) y_traj_jpl_x[i][p+nshs*mRef-nshs] = (*y_traj_jpl)[i][p];
-            t_traj_jpl_x[p+nshs*mRef-nshs] = (*t_traj_jpl)[p];
-        }
-        break;
-    }
-
-    //====================================================================================
-    //Free, before final_index is changed
-    //====================================================================================
-    free_dmatrix(y_traj_jpl_n, 0, 41, 0, final_index);
-    free_dvector(t_traj_jpl_n, 0, final_index);
-
-    free_dmatrix(yms, 0, 5, 0, mRef);
-    free_dvector(tms, 0, mRef);
-    free_dmatrix(ymc, 0, 5, 0, mRef);
-    free_dvector(tmc, 0, mRef);
-    free_dmatrix(ymc_comp, 0, 5, 0, mRef);
-    free_dvector(tmc_comp, 0, mRef);
-
-    //====================================================================================
-    //New init. Once the previous computation has been done, we need to define again:
-    //final_index, y_traj_jpl, and t_traj_jpl, so that the final trajectory incorporates
-    //the interpolated part.
-    //====================================================================================
-    //Free from previous initialization
-    free_dmatrix(*y_traj_jpl, 0, 41, 0, final_index);
-    free_dvector(*t_traj_jpl, 0, final_index);
-
-    //Redefinition of final_index
-    int final_index_0 = final_index +nshs*(mRef-1);
-
-    //Init again
-    *y_traj_jpl  = dmatrix(0, 41, 0, final_index_0);
-    *t_traj_jpl  = dvector(0, final_index_0);
-
-    //Store
-    for(p = 0; p <= final_index_0; p++)
-    {
-        for(int i = 0; i < 6; i++) (*y_traj_jpl)[i][p] = y_traj_jpl_x[i][p];
-        (*t_traj_jpl)[p] = t_traj_jpl_x[p];
-    }
-
-
-    //    cout << "-----------------------------------------------------------" << endl;
-    //    cout << "oojplfg3d_interpolation. Switch part after refinement      " << endl;
-    //    cout << "-----------------------------------------------------------" << endl;
-    //    for(int p = pmin-2; p <= pmin+2*mRef+1; p++)
-    //    {
-    //        cout << (*t_traj_jpl)[p] << "  " << (*y_traj_jpl)[0][p] << "   " << (*y_traj_jpl)[1][p] <<  "   " << (*y_traj_jpl)[2][p] << endl;
-    //    }
-
-    //====================================================================================
-    //Return final_index_0
-    //====================================================================================
-    return final_index_0;
-}
-
-//----------------------------------------------------------------------------------------
-//         Refinement of solutions: to JPL - Tests
-//----------------------------------------------------------------------------------------
-/**
- *  \brief Computes only a SEMLi orbit and test a JPL refinement.
- **/
-int oocomprefft3d_test_seml_synjpl(int man_grid_size_t,
-                                   int coord_type,
-                                   Orbit& orbit_SEM,
-                                   RefSt refSt)
-
-{
-    //====================================================================================
-    // 1. Initialize local variables
-    //====================================================================================
-    string fname = "oocomprefft3d_test_seml_synjpl";
-    cout << fname << ". Initialization of the local variables..."  << endl;
-
-    //----------------------------------------------------------
-    //Get the default coordinates system from the coord_type
-    //----------------------------------------------------------
-    int dcs  = default_coordinate_system(coord_type);
-
-    //----------------------------------------------------------
-    // Define the time of flight on each orbit
-    //----------------------------------------------------------
-    double tof_seml_SEM = refSt.tspan_SEM;   //TOF on SEMLi orbit
-
-    //====================================================================================
-    // 2. Init the gnuplot
-    //====================================================================================
-    //----------------------------------------------------------
-    //Gnuplot window
-    //----------------------------------------------------------
-    gnuplot_ctrl* h2, *h3;
-    h2 = gnuplot_init();
-    h3 = gnuplot_init();
-
-    gnuplot_cmd(h2, "set title \"Computation coordinates\" ");
-    gnuplot_cmd(h3, "set title \"Complementary coordinates\" ");
-
-    //gnuplot_cmd(h2, "set view equal xyz");
-    //gnuplot_cmd(h3, "set view equal xyz");
-    gnuplot_cmd(h2, "set grid");
-    gnuplot_cmd(h3, "set grid");
-
-    //----------------------------------------------------------
-    //Notable points in SEM & EM systems
-    //----------------------------------------------------------
-    notablePoints(h2, h3, coord_type);
-
-    //----------------------------------------------------------
-    //Complementary coordinate type
-    //----------------------------------------------------------
-    int comp_type = comp_coord_typ(coord_type);
-
-    //====================================================================================
-    // 3. Init the data containers
-    //====================================================================================
-    int max_grid    = 3000;
-    int man_grid_2  = (refSt.grid == REF_VAR_GRID) ? max_grid:man_grid_size_t;
-    int traj_grid_2 = (refSt.grid == REF_VAR_GRID) ? max_grid:man_grid_size_t;
-
-    //------------------------------------------------------------------------------------
-    //To store final data
-    //------------------------------------------------------------------------------------
-    double** y_traj  = dmatrix(0, 41, 0, traj_grid_2);
-    double*  t_traj  = dvector(0, traj_grid_2);
-
-    double** y_traj_comp  = dmatrix(0, 41, 0, traj_grid_2);
-    double*  t_traj_comp  = dvector(0, traj_grid_2);
-
-    //------------------------------------------------------------------------------------
-    //Local variables to store the refined trajectory
-    //------------------------------------------------------------------------------------
-    double** y_traj_n   = dmatrix(0, 41, 0, traj_grid_2);
-    double* t_traj_n    = dvector(0, traj_grid_2);
-
-    //====================================================================================
-    // 4. Build the trajectory
-    //====================================================================================
-
-    //====================================================================================
-    // 4.1 Initialize local variables
-    //====================================================================================
-    //------------------------------------------------------------------------------------
-    //Local variables to store the manifold leg
-    //------------------------------------------------------------------------------------
-    double** y_man_NCEM   = dmatrix(0, 5, 0, man_grid_2);
-    double** y_man_NCSEM  = dmatrix(0, 5, 0, man_grid_2);
-    double** y_man_coord  = dmatrix(0, 5, 0, man_grid_2);
-    double** y_man_comp   = dmatrix(0, 5, 0, man_grid_2);
-    double* t_man_EM      = dvector(0, man_grid_2);
-    double* t_man_SEM     = dvector(0, man_grid_2);
-    double* t_man_coord   = dvector(0, man_grid_2);
-    double* t_man_comp    = dvector(0, man_grid_2);
-
-    //====================================================================================
-    // 6.4 Compute the final SEMLi orbit
-    //====================================================================================
-    cout << fname << ". Compute the final SEMLi orbit..."  << endl;
-    //------------------------------------------------------------------------------------
-    // Initialize the initial conditions (both NC and RCM coordinates)
-    // We also need to kill the stable part.
-    //------------------------------------------------------------------------------------
-    orbit_SEM.setSi(0.0, 4);
-    orbit_SEM.update_ic(orbit_SEM.getSi());
-
-
-    //------------------------------------------------------------------------------------
-    //Integration on man_grid_size+1 fixed grid
-    //------------------------------------------------------------------------------------
-    int sem_index = man_grid_2;
-
-    switch(refSt.grid)
-    {
-    case REF_FIXED_GRID:
-    case REF_GIVEN_GRID:
-    {
-        int output = orbit_SEM.traj_int_grid(orbit_SEM.getT0()+tof_seml_SEM, y_man_NCSEM, t_man_SEM, man_grid_2, true);
-        //--------------------------------------------------------------------------------
-        //If output is strictly greater than 0, then the projection procedure inside
-        //the integration went wrong, and the new indix is output.
-        //It output == ORBIT_EPROJ, the projection procedure failed so bad that there
-        //is no point stored in the data, except the first one, and the new indix is zero
-        //--------------------------------------------------------------------------------
-        if(output == ORBIT_EPROJ) sem_index = 0;
-        else if(output > 0) sem_index = output;
-        break;
-    }
-
-    case REF_VAR_GRID:
-    {
-        sem_index = orbit_SEM.traj_int_var_grid(orbit_SEM.getT0()+tof_seml_SEM, y_man_NCSEM, t_man_SEM, man_grid_2, 1);
-        break;
-    }
-    }
-
-    //------------------------------------------------------------------------------------
-    //To coord_type coordinates
-    //------------------------------------------------------------------------------------
-    qbcp_coc_vec(y_man_NCSEM, t_man_SEM, y_man_coord, t_man_coord, sem_index, NCSEM, coord_type);
-    qbcp_coc_vec(y_man_NCSEM, t_man_SEM, y_man_comp, t_man_comp, sem_index, NCSEM, comp_type);
-
-
-    //------------------------------------------------------------------------------------
-    // Save ALL points
-    //------------------------------------------------------------------------------------
-    for(int kman = 0; kman <= sem_index; kman++)
-    {
-        for(int i = 0; i < 6; i++) y_traj[i][kman] = y_man_coord[i][kman];
-        t_traj[kman] = t_man_coord[kman];
-    }
-
-    //------------------------------------------------------------------------------------
-    //Plot
-    //------------------------------------------------------------------------------------
-    gnuplot_plot_X(h2, y_man_coord, sem_index+1, (char*)"SEMLi", "points", "1", "3", 6);
-    gnuplot_plot_X(h3, y_man_comp, sem_index+1, (char*)"", "points", "1", "3", 6);
-
-    //====================================================================================
-    // Entire size is: no more than 3*man_grid_size_t points or so.
-    //====================================================================================
-    int final_index = 0;
-    if(refSt.grid == REF_VAR_GRID)
-    {
-        final_index = sem_index;
-        int freq = final_index/(3*man_grid_size_t);
-        cout << "----------------------------------"<< endl;
-        cout << "Number of MSD points:        "     << endl;
-        cout << "At SEML:          " << sem_index   << endl;
-        cout << "Total:            " << final_index << endl;
-        cout << "Selecting 1/" << freq << " points" << endl;
-        cout << "Subtotal:         " << (int) floor(final_index/freq) << endl;
-        cout << "----------------------------------"<< endl;
-
-        //------------------------------------------------------------------------------------
-        // Subset of points in y_traj_comp/t_traj_comp
-        //------------------------------------------------------------------------------------
-        for(int kman = 0; kman <= floor(final_index/freq); kman++)
-        {
-            for(int i = 0; i < 6; i++) y_traj_comp[i][kman] = y_traj[i][freq*kman];
-            t_traj_comp[kman] = t_traj[freq*kman];
-        }
-
-        //New final index
-        final_index = floor(final_index/freq);
-
-        //------------------------------------------------------------------------------------
-        // Subset of points back in y_traj/t_traj
-        //------------------------------------------------------------------------------------
-        for(int kman = 0; kman <= final_index; kman++)
-        {
-            for(int i = 0; i < 6; i++) y_traj[i][kman] = y_traj_comp[i][kman];
-            t_traj[kman] = t_traj_comp[kman];
-        }
-    }
-    else
-    {
-        //If the grid size is fixed, we still return the variable indix, because
-        //some integration procedure could have gone wrong so that the returned indices
-        //are smaller than their optimal desired value
-        final_index = sem_index;
-    }
-
-    //====================================================================================
-    // Initial trajectory, on a grid
-    //====================================================================================
-    cout << fname << ". Initial trajectory, on a grid..."  << endl;
-    int mPlot = 10;
-    double** ymc        = dmatrix(0, 5, 0, mPlot);
-    double* tmc         = dvector(0, mPlot);
-    double** ymc_comp   = dmatrix(0, 5, 0, mPlot);
-    double* tmc_comp    = dvector(0, mPlot);
-    double** ymc_v      = dmatrix(0, 5, 0, mPlot*final_index);
-    double* tmc_v       = dvector(0, mPlot*final_index);
-    double** ymc_comp_v = dmatrix(0, 5, 0, mPlot*final_index);
-    double* tmc_comp_v  = dvector(0, mPlot*final_index);
-
-    //Initial trajectory on lines, segment by segment
-    double yv[6];
-    int ode78coll;
-
-    for(int k = 0; k < final_index; k++)
-    {
-        //Integration segment by segment
-        for(int i = 0; i < 6; i++) yv[i] = y_traj[i][k];
-        ode78(ymc, tmc, &ode78coll, t_traj[k], t_traj[k+1], yv, 6, mPlot, NCEM, coord_type, coord_type);
-
-        //Store
-        for(int p = 0; p <= mPlot; p++)
-        {
-            for(int i = 0; i < 6; i++) ymc_v[i][k*mPlot + p] = ymc[i][p];
-            tmc_v[k*mPlot + p] = tmc[p];
-        }
-    }
-    //To complementary coordinates
-    qbcp_coc_vec(ymc_v, tmc_v, ymc_comp_v, tmc_comp_v, mPlot*final_index, coord_type, comp_type);
-
-    //Plot on h2: lines
-    gnuplot_plot_X(h2, ymc_v, mPlot*final_index+1, (char*)"Initial guess", "lines", "1", "2", 7);
-    //Plot on h2: points
-    gnuplot_plot_X(h2, y_traj, final_index+1, (char*)"", "points", "1", "2", 7);
-    //Plot on h3: lines
-    gnuplot_plot_X(h3, ymc_comp_v, mPlot*final_index+1, (char*)"Initial guess", "lines", "1", "2", 7);
-
-
-    //====================================================================================
-    // 6.5 Differential correction & final trajectory
-    //====================================================================================
-    cout << fname << ". Differential correction procedure.          "  << endl;
-    cout << "-----------------------------------------------------------"  << endl;
-    pressEnter(refSt.isFlagOn);
-
-    int isPlotted   = 0;
-    multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, h2);
-    //multiple_shooting_direct_variable_time(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, isTimeFixed, h2);
-
-    //------------------------------------------------------------------------------------
-    // Final trajectory, on a grid
-    //------------------------------------------------------------------------------------
-    cout << fname << ". Final trajectory, on a grid..."  << endl;
-    //Final trajectory on lines, segment by segment
-    for(int k = 0; k < final_index; k++)
-    {
-        //Integration segment by segment
-        for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
-        ode78(ymc, tmc, &ode78coll, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
-
-        //Store
-        for(int p = 0; p <= mPlot; p++)
-        {
-            for(int i = 0; i < 6; i++) ymc_v[i][k*mPlot + p] = ymc[i][p];
-            tmc_v[k*mPlot + p] = tmc[p];
-        }
-    }
-
-    //To complementary coordinates
-    qbcp_coc_vec(ymc_v, tmc_v, ymc_comp_v, tmc_comp_v, mPlot*final_index, coord_type, comp_type);
-    //Plot on h2
-    gnuplot_plot_X(h2, ymc_v, mPlot*final_index+1, (char*)"Final guess", "lines", "1", "2", 3);
-    gnuplot_plot_X(h2, y_traj_n, final_index+1, (char*)"", "points", "1", "2", 3);
-    //Plot on h3
-    gnuplot_plot_X(h3, ymc_comp_v, mPlot*final_index+1, (char*)"Final guess", "lines", "1", "2", 3);
-
-    //====================================================================================
-    // JPL
-    //====================================================================================
-    if(refSt.isJPL)
-    {
-        //----------------------------------------------------------
-        //Go on
-        //----------------------------------------------------------
-        pressEnter(refSt.isFlagOn);
-
-        //====================================================================================
-        // Initialize SPICE kernerls
-        //====================================================================================
-        gnuplot_ctrl* h4 = gnuplot_init();
-        cout << fname << ". Initialize SPICE kernerls..." << endl;
-        furnsh_c("spice/kernels/metakernel.furnsh");
-
-        //====================================================================================
-        // Initialize VF
-        //====================================================================================
-        cout << fname << ". Initialize associated VF..." << endl;
-        int shift = 0;
-        OdeStruct driver_JPL;
-        //Root-finding
-        const gsl_root_fsolver_type* T_root = gsl_root_fsolver_brent;
-        //Stepper
-        const gsl_odeiv2_step_type* T = gsl_odeiv2_step_rk8pd;
-        //Parameters
-        int coll;
-        OdeParams odeParams(&coll, &SEML);
-        //Init ode structure
-        init_ode_structure(&driver_JPL, T, T_root, 6, jpl_vf_syn, &odeParams);
-
-        //====================================================================================
-        // Search for best fit in  JPL ephemerides
-        //====================================================================================
-        cout << fname << ". Search for best fit in JPL DE430..." << endl;
-
-        //----------------------------------------------------------
-        //Get the best fit at t = t_traj_n[shift]. et0 is in seconds
-        //----------------------------------------------------------
-        double et0;
-        double tsys0 = t_traj_n[shift];
-        double tsys0_comp = tsys0;
-        switch(eph_coord(comp_type))
-        {
-        case VEM:
-            tsys0_comp /= SEML.us_em.ns;
-            break;
-
-        case VSEM:
-            tsys0_comp *= SEML.us_em.ns;
-            break;
-        }
-        //Best fit
-        qbcp2jpl(tsys0, &et0, coord_type);
-
-        //----------------------------------------------------------
-        //Update the SEML
-        //----------------------------------------------------------
-        SEML.ss.et0 = et0;
-        SEML.ss.t0  = tsys0;
-
-        cout << "best fit (s) = " << et0 << endl;
-
-        //====================================================================================
-        // Change of coordinates
-        //====================================================================================
-        cout << fname << ". Change of coordinates syn -> ecliptic..." << endl;
-        //------------------------------------------------------------------------------------
-        //Local variables to store the refined trajectory
-        //------------------------------------------------------------------------------------
-        double** y_traj_syn   = dmatrix(0, 41, 0, final_index);
-        double* t_traj_syn    = dvector(0, final_index);
-        double* et_traj_jpl   = dvector(0, final_index);
-
-        double** y_traj_jpl_n = dmatrix(0, 41, 0, final_index);
-        double* t_traj_jpl_n  = dvector(0, final_index);
-
-        //------------------------------------------------------------------------------------
-        //Compute the change of coord: syn -> ecliptic
-        //------------------------------------------------------------------------------------
-        qbcp_coc_vec(y_traj_n, t_traj_n, y_traj_syn, t_traj_syn, final_index, coord_type, eph_coord(coord_type));
-        for(int p = 0; p <= final_index; p++)
-        {
-            et_traj_jpl[p] = et0 + (t_traj_n[p]-tsys0)/mean_motion(eph_coord(coord_type));
-        }
-
-        //====================================================================================
-        // Plotting Initial Guess
-        //====================================================================================
-        pressEnter(refSt.isFlagOn);
-        cout << fname << ". Plotting Initial Guess..." << endl;
-        //------------------------------------------------------------------------------------
-        //Initial trajectory on lines, segment by segment
-        //------------------------------------------------------------------------------------
-        for(int k = 0; k < final_index; k++)
-        {
-            //----------------------------------------------------
-            //Integration segment by segment
-            //----------------------------------------------------
-            for(int i = 0; i < 6; i++) yv[i] = y_traj_syn[i][k];
-            ode78_jpl(ymc_comp, tmc_comp, &ode78coll, t_traj_syn[k], t_traj_syn[k+1], yv, 6, mPlot, eph_fwrk(coord_type), eph_coord(coord_type), eph_coord(coord_type));
-
-            //----------------------------------------------------
-            //Back to coord_type coordinates
-            //----------------------------------------------------
-            qbcp_coc_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, eph_coord(coord_type), coord_type);
-
-            //Plot on h2
-            if(k == 0) gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"Initial guess in JPL", "lines", "1", "2", 1);
-            else gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"", "lines", "1", "2", 1);
-
-            //----------------------------------------------------
-            //Back to comp_type coordinates
-            //----------------------------------------------------
-            //qbcp_coc_vec(ymc, tmc, ymc_comp, tmc_comp, mPlot, coord_type, comp_type);
-            //OR
-            //coord_type  -> ECLIPTIC -> comp_type
-            syn2eclstate_vec(ymc_comp, tmc_comp, ymc, tmc,  mPlot, et0, tsys0, eph_coord(coord_type));
-            ecl2coordstate_vec(ymc, tmc, ymc_comp, tmc_comp, mPlot, comp_type, et0, tsys0_comp, eph_coord(comp_type));
-
-            //Plot on h3
-            if(k == 0) gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"Initial guess in JPL", "lines", "1", "2", 1);
-            else gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"", "lines", "1", "2", 1);
-        }
-
-        //====================================================================================
-        // 6.5 Differential correction & final trajectory
-        //====================================================================================
-        pressEnter(refSt.isFlagOn);
-        cout << fname << ". Refine trajectory in JPL ephemerides..." << endl;
-
-        isPlotted   = 1;
-        multiple_shooting_direct(y_traj_syn, t_traj_syn, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, eph_coord(coord_type), isPlotted, h4);
-        //Plot
-        gnuplot_plot_X(h4, y_traj_jpl_n, final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
-
-
-        //--------------------------------------------------------------------------------
-        //Final trajectory on lines, segment by segment
-        //--------------------------------------------------------------------------------
-        for(int k = 0; k < final_index; k++)
-        {
-            //----------------------------------------------------
-            //Integration segment by segment
-            //----------------------------------------------------
-            for(int i = 0; i < 6; i++) yv[i] = y_traj_jpl_n[i][k];
-            ode78_jpl(ymc_comp, tmc_comp, &ode78coll, t_traj_jpl_n[k], t_traj_jpl_n[k+1], yv, 6, mPlot, eph_fwrk(coord_type), eph_coord(coord_type), eph_coord(coord_type));
-
-            //----------------------------------------------------
-            //Back to coord_type coordinates
-            //----------------------------------------------------
-            qbcp_coc_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, eph_coord(coord_type), coord_type);
-
-            //Plot on h2
-            if(k == 0) gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"Final traj in JPL", "lines", "1", "2", 2);
-            else gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"", "lines", "1", "2", 2);
-
-            //----------------------------------------------------
-            //Back to comp_type coordinates
-            //----------------------------------------------------
-            //qbcp_coc_vec(ymc, tmc, ymc_comp, tmc_comp, mPlot, coord_type, comp_type);
-            //OR
-            //coord_type  -> ECLIPTIC -> comp_type
-            syn2eclstate_vec(ymc_comp, tmc_comp, ymc, tmc,  mPlot, et0, tsys0, eph_coord(coord_type));
-            ecl2coordstate_vec(ymc, tmc, ymc_comp, tmc_comp, mPlot, comp_type, et0, tsys0_comp, eph_coord(comp_type));
-
-            //Plot on h3
-            if(k == 0) gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"Final traj in JPL", "lines", "1", "2", 2);
-            else gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"", "lines", "1", "2", 2);
-        }
-
-        //----------------------------------------------------------
-        //Gnuplot window
-        //----------------------------------------------------------
-        pressEnter(refSt.isFlagOn);
-        gnuplot_close(h4);
-    }
-
-    //----------------------------------------------------------
-    //Gnuplot window
-    //----------------------------------------------------------
-    pressEnter(refSt.isFlagOn);
-    gnuplot_close(h2);
-    gnuplot_close(h3);
-
-
-    //====================================================================================
-    // Free the data containers
-    //====================================================================================
-    free_dmatrix(y_traj, 0, 41, 0, traj_grid_2);
-    free_dvector(t_traj, 0, traj_grid_2);
-    free_dmatrix(y_traj_comp, 0, 41, 0, traj_grid_2);
-    free_dvector(t_traj_comp, 0, traj_grid_2);
-    free_dmatrix(y_traj_n, 0, 41, 0, traj_grid_2);
-    free_dvector(t_traj_n, 0, traj_grid_2);
-
-    free_dmatrix(y_man_NCEM, 0, 5, 0, man_grid_2);
-    free_dmatrix(y_man_NCSEM, 0, 5, 0, man_grid_2);
-    free_dmatrix(y_man_coord, 0, 5, 0, man_grid_2);
-    free_dvector(t_man_EM, 0, man_grid_2);
-    free_dvector(t_man_SEM, 0, man_grid_2);
-    free_dvector(t_man_coord, 0, man_grid_2);
-
-    free_dmatrix(ymc, 0, 5, 0, mPlot);
-    free_dvector(tmc, 0, mPlot);
-    free_dmatrix(ymc_comp, 0, 5, 0, mPlot);
-    free_dvector(tmc_comp, 0, mPlot);
-
-    free_dmatrix(ymc_v, 0, 5, 0, mPlot*final_index);
-    free_dvector(tmc_v, 0, mPlot*final_index);
-    free_dmatrix(ymc_comp_v, 0, 5, 0, mPlot*final_index);
-    free_dvector(tmc_comp_v  , 0, mPlot*final_index);
-
-    return FTC_SUCCESS;
-}
-
-
-/**
- *  \brief Computes only an EML2 orbit and test a JPL refinement.
- **/
-int oocomprefft3d_test_eml_synjpl(int man_grid_size_t,
-                                  int coord_type,
-                                  Orbit& orbit_EM,
-                                  RefSt refSt)
-{
-    //====================================================================================
-    // 1. Initialize local variables
-    //====================================================================================
-    string fname = "oocomprefft3d_test_eml_synjpl";
-    cout << fname << ". Initialization of the local variables..."  << endl;
-
-    //----------------------------------------------------------
-    //Get the default coordinates system from the coord_type
-    //----------------------------------------------------------
-    int dcs  = default_coordinate_system(coord_type);
-
-    //----------------------------------------------------------
-    // Define the time of flight on each orbit
-    //----------------------------------------------------------
-    double tof_eml_EM = refSt.tspan_EM;   //TOF on EML2 orbit
-    //    double tof_seml_SEM = refSt.tspan_SEM;   //TOF on SEMLi orbit
-
-    //====================================================================================
-    // 2. Init the gnuplot
-    //====================================================================================
-    //----------------------------------------------------------
-    //Gnuplot window
-    //----------------------------------------------------------
-    gnuplot_ctrl* h2, *h3;
-    h2 = gnuplot_init();
-    h3 = gnuplot_init();
-
-    gnuplot_cmd(h2, "set title \"Computation coordinates\" ");
-    gnuplot_cmd(h3, "set title \"Complementary coordinates\" ");
-
-    //gnuplot_cmd(h2, "set view equal xyz");
-    //gnuplot_cmd(h3, "set view equal xyz");
-    gnuplot_cmd(h2, "set grid");
-    gnuplot_cmd(h3, "set grid");
-
-    //----------------------------------------------------------
-    //Notable points in SEM & EM systems
-    //----------------------------------------------------------
-    notablePoints(h2, h3, coord_type);
-
-    //----------------------------------------------------------
-    //Complementary coordinate type
-    //----------------------------------------------------------
-    int comp_type = comp_coord_typ(coord_type);
-
-    //====================================================================================
-    // 3. Init the data containers
-    //====================================================================================
-    int max_grid    = 3000;
-    int man_grid_2  = (refSt.grid == REF_VAR_GRID) ? max_grid:man_grid_size_t;
-    int traj_grid_2 = (refSt.grid == REF_VAR_GRID) ? max_grid:man_grid_size_t;
-
-    //------------------------------------------------------------------------------------
-    //To store final data
-    //------------------------------------------------------------------------------------
-    double** y_traj  = dmatrix(0, 41, 0, traj_grid_2);
-    double*  t_traj  = dvector(0, traj_grid_2);
-
-    double** y_traj_comp  = dmatrix(0, 41, 0, traj_grid_2);
-    double*  t_traj_comp  = dvector(0, traj_grid_2);
-
-    //------------------------------------------------------------------------------------
-    //Local variables to store the refined trajectory
-    //------------------------------------------------------------------------------------
-    double** y_traj_n   = dmatrix(0, 41, 0, traj_grid_2);
-    double* t_traj_n    = dvector(0, traj_grid_2);
-
-    //====================================================================================
-    // 4. Build the trajectory
-    //====================================================================================
-
-    //====================================================================================
-    // 4.1 Initialize local variables
-    //====================================================================================
-    //------------------------------------------------------------------------------------
-    //Local variables to store the manifold leg
-    //------------------------------------------------------------------------------------
-    double** y_man_NCEM   = dmatrix(0, 5, 0, man_grid_2);
-    double** y_man_NCSEM  = dmatrix(0, 5, 0, man_grid_2);
-    double** y_man_coord  = dmatrix(0, 5, 0, man_grid_2);
-    double** y_man_comp   = dmatrix(0, 5, 0, man_grid_2);
-    double* t_man_EM      = dvector(0, man_grid_2);
-    double* t_man_SEM     = dvector(0, man_grid_2);
-    double* t_man_coord   = dvector(0, man_grid_2);
-    double* t_man_comp    = dvector(0, man_grid_2);
-
-
-    //====================================================================================
-    // 4.2 Compute the initial orbit
-    //====================================================================================
-    cout << fname << ". Compute the initial orbit..."  << endl;
-    //------------------------------------------------------------------------------------
-    //For the computation of the initial orbit, we kill the unstable part.
-    //------------------------------------------------------------------------------------
-    orbit_EM.setSi(0.0, 4);
-
-    //------------------------------------------------------------------------------------
-    // Update the initial state in the orbit, with the RCM coordinates
-    //------------------------------------------------------------------------------------
-    orbit_EM.update_ic(orbit_EM.getSi());
-
-    //------------------------------------------------------------------------------------
-    //Integration on man_grid_size+1 fixed grid
-    //------------------------------------------------------------------------------------
-    int em_index = man_grid_2;
-
-    switch(refSt.grid)
-    {
-    case REF_FIXED_GRID:
-    case REF_GIVEN_GRID:
-    {
-        int output = orbit_EM.traj_int_grid(orbit_EM.getT0()-tof_eml_EM, y_man_NCEM, t_man_EM, man_grid_2, true);
-        //--------------------------------------------------------------------------------
-        //If output is strictly greater than 0, then the projection procedure inside
-        //the integration went wrong, and the new indix is output.
-        //It output == ORBIT_EPROJ, the projection procedure failed so bad that there
-        //is no point stored in the data, except the first one, and the new indix is zero
-        //--------------------------------------------------------------------------------
-        if(output == ORBIT_EPROJ) em_index = 0;
-        else if(output > 0) em_index = output;
-        break;
-    }
-
-    case REF_VAR_GRID:
-    {
-        em_index = orbit_EM.traj_int_var_grid(orbit_EM.getT0()-tof_eml_EM, y_man_NCEM, t_man_EM, man_grid_2, true);
-        break;
-    }
-    }
-
-    //------------------------------------------------------------------------------------
-    //To coord_type coordinates
-    //------------------------------------------------------------------------------------
-    qbcp_coc_vec(y_man_NCEM, t_man_EM, y_man_coord, t_man_coord, em_index, NCEM, coord_type);
-    qbcp_coc_vec(y_man_NCEM, t_man_EM, y_man_comp,  t_man_comp,  em_index, NCEM, comp_type);
-
-    //------------------------------------------------------------------------------------
-    // Save All points
-    //------------------------------------------------------------------------------------
-    for(int kman = 0; kman <= em_index; kman++)
-    {
-        for(int i = 0; i < 6; i++) y_traj[i][kman] = y_man_coord[i][em_index-kman];
-        t_traj[kman] = t_man_coord[em_index-kman];
-    }
-
-    //------------------------------------------------------------------------------------
-    //Plot
-    //------------------------------------------------------------------------------------
-    gnuplot_plot_X(h2, y_man_coord, em_index+1, (char*)"", "lines", "5", "3", 5);
-    gnuplot_plot_X(h3, y_man_comp, em_index+1, (char*)"", "lines", "5", "3", 5);
-
-
-    //====================================================================================
-    // Entire size is: no more than 3*man_grid_size_t points or so.
-    //====================================================================================
-    int final_index = 0;
-    if(refSt.grid == REF_VAR_GRID)
-    {
-        final_index = em_index;
-        int freq = final_index/(3*man_grid_size_t);
-        cout << "----------------------------------"<< endl;
-        cout << "Number of MSD points:        "     << endl;
-        cout << "At EML:          " << em_index   << endl;
-        cout << "Total:            " << final_index << endl;
-        cout << "Selecting 1/" << freq << " points" << endl;
-        cout << "Subtotal:         " << (int) floor(final_index/freq) << endl;
-        cout << "----------------------------------"<< endl;
-
-        //------------------------------------------------------------------------------------
-        // Subset of points in y_traj_comp/t_traj_comp
-        //------------------------------------------------------------------------------------
-        for(int kman = 0; kman <= floor(final_index/freq); kman++)
-        {
-            for(int i = 0; i < 6; i++) y_traj_comp[i][kman] = y_traj[i][freq*kman];
-            t_traj_comp[kman] = t_traj[freq*kman];
-        }
-
-        //New final index
-        final_index = floor(final_index/freq);
-
-        //------------------------------------------------------------------------------------
-        // Subset of points back in y_traj/t_traj
-        //------------------------------------------------------------------------------------
-        for(int kman = 0; kman <= final_index; kman++)
-        {
-            for(int i = 0; i < 6; i++) y_traj[i][kman] = y_traj_comp[i][kman];
-            t_traj[kman] = t_traj_comp[kman];
-        }
-    }
-    else
-    {
-        //If the grid size is fixed, we still return the variable indix, because
-        //some integration procedure could have gone wrong so that the returned indices
-        //are smaller than their optimal desired value
-        final_index = em_index;
-    }
-
-    //====================================================================================
-    // Initial trajectory, on a grid
-    //====================================================================================
-    cout << fname << ". Initial trajectory, on a grid..."  << endl;
-    int mPlot = 10;
-    double** ymc        = dmatrix(0, 5, 0, mPlot);
-    double* tmc         = dvector(0, mPlot);
-    double** ymc_comp   = dmatrix(0, 5, 0, mPlot);
-    double* tmc_comp    = dvector(0, mPlot);
-    double** ymc_v      = dmatrix(0, 5, 0, mPlot*final_index);
-    double* tmc_v       = dvector(0, mPlot*final_index);
-    double** ymc_comp_v = dmatrix(0, 5, 0, mPlot*final_index);
-    double* tmc_comp_v  = dvector(0, mPlot*final_index);
-
-    //Initial trajectory on lines, segment by segment
-    double yv[6];
-    int ode78coll;
-    for(int k = 0; k < final_index; k++)
-    {
-        //Integration segment by segment
-        for(int i = 0; i < 6; i++) yv[i] = y_traj[i][k];
-        ode78(ymc, tmc, &ode78coll, t_traj[k], t_traj[k+1], yv, 6, mPlot, NCEM, coord_type, coord_type);
-
-        //Store
-        for(int p = 0; p <= mPlot; p++)
-        {
-            for(int i = 0; i < 6; i++) ymc_v[i][k*mPlot + p] = ymc[i][p];
-            tmc_v[k*mPlot + p] = tmc[p];
-        }
-    }
-    //To complementary coordinates
-    qbcp_coc_vec(ymc_v, tmc_v, ymc_comp_v, tmc_comp_v, mPlot*final_index, coord_type, comp_type);
-
-    //Plot on h2: lines
-    gnuplot_plot_X(h2, ymc_v, mPlot*final_index+1, (char*)"Initial guess", "lines", "1", "2", 7);
-    //Plot on h2: points
-    gnuplot_plot_X(h2, y_traj, final_index+1, (char*)"", "points", "1", "2", 7);
-    //Plot on h3: lines
-    gnuplot_plot_X(h3, ymc_comp_v, mPlot*final_index+1, (char*)"Initial guess", "lines", "1", "2", 7);
-
-
-    //====================================================================================
-    // 6.5 Differential correction & final trajectory
-    //====================================================================================
-    cout << fname << ". Differential correction procedure.          "  << endl;
-    cout << "-----------------------------------------------------------"  << endl;
-    char ch;
-    printf("Press ENTER to go on\n");
-    scanf("%c",&ch);
-
-    int isPlotted   = 0;
-    multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, h2);
-    //multiple_shooting_direct_variable_time(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, isTimeFixed, h2);
-
-    //------------------------------------------------------------------------------------
-    // Final trajectory, on a grid
-    //------------------------------------------------------------------------------------
-    cout << fname << ". Final trajectory, on a grid..."  << endl;
-    //Final trajectory on lines, segment by segment
-    for(int k = 0; k < final_index; k++)
-    {
-        //Integration segment by segment
-        for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
-        ode78(ymc, tmc, &ode78coll, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
-
-        //Store
-        for(int p = 0; p <= mPlot; p++)
-        {
-            for(int i = 0; i < 6; i++) ymc_v[i][k*mPlot + p] = ymc[i][p];
-            tmc_v[k*mPlot + p] = tmc[p];
-        }
-    }
-
-    //To complementary coordinates
-    qbcp_coc_vec(ymc_v, tmc_v, ymc_comp_v, tmc_comp_v, mPlot*final_index, coord_type, comp_type);
-    //Plot on h2
-    gnuplot_plot_X(h2, ymc_v, mPlot*final_index+1, (char*)"Final guess", "lines", "1", "2", 3);
-    gnuplot_plot_X(h2, y_traj_n, final_index+1, (char*)"", "points", "1", "2", 3);
-    //Plot on h3
-    gnuplot_plot_X(h3, ymc_comp_v, mPlot*final_index+1, (char*)"Final guess", "lines", "1", "2", 3);
-
-    //====================================================================================
-    // JPL
-    //====================================================================================
-    if(refSt.isJPL)
-    {
-        //----------------------------------------------------------
-        //Go on
-        //----------------------------------------------------------
-        printf("Press ENTER to go on with the JPL ref");
-        scanf("%c",&ch);
-
-
-        //====================================================================================
-        // Initialize SPICE kernerls
-        //====================================================================================
-        gnuplot_ctrl* h4 = gnuplot_init();
-        cout << fname << ". Initialize SPICE kernerls..." << endl;
-        furnsh_c("spice/kernels/metakernel.furnsh");
-
-        //====================================================================================
-        // Initialize VF
-        //====================================================================================
-        cout << fname << ". Initialize associated VF..." << endl;
-        int shift = 0;
-        OdeStruct driver_JPL;
-        //Root-finding
-        const gsl_root_fsolver_type* T_root = gsl_root_fsolver_brent;
-        //Stepper
-        const gsl_odeiv2_step_type* T = gsl_odeiv2_step_rk8pd;
-        //Parameters
-        int coll;
-        OdeParams odeParams(&coll, &SEML);
-        //Init ode structure
-        init_ode_structure(&driver_JPL, T, T_root, 6, jpl_vf_syn, &odeParams);
-
-        //====================================================================================
-        // Search for best fit in  JPL ephemerides
-        //====================================================================================
-        cout << fname << ". Search for best fit in JPL DE430..." << endl;
-
-        //----------------------------------------------------------
-        //Get the best fit at t = t_traj_n[shift]. et0 is in seconds
-        //----------------------------------------------------------
-        double et0;
-        double tsys0 = t_traj_n[shift];
-        double tsys0_comp = tsys0;
-        switch(eph_coord(comp_type))
-        {
-        case VEM:
-            tsys0_comp /= SEML.us_em.ns;
-            break;
-
-        case VSEM:
-            tsys0_comp *= SEML.us_em.ns;
-            break;
-        }
-        //Best fit
-        qbcp2jpl(tsys0, &et0, coord_type);
-
-        //----------------------------------------------------------
-        //Update the SEML
-        //----------------------------------------------------------
-        SEML.ss.et0 = et0;
-        SEML.ss.t0  = tsys0;
-
-        //====================================================================================
-        // Change of coordinates
-        //====================================================================================
-        cout << fname << ". Change of coordinates syn -> ecliptic..." << endl;
-        //------------------------------------------------------------------------------------
-        //Local variables to store the refined trajectory
-        //------------------------------------------------------------------------------------
-        double** y_traj_syn   = dmatrix(0, 41, 0, final_index);
-        double* t_traj_syn    = dvector(0, final_index);
-        double* et_traj_jpl   = dvector(0, final_index);
-
-        double** y_traj_jpl_n = dmatrix(0, 41, 0, final_index);
-        double* t_traj_jpl_n  = dvector(0, final_index);
-
-        //------------------------------------------------------------------------------------
-        //Compute the change of coord: syn -> ecliptic
-        //------------------------------------------------------------------------------------
-        qbcp_coc_vec(y_traj_n, t_traj_n, y_traj_syn, t_traj_syn, final_index, coord_type, eph_coord(coord_type));
-        for(int p = 0; p <= final_index; p++)
-        {
-            et_traj_jpl[p] = et0 + (t_traj_n[p]-tsys0)/mean_motion(eph_coord(coord_type));
-        }
-
-        //================================================================================
-        // Plotting Initial Guess
-        //================================================================================
-        printf("Press ENTER to plot the Initial Guess\n");
-        scanf("%c",&ch);
-        cout << fname << ". Plotting Initial Guess..." << endl;
-        //--------------------------------------------------------------------------------
-        //Initial trajectory on lines, segment by segment
-        //--------------------------------------------------------------------------------
-        for(int k = 0; k < final_index; k++)
-        {
-            //----------------------------------------------------
-            //Integration segment by segment
-            //----------------------------------------------------
-            for(int i = 0; i < 6; i++) yv[i] = y_traj_syn[i][k];
-            ode78_jpl(ymc_comp, tmc_comp, &ode78coll, t_traj_syn[k], t_traj_syn[k+1], yv, 6, mPlot, eph_fwrk(coord_type), eph_coord(coord_type), eph_coord(coord_type));
-
-            //----------------------------------------------------
-            //Back to coord_type coordinates
-            //----------------------------------------------------
-            qbcp_coc_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, eph_coord(coord_type), coord_type);
-
-            //Plot on h2
-            if(k == 0) gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"Initial guess in JPL", "lines", "1", "2", 1);
-            else gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"", "lines", "1", "2", 1);
-
-            //----------------------------------------------------
-            //Back to comp_type coordinates
-            //----------------------------------------------------
-            //qbcp_coc_vec(ymc, tmc, ymc_comp, tmc_comp, mPlot, coord_type, comp_type);
-            //OR
-            //coord_type  -> ECLIPTIC -> comp_type
-            syn2eclstate_vec(ymc_comp, tmc_comp, ymc, tmc,  mPlot, et0, tsys0, eph_coord(coord_type));
-            ecl2coordstate_vec(ymc, tmc, ymc_comp, tmc_comp, mPlot, comp_type, et0, tsys0_comp, eph_coord(comp_type));
-
-            //Plot on h3
-            if(k == 0) gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"Initial guess in JPL", "lines", "1", "2", 1);
-            else gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"", "lines", "1", "2", 1);
-
-        }
-
-        //====================================================================================
-        // 6.5 Differential correction & final trajectory
-        //====================================================================================
-        printf("Press ENTER to refine\n");
-        scanf("%c",&ch);
-        cout << fname << ". Refine trajectory in JPL ephemerides..." << endl;
-
-        isPlotted   = 1;
-        multiple_shooting_direct(y_traj_syn, t_traj_syn, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, eph_coord(coord_type), isPlotted, h4);
-        //Plot
-        gnuplot_plot_X(h4, y_traj_jpl_n, final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
-
-
-        //--------------------------------------------------------------------------------
-        //Final trajectory on lines, segment by segment
-        //--------------------------------------------------------------------------------
-        for(int k = 0; k < final_index; k++)
-        {
-            //----------------------------------------------------
-            //Integration segment by segment
-            //----------------------------------------------------
-            for(int i = 0; i < 6; i++) yv[i] = y_traj_jpl_n[i][k];
-            ode78_jpl(ymc_comp, tmc_comp, &ode78coll, t_traj_jpl_n[k], t_traj_jpl_n[k+1], yv, 6, mPlot, eph_fwrk(coord_type), eph_coord(coord_type), eph_coord(coord_type));
-
-            //----------------------------------------------------
-            //Back to coord_type coordinates
-            //----------------------------------------------------
-            qbcp_coc_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, eph_coord(coord_type), coord_type);
-
-            //Plot on h2
-            if(k == 0) gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"Final traj in JPL", "lines", "1", "2", 2);
-            else gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"", "lines", "1", "2", 2);
-
-            //----------------------------------------------------
-            //Back to comp_type coordinates
-            //----------------------------------------------------
-            //qbcp_coc_vec(ymc, tmc, ymc_comp, tmc_comp, mPlot, coord_type, comp_type);
-            //OR
-            //coord_type  -> ECLIPTIC -> comp_type
-            syn2eclstate_vec(ymc_comp, tmc_comp, ymc, tmc,  mPlot, et0, tsys0, eph_coord(coord_type));
-            ecl2coordstate_vec(ymc, tmc, ymc_comp, tmc_comp, mPlot, comp_type, et0, tsys0_comp, eph_coord(comp_type));
-
-            //Plot on h3
-            if(k == 0) gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"Final traj in JPL", "lines", "1", "2", 2);
-            else gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"", "lines", "1", "2", 2);
-        }
-
-        //----------------------------------------------------------
-        //Gnuplot window
-        //----------------------------------------------------------
-        printf("Press ENTER to go on\n");
-        scanf("%c",&ch);
-        gnuplot_close(h4);
-    }
-
-    //----------------------------------------------------------
-    //Gnuplot window
-    //----------------------------------------------------------
-    printf("Press ENTER to go on\n");
-    scanf("%c",&ch);
-    gnuplot_close(h2);
-    gnuplot_close(h3);
-
-
-    //====================================================================================
-    // Free the data containers
-    //====================================================================================
-    free_dmatrix(y_traj, 0, 41, 0, traj_grid_2);
-    free_dvector(t_traj, 0, traj_grid_2);
-    free_dmatrix(y_traj_comp, 0, 41, 0, traj_grid_2);
-    free_dvector(t_traj_comp, 0, traj_grid_2);
-    free_dmatrix(y_traj_n, 0, 41, 0, traj_grid_2);
-    free_dvector(t_traj_n, 0, traj_grid_2);
-
-    free_dmatrix(y_man_NCEM, 0, 5, 0, man_grid_2);
-    free_dmatrix(y_man_NCSEM, 0, 5, 0, man_grid_2);
-    free_dmatrix(y_man_coord, 0, 5, 0, man_grid_2);
-    free_dvector(t_man_EM, 0, man_grid_2);
-    free_dvector(t_man_SEM, 0, man_grid_2);
-    free_dvector(t_man_coord, 0, man_grid_2);
-
-    free_dmatrix(ymc, 0, 5, 0, mPlot);
-    free_dvector(tmc, 0, mPlot);
-    free_dmatrix(ymc_comp, 0, 5, 0, mPlot);
-    free_dvector(tmc_comp, 0, mPlot);
-
-    free_dmatrix(ymc_v, 0, 5, 0, mPlot*final_index);
-    free_dvector(tmc_v, 0, mPlot*final_index);
-    free_dmatrix(ymc_comp_v, 0, 5, 0, mPlot*final_index);
-    free_dvector(tmc_comp_v  , 0, mPlot*final_index);
-
-    return FTC_SUCCESS;
-}
-
-
-/**
- *  \brief Computes only a EML2-SEMLi connection and test a JPL refinement, in synodical coordinates
- **/
-int oocomprefft3d_test_eml2seml_synjpl(int coord_type)
-{
-    //====================================================================================
-    // 1. Read the data, in sys units
-    //====================================================================================
-    string fname = "oocomprefft3d_test_eml2seml_synjpl";
-    cout << fname << ". Read the data, in sys units..."  << endl;
-
-    //------------------------------------------------------------------------------------
-    //Local variables to store the refined trajectory
-    //------------------------------------------------------------------------------------
-    int final_index = getLengthCOMP_txt();
-    double** y_traj_n   = dmatrix(0, 41, 0, final_index);
-    double* t_traj_n    = dvector(0, final_index);
-
-    //------------------------------------------------------------------------------------
-    //Read the data stored in a data file
-    //------------------------------------------------------------------------------------
-    readCOMP_txt(t_traj_n, y_traj_n, final_index);
-
-    //====================================================================================
-    // 2. Local parameters
-    //====================================================================================
-    //----------------------------------------------------------
-    //Complementary coordinate type
-    //----------------------------------------------------------
-    int comp_type = comp_coord_typ(coord_type);
-
-    //----------------------------------------------------------
-    // State and time vectors
-    //----------------------------------------------------------
-    int mPlot = 100;
-
-    double** ymc        = dmatrix(0, 5, 0, mPlot);
-    double* tmc         = dvector(0, mPlot);
-    double** ymc_comp   = dmatrix(0, 5, 0, mPlot);
-    double* tmc_comp    = dvector(0, mPlot);
-
-    double** ymc_v      = dmatrix(0, 5, 0, mPlot*final_index);
-    double* tmc_v       = dvector(0, mPlot*final_index);
-    double** ymc_comp_v = dmatrix(0, 5, 0, mPlot*final_index);
-    double* tmc_comp_v  = dvector(0, mPlot*final_index);
-
-    //----------------------------------------------------------
-    //Get the default coordinates system from the coord_type
-    //----------------------------------------------------------
-    int dcs  = default_coordinate_system(coord_type);
-
-    //====================================================================================
-    // 3. Init the gnuplot
-    //====================================================================================
-    //----------------------------------------------------------
-    //Gnuplot window
-    //----------------------------------------------------------
-    gnuplot_ctrl* h2, *h3;
-    h2 = gnuplot_init();
-    h3 = gnuplot_init();
-
-    gnuplot_cmd(h2, "set title \"Computation coordinates\" ");
-    gnuplot_cmd(h3, "set title \"Complementary coordinates\" ");
-    //gnuplot_cmd(h2, "set view equal xyz");
-    //gnuplot_cmd(h3, "set view equal xyz");
-    gnuplot_cmd(h2, "set grid");
-    gnuplot_cmd(h3, "set grid");
-
-    //----------------------------------------------------------
-    //Notable points in SEM & EM systems
-    //----------------------------------------------------------
-    notablePoints(h2, h3, coord_type);
-
-    //====================================================================================
-    // Initial trajectory, on a grid
-    //====================================================================================
-    double yv[6];
-    int ode78coll;
-
-    cout << fname << ". Initial trajectory, on a grid..."  << endl;
-    //Final trajectory on lines, segment by segment
-    for(int k = 0; k < final_index; k++)
-    {
-        //Integration segment by segment
-        for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
-        ode78(ymc, tmc, &ode78coll, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
-
-        //Store
-        for(int p = 0; p <= mPlot; p++)
-        {
-            for(int i = 0; i < 6; i++) ymc_v[i][k*mPlot + p] = ymc[i][p];
-            tmc_v[k*mPlot + p] = tmc[p];
-        }
-    }
-
-    //To complementary coordinates
-    qbcp_coc_vec(ymc_v, tmc_v, ymc_comp_v, tmc_comp_v, mPlot*final_index, coord_type, comp_type);
-    //Plot on h2
-    gnuplot_plot_X(h2, ymc_v, mPlot*final_index+1, (char*)"Final guess", "lines", "1", "2", 3);
-    gnuplot_plot_X(h2, y_traj_n, final_index+1, (char*)"", "points", "1", "2", 3);
-    //Plot on h3
-    gnuplot_plot_X(h3, ymc_comp_v, mPlot*final_index+1, (char*)"Final guess", "lines", "1", "2", 3);
-
-    //====================================================================================
-    // JPL
-    //====================================================================================
-    //----------------------------------------------------------
-    //Go on
-    //----------------------------------------------------------
-    char ch;
-    printf("Press ENTER to go on with the JPL ref");
-    scanf("%c",&ch);
-
-
-    //====================================================================================
-    // Initialize SPICE kernerls
-    //====================================================================================
-    gnuplot_ctrl* h4 = gnuplot_init();
-    cout << fname << ". Initialize SPICE kernerls..." << endl;
-    furnsh_c("spice/kernels/metakernel.furnsh");
-
-    //====================================================================================
-    // Initialize VF
-    //====================================================================================
-    cout << fname << ". Initialize associated VF..." << endl;
-    int shift = 0;
-    OdeStruct driver_JPL;
-    //Root-finding
-    const gsl_root_fsolver_type* T_root = gsl_root_fsolver_brent;
-    //Stepper
-    const gsl_odeiv2_step_type* T = gsl_odeiv2_step_rk8pd;
-    //Parameters
-    int coll;
-    OdeParams odeParams(&coll, &SEML);
-    //Init ode structure
-    init_ode_structure(&driver_JPL, T, T_root, 6, jpl_vf_syn, &odeParams);
-
-    //====================================================================================
-    // Search for best fit in  JPL ephemerides
-    //====================================================================================
-    cout << fname << ". Search for best fit in JPL DE430..." << endl;
-
-    //----------------------------------------------------------
-    //Get the best fit at t = t_traj_n[shift]. et0 is in seconds
-    //----------------------------------------------------------
-    double et0;
-    double tsys0      = t_traj_n[shift];
-    double tsys0_comp = tsys0;
-    switch(eph_coord(comp_type))
-    {
-    case VEM:
-        tsys0_comp /= SEML.us_em.ns;
-        break;
-
-    case VSEM:
-        tsys0_comp *= SEML.us_em.ns;
-        break;
-    }
-    qbcp2jpl(tsys0, &et0, coord_type);
-
-    //----------------------------------------------------------
-    //Update the SEML
-    //----------------------------------------------------------
-    SEML.ss.et0 = et0;
-    SEML.ss.t0  = tsys0;
-
-    //====================================================================================
-    // Change of coordinates
-    //====================================================================================
-    cout << fname << ". Change of coordinates syn -> ecliptic..." << endl;
-    //------------------------------------------------------------------------------------
-    //Local variables to store the refined trajectory
-    //------------------------------------------------------------------------------------
-    double** y_traj_syn   = dmatrix(0, 41, 0, final_index);
-    double* t_traj_syn    = dvector(0, final_index);
-    //double* et_traj_jpl   = dvector(0, final_index);
-    double** y_traj_jpl   = dmatrix(0, 41, 0, final_index);
-    double* t_traj_jpl    = dvector(0, final_index);
-    double** y_traj_syn_n = dmatrix(0, 41, 0, final_index);
-    double* t_traj_syn_n  = dvector(0, final_index);
-
-    //------------------------------------------------------------------------------------
-    //Compute the change of coord: syn -> ecliptic
-    //------------------------------------------------------------------------------------
-    //qbcp_coc_vec(y_traj_n, t_traj_n, y_traj_syn, t_traj_syn, final_index, coord_type, eph_coord(coord_type));
-    coord2eclstate_vec(y_traj_n, t_traj_n, y_traj_jpl, t_traj_jpl, final_index, coord_type, et0,  tsys0, eph_coord(coord_type));
-
-    cout << "-----------------------------------------------------------" << endl;
-    cout << "Trajectory  before refinment                               " << endl;
-    cout << "-----------------------------------------------------------" << endl;
-    for(int p = 0; p <= final_index; p++)
-    {
-        cout << y_traj_jpl[0][p] << "   " << y_traj_jpl[1][p] <<  "   " << y_traj_jpl[2][p] << endl;
-    }
-
-    //====================================================================================
-    //Half of the trajectory is set in the other plane
-    //====================================================================================
-    double** y_traj_jpl_n = dmatrix(0, 41, 0, final_index);
-    double* t_traj_jpl_n  = dvector(0, final_index);
-    coord2eclstate_vec(y_traj_n, t_traj_n, y_traj_jpl_n, t_traj_jpl_n, final_index, coord_type, et0, tsys0_comp, eph_coord(comp_type));
-
-    //----------------------------------------------------------
-    //Find the point that minimizes the discrepancy
-    //----------------------------------------------------------
-    int pmin = final_index/3;
-    int p = final_index/3;
-    double dmin = 0.0, dminmin = 0.0;
-    do
-    {
-        dmin = 0.0;
-        for(int i = 0; i < 6; i++) dmin += (y_traj_jpl[i][p] - y_traj_jpl_n[i][p])*(y_traj_jpl[i][p] - y_traj_jpl_n[i][p]);
-
-        if(p == final_index/3)
-        {
-            pmin = p;
-            dminmin = dmin;
-        }
-        else
-        {
-            if(dmin < dminmin)
-            {
-                pmin = p;
-                dminmin = dmin;
-            }
-        }
-        p++;
-    }
-    while(p <= 2*final_index/3);
-
-    cout << "pmin = " << pmin << "/" << final_index << endl;
-
-    //----------------------------------------------------------
-    //Store the second half: at the beginning or at the end, depending on the computation coordinates
-    //----------------------------------------------------------
-    int begind = 0, endind = 0;
-    switch(eph_coord(coord_type))
-    {
-    case VEM:
-        begind = pmin;
-        endind = final_index;
-        break;
-
-    case VSEM:
-        begind = 0;
-        endind = pmin;
-        break;
-    }
-
-    for(int p = begind; p <= endind; p++)
-    {
-        for(int i = 0; i <6; i++) y_traj_jpl[i][p] =  y_traj_jpl_n[i][p];
-    }
-
-
-    cout << "-----------------------------------------------------------" << endl;
-    cout << "Trajectory  before refinment                               " << endl;
-    cout << "-----------------------------------------------------------" << endl;
-    for(int p = 0; p <= final_index; p++)
-    {
-        cout << y_traj_jpl[0][p] << "   " << y_traj_jpl[1][p] <<  "   " << y_traj_jpl[2][p] << endl;
-    }
-
-    //====================================================================================
-    //Whole trajectory back in syn coordinates
-    //====================================================================================
-    ecl2synstate_vec(y_traj_jpl, t_traj_jpl, y_traj_syn, t_traj_syn, final_index, et0, tsys0, eph_coord(coord_type));
-
-    cout << "-----------------------------------------------------------" << endl;
-    cout << "Trajectory (y_traj_syn)  before refinment                               " << endl;
-    cout << "-----------------------------------------------------------" << endl;
-    for(int p = 0; p <= final_index; p++)
-    {
-        cout << y_traj_syn[0][p] << "   " << y_traj_syn[1][p] <<  "   " << y_traj_syn[2][p] << endl;
-    }
-
-    final_index = pmin;
-    //------------------------------------------------------------------------------------
-    //Time in seconds
-    //------------------------------------------------------------------------------------
-    //for(int p = 0; p <= final_index; p++)
-    //{
-    //        et_traj_jpl[p] = et0 + (t_traj_n[p]-tsys0)/mean_motion(eph_coord(coord_type));
-    //}
-
-    //====================================================================================
-    // Plotting Initial Guess
-    //====================================================================================
-    printf("Press ENTER to plot the Initial Guess\n");
-    scanf("%c",&ch);
-    cout << fname << ". Plotting Initial Guess..." << endl;
-    //------------------------------------------------------------------------------------
-    //Initial trajectory on lines, segment by segment
-    //------------------------------------------------------------------------------------
-    for(int k = 0; k < final_index; k++)
-    {
-        //Integration segment by segment
-        for(int i = 0; i < 6; i++) yv[i] = y_traj_syn[i][k];
-        ode78_jpl(ymc_comp, tmc_comp, &ode78coll, t_traj_syn[k], t_traj_syn[k+1], yv, 6, mPlot, eph_fwrk(coord_type), eph_coord(coord_type), eph_coord(coord_type));
-
-        //To ecl, then to NCSEM
-        qbcp_coc_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, eph_coord(coord_type), coord_type);
-
-        //Plot on h2
-        if(k == 0) gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"Initial guess in JPL", "lines", "1", "2", 1);
-        else gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"", "lines", "1", "2", 1);
-
-        if(k == 0 || k == final_index-1)
-        {
-            for(int p = 0; p <= mPlot; p++)
-            {
-                cout << ymc[0][p] << "   " << ymc[1][p] <<  "   " << ymc[2][p] << endl;
-            }
-            cout << "--------------------------------------" << endl;
-        }
-
-        //Back to comp_type coordinates
-        // @todo: put it NCEM  -> ECLIPTIC -> NCSEM, using ecl2coordstate_vec and its counterpart
-        syn2eclstate_vec(ymc_comp, tmc_comp, ymc, tmc,  mPlot, et0, tsys0, eph_coord(coord_type));
-        ecl2coordstate_vec(ymc, tmc, ymc_comp, tmc_comp, mPlot, comp_type, et0, tsys0_comp, eph_coord(comp_type));
-
-        //Plot on h3
-        if(k == 0) gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"Initial guess in JPL", "lines", "1", "2", 1);
-        else gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"", "lines", "1", "2", 1);
-    }
-
-    //====================================================================================
-    // 6.5 Differential correction & final trajectory
-    //====================================================================================
-    printf("Press ENTER to refine\n");
-    scanf("%c",&ch);
-    cout << fname << ". Refine trajectory in JPL ephemerides..." << endl;
-
-    int isPlotted   = 1;
-    multiple_shooting_direct(y_traj_syn, t_traj_syn, y_traj_syn_n, t_traj_syn_n, 42, final_index, eph_coord(coord_type), isPlotted, h4);
-    //multiple_shooting_direct_variable_time(y_traj_syn, t_traj_syn, y_traj_syn_n, t_traj_syn_n,  42, final_index, eph_coord(coord_type), 5e-9, isPlotted, h4);
-    //Plot
-    gnuplot_plot_X(h4, y_traj_syn_n, final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
-
-
-    //------------------------------------------------------------------------------------
-    //Final trajectory on lines, segment by segment
-    //------------------------------------------------------------------------------------
-    for(int k = 0; k < final_index; k++)
-    {
-        //Integration segment by segment
-        for(int i = 0; i < 6; i++) yv[i] = y_traj_syn_n[i][k];
-        ode78_jpl(ymc_comp, tmc_comp, &ode78coll, t_traj_syn_n[k], t_traj_syn_n[k+1], yv, 6, mPlot,
-                  eph_fwrk(coord_type), eph_coord(coord_type), eph_coord(coord_type));
-
-
-        //Back to coord_type coordinates
-        qbcp_coc_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, eph_coord(coord_type), coord_type);
-
-        //Plot on h2
-        if(k == 0) gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"Final traj in JPL", "lines", "1", "2", 2);
-        else gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"", "lines", "1", "2", 2);
-
-        //Back to comp_type coordinates
-        //qbcp_coc_vec(ymc, tmc, ymc_comp, tmc_comp, mPlot, coord_type, comp_type);
-        syn2eclstate_vec(ymc_comp, tmc_comp, ymc, tmc,  mPlot, et0, tsys0, eph_coord(coord_type));
-        ecl2coordstate_vec(ymc, tmc, ymc_comp, tmc_comp, mPlot, comp_type, et0, tsys0_comp, eph_coord(comp_type));
-
-        //Plot on h3
-        if(k == 0) gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"Final traj in JPL", "lines", "1", "2", 2);
-        else gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"", "lines", "1", "2", 2);
-    }
-
-    //----------------------------------------------------------
-    //Gnuplot window
-    //----------------------------------------------------------
-    printf("Press ENTER to go on\n");
-    scanf("%c",&ch);
-    gnuplot_close(h4);
-
-
-    //----------------------------------------------------------
-    //Gnuplot window
-    //----------------------------------------------------------
-    printf("Press ENTER to go on\n");
-    scanf("%c",&ch);
-    gnuplot_close(h2);
-    gnuplot_close(h3);
-
-
-    //====================================================================================
-    // Free the data containers
-    //====================================================================================
-    free_dmatrix(y_traj_n, 0, 41, 0, final_index);
-    free_dvector(t_traj_n, 0, final_index);
-
-    free_dmatrix(ymc, 0, 5, 0, mPlot);
-    free_dvector(tmc, 0, mPlot);
-    free_dmatrix(ymc_comp, 0, 5, 0, mPlot);
-    free_dvector(tmc_comp, 0, mPlot);
-
-    free_dmatrix(ymc_v, 0, 5, 0, mPlot*final_index);
-    free_dvector(tmc_v, 0, mPlot*final_index);
-    free_dmatrix(ymc_comp_v, 0, 5, 0, mPlot*final_index);
-    free_dvector(tmc_comp_v  , 0, mPlot*final_index);
-
-    return FTC_SUCCESS;
-}
-
-
-//========================================================================================
-//
-// Text format, read
-//
-//========================================================================================
 /**
  * \brief Reads a given \c Ofsc  object within a \c Oftsc, in txt format.
  **/

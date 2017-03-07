@@ -3,6 +3,8 @@
 
 #include "Invman.h"
 #include "ftc_errno.h"
+#include "single_orbit.h"
+#include "multshoot.h"
 
 
 
@@ -20,6 +22,7 @@ class Orbit
         //Time and projection
         double    tfx;         //final time after computation
         double    t0x;         //initial time
+        double    t0xT;        //initial as a ratio of T
         double    tprojx;      //default time between each projection
         double    tprojminx;   //minimum time between each projection
         double    ePmaxx;      //maximum projection distance allowed
@@ -47,6 +50,7 @@ class Orbit
         //Getters
         //--------------------------------------------------------------------------------
         const double  getT0() const;
+        const double  getT0xT() const;
         const double  getN()  const;
         const double  getTf() const;
         const double* getZ0() const;

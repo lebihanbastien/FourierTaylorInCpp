@@ -1,5 +1,4 @@
 #include "Orbit.h"
-#include "lenconref.h"
 
 //========================================================================================
 // Constructors
@@ -20,7 +19,8 @@ Orbit::Orbit(Invman const *invman_, QBCP_L const *qbcp_l_, OdeStruct *driver_, i
     ofs(ofs_order_),
     tfx(tf_),
     t0x(t0_),
-    tprojx(0.1*invman_->getCS()->us.T),   //The default tproj is set to (period of the model)/10
+    t0xT(t0_/invman_->getCS()->us.T),      //Initial time as a ratio of the period of the model
+    tprojx(0.1*invman_->getCS()->us.T),    //The default tproj is set to (period of the model)/10
     tprojminx(1e-5*invman_->getCS()->us.T) //equal to 1e-5*period of the model
 //----------------------------------------------------------------------------------------
 // Body of the constructor
@@ -133,6 +133,11 @@ const double Orbit::getN() const
 const double Orbit::getT0() const
 {
     return t0x;
+}
+
+const double Orbit::getT0xT() const
+{
+    return t0xT;
 }
 
 const double Orbit::getTf() const

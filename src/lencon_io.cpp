@@ -1,8 +1,5 @@
 #include "lencon_io.h"
-#include <iostream>     // std::cout
-#include <algorithm>    // std::unique, std::distance
-#include <vector>       // std::vector
-#include <iterator>
+
 
 //========================================================================================
 //
@@ -35,12 +32,6 @@ string filenameCUM(int ofts_order, int type, int destination)
 
     case TYPE_COMP_FOR_JPL:
         return SEML.cs_em.F_PLOT+"comp_for_jpl_order_"+numTostring(ofts_order)+"_dest_L"+numTostring(destination)+".txt";
-
-    case TYPE_MAN_PROJ_FROM_SERVER:
-        return SEML.cs_em.F_PLOT+"Serv/projcu_order_20.bin";
-    case TYPE_MAN_PROJ_3D_FROM_SERVER:
-        return SEML.cs_em.F_PLOT+"Serv/projcu_3d_order_20.bin";
-
     default:
         cout << "filenameOrbit: unknown type." << endl;
         return "";
@@ -52,24 +43,32 @@ string filenameCUM(int ofts_order, int type, int destination)
  **/
 string filenameCUM(int ofts_order, int type, int destination, double t0)
 {
+    string order_t0_bin      = numTostring(ofts_order)+"_t0_"+numTostring(t0)+".bin";
+    string order_dest_t0_bin = numTostring(ofts_order)+"_dest_L"+numTostring(destination)+"_t0_"+numTostring(t0)+".bin";
+    string order_dest_t0_txt = numTostring(ofts_order)+"_dest_L"+numTostring(destination)+"_t0_"+numTostring(t0)+".txt";
     switch(type)
     {
     case TYPE_CU:
-        return SEML.cs_em.F_PLOT+"cu_order_"+numTostring(ofts_order)+"_t0_"+numTostring(t0)+".bin";
+        return SEML.cs_em.F_PLOT+"cu_order_"+order_t0_bin;
     case TYPE_CU_3D:
-        return SEML.cs_em.F_PLOT+"cu_3d_order_"+numTostring(ofts_order)+"_t0_"+numTostring(t0)+".bin";
+        return SEML.cs_em.F_PLOT+"cu_3d_order_"+order_t0_bin;
     case TYPE_MAN:
-        return SEML.cs_em.F_PLOT+"intcu_order_"+numTostring(ofts_order)+"_t0_"+numTostring(t0)+".bin";
+        return SEML.cs_em.F_PLOT+"intcu_order_"+order_t0_bin;
+
     case TYPE_MAN_PROJ:
-        return SEML.cs_em.F_PLOT+"projcu_order_"+numTostring(ofts_order)+"_dest_L"+numTostring(destination)+"_t0_"+numTostring(t0)+".bin";
+        return SEML.cs_em.F_PLOT+"projcu_order_"+order_dest_t0_bin;
     case TYPE_MAN_SORT:
-        return SEML.cs_em.F_PLOT+"sortprojcu_order_"+numTostring(ofts_order)+"_dest_L"+numTostring(destination)+"_t0_"+numTostring(t0)+".bin";
+        return SEML.cs_em.F_PLOT+"sortprojcu_order_"+order_dest_t0_bin;
     case TYPE_MAN_SORT_IN:
-        return SEML.cs_em.F_PLOT+"sortprojintcu_order_"+numTostring(ofts_order)+"_dest_L"+numTostring(destination)+"_t0_"+numTostring(t0)+".bin";
-    case TYPE_CONT_ATF:
-        return SEML.cs_em.F_PLOT+"cont_atf_order_"+numTostring(ofts_order)+"_dest_L"+numTostring(destination)+"_t0_"+numTostring(t0)+".txt";
+        return SEML.cs_em.F_PLOT+"sortprojintcu_order_"+order_dest_t0_bin;
     case TYPE_CONT_ATF_TRAJ:
-        return SEML.cs_em.F_PLOT+"cont_atf_traj_order_"+numTostring(ofts_order)+"_dest_L"+numTostring(destination)+"_t0_"+numTostring(t0)+".bin";
+        return SEML.cs_em.F_PLOT+"cont_atf_traj_order_"+order_dest_t0_bin;
+    case TYPE_CONT_JPL_TRAJ:
+        return SEML.cs_em.F_PLOT+"cont_jpl_order_"+order_dest_t0_bin;
+
+    case TYPE_CONT_ATF:
+        return SEML.cs_em.F_PLOT+"cont_atf_order_"+order_dest_t0_txt;
+
     default:
         cout << "filenameOrbit: unknown type." << endl;
         return "";
@@ -177,18 +176,14 @@ int getLengthCOMP_txt()
 }
 
 
-
-
-
-
 //========================================================================================
 //
 //          I/O (CU/CS/CM)
 //
 //========================================================================================
-//-----------------------------------------------
+//----------------------------------------------------------------------------------------
 // CU
-//-----------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  *  \brief Store in a data file the Initial Conditions of a planar Center-Unstable manifold. Used in compute_grid_CMU_EM.
  *         The data are of type t0*s1*s3 and of size (tGrid +1)*(gSize+1)*(gSize+1)
@@ -404,13 +399,10 @@ int getLenghtCU_bin(int* s1_grid_size, int* s3_grid_size,
 }
 
 
-//-----------------------------------------------
+//----------------------------------------------------------------------------------------
 // CU 3D
-//-----------------------------------------------
+//----------------------------------------------------------------------------------------
 
-//----------
-// IN
-//----------
 /**
  *  \brief init the data file of Initial Conditions of a 3D Center-Unstable manifold. Used in compute_grid_CMU_EM_3D.
  *         The data are of type t0*s1*s2*s3*s4 and of size (t_grid_size +1)*(si_grid_size[0]+1)*(si_grid_size[1]+1)*(si_grid_size[2]+1)*(si_grid_size[3]+1)
@@ -526,10 +518,6 @@ int writeCU_bin_3D(double** yNCE, double** sNCE, int* si_grid_size,
 
     return FTC_SUCCESS;
 }
-
-//----------
-// OUT
-//----------
 
 /**
  *  \brief Get the length of the data file the containing the Initial Conditions of a 3D Center-Unstable manifold. Used in compute_grid_CMU_EM_3D.
@@ -701,11 +689,9 @@ int readCU_bin_3D(int offset, double** yNCE, double** sNCE, int* si_grid_size,
 }
 
 
-
-
-//-----------------------------------------------
+//----------------------------------------------------------------------------------------
 // Int CU
-//-----------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  *  \brief Get the length of the data file containing the best connections between EML2 and SEML1,2.
  *         Used in int_sorted_sol_CMU_EM_to_CM_SEM/ref_CMU_EM_to_CM_SEM_MSD
@@ -827,9 +813,9 @@ void writeIntProjCU_bin(string filename,
     }
 }
 
-//-----------------------------------------------
+//----------------------------------------------------------------------------------------
 // Int CU 3D
-//-----------------------------------------------
+//----------------------------------------------------------------------------------------
 /**
  *  \brief Store in a data file the connections between EML2 and SEML1,2.
  *         Used in int_proj_CMU_EM_on_CM_SEM_3D.
@@ -918,7 +904,14 @@ void writeIntProjCU_bin_3D(string filename,
     }
 }
 
-
+//========================================================================================
+//
+//          I/O (Refinement)
+//
+//========================================================================================
+/**
+ *   \brief Resize a vector to its vector of unique elemnts
+ **/
 void vector_getUnique(vector<double>& v0U)
 {
     //Creating iterator on v0U
@@ -927,14 +920,11 @@ void vector_getUnique(vector<double>& v0U)
 
     //Resize
     v0U.resize(std::distance(v0U.begin(),it) );
-
-    //Print out content:
-    //std::cout << "v0U contains:";
-    //for (it=v0U.begin(); it!=v0U.end(); ++it)
-    //    std::cout << ' ' << *it;
-    //std::cout << '\n';
 }
 
+/**
+ *   \brief Save in indRes the indices of the occurences of t0 in t0_CMU_EM.
+ **/
 void vector_getIndices(vector<size_t>& indRes, vector<double>& t0_CMU_EM, double t0)
 {
     //Create an iterator that will contain the position of each component of t0_CMU_EM that matches t0
@@ -954,18 +944,12 @@ void vector_getIndices(vector<size_t>& indRes, vector<double>& t0_CMU_EM, double
  *  \brief Read in a data file the connections between EML2 and SEML1,2.
  **/
 void readIntProjCU_bin(string filename,
-                       vector<double>& t0_CMU_EM_0,
-                       vector<double>& tf_man_EM_0,
-                       vector<double>& s1_CMU_EM_0,
-                       vector<double>& s2_CMU_EM_0,
-                       vector<double>& s3_CMU_EM_0,
-                       vector<double>& s4_CMU_EM_0,
-                       vector<double>& s5_CMU_EM_0,
-                       vector<double>& pmin_dist_SEM_0,
-                       vector<double>& s1_CM_SEM_0,
-                       vector<double>& s2_CM_SEM_0,
-                       vector<double>& s3_CM_SEM_0,
-                       vector<double>& s4_CM_SEM_0,
+                       vector<double>& t0_CMU_EM_0, vector<double>& tf_man_EM_0,
+                       vector<double>& s1_CMU_EM_0, vector<double>& s2_CMU_EM_0,
+                       vector<double>& s3_CMU_EM_0, vector<double>& s4_CMU_EM_0,
+                       vector<double>& s5_CMU_EM_0, vector<double>& pmin_dist_SEM_0,
+                       vector<double>& s1_CM_SEM_0, vector<double>& s2_CM_SEM_0,
+                       vector<double>& s3_CM_SEM_0, vector<double>& s4_CM_SEM_0,
                        vector<size_t>& sortId)
 {
     coutmp();
@@ -1172,26 +1156,18 @@ void readIntProjCU_bin(string filename,
 }
 
 
-
 /**
  *  \brief Read in a data file the connections between EML2 and SEML1,2.
  *         Interpolate in the data set to get the right desired t0 at EML2 departures.
  **/
-void readAndInterpolateIntProjCU_bin(string filename,
-                                     double t0_des,
-                                     vector<double>& t0_CMU_EM_0,
-                                     vector<double>& tf_man_EM_0,
-                                     vector<double>& s1_CMU_EM_0,
-                                     vector<double>& s2_CMU_EM_0,
-                                     vector<double>& s3_CMU_EM_0,
-                                     vector<double>& s4_CMU_EM_0,
-                                     vector<double>& s5_CMU_EM_0,
-                                     vector<double>& pmin_dist_SEM_0,
-                                     vector<double>& s1_CM_SEM_0,
-                                     vector<double>& s2_CM_SEM_0,
-                                     vector<double>& s3_CM_SEM_0,
-                                     vector<double>& s4_CM_SEM_0,
-                                     vector<size_t>& sortId)
+void readClosestIntProjCU_bin(string filename, double t0_des,
+                              vector<double>& t0_CMU_EM_0, vector<double>& tf_man_EM_0,
+                              vector<double>& s1_CMU_EM_0, vector<double>& s2_CMU_EM_0,
+                              vector<double>& s3_CMU_EM_0, vector<double>& s4_CMU_EM_0,
+                              vector<double>& s5_CMU_EM_0, vector<double>& pmin_dist_SEM_0,
+                              vector<double>& s1_CM_SEM_0, vector<double>& s2_CM_SEM_0,
+                              vector<double>& s3_CM_SEM_0, vector<double>& s4_CM_SEM_0,
+                              vector<size_t>& sortId)
 {
     coutmp();
     //====================================================================================
@@ -1296,7 +1272,7 @@ void readAndInterpolateIntProjCU_bin(string filename,
 
         filestream.close();
     }else{
-        cout << "readAndInterpolateIntProjCU_bin. Unable to open the file. Check file name. " << endl;
+        cout << "readClosestIntProjCU_bin. Unable to open the file. Check file name. " << endl;
         return;
     }
 
@@ -1422,7 +1398,11 @@ void readAndInterpolateIntProjCU_bin(string filename,
 }
 
 
-
+//========================================================================================
+//
+//          I/O (sorted solutions, deprecated)
+//
+//========================================================================================
 /**
  *  \brief Store in a data file the best connections between EML2 and SEML1,2.
  *         Used in int_proj_CMU_EM_on_CM_SEM.
@@ -1526,107 +1506,4 @@ void writeIntProjSortCU_bin(string filename,
         filestream.close();
     }
 }
-
-/**
- *  \brief Read from a data file the best connections between EML2 and SEML1,2.
- *         Used in int_sorted_sol_CMU_EM_to_CM_SEM. The data file must have been build via writeIntProjSortCU_bin.
- **/
-void readIntProjSortCU_bin(string filename,
-                           double* label,
-                           double* t0_EM,
-                           double* tf_EM,
-                           double* s1_CMU_EM,
-                           double* s3_CMU_EM,
-                           double* s1_CM_SEM,
-                           double* s3_CM_SEM,
-                           double** init_state_CMU_NCEM,
-                           double** final_state_CMU_SEM,
-                           double** projected_state_CMU_SEM,
-                           double* min_proj_dist_SEM_1,
-                           double* min_proj_dist_SEM_2,
-                           int number_of_sol)
-{
-    //---------------------
-    //Open datafile
-    //---------------------
-    fstream filestream;
-    filestream.open (filename.c_str(), ios::binary | ios::in);
-    if (filestream.is_open())
-    {
-        double res;
-        int resi;
-
-        //---------------------
-        //Number of stored solutions
-        //---------------------
-        filestream.read((char*) &resi, sizeof(int));
-
-        //---------------------
-        //Loop
-        //---------------------
-        for(int kpos = 0; kpos <= number_of_sol; kpos++)
-        {
-            //1. label
-            filestream.read((char*) &res, sizeof(double));
-            label[kpos] = res;
-
-            //2. t0 in EM coordinates
-            filestream.read((char*) &res, sizeof(double));
-            t0_EM[kpos] = res;
-
-            // 3-8. init_state_CMU_NCEM state in NCEM coordinates again
-            for (int i = 0; i < 6; i++)
-            {
-                filestream.read((char*) &res, sizeof(double));
-                init_state_CMU_NCEM[i][kpos] = res;
-
-            }
-
-            //9. s1 (EM)
-            filestream.read((char*) &res, sizeof(double));
-            s1_CMU_EM[kpos] = res;
-
-            //10. s3 (EM)
-            filestream.read((char*) &res, sizeof(double));
-            s3_CMU_EM[kpos] = res;
-
-            //11. tf in EM coordinates
-            filestream.read((char*) &res, sizeof(double));
-            tf_EM[kpos] = res;
-
-            //12-17. yf in SEM coordinates
-            for(int i = 0; i <6; i++)
-            {
-                filestream.read((char*) &res, sizeof(double));
-                final_state_CMU_SEM[i][kpos] = res;
-            }
-
-            //18-23. yp in SEM coordinates
-            for(int i = 0; i <6; i++)
-            {
-                filestream.read((char*) &res, sizeof(double));
-                projected_state_CMU_SEM[i][kpos] = res;
-            }
-
-            //24. s1 (SEM)
-            filestream.read((char*) &res, sizeof(double));
-            s1_CM_SEM[kpos] = res;
-
-            //25. s3 (SEM)
-            filestream.read((char*) &res, sizeof(double));
-            s3_CM_SEM[kpos] = res;
-
-            //26. min_proj_dist_SEM (1)
-            filestream.read((char*) &res, sizeof(double));
-            min_proj_dist_SEM_1[kpos] = res;
-
-            //27. min_proj_dist_SEM (2)
-            filestream.read((char*) &res, sizeof(double));
-            min_proj_dist_SEM_2[kpos] = res;
-
-        }
-        filestream.close();
-    }
-}
-
 

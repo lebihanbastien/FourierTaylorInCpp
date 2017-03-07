@@ -14,7 +14,6 @@
 #include "env.h"
 #include "timec.h"
 #include "single_orbit.h"
-#include "lencon.h"
 #include "oolencon.h"
 #include "ephemerides.h"
 #include "Invman.h"
@@ -55,14 +54,14 @@ using namespace std;
 
 + @TODO: see if we can fasten the JPL and QBCP vf codes! Started to be sloooow. Can we also fasten ode78?
 
-+ @TODO: in ooconteml2seml, try to move around the et0. Is there a connection with the size of the final refined EML2 orbit?
-+ @TODO: in ooconteml2seml, what happens if we search for et0 in more than 3 month span? we can probably find a month for which the size is roughly equivalent
++ @TODO: in reffromcontemlisemli, try to move around the et0. Is there a connection with the size of the final refined EML2 orbit?
++ @TODO: in reffromcontemlisemli, what happens if we search for et0 in more than 3 month span? we can probably find a month for which the size is roughly equivalent
 
 + @TODO: do NOT use function that select pointers to function (does not work in C/C++)
 but pass the desired function as argument. Should replace ftc_select_vf that does
 NOT work!!! Ou alors dans le return?? Yes, by creating a typedef
 
-+ @TODO: look for the other kinds of switch... typically in oosrefeml2seml (call to mft3d...)
++ @TODO: look for the other kinds of switch... typically in subrefemlisemli (call to mft3d...)
 
 
 *****************************************************************************************/
@@ -312,9 +311,10 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         //rk: set REF_CONT_D_HARD_CASE for difficult cases
         //with REF_CONT_D (ex: EML2-SEMLi via SEML1...)
-        refSt.type          = REF_CONT_D;         // Type of refinement
-        refSt.dim           = REF_MIXED;         // Type of dimensions planar or 3d?
-        refSt.t0_des        = 0.995*SEML.us_em.T;  // Initial time
+        refSt.type          = REF_CONT_D;                   // Type of refinement
+        refSt.dim           = REF_MIXED;                    // Type of dimensions planar or 3d?
+        refSt.t0xT_des      = 0.995;                        // Initial time (xT)
+        refSt.t0_des        = refSt.t0xT_des*SEML.us_em.T;  // Initial time
 
         // Direction of the continuation procedure
         refSt.isDirUD       = 0;                  // is it user defined?
@@ -354,7 +354,7 @@ int main(int argc, char** argv)
         refSt.nu0_vt = 3;       //with variable time
 
         //User parameters
-        refSt.isFlagOn      = 1;                  // do we have steps in the procedure - asking the user to press enter to go on?
+        refSt.isFlagOn      = 0;                  // do we have steps in the procedure - asking the user to press enter to go on?
         refSt.isPlotted     = 1;                  // do we plot the results during the computation?
         refSt.isSaved       = 1;                  // do we save the results in data files?
         refSt.isFromServer  = 1;                  // does the raw data comes from server files?
@@ -382,7 +382,7 @@ int main(int argc, char** argv)
 
         refSt.xps           = (LI_SEM == 1)? +0.6:-0.6; // position of the poincaré section in NCSEM coordinates
         refSt.isJPL         = 1;                        // is the JPL refinement performed when possible?
-        refSt.djplcoord     = -1;                       // coordinate system used during the JPL refinement (if -1, it is user defined) Best results obtained with NJ2000
+        refSt.djplcoord     = 2;                       // coordinate system used during the JPL refinement (if -1, it is user defined) Best results obtained with NJ2000
         refSt.sidim         = 0;                        // 0 or 2 - component of s0 that stays constant when t0 is free
 
         // Sampling frequencies in REF_COMP (complete trajectory) in days
@@ -471,7 +471,8 @@ int main(int argc, char** argv)
             //with REF_CONT_D (ex: EML2-SEMLi via SEML1...)
             refSt.type          = atoi(argv[index++]);            // Type of refinement
             refSt.dim           = atoi(argv[index++]);            // Type of dimensions planar or 3d?
-            refSt.t0_des        = atof(argv[index++])*SEML.us.T;  // Initial time
+            refSt.t0xT_des      = atof(argv[index++]);            // Initial time (xT)
+            refSt.t0_des        = refSt.t0xT_des*SEML.us.T;       // Initial time
 
             // Direction of the continuation procedure
             refSt.isDirUD       = atoi(argv[index++]);    // is it user defined?
@@ -534,8 +535,8 @@ int main(int argc, char** argv)
             // Maximum/Minimum step in the continuation procedure (for now, not changed by the user)
             refSt.dsmin         = 1e-6;                 //with fixed time
             refSt.dsmin_vt      = 1e-6;                 //with variable time
-            refSt.dsmax         = 2e-1;                 //with fixed time
-            refSt.dsmax_vt      = 2e-1;                 //with variable time
+            refSt.dsmax         = 10;                   //with fixed time
+            refSt.dsmax_vt      = 10;                   //with variable time
 
             refSt.xps           = atof(argv[index++]);  // position of the poincaré section in NCSEM coordinates
             refSt.xps *= (LI_SEM == 1)? +1:-1;
@@ -591,37 +592,19 @@ int main(int argc, char** argv)
     case COMP_CM_EML2_TO_CM_SEML_3D:
     {
         //--------------------------------------------------------------------------------
-        // New version
-        //--------------------------------------------------------------------------------
         // Compute initial conditions in CMU EML2 on a given grid
-        tic();
-        oo_compute_grid_CMU_EM_3D(PROJ_EPSILON, projSt);
-        cout << "End of in oo_compute_grid_CMU_EM_3D in " << toc() << endl;
-
-
-
-        // Integrate those initial conditions and project them on the CM SEMLi
-        tic();
-        oo_int_proj_CMU_EM_on_CM_SEM_3D(projSt);
-        cout << "End of in oo_int_proj_CMU_EM_on_CM_SEM_3D in " << toc() << endl;
-        break;
-
         //--------------------------------------------------------------------------------
-        // Old version
-        //--------------------------------------------------------------------------------
-        // Compute initial conditions in CMU EML2 on a given grid
-
         tic();
-        //compute_grid_CMU_EM_3D(PROJ_EPSILON, TLIM, TSIZE, GLIM_SI, GSIZE_SI, CM_TFC, Mcoc, Vcoc, ISPAR);
+        compute_grid_CMU_EM_3D(PROJ_EPSILON, projSt);
         cout << "End of in compute_grid_CMU_EM_3D in " << toc() << endl;
 
 
-
+        //--------------------------------------------------------------------------------
         // Integrate those initial conditions and project them on the CM SEMLi
+        //--------------------------------------------------------------------------------
         tic();
-        //int_proj_CMU_EM_on_CM_SEM_3D(TM, MSIZE , NOD, ISPAR, YNMAX, SNMAX);
+        int_proj_CMU_EM_on_CM_SEM_3D(projSt);
         cout << "End of in int_proj_CMU_EM_on_CM_SEM_3D in " << toc() << endl;
-
         break;
     }
 
@@ -631,47 +614,19 @@ int main(int argc, char** argv)
     case COMP_CM_EML2_TO_CM_SEML:
     {
         //--------------------------------------------------------------------------------
-        // New version
-        //--------------------------------------------------------------------------------
         // Compute initial conditions in CMU EML2 on a given grid
-        tic();
-        oo_compute_grid_CMU_EM(PROJ_EPSILON, projSt);
-        cout << "End of in oo_compute_grid_CMU_EM in " << toc() << endl;
-
-
-        // Integrate those initial conditions and project them on the CM SEMLi
-        tic();
-        oo_int_proj_CMU_EM_on_CM_SEM(projSt);
-        cout << "End of in oo_int_proj_CMU_EM_on_CM_SEM in " << toc() << endl;
-        break;
-
-        //--------------------------------------------------------------------------------
-        // Old version
         //--------------------------------------------------------------------------------
         tic();
-        //compute_grid_CMU_EM(PROJ_EPSILON, TMIN, TMAX, TSIZE,
-        //                    GMIN_S1, GMAX_S1, GMIN_S3, GMAX_S3, GSIZE_S1, GSIZE_S3,
-        //                    CM_TFC, Mcoc, Vcoc, ISPAR);
+        compute_grid_CMU_EM(PROJ_EPSILON, projSt);
         cout << "End of in compute_grid_CMU_EM in " << toc() << endl;
 
-
-
-
+        //--------------------------------------------------------------------------------
         // Integrate those initial conditions and project them on the CM SEMLi
-
+        //--------------------------------------------------------------------------------
         tic();
-        //int_proj_CMU_EM_on_CM_SEM(TM, TSIZE, GSIZE_S1, GSIZE_S3, MSIZE, NSMIN, NOD,
-        //                          ISPAR, YNMAX, SNMAX);
+        int_proj_CMU_EM_on_CM_SEM(projSt);
         cout << "End of in int_proj_CMU_EM_on_CM_SEM in " << toc() << endl;
 
-
-
-        //----------------------
-        // Compute the best solutions from previous computation
-        // No equivalent in new implementation for now
-        //----------------------
-        //int_sorted_sol_CMU_EM_to_CM_SEM(OFTS_ORDER, MSIZE, ISPAR, CM_NC, CM_TFC, Mcoc, MIcoc, Vcoc);
-        //cout << "End of int_sorted_sol_CMU_EM_to_CM_SEM in " << toc() << endl;
         break;
     }
         //================================================================================
@@ -682,29 +637,8 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         // Complete routine: new version
         //--------------------------------------------------------------------------------
-        oorefeml2seml(refSt);
-        //ooconteml2seml(refSt);
+        refemlisemli(refSt);
         break;
-
-        //--------------------------------------------------------------------------------
-        // Complete routine: old version
-        //--------------------------------------------------------------------------------
-        //refeml2seml(20, NCSEM, CM_NC, CM_TFC, DCM_TFC, Mcoc, MIcoc, Vcoc, refSt);
-        break;
-
-        //--------------------------------------------------------------------------------
-        // Complete routine: original version
-        //--------------------------------------------------------------------------------
-        //int ISPLANAR = 1;
-        //int ISSAVED = 1;
-        //int ISUSERDEFINED = 1;
-        // Continuation: CMU to CMS, with variable times
-        //ref_CMU_EM_to_CMS_SEM_MSD_RCM_2(20, NCSEM, CM_NC, CM_TFC, DCM_TFC, Mcoc, MIcoc, Vcoc, ISPLANAR, ISSAVED, ISUSERDEFINED);
-        break;
-
-        // Multiple shooting: CMU to CMS, with variable times. DEPRECATED?
-        //ref_CMU_EM_to_CMS_SEM_MSD_RCM_SINGLE(20, 60, NCSEM, CM_NC, CM_TFC, DCM_TFC, Mcoc, Pcoc, MIcoc, PIcoc, Vcoc, ISPLANAR, ISSAVED, ISUSERDEFINED);
-        //break;
 
         //--------------------------------------------------------------------------------
         // Celestia format (for movies)
@@ -718,33 +652,11 @@ int main(int argc, char** argv)
         //================================================================================
     case COMP_REF_JPL:
     {
-        //oojplrefft3d(refSt.coord_type, refSt);
-        oointojplrefft3d(refSt.coord_type, refSt);
-        //oocomprefft3d_test_eml2seml_synjpl(refSt.coord_type);
-        break;
-    }
-        //================================================================================
-        // Refinement of the whole trajectory CMU EML2 to CM SEMLi
-        //================================================================================
-    case COMP_CM_EML2_TO_CM_SEML_REFINE:
-    {
+        reffromcontemlisemli(refSt);
 
-        //----------------------
-        // Multiple shooting on the whole trajectory (base for JPL refinment)
-        //ref_CMU_EM_to_CM_SEM_MSD_COMP(OFTS_ORDER, 60, NCSEM, CM_NC, CM_TFC, Mcoc, MIcoc, Vcoc);
-
-        //----------------------
-        // Multiple shooting on the manifold leg only
-        //ref_CMU_EM_to_CM_SEM_MSD(OFTS_ORDER, 10, 1, CM_NC, CM_TFC, Mcoc, Pcoc, MIcoc, PIcoc, Vcoc);
-
-        //----------------------
-        // Multiple shooting: CMU to free boundary (SEMLi orbit included)
-        //ref_CMU_EM_to_CM_SEM_MSD_PART(OFTS_ORDER, 60, NCSEM, CM_NC, CM_TFC, DCM_TFC, Mcoc, Pcoc, MIcoc, PIcoc, Vcoc);
-
-        //----------------------
-        // Multiple shooting: CMU to CM (DEPRECATED)
-        //ref_CMU_EM_to_CM_SEM_MSD_DEP(OFTS_ORDER, 50, NCSEM, CM_NC, CM_TFC, DCM_TFC, Mcoc, Pcoc, MIcoc, PIcoc, Vcoc, false);
-
+        //jplref3d(refSt.coord_type, refSt);
+        //comptojplref3d(refSt.coord_type, refSt);
+        //compref3d_test_eml2seml_synjpl(refSt.coord_type);
         break;
     }
 
@@ -818,8 +730,11 @@ int main(int argc, char** argv)
 
 
         //Read data file
-        readIntProjCU_bin(filename, t0_CMU_EM, tf_man_EM, s1_CMU_EM, s2_CMU_EM, s3_CMU_EM, s4_CMU_EM, s5_CMU_EM,
-                          pmin_dist_SEM, s1_CM_SEM, s2_CM_SEM, s3_CM_SEM, s4_CM_SEM, sortId);
+        readIntProjCU_bin(filename, t0_CMU_EM, tf_man_EM,
+                          s1_CMU_EM, s2_CMU_EM, s3_CMU_EM,
+                          s4_CMU_EM, s5_CMU_EM,
+                          pmin_dist_SEM, s1_CM_SEM, s2_CM_SEM,
+                          s3_CM_SEM, s4_CM_SEM, sortId);
 
         //Display
         coutmp();
@@ -935,10 +850,10 @@ int main(int argc, char** argv)
     }
     break;
 
-    //================================================================================
-    // Store CS/CU into one-dimensionnal series to gain memory.
-    // DEPRECATED: NOW DONE IN OOFTDA
-    //================================================================================
+        //================================================================================
+        // Store CS/CU into one-dimensionnal series to gain memory.
+        // DEPRECATED: NOW DONE IN OOFTDA
+        //================================================================================
     case COMP_VOFTS_TO_VOFTS:
     {
         cout << "-------------------------------------------------------" << endl;

@@ -49,6 +49,7 @@ struct RefSt
     int type;             //single solution or continuation procedure
     int dim;              //planar or 3d
     double t0_des;        //desired  initial time
+    double t0xT_des;      //desired  initial time as a percent
 
     // Limits for domain of research of the first guess
     double s1_CMU_EM_MIN;
