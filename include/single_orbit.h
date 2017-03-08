@@ -440,6 +440,10 @@ int ode78_jpl(double **yv, double *tv, int *ode78coll,
                   int nvar, int nGrid, int dcs,
                   int inputType, int outputType);
 
+int ode78(double **yv, double *tv, OdeEvent *odeEvent,
+          double t0NC, double tfNC, const double *y0NC,
+          int nvar, int nGrid, int dcs,
+          int inputType, int outputType);
 
 /**
  * \brief Integrates the QBCP vector field from any input type to any output type.

@@ -435,7 +435,7 @@ if [ "$ans" == "y" ]; then
 			COEFFS=(${COEFFS[*]}  ${GLIM_S1[*]} ${GLIM_S2[*]} ${GLIM_S3[*]} ${GLIM_S4[*]} ${GSIZE_SI[*]})
 			COEFFS=(${COEFFS[*]}  $MSIZE $NSMIN $YNMAX $SNMAX $NOD)
 		;;
-		$COMP_CM_EML2_TO_CMS_SEML) 	 
+		$COMP_CM_EML2_TO_CMS_SEML | $COMP_REF_JPL)
 			COEFFS=(${COEFFS[*]}  $REFST_TYPE $REFST_DIM $REFST_T0_DES)
 		    COEFFS=(${COEFFS[*]}  $REFST_ISDIRUD $REFST_DIR)
 		    COEFFS=(${COEFFS[*]}  ${REFST_SI_CMU_EM_LIM[*]} $REFST_ISLIMUD)
@@ -472,9 +472,6 @@ if [ "$ans" == "y" ]; then
 
 		;;
 		$COMP_test_INVMAN) 		 
-
-		;;
-		$COMP_REF_JPL) 			 
 
 		;;
 		*)  echo "COMP_TYPE    = "$COMP_TYPE". Unknown type."

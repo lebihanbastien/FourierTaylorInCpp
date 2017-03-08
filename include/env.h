@@ -330,6 +330,31 @@ struct QBCP_I
 };
 
 /**
+ *  \struct OdeEvent
+ *  \brief Contains some values that can be modified during integration (collision with the primaries, etc).
+ **/
+typedef struct OdeEvent OdeEvent;
+struct OdeEvent
+{
+    //Collisioner
+    int coll;
+    //Crossings
+    double crossings;
+    double x1;
+
+    /**
+     *  \brief Constructor for OdeEvent
+     **/
+     OdeEvent()
+     {
+         coll  = FTC_SUCCESS;  //at initialisation, no collision so == FTC_SUCCESS
+         crossings = 0.0;      //at initialisation, no crossing
+         x1 = -1;
+     }
+};
+
+
+/**
  *  \struct OdeParams
  *  \brief QBCP_L + some additionnal parameters that can be modified (collisions with primaries...)
  **/
@@ -337,17 +362,16 @@ typedef struct OdeParams OdeParams;
 struct OdeParams
 {
     //Collisioner
-    int *coll;
+    OdeEvent event;
     //Parameters
     QBCP_L *qbcp_l;
 
     /**
      *  \brief Constructor for OdeParams
      **/
-     OdeParams(int *coll_, QBCP_L *qbcp_l_)
+     OdeParams(QBCP_L *qbcp_l_)
      {
-         coll   = coll_;
-         *coll  = FTC_SUCCESS; //at initialisation, no collision so == FTC_SUCCESS
+         event  = OdeEvent();
          qbcp_l = qbcp_l_;
      }
 };

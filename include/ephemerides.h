@@ -17,7 +17,8 @@ extern "C" {
 using namespace std;
 
 //Default
-#define DEFOBS   "SSB"
+#define DEFOBS      "SSB"
+#define DEFOBSINT   0
 #define DEFFRAME "ECLIPJ2000"
 //#define DEFFRAME "J2000"
 

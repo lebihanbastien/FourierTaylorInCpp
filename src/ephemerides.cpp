@@ -2508,8 +2508,7 @@ void test_asteroid()
     //Stepper
     const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
     //Parameters
-    int coll;
-    OdeParams odeParams(&coll, &SEML);
+    OdeParams odeParams(&SEML);
     //Init ode structure
     init_ode_structure(&driver_JPL, T, T_root, 6, jpl_vf, &odeParams);
 

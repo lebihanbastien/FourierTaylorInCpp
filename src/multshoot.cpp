@@ -442,7 +442,7 @@ int multiple_shooting_gomez(double **ymd, double *tmd,
 int multiple_shooting_direct(double **ymd, double *tmd,
                              double **ymdn, double *tmdn,
                              int N, int mgs, int coord_type,
-                             int isPlotted, gnuplot_ctrl *h1)
+                             int isPlotted, gnuplot_ctrl *h1, int isPar)
 {
     //====================================================================================
     // 1. Initialization
@@ -452,12 +452,6 @@ int multiple_shooting_direct(double **ymd, double *tmd,
 
     //Cumulated norm of the error
     double normC;
-    //Current state along the trajectory
-    double **ym  = dmatrix(0, 41, 0, mgs);
-    //Current time along the trajectory
-    double *tm   = dvector(0, mgs);
-    //Various temporary states and times
-    double yv[N], ye[N];
 
     //------------------------------------------------------------------------------------
     //Get the default coordinates system from the coord_type
@@ -467,6 +461,17 @@ int multiple_shooting_direct(double **ymd, double *tmd,
         cerr << fname << ". The selection of dcs failed." << endl;
         return FTC_FAILURE;
     }
+
+    //------------------------------------------------------------------------------------
+    //Get the default coordinates system from the coord_type
+    //------------------------------------------------------------------------------------
+    int fwrk    = default_framework_dcs(dcs);
+
+    //------------------------------------------------------------------------------------
+    // Check that the focus in SEML is in accordance with the dcs.
+    //------------------------------------------------------------------------------------
+    int fwrk0 = SEML.fwrk;
+    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
 
     //------------------------------------------------------------------------------------
     // Get the correct integration routine
@@ -511,7 +516,6 @@ int multiple_shooting_direct(double **ymd, double *tmd,
     //Maximum number of iterations is retrieved from config manager
     int itermax = Config::configManager().G_DC_ITERMAX();
     int iter = 0;
-    int  ode78coll;
     while(iter < itermax)
     {
 
@@ -523,13 +527,26 @@ int multiple_shooting_direct(double **ymd, double *tmd,
         //--------------------------------------------------------------------------------
         // Build the Jacobian and other useful matrices
         //--------------------------------------------------------------------------------
+        #pragma omp parallel for if(isPar)
         for(int k = 0; k <= mgs-1; k++)
         {
+            //----------------------------------------------------------------------------
+            // Initialization for // computing
+            //----------------------------------------------------------------------------
+            int ode78coll;
+            double yv[N], ye[N];
+            //Current state along the trajectory
+            double **ym  = dmatrix(0, 41, 0, mgs);
+            //Current time along the trajectory
+            double *tm   = dvector(0, mgs);
+
             //----------------------------------------------------------------------------
             // Integration
             //----------------------------------------------------------------------------
             for(int i = 0; i < N; i++) yv[i] = ymdn[i][k];
             ode78_int(ym, tm, &ode78coll, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
+
+
 
             //----------------------------------------------------------------------------
             // Final position is at the end of ym
@@ -560,6 +577,20 @@ int multiple_shooting_direct(double **ymd, double *tmd,
                     gsl_matrix_set(DF, i + 6*k, j + 6*(k+1), -gsl_matrix_get(Id, i, j));
                 }
             }
+
+            //----------------------------------------------------------------------------
+            //Display
+            //----------------------------------------------------------------------------
+            //            #pragma omp critical
+            //            {
+            //                cout << fname << ".Step " << k << endl;
+            //            }
+
+            //----------------------------------------------------------------------------
+            //Free
+            //----------------------------------------------------------------------------
+            free_dmatrix(ym, 0, 41, 0, mgs);
+            free_dvector(tm, 0, mgs);
         }
 
 
@@ -612,12 +643,14 @@ int multiple_shooting_direct(double **ymd, double *tmd,
         iter++;
     }
 
+    //====================================================================================
+    // 9. Reset the focus in SEML, if necessary
+    //====================================================================================
+    if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
 
     //====================================================================================
     // Free
     //====================================================================================
-    free_dmatrix(ym, 0, 41, 0, mgs);
-    free_dvector(tm, 0, mgs);
     gslc_matrix_array_free(Ji , mgs);
     gsl_vector_free(DQv);
     gsl_vector_free(Fv);
@@ -640,7 +673,7 @@ int multiple_shooting_direct_variable_time(double **ymd, double *tmd,
                                            double **ymdn, double *tmdn,
                                            int N, int mgs, int coord_type,
                                            double prec,
-                                           int isPlotted, gnuplot_ctrl *h1)
+                                           int isPlotted, gnuplot_ctrl *h1, int isPar)
 {
     //Name of the routine
     string fname = "multiple_shooting_direct_variable_time";
@@ -650,12 +683,6 @@ int multiple_shooting_direct_variable_time(double **ymd, double *tmd,
     //====================================================================================
     //Cumulated norm of the error
     double normC;
-    //Current state along the trajectory
-    double **ym  = dmatrix(0, 41, 0, mgs);
-    //Current time along the trajectory
-    double *tm   = dvector(0, mgs);
-    //Various temporary states and times
-    double yv[N], ye[N], f[6];
 
     //------------------------------------------------------------------------------------
     //Get the default coordinates system from the coord_type
@@ -731,10 +758,8 @@ int multiple_shooting_direct_variable_time(double **ymd, double *tmd,
     //Maximum number of iterations is retrieved from config manager
     int itermax = Config::configManager().G_DC_ITERMAX();
     int iter = 0;
-    int  ode78coll;
     while(iter <  itermax)
     {
-
         //================================================================================
         //Trajectory plot
         //================================================================================
@@ -743,8 +768,19 @@ int multiple_shooting_direct_variable_time(double **ymd, double *tmd,
         //================================================================================
         // Build the Jacobian and other useful matrices
         //================================================================================
+        #pragma omp parallel for if(isPar)
         for(int k = 0; k <= mgs-1; k++)
         {
+            //----------------------------------------------------------------------------
+            // Initialization for // computing
+            //----------------------------------------------------------------------------
+            int ode78coll;
+            double yv[N], ye[N], f[6];
+            //Current state along the trajectory
+            double **ym  = dmatrix(0, 41, 0, mgs);
+            //Current time along the trajectory
+            double *tm   = dvector(0, mgs);
+
             //----------------------------------------------------------------------------
             // Integration
             //----------------------------------------------------------------------------
@@ -820,6 +856,20 @@ int multiple_shooting_direct_variable_time(double **ymd, double *tmd,
                 //--------------------------
                 gsl_matrix_set(DF, i + 6*k, 7*(k+2)-1, f[i]);
             }
+
+            //----------------------------------------------------------------------------
+            //Display
+            //----------------------------------------------------------------------------
+            //            #pragma omp critical
+            //            {
+            //                cout << fname << ".Step " << k << endl;
+            //            }
+
+            //----------------------------------------------------------------------------
+            //Free
+            //----------------------------------------------------------------------------
+            free_dmatrix(ym, 0, 41, 0, mgs);
+            free_dvector(tm, 0, mgs);
         }
 
         //================================================================================
@@ -875,8 +925,6 @@ int multiple_shooting_direct_variable_time(double **ymd, double *tmd,
     //====================================================================================
     // Free
     //====================================================================================
-    free_dmatrix(ym, 0, 41, 0, mgs);
-    free_dvector(tm, 0, mgs);
     gslc_matrix_array_free(Ji , mgs);
     gsl_vector_free(DQv);
     gsl_vector_free(Fv);
@@ -922,8 +970,7 @@ int multiple_shooting_direct_deps(double **ymd, double *tmd,
     //Stepper
     const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
     //Parameters
-    int coll;
-    OdeParams odeParams(&coll, &SEML);
+    OdeParams odeParams(&SEML);
     //Init ode structure
     init_ode_structure(&driver, T, T_root, 48, qbcp_ecisem_cont_necijpl, &odeParams);
 

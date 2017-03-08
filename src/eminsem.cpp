@@ -33,47 +33,60 @@ void qbcp_coc(double t, const double y0[], double yout[], int inputType, int out
         perror("Unknown outputType");
 
     //------------------------------------------------------------------------------------
-    // 2. Define the default framework wrt the inputType
+    // 2. Check that there is actually a coc to perform
     //------------------------------------------------------------------------------------
-    int fwrk = 0;
-    switch(inputType)
+    if(inputType != outputType)
     {
-    case VNCEM:
-    case NCEM:
-    case PEM:
-    case VEM:
-    case INEM:
-        fwrk = F_EM;
-        break;
-    case VNCSEM:
-    case NCSEM:
-    case PSEM:
-    case VSEM:
-    case INSEM:
-    case ECISEM:
-        fwrk = F_SEM;
-        break;
+        //--------------------------------------------------------------------------------
+        // 2.1 Define the default framework wrt the inputType
+        //--------------------------------------------------------------------------------
+        int fwrk = 0;
+        switch(inputType)
+        {
+        case VNCEM:
+        case NCEM:
+        case PEM:
+        case VEM:
+        case INEM:
+            fwrk = F_EM;
+            break;
+        case VNCSEM:
+        case NCSEM:
+        case PSEM:
+        case VSEM:
+        case INSEM:
+        case ECISEM:
+            fwrk = F_SEM;
+            break;
+        }
+
+
+        //--------------------------------------------------------------------------------
+        // 2.2 Check that the focus in SEML is
+        // in accordance with the inputType.
+        //--------------------------------------------------------------------------------
+        int fwrk0 = SEML.fwrk;
+        if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
+
+
+        //--------------------------------------------------------------------------------
+        // 2.3 Updating output
+        //--------------------------------------------------------------------------------
+        qbcp_coc_fwrk(t, y0, yout, inputType, outputType);
+
+
+        //--------------------------------------------------------------------------------
+        // 2.4 Reset the focus in SEML, if necessary
+        //--------------------------------------------------------------------------------
+        if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
     }
-
-
-    //------------------------------------------------------------------------------------
-    // 2. Check that the focus in SEML is
-    // in accordance with the inputType.
-    //------------------------------------------------------------------------------------
-    int fwrk0 = SEML.fwrk;
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
-
-
-    //------------------------------------------------------------------------------------
-    // 3. Updating output
-    //------------------------------------------------------------------------------------
-    qbcp_coc_fwrk(t, y0, yout, inputType, outputType);
-
-
-    //------------------------------------------------------------------------------------
-    // 4. Reset the focus in SEML, if necessary
-    //------------------------------------------------------------------------------------
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
+    else
+    {
+        //--------------------------------------------------------------------------------
+        // Simple copy
+        //--------------------------------------------------------------------------------
+        for(int i = 0; i < 6; i++) yout[i] = y0[i];
+    }
 }
 
 /**
@@ -95,96 +108,111 @@ void qbcp_coc(double t, const double y0[], double yout[], double *tout, int inpu
     if(outputType > ECISEM)
         perror("Unknown outputType");
 
+
     //------------------------------------------------------------------------------------
-    // 2. Define the default framework wrt the inputType
-    //    Define the factor to apply to the time vector
+    // 2. Check that there is actually a coc to perform
     //------------------------------------------------------------------------------------
-    int fwrk = 0;
-    double tfactor = 1.0;
-    switch(inputType)
+    if(inputType != outputType)
     {
-    case VNCEM:
-    case NCEM:
-    case PEM:
-    case VEM:
-    case INEM:
-        //EM framework
-        fwrk = F_EM;
-        //Time factor
-        switch(outputType)
+        //--------------------------------------------------------------------------------
+        // 2.1 Define the default framework wrt the inputType
+        //    Define the factor to apply to the time vector
+        //--------------------------------------------------------------------------------
+        int fwrk = 0;
+        double tfactor = 1.0;
+        switch(inputType)
         {
         case VNCEM:
         case NCEM:
         case PEM:
         case VEM:
         case INEM:
-            //EM to EM units
-            tfactor = 1.0;
+            //EM framework
+            fwrk = F_EM;
+            //Time factor
+            switch(outputType)
+            {
+            case VNCEM:
+            case NCEM:
+            case PEM:
+            case VEM:
+            case INEM:
+                //EM to EM units
+                tfactor = 1.0;
+                break;
+            case VNCSEM:
+            case NCSEM:
+            case PSEM:
+            case VSEM:
+            case INSEM:
+            case ECISEM:
+                //EM to SEM units
+                tfactor = SEML.us_em.ns;
+                break;
+            }
             break;
-        case VNCSEM:
-        case NCSEM:
-        case PSEM:
-        case VSEM:
-        case INSEM:
-        case ECISEM:
-            //EM to SEM units
-            tfactor = SEML.us_em.ns;
-            break;
-        }
-        break;
 
-    case VNCSEM:
-    case NCSEM:
-    case PSEM:
-    case VSEM:
-    case INSEM:
-    case ECISEM:
-        //SEM framework
-        fwrk = F_SEM;
-        //Time factor
-        switch(outputType)
-        {
-        case VNCEM:
-        case NCEM:
-        case PEM:
-        case VEM:
-        case INEM:
-            //SEM to EM units
-            tfactor = 1.0/SEML.us_em.ns;
-            break;
         case VNCSEM:
         case NCSEM:
         case PSEM:
         case VSEM:
         case INSEM:
         case ECISEM:
-            //SEM to SEM units
-            tfactor = 1.0;
+            //SEM framework
+            fwrk = F_SEM;
+            //Time factor
+            switch(outputType)
+            {
+            case VNCEM:
+            case NCEM:
+            case PEM:
+            case VEM:
+            case INEM:
+                //SEM to EM units
+                tfactor = 1.0/SEML.us_em.ns;
+                break;
+            case VNCSEM:
+            case NCSEM:
+            case PSEM:
+            case VSEM:
+            case INSEM:
+            case ECISEM:
+                //SEM to SEM units
+                tfactor = 1.0;
+                break;
+            }
             break;
         }
-        break;
+
+
+        //--------------------------------------------------------------------------------
+        // 2.2 Check that the focus in SEML is
+        // in accordance with the inputType.
+        //--------------------------------------------------------------------------------
+        int fwrk0 = SEML.fwrk;
+        if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
+
+
+        //--------------------------------------------------------------------------------
+        // 2.3 Updating output
+        //--------------------------------------------------------------------------------
+        qbcp_coc_fwrk(t, y0, yout, inputType, outputType);
+        *tout = tfactor*t;
+
+
+        //--------------------------------------------------------------------------------
+        // 2.4 Reset the focus in SEML, if necessary
+        //--------------------------------------------------------------------------------
+        if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
     }
-
-
-    //------------------------------------------------------------------------------------
-    // 2. Check that the focus in SEML is
-    // in accordance with the inputType.
-    //------------------------------------------------------------------------------------
-    int fwrk0 = SEML.fwrk;
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
-
-
-    //------------------------------------------------------------------------------------
-    // 3. Updating output
-    //------------------------------------------------------------------------------------
-    qbcp_coc_fwrk(t, y0, yout, inputType, outputType);
-    *tout = tfactor*t;
-
-
-    //------------------------------------------------------------------------------------
-    // 4. Reset the focus in SEML, if necessary
-    //------------------------------------------------------------------------------------
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
+    else
+    {
+        //--------------------------------------------------------------------------------
+        // Simple copy
+        //--------------------------------------------------------------------------------
+        for(int i = 0; i < 6; i++) yout[i] = y0[i];
+        *tout = t;
+    }
 }
 
 /**
@@ -193,7 +221,7 @@ void qbcp_coc(double t, const double y0[], double yout[], double *tout, int inpu
  *         The routine is able to make the COC between 8 different types of outputs: NCEM, VNCEM, PEM, VEM, and their equivalents in SEM coordinates.
  *         All 64 possibilities are available.
  **/
-void qbcp_coc_vec(double **y0, double *t0, double **yout, double *tout, int N, int inputType, int outputType)
+void qbcp_coc_vec(double** y0, double* t0, double** yout, double* tout, int N, int inputType, int outputType)
 {
     //------------------------------------------------------------------------------------
     // 1. Do some checks on the inputs
@@ -207,106 +235,124 @@ void qbcp_coc_vec(double **y0, double *t0, double **yout, double *tout, int N, i
         perror("Unknown outputType");
 
     //------------------------------------------------------------------------------------
-    // 2. Define the default framework wrt the inputType
-    //    Define the factor to apply to the time vector
+    // 2. Check that there is actually a coc to perform
     //------------------------------------------------------------------------------------
-    int fwrk = 0;
-    double tfactor = 1.0;
-    switch(inputType)
+    if(inputType != outputType)
     {
-    case VNCEM:
-    case NCEM:
-    case PEM:
-    case VEM:
-    case INEM:
-        //EM framework
-        fwrk = F_EM;
-        //Time factor
-        switch(outputType)
+
+        //--------------------------------------------------------------------------------
+        // 2.1 Define the default framework wrt the inputType
+        //    Define the factor to apply to the time vector
+        //--------------------------------------------------------------------------------
+        int fwrk = 0;
+        double tfactor = 1.0;
+        switch(inputType)
         {
         case VNCEM:
         case NCEM:
         case PEM:
         case VEM:
         case INEM:
-            //EM to EM units
-            tfactor = 1.0;
+            //EM framework
+            fwrk = F_EM;
+            //Time factor
+            switch(outputType)
+            {
+            case VNCEM:
+            case NCEM:
+            case PEM:
+            case VEM:
+            case INEM:
+                //EM to EM units
+                tfactor = 1.0;
+                break;
+            case VNCSEM:
+            case NCSEM:
+            case PSEM:
+            case VSEM:
+            case INSEM:
+            case ECISEM:
+                //EM to SEM units
+                tfactor = SEML.us_em.ns;
+                break;
+            }
             break;
+
         case VNCSEM:
         case NCSEM:
         case PSEM:
         case VSEM:
         case INSEM:
         case ECISEM:
-            //EM to SEM units
-            tfactor = SEML.us_em.ns;
+            //SEM framework
+            fwrk = F_SEM;
+            //Time factor
+            switch(outputType)
+            {
+            case VNCEM:
+            case NCEM:
+            case PEM:
+            case VEM:
+            case INEM:
+                //SEM to EM units
+                tfactor = 1.0/SEML.us_em.ns;
+                break;
+            case VNCSEM:
+            case NCSEM:
+            case PSEM:
+            case VSEM:
+            case INSEM:
+            case ECISEM:
+                //SEM to SEM units
+                tfactor = 1.0;
+                break;
+            }
             break;
         }
-        break;
 
-    case VNCSEM:
-    case NCSEM:
-    case PSEM:
-    case VSEM:
-    case INSEM:
-    case ECISEM:
-        //SEM framework
-        fwrk = F_SEM;
-        //Time factor
-        switch(outputType)
+
+        //--------------------------------------------------------------------------------
+        // 2.2 Check that the focus in SEML is
+        // in accordance with the inputType.
+        //--------------------------------------------------------------------------------
+        int fwrk0 = SEML.fwrk;
+        if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
+
+
+        //--------------------------------------------------------------------------------
+        // 2.3 Updating output
+        //--------------------------------------------------------------------------------
+        double yt[6], yt2[6];
+        //Loop on all elements in yNCEM
+        for(int p = 0; p <= N; p++)
         {
-        case VNCEM:
-        case NCEM:
-        case PEM:
-        case VEM:
-        case INEM:
-            //SEM to EM units
-            tfactor = 1.0/SEML.us_em.ns;
-            break;
-        case VNCSEM:
-        case NCSEM:
-        case PSEM:
-        case VSEM:
-        case INSEM:
-        case ECISEM:
-            //SEM to SEM units
-            tfactor = 1.0;
-            break;
+            //Copy step p in yt
+            for(int k = 0; k < 6; k++) yt[k] = y0[k][p];
+            //Perform COC
+            qbcp_coc_fwrk(t0[p], yt, yt2, inputType, outputType);
+            //Copy result in yout
+            for(int k = 0; k < 6; k++) yout[k][p] = yt2[k];
+            //time
+            tout[p] = t0[p]*tfactor;
         }
-        break;
-    }
 
 
-    //------------------------------------------------------------------------------------
-    // 2. Check that the focus in SEML is
-    // in accordance with the inputType.
-    //------------------------------------------------------------------------------------
-    int fwrk0 = SEML.fwrk;
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
-
-
-    //------------------------------------------------------------------------------------
-    // 3. Updating output
-    //------------------------------------------------------------------------------------
-    double yt[6], yt2[6];
-    //Loop on all elements in yNCEM
-    for(int p = 0; p <= N; p++)
-    {
-        //Copy step p in yt
-        for(int k = 0; k < 6; k++) yt[k] = y0[k][p];
-        //Perform COC
-        qbcp_coc_fwrk(t0[p], yt, yt2, inputType, outputType);
-        //Copy result in yout
-        for(int k = 0; k < 6; k++) yout[k][p] = yt2[k];
-        //time
-        tout[p] = t0[p]*tfactor;
-    }
-
-
-    //------------------------------------------------------------------------------------
-    // 4. Reset the focus in SEML, if necessary
-    //------------------------------------------------------------------------------------
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
+        //--------------------------------------------------------------------------------
+        // 2.4 Reset the focus in SEML, if necessary
+        //--------------------------------------------------------------------------------
+        if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
+        }
+        else
+        {
+            //--------------------------------------------------------------------------------
+            // Simple copy
+            //--------------------------------------------------------------------------------
+            for(int p = 0; p <= N; p++)
+            {
+                for(int k = 0; k < 6; k++) yout[k][p] = y0[k][p];
+                tout[p] = t0[p];
+            }
+        }
 }
 
 /**
@@ -315,7 +361,7 @@ void qbcp_coc_vec(double **y0, double *t0, double **yout, double *tout, int N, i
  *         The routine is able to make the COC between 8 different types of outputs: NCEM, VNCEM, PEM, VEM, and their equivalents in SEM coordinates.
  *         All 64 possibilities are available.
  **/
-void qbcp_coc_vec(double **y0, double *t0, double **yout, int N, int inputType, int outputType)
+void qbcp_coc_vec(double** y0, double* t0, double** yout, int N, int inputType, int outputType)
 {
     //------------------------------------------------------------------------------------
     // 1. Do some checks on the inputs
@@ -329,61 +375,78 @@ void qbcp_coc_vec(double **y0, double *t0, double **yout, int N, int inputType, 
         perror("Unknown outputType");
 
     //------------------------------------------------------------------------------------
-    // 2. Define the default framework wrt the inputType
-    //    Define the factor to apply to the time vector
+    // 2. Check that there is actually a coc to perform
     //------------------------------------------------------------------------------------
-    int fwrk = 0;
-    switch(inputType)
-    {
-    case VNCEM:
-    case NCEM:
-    case PEM:
-    case VEM:
-    case INEM:
-        //EM framework
-        fwrk = F_EM;
-        break;
+        if(inputType != outputType)
+        {
+        //--------------------------------------------------------------------------------
+        // 2.1 Define the default framework wrt the inputType
+        //    Define the factor to apply to the time vector
+        //--------------------------------------------------------------------------------
+        int fwrk = 0;
+        switch(inputType)
+        {
+        case VNCEM:
+        case NCEM:
+        case PEM:
+        case VEM:
+        case INEM:
+            //EM framework
+            fwrk = F_EM;
+            break;
 
-    case VNCSEM:
-    case NCSEM:
-    case PSEM:
-    case VSEM:
-    case INSEM:
-    case ECISEM:
-        //SEM framework
-        fwrk = F_SEM;
-        break;
-    }
-
-
-    //------------------------------------------------------------------------------------
-    // 2. Check that the focus in SEML is
-    // in accordance with the inputType.
-    //------------------------------------------------------------------------------------
-    int fwrk0 = SEML.fwrk;
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
+        case VNCSEM:
+        case NCSEM:
+        case PSEM:
+        case VSEM:
+        case INSEM:
+        case ECISEM:
+            //SEM framework
+            fwrk = F_SEM;
+            break;
+        }
 
 
-    //------------------------------------------------------------------------------------
-    // 3. Updating output
-    //------------------------------------------------------------------------------------
-    double yt[6], yt2[6];
-    //Loop on all elements in yNCEM
-    for(int p = 0; p <= N; p++)
-    {
-        //Copy step p in yt
-        for(int k = 0; k < 6; k++) yt[k] = y0[k][p];
-        //Perform COC
-        qbcp_coc_fwrk(t0[p], yt, yt2, inputType, outputType);
-        //Copy result in yout
-        for(int k = 0; k < 6; k++) yout[k][p] = yt2[k];
-    }
+        //--------------------------------------------------------------------------------
+        // 2.2 Check that the focus in SEML is
+        // in accordance with the inputType.
+        //--------------------------------------------------------------------------------
+        int fwrk0 = SEML.fwrk;
+        if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
 
 
-    //------------------------------------------------------------------------------------
-    // 4. Reset the focus in SEML, if necessary
-    //------------------------------------------------------------------------------------
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
+        //--------------------------------------------------------------------------------
+        // 2.3 Updating output
+        //--------------------------------------------------------------------------------
+        double yt[6], yt2[6];
+        //Loop on all elements in yNCEM
+        for(int p = 0; p <= N; p++)
+        {
+            //Copy step p in yt
+            for(int k = 0; k < 6; k++) yt[k] = y0[k][p];
+            //Perform COC
+            qbcp_coc_fwrk(t0[p], yt, yt2, inputType, outputType);
+            //Copy result in yout
+            for(int k = 0; k < 6; k++) yout[k][p] = yt2[k];
+        }
+
+
+        //--------------------------------------------------------------------------------
+        // 2.4 Reset the focus in SEML, if necessary
+        //--------------------------------------------------------------------------------
+        if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
+        }
+        else
+        {
+            //--------------------------------------------------------------------------------
+            // Simple copy
+            //--------------------------------------------------------------------------------
+            for(int p = 0; p <= N; p++)
+            {
+                for(int k = 0; k < 6; k++) yout[k][p] = y0[k][p];
+            }
+
+        }
 }
 
 /**

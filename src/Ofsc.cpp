@@ -110,10 +110,17 @@ Ofsc& Ofsc::operator = (Ofsc const& b)
 {
     if(this != &b)
     {
-        order = b.order;
-        if(coef != NULL) delete coef;
-        coef = new cdouble[2*order+1];
-        for(int i = -order ; i<= order; i++) coef[i+order] = b.coef[i+order]; //this->setCoef(b.getCoef(i), i);
+        if(order != b.order)
+        {
+            order = b.order;
+            if(coef != NULL) delete coef;
+            coef = new cdouble[2*order+1];
+            for(int i = -order ; i<= order; i++) coef[i+order] = b.coef[i+order]; //this->setCoef(b.getCoef(i), i);
+        }
+        else
+        {
+            for(int i = -order ; i<= order; i++) coef[i+order] = b.coef[i+order];
+        }
     }
     return *this; //same object if returned
 }

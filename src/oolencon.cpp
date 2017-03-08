@@ -175,9 +175,9 @@ int compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt &projSt)
                         free_dvector(sti, 0, 4);
                     }
 
-                    //------------------------------------------------------------------------------------
+                    //--------------------------------------------------------------------
                     //Store values
-                    //------------------------------------------------------------------------------------
+                    //--------------------------------------------------------------------
                     writeCU_bin_3D(init_state_CMU_NCEM, init_state_CMU_RCM, projSt.GSIZE_SI,
                                    OFTS_ORDER, TYPE_CU_3D, SEML.li_SEM);
                 }
@@ -874,8 +874,8 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt)
                 //Integration on projSt.MSIZE+1 fixed grid
                 // PB: when Release + I_NCSEM!! not used for now
                 //------------------------------------------------------------------------
-                int ode78coll;
-                int status = ode78(y_man_NCSEM, t_man_SEM, &ode78coll, tv, tv+projSt.TM, yv, 6, projSt.MSIZE, I_NCEM, NCEM, NCSEM);
+                OdeEvent odeEvent;
+                int status = ode78(y_man_NCSEM, t_man_SEM, &odeEvent, tv, tv+projSt.TM, yv, 6, projSt.MSIZE, I_NCEM, NCEM, NCSEM);
 
                 //========================================================================
                 // 3.2. Projection on the center manifold of SEMLi. No use of SEML_EM or SEML after this point!
@@ -968,15 +968,86 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt)
                     }
 
                     //--------------------------------------------------------------------
+                    // We check if we have the primary family, if necessary
+                    // To do so, we check that we have made two clockwise/counterclockwise
+                    //  crossings of x = -1.
+                    //
+                    // To do a clockwise turn:
+                    //  1. x1 > 0 -> x2 < 0 && y1 > 0
+                    //  2. x1 < 0 -> x2 > 0 && y1 < 0
+                    //
+                    // To do a counterclockwise turn:
+                    //  1. x1 > 0 -> x2 < 0 && y1 < 0
+                    //  2. x1 < 0 -> x2 > 0 && y1 > 0
+                    //--------------------------------------------------------------------
+                    if(min_proj_dist_SEM < ePdef)
+                    {
+                        OdeEvent odeEvent_purge;
+                        double** y_purge = dmatrix(0, 5, 0, projSt.MSIZE);
+                        double* t_purge  = dvector(0, projSt.MSIZE);
+                        tv  = init_time_grid_EM[kt];
+
+                        for(int i = 0; i < 6; i++) yv[i] = init_state_CMU_NCEM[i][kt][ks1][ks3];
+
+                        ode78(y_purge, t_purge, &odeEvent_purge, tv, t_man_SEM[kmin]/SEML.us_em.ns, yv, 6, projSt.MSIZE, I_NCSEM, NCEM, NCSEM);
+
+                        free_dmatrix(y_purge, 0, 5, 0, projSt.MSIZE);
+                        free_dvector(t_purge, 0, projSt.MSIZE);
+
+                        dv_at_projection_SEM = odeEvent_purge.crossings;
+                        //cout << "odeEvent_purge.crossings = " << odeEvent_purge.crossings << endl;
+                    }
+
+
+                    //                    if(min_proj_dist_SEM < ePdef)
+                    //                    {
+                    //                        double crossings = 0.0;
+                    //                        double x1, x2, y1;
+                    //                        for(int kman = kmin; kman >= 1; kman--)
+                    //                        {
+                    //                            //------------------------------------------------------------
+                    //                            // Values of x wrt to x = -1.0, position of BEM
+                    //                            //------------------------------------------------------------
+                    //                            x1 = y_man_NCSEM[0][kman-1] + 1.0;
+                    //                            x2 = y_man_NCSEM[0][kman]   + 1.0;
+                    //
+                    //                            //------------------------------------------------------------
+                    //                            // Crossing detected
+                    //                            //------------------------------------------------------------
+                    //                            if(x1*x2 < 0)
+                    //                            {
+                    //                                //Value of y at x1
+                    //                                y1 = y_man_NCSEM[1][kman-1];
+                    //
+                    //                                if(x1 > 0 && x2 < 0)
+                    //                                {
+                    //                                    if(y1 > 0) crossings += 1.0;    //clockwise
+                    //                                    else       crossings += 0.1;    //counterclockwise
+                    //
+                    //                                }else
+                    //                                {
+                    //                                    if(y1 < 0) crossings += 1.0;    //clockwise
+                    //                                    else       crossings += 0.1;    //counterclockwise
+                    //                                }
+                    //
+                    //                            }
+                    //                        }
+                    //
+                    //                        //we send back the crossings in dv_at_projection_SEM.
+                    //                        dv_at_projection_SEM = crossings;
+                    //                        //printf("crossing = %1.1f\n", crossings);
+                    //                    }
+
+                    //--------------------------------------------------------------------
                     //We check for collisions
                     //--------------------------------------------------------------------
-                    if(ode78coll)
+                    if(odeEvent.coll)
                     {
                         //If ode78coll !=  0 a collision has occured, and we
                         //send back the code of the associated primary in the
                         //dv_at_projection_SEM.
                         //cout << "Collision! with " << ode78coll << endl;
-                        dv_at_projection_SEM = ode78coll;
+                        dv_at_projection_SEM = odeEvent.coll;
                     }
                 }
 
@@ -1205,8 +1276,8 @@ int refemlisemli(RefSt& refSt)
     //Stepper
     const gsl_odeiv2_step_type* T = gsl_odeiv2_step_rk8pd;
     //Parameters
-    int coll_EM;
-    OdeParams odeParams_EM(&coll_EM, &SEML_EM);
+
+    OdeParams odeParams_EM(&SEML_EM);
     //Init ode structure
     init_ode_structure(&driver_EM, T, T_root, 6, qbcp_vfn, &odeParams_EM);
     //Init routine
@@ -1226,8 +1297,7 @@ int refemlisemli(RefSt& refSt)
     //------------------------------------------------------------------------------------
     OdeStruct driver_SEM;
     //Parameters
-    int coll_SEM;
-    OdeParams odeParams_SEM(&coll_SEM, &SEML_SEM);
+OdeParams odeParams_SEM(&SEML_SEM);
     //Init ode structure
     init_ode_structure(&driver_SEM, T, T_root, 6, qbcp_vfn, &odeParams_SEM);
     //Init routine
@@ -3232,8 +3302,8 @@ int reffromcontemlisemli(RefSt& refSt)
         //Stepper
         const gsl_odeiv2_step_type* T = gsl_odeiv2_step_rk8pd;
         //Parameters
-        int coll_EM;
-        OdeParams odeParams_EM(&coll_EM, &SEML_EM);
+
+        OdeParams odeParams_EM(&SEML_EM);
         //Init ode structure
         init_ode_structure(&driver_EM, T, T_root, 6, qbcp_vfn, &odeParams_EM);
         //Init routine
@@ -3253,8 +3323,7 @@ int reffromcontemlisemli(RefSt& refSt)
         //--------------------------------------------------------------------------------
         OdeStruct driver_SEM;
         //Parameters
-        int coll_SEM;
-        OdeParams odeParams_SEM(&coll_SEM, &SEML_SEM);
+        OdeParams odeParams_SEM(&SEML_SEM);
         //Init ode structure
         init_ode_structure(&driver_SEM, T, T_root, 6, qbcp_vfn, &odeParams_SEM);
         //Init routine
@@ -3297,8 +3366,8 @@ int reffromcontemlisemli(RefSt& refSt)
  *         (EML2 orbit + manifold leg + SEMLi orbit).
  **/
 int comprefemlisemli3d(int grid_freq_days[3], int coord_type,
-                  Orbit& orbit_EM, Orbit& orbit_SEM,
-                  RefSt& refSt, int label, int isFirst)
+                       Orbit& orbit_EM, Orbit& orbit_SEM,
+                       RefSt& refSt, int label, int isFirst)
 
 {
     //====================================================================================
@@ -3432,7 +3501,7 @@ int comprefemlisemli3d(int grid_freq_days[3], int coord_type,
     pressEnter(refSt.isFlagOn);
 
     int isPlotted   = 0;
-    status = multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, h2);
+    status = multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, h2, refSt.isPar);
     //status =multiple_shooting_direct_variable_time(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, isTimeFixed, h2);
 
     //------------------------------------------------------------------------------------
@@ -3626,13 +3695,14 @@ int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst)
     pressEnter(refSt.isFlagOn);
 
     //====================================================================================
-    // Select between VECLI and J2000
+    // Select between VECLI, J2000, and NJ2000 (best choice is NJ2000)
     //====================================================================================
     int choice = 0;
     //If refSt.djplcoord does not contain a valid choice (e.g. -1), we ask the user
-    if(refSt.djplcoord != 0 && refSt.djplcoord != 1  && refSt.djplcoord != 2)
+    if(refSt.djplcoord != VECLI && refSt.djplcoord != J2000  && refSt.djplcoord != NJ2000)
     {
-        cout << "Enter 0 for VECLI, 1 for J2000, 2 for NJ2000: ";
+        cout << "Enter " <<  VECLI << "for VECLI, ";
+        cout << J2000  << "for J2000, " << NJ2000 << "for NJ2000: ";
         cin >> choice;
     }
     else
@@ -3640,21 +3710,26 @@ int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst)
         choice = refSt.djplcoord;
     }
 
-    int coord_int = 0, fwrk_int = 0;
+    //------------------------------------------------------------------------------------
+    // Select the coordinate system and the frawemork for future integration
+    //------------------------------------------------------------------------------------
+    int coord_int = 0, fwrk_int = 0, fwrk0 = SEML.fwrk;
     switch(choice)
     {
-    case 0:
+    case VECLI:
         coord_int = VECLI;
         fwrk_int  = I_ECLI;
         break;
-    case 1:
+    case J2000:
         coord_int = J2000;
         fwrk_int  = I_J2000;
         break;
-    case 2:
+    case NJ2000:
         coord_int = NJ2000;
         fwrk_int  = I_NJ2000;
-        changeDCS(SEML, fwrk);
+
+        //Change focus, if necessary
+        if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
         cout << "NJ2000 has been chosen: changeDCS is applied to match " << endl;
         cout << " the framework associated to coord_type.";
         break;
@@ -3664,7 +3739,7 @@ int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst)
         cout << " the framework associated to coord_type.";
         coord_int = NJ2000;
         fwrk_int  = I_NJ2000;
-        changeDCS(SEML, fwrk);
+        if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
         break;
     }
 
@@ -3800,12 +3875,15 @@ int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst)
         //EARTH
         spkezr_c ("EARTH", et, DEFFRAME,  "NONE", DEFOBS, YV, &lt);
         for(int i = 0; i < 6; i++) y_earth_spice[i][p] = YV[i];
-        //MOON
-        spkezr_c ("MOON", et, DEFFRAME,  "NONE", DEFOBS, YV, &lt);
-        for(int i = 0; i < 6; i++) y_moon_spice[i][p] = YV[i];
+
         //L2
-        spkez_c (392, et, DEFFRAME,  "NONE", 0, YV, &lt);
+        spkez_c (392, et, DEFFRAME,  "NONE", DEFOBSINT, YV, &lt);
         for(int i = 0; i < 6; i++) y_l2_spice[i][p] = YV[i];
+
+        //MOON - The Moon does NOT work for now, for an unknown reason... Linked to SPICE kernels?
+        //spkezr_c ("MOON", et, DEFFRAME,  "NONE", DEFOBS, YV, &lt);
+        //spkez_c (301, et, DEFFRAME,  "NONE", DEFOBSINT, YV, &lt);
+        //for(int i = 0; i < 6; i++) y_moon_spice[i][p] = YV[i];
     }
 
     //------------------------------------------------------------------------------------
@@ -3814,8 +3892,8 @@ int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst)
     ecl2coordstate_vec(y_earth_spice, et_traj_jpl, y_jpl_temp, t_jpl_temp, final_index, coord_type, et0, tsys0, eph_coord(coord_type));
     gnuplot_plot_X(h2, y_jpl_temp, final_index+1, (char*) "EARTH", "points", "3", "2", 8);
 
-    ecl2coordstate_vec(y_moon_spice, et_traj_jpl, y_jpl_temp, t_jpl_temp, final_index, coord_type, et0, tsys0, eph_coord(coord_type));
-    gnuplot_plot_X(h2, y_jpl_temp, final_index+1, (char*) "MOON", "points", "4", "2", 8);
+    //ecl2coordstate_vec(y_moon_spice, et_traj_jpl, y_jpl_temp, t_jpl_temp, final_index, coord_type, et0, tsys0, eph_coord(coord_type));
+    //gnuplot_plot_X(h2, y_jpl_temp, final_index+1, (char*) "MOON", "points", "4", "2", 8);
 
     ecl2coordstate_vec(y_l2_spice, et_traj_jpl, y_jpl_temp, t_jpl_temp, final_index, coord_type, et0, tsys0, eph_coord(coord_type));
     gnuplot_plot_X(h2, y_jpl_temp, final_index+1, (char*) "SEMLi", "points", "5", "2", 8);
@@ -3823,15 +3901,15 @@ int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst)
     //====================================================================================
     // Plotting Initial Guess
     //====================================================================================
-    pressEnter(refSt.isFlagOn);
-    cout << fname << ". Plotting Initial Guess..." << endl;
-
-    //------------------------------------------------------------------------------------
-    //Initial trajectory on lines, segment by segment
-    //------------------------------------------------------------------------------------
-    plottrajsegbyseg(y_traj_jpl, t_traj_jpl, final_index, mPlot, coord_int,
-                     et0, tsys0, coord_type, h2, comp_type,  h3, 6,
-                     "Initial guess in JPL ephemerides");
+    //    pressEnter(refSt.isFlagOn);
+    //    cout << fname << ". Plotting Initial Guess..." << endl;
+    //
+    //    //------------------------------------------------------------------------------
+    //    //Initial trajectory on lines, segment by segment
+    //    //------------------------------------------------------------------------------
+    //    plottrajsegbyseg(y_traj_jpl, t_traj_jpl, final_index, mPlot, coord_int,
+    //                     et0, tsys0, coord_type, h2, comp_type,  h3, 6,
+    //                     "Initial guess in JPL ephemerides");
 
 
     //====================================================================================
@@ -3839,8 +3917,8 @@ int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst)
     //====================================================================================
     pressEnter(refSt.isFlagOn);
     cout << fname << ". Refine trajectory in JPL ephemerides..." << endl;
-    status  = multiple_shooting_direct_variable_time(y_traj_jpl, t_traj_jpl, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, coord_int,  5e-10, true, h4);
-    //status  = multiple_shooting_direct(y_traj_jpl, t_traj_jpl, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, coord_int, true, h4);
+    //status  = multiple_shooting_direct_variable_time(y_traj_jpl, t_traj_jpl, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, coord_int,  5e-10, true, h4, 0);
+    status  = multiple_shooting_direct(y_traj_jpl, t_traj_jpl, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, coord_int, true, h4, 0);
     //Plot
     gnuplot_plot_X(h4, y_traj_jpl_n, final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
 
@@ -3876,6 +3954,11 @@ int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst)
     gnuplot_close(h2);
     gnuplot_close(h3);
     gnuplot_close(h4);
+
+    //====================================================================================
+    // Reset the focus in SEML, if necessary
+    //====================================================================================
+    if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
 
     //====================================================================================
     // Free the data containers
@@ -4048,7 +4131,7 @@ int comptojplref3d(int coord_type, RefSt& refSt)
     //pressEnter(refSt.isFlagOn);
     cout << fname << ". Refine trajectory in JPL ephemerides..." << endl;
     //DiffCorr
-    status  = multiple_shooting_direct(y_traj_ecisem, t_traj_ecisem, y_traj_ecisem, t_traj_ecisem, 42, final_index, coord_int, true, h4);
+    status  = multiple_shooting_direct(y_traj_ecisem, t_traj_ecisem, y_traj_ecisem, t_traj_ecisem, 42, final_index, coord_int, true, h4, 0);
     //Plot
     gnuplot_plot_X(h4, y_traj_ecisem, final_index+1, (char*) "Final trajectory", "lines", "2", "2", color);
 
@@ -5258,7 +5341,7 @@ int compref3d_test_seml_synjpl(int man_grid_size_t,
     pressEnter(refSt.isFlagOn);
 
     int isPlotted   = 0;
-    multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, h2);
+    multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, h2, refSt.isPar);
     //multiple_shooting_direct_variable_time(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, isTimeFixed, h2);
 
     //------------------------------------------------------------------------------------
@@ -5316,8 +5399,7 @@ int compref3d_test_seml_synjpl(int man_grid_size_t,
         //Stepper
         const gsl_odeiv2_step_type* T = gsl_odeiv2_step_rk8pd;
         //Parameters
-        int coll;
-        OdeParams odeParams(&coll, &SEML);
+        OdeParams odeParams(&SEML);
         //Init ode structure
         init_ode_structure(&driver_JPL, T, T_root, 6, jpl_vf_syn, &odeParams);
 
@@ -5422,7 +5504,7 @@ int compref3d_test_seml_synjpl(int man_grid_size_t,
         cout << fname << ". Refine trajectory in JPL ephemerides..." << endl;
 
         isPlotted   = 1;
-        multiple_shooting_direct(y_traj_syn, t_traj_syn, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, eph_coord(coord_type), isPlotted, h4);
+        multiple_shooting_direct(y_traj_syn, t_traj_syn, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, eph_coord(coord_type), isPlotted, h4, 0);
         //Plot
         gnuplot_plot_X(h4, y_traj_jpl_n, final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
 
@@ -5763,7 +5845,7 @@ int compref3d_test_eml_synjpl(int man_grid_size_t,
     scanf("%c",&ch);
 
     int isPlotted   = 0;
-    multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, h2);
+    multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, h2, refSt.isPar);
     //multiple_shooting_direct_variable_time(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, isTimeFixed, h2);
 
     //------------------------------------------------------------------------------------
@@ -5824,7 +5906,7 @@ int compref3d_test_eml_synjpl(int man_grid_size_t,
         const gsl_odeiv2_step_type* T = gsl_odeiv2_step_rk8pd;
         //Parameters
         int coll;
-        OdeParams odeParams(&coll, &SEML);
+        OdeParams odeParams(&SEML);
         //Init ode structure
         init_ode_structure(&driver_JPL, T, T_root, 6, jpl_vf_syn, &odeParams);
 
@@ -5930,7 +6012,7 @@ int compref3d_test_eml_synjpl(int man_grid_size_t,
         cout << fname << ". Refine trajectory in JPL ephemerides..." << endl;
 
         isPlotted   = 1;
-        multiple_shooting_direct(y_traj_syn, t_traj_syn, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, eph_coord(coord_type), isPlotted, h4);
+        multiple_shooting_direct(y_traj_syn, t_traj_syn, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, eph_coord(coord_type), isPlotted, h4, 0);
         //Plot
         gnuplot_plot_X(h4, y_traj_jpl_n, final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
 
@@ -6150,7 +6232,7 @@ int compref3d_test_eml2seml_synjpl(int coord_type)
     const gsl_odeiv2_step_type* T = gsl_odeiv2_step_rk8pd;
     //Parameters
     int coll;
-    OdeParams odeParams(&coll, &SEML);
+    OdeParams odeParams(&SEML);
     //Init ode structure
     init_ode_structure(&driver_JPL, T, T_root, 6, jpl_vf_syn, &odeParams);
 
@@ -6351,7 +6433,7 @@ int compref3d_test_eml2seml_synjpl(int coord_type)
     cout << fname << ". Refine trajectory in JPL ephemerides..." << endl;
 
     int isPlotted   = 1;
-    multiple_shooting_direct(y_traj_syn, t_traj_syn, y_traj_syn_n, t_traj_syn_n, 42, final_index, eph_coord(coord_type), isPlotted, h4);
+    multiple_shooting_direct(y_traj_syn, t_traj_syn, y_traj_syn_n, t_traj_syn_n, 42, final_index, eph_coord(coord_type), isPlotted, h4, 0);
     //multiple_shooting_direct_variable_time(y_traj_syn, t_traj_syn, y_traj_syn_n, t_traj_syn_n,  42, final_index, eph_coord(coord_type), 5e-9, isPlotted, h4);
     //Plot
     gnuplot_plot_X(h4, y_traj_syn_n, final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);

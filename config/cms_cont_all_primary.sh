@@ -126,9 +126,9 @@ REFST_TERMINATION=$REF_COND_T    # Termination condition in the continuation wit
 REFST_COORD_TYPE=$NCSEM		 # coordinates system in the refinement procedure
 
 REFST_XPS=0.7			 # position of the poincaré section in NCSEM coordinates
-REFST_ISJPL=1		         # is the JPL refinement performed when possible?
-REFST_DJPLCOORD=-1		 # coordinate system used during the JPL refinement (if -1, it is user defined) Best results obtained with $NJ2000
-REFST_SIDIM=0		         # 0 or 2 - component of s0 that stays constant when t0 is free
+REFST_ISJPL=1		     # is the JPL refinement performed when possible?
+REFST_DJPLCOORD=$NJ2000  # coordinate system used during the JPL refinement (if -1, it is user defined) Best results obtained with $NJ2000
+REFST_SIDIM=0		     # 0 or 2 - component of s0 that stays constant when t0 is free
 
 # Sampling frequencies in REF_COMP (complete trajectory) in days
 REFST_SF_EML2=2			 # orbit at EML2	

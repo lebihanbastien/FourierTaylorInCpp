@@ -773,7 +773,7 @@ int oo_gridOrbit(double st0[], double t0, double tf, double dt)
     const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
     //Parameters
     int coll;
-    OdeParams odeParams(&coll, &SEML);
+    OdeParams odeParams(&SEML);
     //Init ode structure
     init_ode_structure(&driver, T, T_root, 6, qbcp_vfn, &odeParams);
 
@@ -931,7 +931,7 @@ int oo_gridOrbit(double st0[], double t0, double tf, double dt)
     //------------------------------------------------------------------------------------
     //Diff Corr!
     //------------------------------------------------------------------------------------
-    multiple_shooting_direct(yc, tc, yc, tc, 42, N, new_ncd, true, h2);
+    multiple_shooting_direct(yc, tc, yc, tc, 42, N, new_ncd, true, h2, 0);
 
     //------------------------------------------------------------------------------------
     //Trajectory on lines, segment by segment

@@ -96,6 +96,7 @@ struct RefSt
     int isPlotted;        //do we plot the results during the computation?
     int isSaved;          //do we save the results in data files?
     int isFromServer;     //does the raw data comes from server files?
+    int isPar;            //is parallel computation allowed?
 
     // Maximum angle around SEMLi if REF_COND_T is used (in degrees)
     double thetaMax;      //should be a multiple of 90°

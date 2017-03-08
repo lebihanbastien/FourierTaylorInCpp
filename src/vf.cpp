@@ -204,7 +204,6 @@ void acc_center_from_vf(double et, double Ae[3],  double Rj[11][6], QBCP_L* qbp)
     }
 }
 
-
 /**
  *  \brief Computes the acceleration vector of the Earth.
  **/
@@ -3073,17 +3072,39 @@ int qbcp_vfn(double t, const double y[], double f[], void* params_void)
     //Collision with the Earth
     if(sqrt(qpe2) < re)
     {
-        *odeParams->coll = EARTH;
+        odeParams->event.coll = EARTH;
         //cout << "Earth collision!" << endl;
     }
 
     //Collision with the Moon
     if(sqrt(qpm2) < rm)
     {
-        *odeParams->coll = MOON;
+        odeParams->event.coll = MOON;
         //cout << "Moon collision!" << endl;
     }
 
+    //------------------------------------------------------------------------------------
+    //Check crossings of x = -1
+    //------------------------------------------------------------------------------------
+    double x1 = odeParams->event.x1;
+    if(x1 == 0.0) odeParams->event.x1 = y[0] + 1.0;
+    else
+    {
+        double x2 = y[0] + 1.0;
+
+        if(x1 > 0 && x2 < 0)
+        {
+            if(y[1] > 0) odeParams->event.crossings += 1.0;    //clockwise
+            else         odeParams->event.crossings += 0.1;    //counterclockwise
+        }
+        else if(x1 < 0 && x2 > 0)
+        {
+            if(y[1] < 0) odeParams->event.crossings += 1.0;    //clockwise
+            else         odeParams->event.crossings += 0.1;    //counterclockwise
+        }
+
+        odeParams->event.x1 = x2;
+    }
     return FTC_SUCCESS;
 }
 

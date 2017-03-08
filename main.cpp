@@ -94,7 +94,7 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         // Type of computation
         //--------------------------------------------------------------------------------
-        COMP_TYPE   = COMP_CM_EML2_TO_CMS_SEML;
+        COMP_TYPE   = COMP_CM_EML2_TO_CM_SEML;
 
         //--------------------------------------------------------------------------------
         // Model and libration points
@@ -358,6 +358,7 @@ int main(int argc, char** argv)
         refSt.isPlotted     = 1;                  // do we plot the results during the computation?
         refSt.isSaved       = 1;                  // do we save the results in data files?
         refSt.isFromServer  = 1;                  // does the raw data comes from server files?
+        refSt.isPar         = 0;                  //is parallel computation allowed?
 
         //Maximum angle around SEMLi if REF_COND_T is used (in degrees)
         refSt.thetaMax      = 240;                //should be a multiple of 90°
@@ -377,12 +378,12 @@ int main(int argc, char** argv)
         // Maximum/Minimum step in the continuation procedure
         refSt.dsmin         = 1e-6;                     //with fixed time
         refSt.dsmin_vt      = 1e-6;                     //with variable time
-        refSt.dsmax         = 10;                 //with fixed time
-        refSt.dsmax_vt      = 10;                 //with variable time
+        refSt.dsmax         = 10;                       //with fixed time
+        refSt.dsmax_vt      = 10;                       //with variable time
 
         refSt.xps           = (LI_SEM == 1)? +0.6:-0.6; // position of the poincaré section in NCSEM coordinates
         refSt.isJPL         = 1;                        // is the JPL refinement performed when possible?
-        refSt.djplcoord     = 2;                       // coordinate system used during the JPL refinement (if -1, it is user defined) Best results obtained with NJ2000
+        refSt.djplcoord     = NJ2000;                   // coordinate system used during the JPL refinement (if -1, it is user defined) Best results obtained with NJ2000
         refSt.sidim         = 0;                        // 0 or 2 - component of s0 that stays constant when t0 is free
 
         // Sampling frequencies in REF_COMP (complete trajectory) in days
@@ -516,6 +517,7 @@ int main(int argc, char** argv)
             refSt.isPlotted     = atoi(argv[index++]);     // do we plot the results during the computation?
             refSt.isSaved       = atoi(argv[index++]);     // do we save the results in data files?
             refSt.isFromServer  = atoi(argv[index++]);     // does the raw data comes from server files?
+            refSt.isPar         = ISPAR;                   //is parallel computation allowed?
 
             //Maximum angle around SEMLi if REF_COND_T is used (in degrees)
             refSt.thetaMax      = atof(argv[index++]);     //should be a multiple of 90°
@@ -616,9 +618,9 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         // Compute initial conditions in CMU EML2 on a given grid
         //--------------------------------------------------------------------------------
-        tic();
-        compute_grid_CMU_EM(PROJ_EPSILON, projSt);
-        cout << "End of in compute_grid_CMU_EM in " << toc() << endl;
+                tic();
+                compute_grid_CMU_EM(PROJ_EPSILON, projSt);
+                cout << "End of in compute_grid_CMU_EM in " << toc() << endl;
 
         //--------------------------------------------------------------------------------
         // Integrate those initial conditions and project them on the CM SEMLi

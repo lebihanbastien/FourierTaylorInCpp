@@ -133,8 +133,7 @@ QBCP_L SEML;           //global structure that describes the Sun-Earth-Moon syst
 QBCP_L SEML_EM;        //global structure that describes the Sun-Earth-Moon system around EMLi
 QBCP_L SEML_SEM;       //global structure that describes the Sun-Earth-Moon system around SEMLi
 
-int coll;
-OdeParams ODESEML(&coll, &SEML);     //global structure: SEML + variable parameters in ODE routines (collisionner...)
+OdeParams ODESEML(&SEML);     //global structure: SEML + variable parameters in ODE routines (collisionner...)
 
 /**
  *   \brief Initialization of the environnement (Sun, Earth, Moon, Li...).
@@ -519,7 +518,12 @@ void initCOC(matrix<Ofsc>& PC,
  *   Note that the QBCP structure is used only for the initialization of the coordinate systems. More precisely, it contains some parameters
  *   specific to each libration point (gamma), via its CR3BP structures (see init_QBCP, the routine that initializes the QBCP structures).
  **/
-void init_QBCP_L(QBCP_L* qbcp_l, QBCP* qbcp, int isNormalized, int li_EM, int li_SEM, int isNew, int model, int fwrk, int pmType_EM, int pmType_SEM, int manType_EM, int manType_SEM)
+void init_QBCP_L(QBCP_L* qbcp_l, QBCP* qbcp,
+                 int isNormalized,
+                 int li_EM, int li_SEM,
+                 int isNew, int model, int fwrk,
+                 int pmType_EM, int pmType_SEM,
+                 int manType_EM, int manType_SEM)
 {
     //------------------------------------------------------------------------------------
     //      Common to all models
