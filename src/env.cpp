@@ -133,8 +133,6 @@ QBCP_L SEML;           //global structure that describes the Sun-Earth-Moon syst
 QBCP_L SEML_EM;        //global structure that describes the Sun-Earth-Moon system around EMLi
 QBCP_L SEML_SEM;       //global structure that describes the Sun-Earth-Moon system around SEMLi
 
-OdeParams ODESEML(&SEML);     //global structure: SEML + variable parameters in ODE routines (collisionner...)
-
 /**
  *   \brief Initialization of the environnement (Sun, Earth, Moon, Li...).
  *
@@ -192,7 +190,7 @@ void initCOC(matrix<Ofsc>& P,
     //------------------------------------------------------------------------------------
     //Retrieve folder
     //------------------------------------------------------------------------------------
-    string F_COC = qbcp_l.cs.F_COC;
+    string F_COC = qbcp_l.cs->F_COC;
 
     //------------------------------------------------------------------------------------
     //Switch RTBP/QBCP/BCP
@@ -221,7 +219,7 @@ void initCOC(matrix<Ofsc>& P,
         //Init double variables
         //--------------------
         double eta1, eta2, la1, om1, om2, dl1, do1, s1, s2, c2;
-        c2 = qbcp_l.cs.c2;
+        c2 = qbcp_l.cs->c2;
         eta1 = (c2 - 2.0 - sqrt(9*c2*c2 - 8*c2))/2.0;
         eta2 = (c2 - 2.0 + sqrt(9*c2*c2 - 8*c2))/2.0;
         om1 = sqrt(-eta1);
@@ -660,10 +658,9 @@ void init_QBCP_L(QBCP_L* qbcp_l, QBCP* qbcp,
     //------------------------------------------------------------------------------------
     // Solar system (all planets + Moon + Sun + Pluto)
     //------------------------------------------------------------------------------------
-    init_SS(&qbcp_l->ss, qbcp_l, I_VSEM);
     init_SS(&qbcp_l->ss_sem, qbcp_l, I_VSEM);
     init_SS(&qbcp_l->ss_em,  qbcp_l, I_VEM);
-
+    qbcp_l->ss = &qbcp_l->ss_sem;
 
     //------------------------------------------------------------------------------------
     // DEFAULT SETTINGS
@@ -708,16 +705,16 @@ void init_QBCP_L(QBCP_L* qbcp_l, QBCP* qbcp,
     switch(fwrk)
     {
     case F_EM:
-        qbcp_l->us = qbcp_l->us_em;
-        qbcp_l->cs = qbcp_l->cs_em;
+        qbcp_l->us = &qbcp_l->us_em;
+        qbcp_l->cs = &qbcp_l->cs_em;
         qbcp_l->li = qbcp_l->li_EM;
-        qbcp_l->ss = qbcp_l->ss_em;
+        qbcp_l->ss = &qbcp_l->ss_em;
         break;
     case F_SEM:
-        qbcp_l->us = qbcp_l->us_sem;
-        qbcp_l->cs = qbcp_l->cs_sem;
+        qbcp_l->us = &qbcp_l->us_sem;
+        qbcp_l->cs = &qbcp_l->cs_sem;
         qbcp_l->li = qbcp_l->li_SEM;
-        qbcp_l->ss = qbcp_l->ss_sem;
+        qbcp_l->ss = &qbcp_l->ss_sem;
         break;
     default:
         cout << "init_QBCP_L. Warning: unknown fwrk." << endl;
@@ -1776,20 +1773,23 @@ void EMtoNC_prim(double Zc[3], double zc[3], double c1, double gamma)
  **/
 void changeDCS(QBCP_L& qbcp_l, int fwrk)
 {
+    cout << "WARNING: changeDCS is used. Press enter to go on." << endl;
+    pressEnter(true);
+
     qbcp_l.fwrk = fwrk;
     switch(fwrk)
     {
     case F_EM:
-        qbcp_l.us = qbcp_l.us_em;
-        qbcp_l.cs = qbcp_l.cs_em;
+        qbcp_l.us = &qbcp_l.us_em;
+        qbcp_l.cs = &qbcp_l.cs_em;
         qbcp_l.li = qbcp_l.li_EM;
-        qbcp_l.ss = qbcp_l.ss_em;
+        qbcp_l.ss = &qbcp_l.ss_em;
         break;
     case F_SEM:
-        qbcp_l.us = qbcp_l.us_sem;
-        qbcp_l.cs = qbcp_l.cs_sem;
+        qbcp_l.us = &qbcp_l.us_sem;
+        qbcp_l.cs = &qbcp_l.cs_sem;
         qbcp_l.li = qbcp_l.li_SEM;
-        qbcp_l.ss = qbcp_l.ss_sem;
+        qbcp_l.ss = &qbcp_l.ss_sem;
         break;
     default:
         cout << "changeDCS. Warning: unknown fwrk." << endl;
@@ -1821,9 +1821,9 @@ void changeLIDCS(QBCP_L& qbcp_l, int fwrk, int li)
             qbcp_l.cs_em  = qbcp_l.cs_em_l3;
             break;
         }
-        qbcp_l.us = qbcp_l.us_em;
-        qbcp_l.cs = qbcp_l.cs_em;
-        qbcp_l.ss = qbcp_l.ss_em;
+        qbcp_l.us = &qbcp_l.us_em;
+        qbcp_l.cs = &qbcp_l.cs_em;
+        qbcp_l.ss = &qbcp_l.ss_em;
         break;
     case F_SEM:
         switch(li)
@@ -1838,9 +1838,9 @@ void changeLIDCS(QBCP_L& qbcp_l, int fwrk, int li)
             qbcp_l.cs_sem  = qbcp_l.cs_sem_l3;
             break;
         }
-        qbcp_l.us = qbcp_l.us_sem;
-        qbcp_l.cs = qbcp_l.cs_sem;
-        qbcp_l.ss = qbcp_l.ss_sem;
+        qbcp_l.us = &qbcp_l.us_sem;
+        qbcp_l.cs = &qbcp_l.cs_sem;
+        qbcp_l.ss = &qbcp_l.ss_sem;
         break;
     default:
         cout << "changeLIDCS. Warning: unknown coordsys." << endl;
@@ -2009,24 +2009,24 @@ double jacobi(double y[], double mu)
  **/
 double cn(QBCP_L& qbcp_l, int n)
 {
-    double gamma = qbcp_l.cs.gamma;
+    double gamma = qbcp_l.cs->gamma;
     double mu;
     switch(qbcp_l.fwrk)
     {
     case F_EM:
-        mu   = qbcp_l.us.mu_EM;
+        mu   = qbcp_l.us->mu_EM;
         break;
     case F_SEM:
-        mu   = qbcp_l.us.mu_SEM;
+        mu   = qbcp_l.us->mu_SEM;
         break;
     default: //EM by default
         cout << "WARNING in cn(): unknown framework. EM by default." << endl;
-        mu   = qbcp_l.us.mu_EM;
+        mu   = qbcp_l.us->mu_EM;
     }
 
 
     double res = 0.0;
-    switch(qbcp_l.cs.li)
+    switch(qbcp_l.cs->li)
     {
     case 1:
         res =  pow(gamma,-3.0)*(pow(+1.0, n)*mu + pow(-1.0, n)*(1-mu)*pow(gamma/(1.0-gamma), n+1));

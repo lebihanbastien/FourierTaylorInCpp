@@ -58,7 +58,7 @@ void init_orbit(SingleOrbit &orbit,
     orbit.t0  = t0;                                   //Initial time
     orbit.tf  = tf;                                   //Final time after computation
     orbit.tproj  = tproj;                             //default time between each projection
-    orbit.tprojmin  = 1e-4*qbcp_l->us.T;              //minimum time between each projection
+    orbit.tprojmin  = 1e-4*qbcp_l->us->T;              //minimum time between each projection
     orbit.ePmax = (qbcp_l->fwrk == F_SEM)? 5e-3:5e-5; //maximum projection distance allowed
 
     //-----------
@@ -80,7 +80,7 @@ void init_orbit(SingleOrbit &orbit,
     //-----------
     //Pulsation
     //-----------
-    orbit.n = qbcp_l->us.n;
+    orbit.n = qbcp_l->us->n;
 }
 
 
@@ -180,18 +180,6 @@ void orbit_update_ic(SingleOrbit &orbit, const double si[], const double z0[])
 // ANNEXES
 //
 //========================================================================================
-
-/**
- *  \brief Changing the scope of the computation:
- *       1. Set OFTS_ORDER=ofts_order
- *       2. Focus on the coordinate system defined by focus (F_EM, F_SEM...).
- **/
-void changeScope(int ofts_order, int focus)
-{
-    OFTS_ORDER=ofts_order;
-    changeDCS(SEML, focus);
-}
-
 /**
  *   \brief Display the current completion (percent) of a routine.
  **/
@@ -290,13 +278,6 @@ int ode78(double **yv, double *tv, OdeEvent *odeEvent,
     int varType = default_coordinate_type(dcs);
 
     //====================================================================================
-    // 3. Check that the focus in SEML is
-    // in accordance with the dcs.
-    //====================================================================================
-    int fwrk0 = SEML.fwrk;
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
-
-    //====================================================================================
     // 4. Selection of the vector field
     //====================================================================================
     vfptr vf = ftc_select_vf(dcs, nvar);
@@ -304,16 +285,15 @@ int ode78(double **yv, double *tv, OdeEvent *odeEvent,
     //====================================================================================
     // 5. ODE system
     //====================================================================================
-    OdeStruct driver;
+    OdeStruct odestruct;
     //Root-finding
     const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
     //Stepper
     const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
     //Parameters
-    int coll;
-    OdeParams odeParams(&SEML);
+    OdeParams odeParams(&SEML, dcs, odeEvent->detection);
     //Init ode structure
-    init_ode_structure(&driver, T, T_root, nvar, vf, &odeParams);
+    init_ode_structure(&odestruct, T, T_root, nvar, vf, &odeParams);
 
 
     //====================================================================================
@@ -451,7 +431,7 @@ int ode78(double **yv, double *tv, OdeEvent *odeEvent,
     tvIN  = dvector(0, nGrid);
 
     //Integration in yvIN/tvIN
-    int status = ode78_grid(&driver, t0, tf, y0, yvIN, tvIN, nGrid);
+    int status = ode78_grid(&odestruct, t0, tf, y0, yvIN, tvIN, nGrid);
 
     //====================================================================================
     // 8. To the right outputs: varType to outputType, if necessary
@@ -487,10 +467,6 @@ int ode78(double **yv, double *tv, OdeEvent *odeEvent,
     }
     }
 
-    //====================================================================================
-    // 9. Reset the focus in SEML, if necessary
-    //====================================================================================
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
 
     //====================================================================================
     // Update the collisionner
@@ -570,13 +546,6 @@ int ode78(double **yv, double *tv, int *ode78coll,
     int varType = default_coordinate_type(dcs);
 
     //====================================================================================
-    // 3. Check that the focus in SEML is
-    // in accordance with the dcs.
-    //====================================================================================
-    int fwrk0 = SEML.fwrk;
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
-
-    //====================================================================================
     // 4. Selection of the vector field
     //====================================================================================
     vfptr vf = ftc_select_vf(dcs, nvar);
@@ -584,16 +553,15 @@ int ode78(double **yv, double *tv, int *ode78coll,
     //====================================================================================
     // 5. ODE system
     //====================================================================================
-    OdeStruct driver;
+    OdeStruct odestruct;
     //Root-finding
     const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
     //Stepper
     const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
     //Parameters
-    int coll;
-    OdeParams odeParams(&SEML);
+    OdeParams odeParams(&SEML, dcs);
     //Init ode structure
-    init_ode_structure(&driver, T, T_root, nvar, vf, &odeParams);
+    init_ode_structure(&odestruct, T, T_root, nvar, vf, &odeParams);
 
 
     //====================================================================================
@@ -731,7 +699,7 @@ int ode78(double **yv, double *tv, int *ode78coll,
     tvIN  = dvector(0, nGrid);
 
     //Integration in yvIN/tvIN
-    int status = ode78_grid(&driver, t0, tf, y0, yvIN, tvIN, nGrid);
+    int status = ode78_grid(&odestruct, t0, tf, y0, yvIN, tvIN, nGrid);
 
     //====================================================================================
     // 8. To the right outputs: varType to outputType, if necessary
@@ -766,11 +734,6 @@ int ode78(double **yv, double *tv, int *ode78coll,
         }
     }
     }
-
-    //====================================================================================
-    // 9. Reset the focus in SEML, if necessary
-    //====================================================================================
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
 
     //====================================================================================
     // Update the collisionner
@@ -872,87 +835,25 @@ int ode78_qbcp_event(double **ye, double *te, int *ode78coll,
         break;
     }
 
-    //====================================================================================
-    // 3. Check that the focus in SEML is
-    // in accordance with the dcs.
-    //====================================================================================
-    int fwrk0 = SEML.fwrk;
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
-
 
     //====================================================================================
     // 4. Selection of the vector field
     //====================================================================================
-    int (*vf)(double, const double*, double*, void*) = qbcp_vfn; //by default, to avoid warning from gcc compiler
-    switch(nvar)
-    {
-        //--------------------------------------------------------------------------------
-        // 6 variables: only the state is integrated
-        //--------------------------------------------------------------------------------
-    case 6:
-        switch(dcs)
-        {
-        case I_PSEM:
-        case I_PEM:
-            vf = qbcp_vf; //vector field with a state (X, PX)
-            break;
-        case I_NCSEM:
-        case I_NCEM:
-            vf = qbcp_vfn; //vector field with a state (x, px) (default)
-            break;
-        case I_VNCSEM:
-        case I_VNCEM:
-            vf = qbcp_vfn_xv; //vector field with a state (x, vx)
-            break;
-        }
-        break;
-
-        //--------------------------------------------------------------------------------
-        // 42 variables: the state + var. eq. are integrated
-        //--------------------------------------------------------------------------------
-    case 42:
-        switch(dcs)
-        {
-        case I_PSEM:
-        case I_PEM:
-            vf = qbcp_vf_varnonlin; //vector field with a state (X, PX)
-            break;
-        case I_NCSEM:
-        case I_NCEM:
-            vf = qbcp_vfn_varnonlin; //vector field with a state (x, px) (default)
-            break;
-        case I_VNCEM:
-        case I_VNCSEM:
-            vf = qbcp_vfn_varnonlin_xv; //vector field with a state (x, vx)
-            break;
-        default:
-            perror("Unknown dcs with 42 states (no corresponding vf).");
-            break;
-        }
-        break;
-
-        //--------------------------------------------------------------------------------
-        // Default case: should NOT be reached
-        //--------------------------------------------------------------------------------
-    default:
-        vf = qbcp_vfn;
-        break;
-    }
+    vfptr vf = ftc_select_vf(dcs, nvar);
 
 
     //====================================================================================
     // 5. ODE system
     //====================================================================================
-    OdeStruct driver;
+    OdeStruct odestruct;
     //Root-finding
     const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
     //Stepper
     const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
     //Parameters
-    int coll;
-    OdeParams odeParams(&SEML);
+    OdeParams odeParams(&SEML, dcs);
     //Init ode structure
-    init_ode_structure(&driver, T, T_root, nvar, vf, &odeParams);
+    init_ode_structure(&odestruct, T, T_root, nvar, vf, &odeParams);
 
 
     //====================================================================================
@@ -1079,8 +980,8 @@ int ode78_qbcp_event(double **ye, double *te, int *ode78coll,
     }
 
     //Integration in yvIN/tvIN, with event detection
-    int nEvents = custom_odezero_2(y0, yvIN, tvIN, t0, tf, &driver, fvalue);
-    //ode78_grid(&driver, t0, tf, y0, yvIN, tvIN, nGrid);
+    int nEvents = custom_odezero_2(y0, yvIN, tvIN, t0, tf, &odestruct, fvalue);
+    //ode78_grid(&odestruct, t0, tf, y0, yvIN, tvIN, nGrid);
 
     //====================================================================================
     // 8. To the right outputs: varType to outputType
@@ -1095,11 +996,6 @@ int ode78_qbcp_event(double **ye, double *te, int *ode78coll,
     {
         for(int p = 0; p <= nGrid; p++) for(int i = 6; i < 42; i++) ye[i][p] = yvIN[i][p];
     }
-
-    //====================================================================================
-    // 9. Reset the focus in SEML, if necessary
-    //====================================================================================
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
 
     //====================================================================================
     // Update the collisionner
@@ -1195,87 +1091,24 @@ int ode78_qbcp_vg(double **yv, double *tv, int *ode78coll,
         break;
     }
 
-    //====================================================================================
-    // 3. Check that the focus in SEML is
-    // in accordance with the dcs.
-    //====================================================================================
-    int fwrk0 = SEML.fwrk;
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
-
 
     //====================================================================================
     // 4. Selection of the vector field
     //====================================================================================
-    int (*vf)(double, const double*, double*, void*) = qbcp_vfn; //by default, to avoid warning from gcc compiler
-    switch(nvar)
-    {
-        //--------------------------------------------------------------------------------
-        // 6 variables: only the state is integrated
-        //--------------------------------------------------------------------------------
-    case 6:
-        switch(dcs)
-        {
-        case I_PSEM:
-        case I_PEM:
-            vf = qbcp_vf; //vector field with a state (X, PX)
-            break;
-        case I_NCSEM:
-        case I_NCEM:
-            vf = qbcp_vfn; //vector field with a state (x, px) (default)
-            break;
-        case I_VNCSEM:
-        case I_VNCEM:
-            vf = qbcp_vfn_xv; //vector field with a state (x, vx)
-            break;
-        }
-        break;
-
-        //--------------------------------------------------------------------------------
-        // 42 variables: the state + var. eq. are integrated
-        //--------------------------------------------------------------------------------
-    case 42:
-        switch(dcs)
-        {
-        case I_PSEM:
-        case I_PEM:
-            vf = qbcp_vf_varnonlin; //vector field with a state (X, PX)
-            break;
-        case I_NCSEM:
-        case I_NCEM:
-            vf = qbcp_vfn_varnonlin; //vector field with a state (x, px) (default)
-            break;
-        case I_VNCEM:
-        case I_VNCSEM:
-            vf = qbcp_vfn_varnonlin_xv; //vector field with a state (x, vx)
-            break;
-        default:
-            perror("Unknown dcs with 42 states (no corresponding vf).");
-            break;
-        }
-        break;
-
-        //-----------------------------------------------------------------------------------------
-        // Default case: should NOT be reached
-        //-----------------------------------------------------------------------------------------
-    default:
-        vf = qbcp_vfn;
-        break;
-    }
-
+    vfptr vf = ftc_select_vf(dcs, nvar);
 
     //====================================================================================
     // 5. ODE system
     //====================================================================================
-    OdeStruct driver;
+    OdeStruct odestruct;
     //Root-finding
     const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
     //Stepper
     const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
     //Parameters
-    int coll;
-    OdeParams odeParams(&SEML);
+    OdeParams odeParams(&SEML, dcs);
     //Init ode structure
-    init_ode_structure(&driver, T, T_root, nvar, vf, &odeParams);
+    init_ode_structure(&odestruct, T, T_root, nvar, vf, &odeParams);
 
 
     //====================================================================================
@@ -1368,7 +1201,7 @@ int ode78_qbcp_vg(double **yv, double *tv, int *ode78coll,
     tvINc  = dvector(0, nGridmax);
 
     //Integration in yvIN/tvIN
-    int lastind = ode78_variable_grid(&driver, t0, tf, y0, yvIN, tvIN, nGridmax);
+    int lastind = ode78_variable_grid(&odestruct, t0, tf, y0, yvIN, tvIN, nGridmax);
 
     //====================================================================================
     // 8. Get only a certain number of points of points if necessary
@@ -1415,10 +1248,6 @@ int ode78_qbcp_vg(double **yv, double *tv, int *ode78coll,
         for(int p = 0; p <= lastind; p++) for(int i = 6; i < 42; i++) yv[i][p] = yvIN[i][p];
     }
 
-    //====================================================================================
-    // 9. Reset the focus in SEML, if necessary
-    //====================================================================================
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
 
     //====================================================================================
     // Update the collisionner
@@ -1496,13 +1325,6 @@ int ode78_qbcp_gg(double **yv, double *tvf, int *ode78coll,
     int fwrk    = default_framework_dcs(dcs);
     int varType = default_coordinate_type(dcs);
 
-    //====================================================================================
-    // 3. Check that the focus in SEML is
-    // in accordance with the dcs.
-    //====================================================================================
-    int fwrk0 = SEML.fwrk;
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
-
 
     //====================================================================================
     // 4. Selection of the vector field
@@ -1512,16 +1334,15 @@ int ode78_qbcp_gg(double **yv, double *tvf, int *ode78coll,
     //====================================================================================
     // 5. ODE system
     //====================================================================================
-    OdeStruct driver;
+    OdeStruct odestruct;
     //Root-finding
     const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
     //Stepper
     const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
     //Parameters
-    int coll;
-    OdeParams odeParams(&SEML);
+    OdeParams odeParams(&SEML, dcs);
     //Init ode structure
-    init_ode_structure(&driver, T, T_root, nvar, vf, &odeParams);
+    init_ode_structure(&odestruct, T, T_root, nvar, vf, &odeParams);
 
 
     //====================================================================================
@@ -1654,7 +1475,7 @@ int ode78_qbcp_gg(double **yv, double *tvf, int *ode78coll,
     //Integration in yvIN/tvIN
 
     vector_printf(tvIN, nGrid);
-    ode78_grid_gg(&driver, y0, yvIN, tvIN, nGrid);
+    ode78_grid_gg(&odestruct, y0, yvIN, tvIN, nGrid);
 
     //====================================================================================
     // 8. To the right outputs: varType to outputType, if necessary
@@ -1689,11 +1510,6 @@ int ode78_qbcp_gg(double **yv, double *tvf, int *ode78coll,
         }
     }
     }
-
-    //====================================================================================
-    // 9. Reset the focus in SEML, if necessary
-    //====================================================================================
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
 
     //====================================================================================
     // Update the collisionner
@@ -1780,12 +1596,6 @@ int ode78_jpl(double **yv, double *tv, int *ode78coll,
     }
 
     //====================================================================================
-    // 3. Check that the focus in SEML is in accordance with the fwrk.
-    //====================================================================================
-    int fwrk0 = SEML.fwrk;
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
-
-    //====================================================================================
     // 4. Selection of the vector field
     //====================================================================================
     int (*vf)(double, const double*, double*, void*) = jpl_vf; //by default, to avoid warning from gcc compiler
@@ -1849,16 +1659,15 @@ int ode78_jpl(double **yv, double *tv, int *ode78coll,
     //====================================================================================
     // 5. ODE system
     //====================================================================================
-    OdeStruct driver;
+    OdeStruct odestruct;
     //Root-finding
     const gsl_root_fsolver_type* T_root = gsl_root_fsolver_brent;
     //Stepper
     const gsl_odeiv2_step_type* T = gsl_odeiv2_step_rk8pd;
     //Parameters
-    int coll;
-    OdeParams odeParams(&SEML);
+    OdeParams odeParams(&SEML, dcs);
     //Init ode structure
-    init_ode_structure(&driver, T, T_root, nvar, vf, &odeParams);
+    init_ode_structure(&odestruct, T, T_root, nvar, vf, &odeParams);
 
     //====================================================================================
     // 6. to FWRK coordinates.
@@ -2141,7 +1950,7 @@ int ode78_jpl(double **yv, double *tv, int *ode78coll,
     yvIN  = dmatrix(0, nvar-1, 0, nGrid);
     tvIN  = dvector(0, nGrid);
     //Integration in yvIN/tvIN
-    ode78_grid(&driver, et0, etf, y0, yvIN, tvIN, nGrid);
+    ode78_grid(&odestruct, et0, etf, y0, yvIN, tvIN, nGrid);
 
     //====================================================================================
     // 8. To the right outputs: varType to outputType. Fo now, simple copy
@@ -2152,11 +1961,6 @@ int ode78_jpl(double **yv, double *tv, int *ode78coll,
         for(int i = 0; i < nvar; i++) yv[i][p] = yvIN[i][p];
         tv[p] = tvIN[p];
     }
-
-    //====================================================================================
-    // 9. Reset the focus in SEML, if necessary
-    //====================================================================================
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
 
 
     //====================================================================================
@@ -2183,30 +1987,37 @@ int ode78_jpl(double **yv, double *tv, int *ode78coll,
 /**
  *   \brief Integrates a given trajectory up to tf, on a given grid
  **/
-int ode78_grid(OdeStruct *driver, double t0, double tf, double *y0, double **yNCE, double *tNCE, int N)
+int ode78_grid(OdeStruct *odestruct, double t0, double tf, double *y0, double **yNCE, double *tNCE, int N)
 {
     //====================================================================================
     //Initialization
     //====================================================================================
 
     //------------------------------------------------------------------------------------
+    //Parameters
+    //------------------------------------------------------------------------------------
+    OdeParams* odP = (OdeParams*) odestruct->sys.params;
+
+
+    //------------------------------------------------------------------------------------
     //Initialization of the parameters
     //------------------------------------------------------------------------------------
-    int nvar = driver->dim;
+    int nvar = odestruct->dim;
     int status;            //current status
     double yv[nvar], t;       //current state and time
     int nt;
     double ti;
+    double x1, x2;
 
     //------------------------------------------------------------------------------------
-    //Initialization of the driver
+    //Initialization of the odestruct
     //------------------------------------------------------------------------------------
     //Change sign of step if necessary
-    if((tf < t0 && driver->d->h>0) || (tf > t0 && driver->d->h<0)) driver->d->h *= -1;
-    if((tf < t0 && driver->h>0)    || (tf > t0 && driver->h<0))    driver->h    *= -1;
+    if((tf < t0 && odestruct->d->h>0) || (tf > t0 && odestruct->d->h<0)) odestruct->d->h *= -1;
+    if((tf < t0 && odestruct->h>0)    || (tf > t0 && odestruct->h<0))    odestruct->h    *= -1;
 
     //Reset ode structure.
-    reset_ode_structure(driver);
+    reset_ode_structure(odestruct);
 
     //------------------------------------------------------------------------------------
     //Initialization of the IC
@@ -2231,14 +2042,52 @@ int ode78_grid(OdeStruct *driver, double t0, double tf, double *y0, double **yNC
     for(int k = 0; k < nvar; k++) yNCE[k][0] = yv[k];
 
     //Limit the max step
-    //gsl_odeiv2_driver_set_hmax (driver->d, 1.0);
+    //gsl_odeiv2_driver_set_hmax (odestruct->d, 1.0);
 
     //Other positions
     do
     {
         //Evolve up to ti
         ti = tNCE[nt];
-        status = gsl_odeiv2_driver_apply(driver->d, &t , ti, yv);
+
+
+        // Old version: just one line
+        //status = gsl_odeiv2_driver_apply(odestruct->d, &t , ti, yv);
+
+        // New version: everything that's in the the "do"
+        do
+        {
+            //----------------------------------------------------------------------------
+            //Evolve one step
+            //----------------------------------------------------------------------------
+            status = gsl_odeiv2_evolve_apply (odestruct->e, odestruct->c, odestruct->s, &odestruct->sys, &t, ti, &odestruct->h, yv);
+
+            //----------------------------------------------------------------------------
+            //Check crossings of x = -1, if desired
+            //----------------------------------------------------------------------------
+            if(odP->event.detection)
+            {
+                x1 = odP->event.x1;
+                if(x1 == -1.0) odP->event.x1 = yv[0] + 1.0; //first use
+                else
+                {
+                    x2 = yv[0] + 1.0;
+
+                    if(x1 > 0 && x2 < 0)
+                    {
+                        if(yv[1] > 0) odP->event.crossings += 1.0;    //clockwise
+                        else          odP->event.crossings += 0.1;    //counterclockwise
+                    }
+                    else if(x1 < 0 && x2 > 0)
+                    {
+
+                        if(yv[1] < 0) odP->event.crossings += 1.0;    //clockwise
+                        else          odP->event.crossings += 0.1;    //counterclockwise
+                    }
+                    odP->event.x1 = x2;
+                }
+            }
+        }while((status == GSL_SUCCESS) && fabs(t - ti) != 0);
 
         //Update the storage
         for(int k = 0; k < nvar; k++) yNCE[k][nt] = yv[k];
@@ -2263,7 +2112,7 @@ int ode78_grid(OdeStruct *driver, double t0, double tf, double *y0, double **yNC
 /**
  *   \brief Integrates a given trajectory up to tf, on a variable grid. Return the last position that is filled on the grid.
  **/
-int ode78_variable_grid(OdeStruct *driver, double t0, double tf, double *y0, double **yNCE, double *tNCE, int N)
+int ode78_variable_grid(OdeStruct *odestruct, double t0, double tf, double *y0, double **yNCE, double *tNCE, int N)
 {
     //====================================================================================
     //Initialization
@@ -2272,20 +2121,20 @@ int ode78_variable_grid(OdeStruct *driver, double t0, double tf, double *y0, dou
     //------------------------------------------------------------------------------------
     //Initialization of the parameters
     //------------------------------------------------------------------------------------
-    int nvar = driver->dim;
+    int nvar = odestruct->dim;
     int status;               //current status
     double yv[nvar], t;       //current state and time
     int nt;
 
     //------------------------------------------------------------------------------------
-    //Initialization of the driver
+    //Initialization of the odestruct
     //------------------------------------------------------------------------------------
     //Change sign of step if necessary
-    if((tf < t0 && driver->d->h>0) || (tf > t0 && driver->d->h<0)) driver->d->h *= -1;
-    if((tf < t0 && driver->h>0) || (tf > t0 && driver->h<0)) driver->h *= -1;
+    if((tf < t0 && odestruct->d->h>0) || (tf > t0 && odestruct->d->h<0)) odestruct->d->h *= -1;
+    if((tf < t0 && odestruct->h>0) || (tf > t0 && odestruct->h<0)) odestruct->h *= -1;
 
     //Reset ode structure.
-    reset_ode_structure(driver);
+    reset_ode_structure(odestruct);
 
     //------------------------------------------------------------------------------------
     //Initialization of the IC
@@ -2305,7 +2154,7 @@ int ode78_variable_grid(OdeStruct *driver, double t0, double tf, double *y0, dou
     //Other positions
     do
     {
-        status = gsl_odeiv2_evolve_apply (driver->e, driver->c, driver->s, &driver->sys, &t, tf, &driver->h, yv);
+        status = gsl_odeiv2_evolve_apply (odestruct->e, odestruct->c, odestruct->s, &odestruct->sys, &t, tf, &odestruct->h, yv);
         //Update the storage
         for(int k = 0; k < nvar; k++) yNCE[k][nt] = yv[k];
         //Evolve up to ti
@@ -2339,7 +2188,7 @@ int ode78_variable_grid(OdeStruct *driver, double t0, double tf, double *y0, dou
 /**
  *   \brief Integrates a given trajectory up to tf, on a given grid. The time grid is given as input
  **/
-int ode78_grid_gg(OdeStruct *driver, double *y0, double **yNCE, const double *tNCEi, int N)
+int ode78_grid_gg(OdeStruct *odestruct, double *y0, double **yNCE, const double *tNCEi, int N)
 {
     //====================================================================================
     //Initialization
@@ -2348,21 +2197,21 @@ int ode78_grid_gg(OdeStruct *driver, double *y0, double **yNCE, const double *tN
     //------------------------------------------------------------------------------------
     //Initialization of the parameters
     //------------------------------------------------------------------------------------
-    int nvar = driver->dim;
+    int nvar = odestruct->dim;
     int status;               //current status
     double yv[nvar], t;       //current state and time
     int nt;
     double ti;
 
     //------------------------------------------------------------------------------------
-    //Initialization of the driver
+    //Initialization of the odestruct
     //------------------------------------------------------------------------------------
     //Change sign of step if necessary
-    if((tNCEi[N] < tNCEi[0] && driver->d->h>0) || (tNCEi[N] > tNCEi[0] && driver->d->h<0)) driver->d->h *= -1;
-    if((tNCEi[N] < tNCEi[0] && driver->h>0)    || (tNCEi[N] > tNCEi[0] && driver->h<0)) driver->h *= -1;
+    if((tNCEi[N] < tNCEi[0] && odestruct->d->h>0) || (tNCEi[N] > tNCEi[0] && odestruct->d->h<0)) odestruct->d->h *= -1;
+    if((tNCEi[N] < tNCEi[0] && odestruct->h>0)    || (tNCEi[N] > tNCEi[0] && odestruct->h<0)) odestruct->h *= -1;
 
     //Reset ode structure.
-    reset_ode_structure(driver);
+    reset_ode_structure(odestruct);
 
     //------------------------------------------------------------------------------------
     //Initialization of the IC
@@ -2384,7 +2233,7 @@ int ode78_grid_gg(OdeStruct *driver, double *y0, double **yNCE, const double *tN
     {
         //Evolve up to ti
         ti = tNCEi[nt];
-        status = gsl_odeiv2_driver_apply (driver->d, &t , ti, yv);
+        status = gsl_odeiv2_driver_apply (odestruct->d, &t , ti, yv);
 
         //Update the storage
         for(int k = 0; k < nvar; k++) yNCE[k][nt] = yv[k];
@@ -2660,8 +2509,8 @@ int gslc_proj_step(SingleOrbit &orbit,
         if(*proj_dist_SEM > orbit.ePmax)
         {
             cout << "Warning: Reset n° " << *nreset << ". Error (NC) = " << *proj_dist_SEM << endl;
-            cout << "Error (SYS) = " << *proj_dist_SEM*orbit.qbcp_l->cs.gamma << endl;
-            cout << "Error (km) = " << *proj_dist_SEM*orbit.qbcp_l->cs.gamma*orbit.qbcp_l->cs.cr3bp.L << endl;
+            cout << "Error (SYS) = " << *proj_dist_SEM*orbit.qbcp_l->cs->gamma << endl;
+            cout << "Error (km) = " << *proj_dist_SEM*orbit.qbcp_l->cs->gamma*orbit.qbcp_l->cs->cr3bp.L << endl;
             return ORBIT_EPROJ;
         }
 
@@ -3049,19 +2898,19 @@ string filenameOrbit(int ofts_order, int sizeOrbit, int type)
     switch(type)
     {
     case TYPE_ORBIT:
-        return SEML.cs.F_PLOT+"orbit_order_"+numTostring(ofts_order)+"_size_"+numTostring(sizeOrbit)+".txt";
+        return SEML.cs->F_PLOT+"orbit_order_"+numTostring(ofts_order)+"_size_"+numTostring(sizeOrbit)+".txt";
     case TYPE_CU:
-        return SEML.cs.F_PLOT+"cu_order_"+numTostring(ofts_order)+"_size_"+numTostring(sizeOrbit)+".txt";
+        return SEML.cs->F_PLOT+"cu_order_"+numTostring(ofts_order)+"_size_"+numTostring(sizeOrbit)+".txt";
     case TYPE_CS:
-        return SEML.cs.F_PLOT+"cs_order_"+numTostring(ofts_order)+"_size_"+numTostring(sizeOrbit)+".txt";
+        return SEML.cs->F_PLOT+"cs_order_"+numTostring(ofts_order)+"_size_"+numTostring(sizeOrbit)+".txt";
     case TYPE_MAN:
-        return SEML.cs.F_PLOT+"man_order_"+numTostring(ofts_order)+"_size_"+numTostring(sizeOrbit)+".bin";
+        return SEML.cs->F_PLOT+"man_order_"+numTostring(ofts_order)+"_size_"+numTostring(sizeOrbit)+".bin";
     case TYPE_MAN_SORT_DR:
-        return SEML.cs.F_PLOT+"man_sort_dr_order_"+numTostring(ofts_order)+"_size_"+numTostring(sizeOrbit)+".bin";
+        return SEML.cs->F_PLOT+"man_sort_dr_order_"+numTostring(ofts_order)+"_size_"+numTostring(sizeOrbit)+".bin";
     case TYPE_MAN_SORT_DH:
-        return SEML.cs.F_PLOT+"man_sort_dh_order_"+numTostring(ofts_order)+"_size_"+numTostring(sizeOrbit)+".bin";
+        return SEML.cs->F_PLOT+"man_sort_dh_order_"+numTostring(ofts_order)+"_size_"+numTostring(sizeOrbit)+".bin";
     case TYPE_MAN_PROJ:
-        return SEML.cs.F_PLOT+"man_proj_"+numTostring(ofts_order)+"_size_"+numTostring(sizeOrbit)+".bin";
+        return SEML.cs->F_PLOT+"man_proj_"+numTostring(ofts_order)+"_size_"+numTostring(sizeOrbit)+".bin";
     default:
         cout << "filenameOrbit: unknown type." << endl;
         return "";
@@ -3388,8 +3237,7 @@ void qbcp_test(QBCP_L &qbcp_l)
     //Root-finding
     const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent; //Brent-Dekker root finding method
     //Parameters
-    int coll;
-    OdeParams odeParams(&SEML);
+    OdeParams odeParams(&SEML, I_INEM);
     //General structures
     init_ode_structure(&ode_s, T, T_root, 14, qbcp_derivatives_em_in, &odeParams);
 
@@ -3509,12 +3357,12 @@ void qbcp_test(QBCP_L &qbcp_l)
     //=======================================================================
     // 9. fPlot
     //=======================================================================
-    gnuplot_fplot_xy(tmIN, dNCEM_IN, man_grid_size+1,  (char*) (qbcp_l.cs.F_PLOT+"QBCP_NCEM_vs_IN.txt").c_str());
-    gnuplot_fplot_xy(tmIN, dEM_IN, man_grid_size+1,    (char*) (qbcp_l.cs.F_PLOT+"QBCP_EM_vs_IN.txt").c_str());
-    gnuplot_fplot_xy(tmIN, dVNCEM_IN, man_grid_size+1, (char*) (qbcp_l.cs.F_PLOT+"QBCP_VNCEM_vs_IN.txt").c_str());
-    gnuplot_fplot_xy(tmIN, dNCSEM_IN, man_grid_size+1,  (char*) (qbcp_l.cs.F_PLOT+"QBCP_NCSEM_vs_IN.txt").c_str());
-    gnuplot_fplot_xy(tmIN, dSEM_IN, man_grid_size+1,    (char*) (qbcp_l.cs.F_PLOT+"QBCP_SEM_vs_IN.txt").c_str());
-    gnuplot_fplot_xy(tmIN, dVNCSEM_IN, man_grid_size+1, (char*) (qbcp_l.cs.F_PLOT+"QBCP_VNCSEM_vs_IN.txt").c_str());
+    gnuplot_fplot_xy(tmIN, dNCEM_IN, man_grid_size+1,  (char*) (qbcp_l.cs->F_PLOT+"QBCP_NCEM_vs_IN.txt").c_str());
+    gnuplot_fplot_xy(tmIN, dEM_IN, man_grid_size+1,    (char*) (qbcp_l.cs->F_PLOT+"QBCP_EM_vs_IN.txt").c_str());
+    gnuplot_fplot_xy(tmIN, dVNCEM_IN, man_grid_size+1, (char*) (qbcp_l.cs->F_PLOT+"QBCP_VNCEM_vs_IN.txt").c_str());
+    gnuplot_fplot_xy(tmIN, dNCSEM_IN, man_grid_size+1,  (char*) (qbcp_l.cs->F_PLOT+"QBCP_NCSEM_vs_IN.txt").c_str());
+    gnuplot_fplot_xy(tmIN, dSEM_IN, man_grid_size+1,    (char*) (qbcp_l.cs->F_PLOT+"QBCP_SEM_vs_IN.txt").c_str());
+    gnuplot_fplot_xy(tmIN, dVNCSEM_IN, man_grid_size+1, (char*) (qbcp_l.cs->F_PLOT+"QBCP_VNCSEM_vs_IN.txt").c_str());
 
     char ch;
     gnuplot_cmd(h1, "set logscale y");
@@ -3568,22 +3416,23 @@ int gridOrbit(double st0[],
               matrix<Ofsc>  &MIcoc,
               vector<Ofsc>  &Vcoc)
 {
-    //-----------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Computation
-    //-----------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
+    int dcs = SEML.fwrk == F_EM ? I_NCEM:I_NCSEM;
+
     //------------------
     // ODE
     //------------------
-    OdeStruct driver;
+    OdeStruct odestruct;
     //Root-finding
     const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
     //Stepper
     const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
     //Parameters
-    int coll;
-    OdeParams odeParams(&SEML);
+    OdeParams odeParams(&SEML, dcs);
     //Init ode structure
-    init_ode_structure(&driver, T, T_root, 6, qbcp_vfn, &odeParams);
+    init_ode_structure(&odestruct, T, T_root, 6, qbcp_vfn, &odeParams);
 
     //------------------
     //Orbit structure
@@ -3592,10 +3441,10 @@ int gridOrbit(double st0[],
     SingleOrbit orbit;
 
     //The default interval of projection is set to Tproj = T/5
-    double tproj = SEML.us.T/5;
+    double tproj = SEML.us->T/5;
 
     //Init routine
-    init_orbit(orbit, &CM, &CM_TFC, &Mcoc, &MIcoc, &Vcoc, &orbit_ofs, OFTS_ORDER, OFS_ORDER, 1, t0, tf, tproj, &driver, &SEML);
+    init_orbit(orbit, &CM, &CM_TFC, &Mcoc, &MIcoc, &Vcoc, &orbit_ofs, OFTS_ORDER, OFS_ORDER, 1, t0, tf, tproj, &odestruct, &SEML);
 
     //------------------
     //Orbit IC

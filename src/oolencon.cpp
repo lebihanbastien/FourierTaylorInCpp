@@ -51,8 +51,8 @@ int compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt &projSt)
     cout << ", " << projSt.GLIM_SI[2][1] << "]" << endl;
     cout << "  - " << projSt.GSIZE_SI[3]+1  << " value(s) of s4 in [" << projSt.GLIM_SI[3][0];
     cout << ", " << projSt.GLIM_SI[3][1] << "]" << endl;
-    cout << "  - " << projSt.TSIZE+1  << " value(s) of t in [" << projSt.TLIM[0]/SEML.us.T;
-    cout << ", " << projSt.TLIM[1]/SEML.us.T << "] x T" << endl;
+    cout << "  - " << projSt.TSIZE+1  << " value(s) of t in [" << projSt.TLIM[0]/SEML.us->T;
+    cout << ", " << projSt.TLIM[1]/SEML.us->T << "] x T" << endl;
     cout << " The data will be stored in " << filename << endl;
     cout << setiosflags(ios::scientific) << setprecision(15);
     cout << "===================================================================" << endl;
@@ -84,8 +84,8 @@ int compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt &projSt)
     init_grid(grid_t_EM, projSt.TLIM[0], projSt.TLIM[1], projSt.TSIZE);
 
     cout << " - The detailed values of t are:                                   " << endl;
-    for(int i = 0; i < projSt.TSIZE; i++) cout << grid_t_EM[i]/SEML.us.T << ", ";
-    cout << grid_t_EM[projSt.TSIZE]/SEML.us.T  << endl;
+    for(int i = 0; i < projSt.TSIZE; i++) cout << grid_t_EM[i]/SEML.us->T << ", ";
+    cout << grid_t_EM[projSt.TSIZE]/SEML.us->T  << endl;
     cout << "===================================================================" << endl;
     pressEnter(true);
 
@@ -104,7 +104,7 @@ int compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt &projSt)
     //====================================================================================
     // Get the invariant manifold at EML2
     //====================================================================================
-    Invman invman(OFTS_ORDER, OFS_ORDER, SEML.cs);
+    Invman invman(OFTS_ORDER, OFS_ORDER, *SEML.cs);
 
     //====================================================================================
     // Check that the invman is an unstable-manifold
@@ -239,8 +239,8 @@ int compute_grid_CMU_EM(double dist_to_cm, ProjSt &projSt)
     cout << ", " << projSt.GLIM_SI[0][1] << "]" << endl;
     cout << "  - " << projSt.GSIZE_SI[2]+1  << " value(s) of s3 in [" << projSt.GLIM_SI[2][0];
     cout << ", " << projSt.GLIM_SI[2][1] << "]" << endl;
-    cout << "  - " << projSt.TSIZE+1  << " value(s) of t in [" << projSt.TLIM[0]/SEML.us.T;
-    cout << ", " << projSt.TLIM[1]/SEML.us.T << "] x T" << endl;
+    cout << "  - " << projSt.TSIZE+1  << " value(s) of t in [" << projSt.TLIM[0]/SEML.us_em.T;
+    cout << ", " << projSt.TLIM[1]/SEML.us_em.T << "] x T" << endl;
     cout << " The data will be stored in " << filename << endl;
     cout << setiosflags(ios::scientific) << setprecision(15);
     cout << "===================================================================" << endl;
@@ -263,8 +263,8 @@ int compute_grid_CMU_EM(double dist_to_cm, ProjSt &projSt)
     init_grid(grid_t_EM, projSt.TLIM[0], projSt.TLIM[1], projSt.TSIZE);
 
     cout << " - The detailed values of t are:                                   " << endl;
-    for(int i = 0; i < projSt.TSIZE; i++) cout << grid_t_EM[i]/SEML.us.T << ", ";
-    cout << grid_t_EM[projSt.TSIZE]/SEML.us.T  << endl;
+    for(int i = 0; i < projSt.TSIZE; i++) cout << grid_t_EM[i]/SEML.us_em.T << ", ";
+    cout << grid_t_EM[projSt.TSIZE]/SEML.us_em.T  << endl;
     cout << "===================================================================" << endl;
     pressEnter(true);
 
@@ -283,7 +283,7 @@ int compute_grid_CMU_EM(double dist_to_cm, ProjSt &projSt)
     //====================================================================================
     // Get the invariant manifold at EML2
     //====================================================================================
-    Invman invman(OFTS_ORDER, OFS_ORDER, SEML.cs);
+    Invman invman(OFTS_ORDER, OFS_ORDER, SEML.cs_em);
 
     //====================================================================================
     // Loop on all elements.
@@ -433,13 +433,13 @@ int int_proj_CMU_EM_on_CM_SEM_3D(ProjSt &projSt)
     // 2.2. Initialize tools for the projection phase. Namely the center manifold @SEML
     //====================================================================================
     //First, check that the type of manifold provided is good:
-    if(SEML_SEM.cs.manType != MAN_CENTER)
+    if(SEML_SEM.cs->manType != MAN_CENTER)
     {
         cout << "int_proj_CMU_EM_on_CM_SEM_3D. The invariant manifold at SEMLi ";
         cout << "must be of center type. return." << endl;
         return FTC_FAILURE;
     }
-    Invman invman_SEM(OFTS_ORDER, OFS_ORDER, SEML_SEM.cs);
+    Invman invman_SEM(OFTS_ORDER, OFS_ORDER, *SEML_SEM.cs);
 
 
     //----------------------------------------------------------
@@ -747,8 +747,7 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt)
     //Read data size
     //----------------------------------------------------------
     int t_grid_size, s1_grid_size, s3_grid_size;
-    getLenghtCU_bin(&s1_grid_size, &s3_grid_size, &t_grid_size,
-                    OFTS_ORDER, TYPE_CU, SEML.li_SEM);
+    getLenghtCU_bin(&s1_grid_size, &s3_grid_size, &t_grid_size, OFTS_ORDER, TYPE_CU, SEML.li_SEM);
 
     //----------------------------------------------------------
     //To store all data
@@ -795,13 +794,13 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt)
     // 2.2. Initialize tools for the projection phase. Namely the center manifold @SEML
     //====================================================================================
     //First, check that the type of manifold provided is good:
-    if(SEML_SEM.cs.manType != MAN_CENTER)
+    if(SEML_SEM.cs->manType != MAN_CENTER)
     {
         cout << "int_proj_CMU_EM_on_CM_SEM. The invariant manifold at SEMLi ";
         cout << "must be of center type. return." << endl;
         return FTC_FAILURE;
     }
-    Invman invman_SEM(OFTS_ORDER, OFS_ORDER, SEML_SEM.cs);
+    Invman invman_SEM(OFTS_ORDER, OFS_ORDER, *SEML_SEM.cs);
 
 
     //------------------------------------------------------------------------------------
@@ -982,61 +981,63 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt)
                     //--------------------------------------------------------------------
                     if(min_proj_dist_SEM < ePdef)
                     {
-                        OdeEvent odeEvent_purge;
-                        double** y_purge = dmatrix(0, 5, 0, projSt.MSIZE);
-                        double* t_purge  = dvector(0, projSt.MSIZE);
+                        OdeEvent odeEvent_purge(true);
+                        double** y_purge = dmatrix(0, 5, 0, 2);
+                        double* t_purge  = dvector(0, 2);
                         tv  = init_time_grid_EM[kt];
 
                         for(int i = 0; i < 6; i++) yv[i] = init_state_CMU_NCEM[i][kt][ks1][ks3];
 
-                        ode78(y_purge, t_purge, &odeEvent_purge, tv, t_man_SEM[kmin]/SEML.us_em.ns, yv, 6, projSt.MSIZE, I_NCSEM, NCEM, NCSEM);
+                        ode78(y_purge, t_purge, &odeEvent_purge, tv, t_man_SEM[kmin]/SEML.us_em.ns, yv, 6, 2, I_NCSEM, NCEM, NCSEM);
 
-                        free_dmatrix(y_purge, 0, 5, 0, projSt.MSIZE);
-                        free_dvector(t_purge, 0, projSt.MSIZE);
+                        free_dmatrix(y_purge, 0, 5, 0, 2);
+                        free_dvector(t_purge, 0, 2);
 
                         dv_at_projection_SEM = odeEvent_purge.crossings;
                         //cout << "odeEvent_purge.crossings = " << odeEvent_purge.crossings << endl;
+
+                        //----------------------------------------------------------------
+                        // SECOND CHECK
+                        //----------------------------------------------------------------
+                        double crossings = 0.0;
+                        double x1, x2, y1;
+                        for(int kman = kmin; kman >= 1; kman--)
+                        {
+                            //------------------------------------------------------------
+                            // Values of x wrt to x = -1.0, position of BEM
+                            //------------------------------------------------------------
+                            x1 = y_man_NCSEM[0][kman-1] + 1.0;
+                            x2 = y_man_NCSEM[0][kman]   + 1.0;
+
+                            //------------------------------------------------------------
+                            // Crossing detected
+                            //------------------------------------------------------------
+                            if(x1*x2 < 0)
+                            {
+                                //Value of y at x1
+                                y1 = y_man_NCSEM[1][kman-1];
+
+                                if(x1 > 0 && x2 < 0)
+                                {
+                                    if(y1 > 0) crossings += 1.0;    //clockwise
+                                    else       crossings += 0.1;    //counterclockwise
+
+                                }
+                                else
+                                {
+                                    if(y1 < 0) crossings += 1.0;    //clockwise
+                                    else       crossings += 0.1;    //counterclockwise
+                                }
+
+                            }
+                        }
+
+                        if(odeEvent_purge.crossings != crossings)
+                        {
+                            cout << "odeEvent_purge.crossings = " << odeEvent_purge.crossings << endl;
+                            cout << "crossings = " << crossings << endl;
+                        }
                     }
-
-
-                    //                    if(min_proj_dist_SEM < ePdef)
-                    //                    {
-                    //                        double crossings = 0.0;
-                    //                        double x1, x2, y1;
-                    //                        for(int kman = kmin; kman >= 1; kman--)
-                    //                        {
-                    //                            //------------------------------------------------------------
-                    //                            // Values of x wrt to x = -1.0, position of BEM
-                    //                            //------------------------------------------------------------
-                    //                            x1 = y_man_NCSEM[0][kman-1] + 1.0;
-                    //                            x2 = y_man_NCSEM[0][kman]   + 1.0;
-                    //
-                    //                            //------------------------------------------------------------
-                    //                            // Crossing detected
-                    //                            //------------------------------------------------------------
-                    //                            if(x1*x2 < 0)
-                    //                            {
-                    //                                //Value of y at x1
-                    //                                y1 = y_man_NCSEM[1][kman-1];
-                    //
-                    //                                if(x1 > 0 && x2 < 0)
-                    //                                {
-                    //                                    if(y1 > 0) crossings += 1.0;    //clockwise
-                    //                                    else       crossings += 0.1;    //counterclockwise
-                    //
-                    //                                }else
-                    //                                {
-                    //                                    if(y1 < 0) crossings += 1.0;    //clockwise
-                    //                                    else       crossings += 0.1;    //counterclockwise
-                    //                                }
-                    //
-                    //                            }
-                    //                        }
-                    //
-                    //                        //we send back the crossings in dv_at_projection_SEM.
-                    //                        dv_at_projection_SEM = crossings;
-                    //                        //printf("crossing = %1.1f\n", crossings);
-                    //                    }
 
                     //--------------------------------------------------------------------
                     //We check for collisions
@@ -1199,8 +1200,8 @@ int refemlisemli(RefSt& refSt)
     //====================================================================================
     // 2. Structures to compute the invariant manifolds
     //====================================================================================
-    Invman invman_EM(OFTS_ORDER, OFS_ORDER, SEML.cs);
-    Invman invman_SEM(OFTS_ORDER, OFS_ORDER, SEML_SEM.cs);
+    Invman invman_EM( OFTS_ORDER, OFS_ORDER, SEML.cs_em);
+    Invman invman_SEM(OFTS_ORDER, OFS_ORDER, SEML.cs_sem);
 
     //====================================================================================
     // 3. User-defined number of continuation steps, if necessary
@@ -1270,18 +1271,17 @@ int refemlisemli(RefSt& refSt)
     //------------------------------------------------------------------------------------
     // Initialisation of the orbit structure
     //------------------------------------------------------------------------------------
-    OdeStruct driver_EM;
+    OdeStruct odestruct_EM;
     //Root-finding
     const gsl_root_fsolver_type* T_root = gsl_root_fsolver_brent;
     //Stepper
     const gsl_odeiv2_step_type* T = gsl_odeiv2_step_rk8pd;
     //Parameters
-
-    OdeParams odeParams_EM(&SEML_EM);
+    OdeParams odeParams_EM(&SEML_EM, I_NCEM);
     //Init ode structure
-    init_ode_structure(&driver_EM, T, T_root, 6, qbcp_vfn, &odeParams_EM);
+    init_ode_structure(&odestruct_EM, T, T_root, 6, qbcp_vfn, &odeParams_EM);
     //Init routine
-    Orbit orbit_EM(&invman_EM, &SEML_EM, &driver_EM, OFTS_ORDER, OFS_ORDER, t_EM[0], t_EM[1]);
+    Orbit orbit_EM(&invman_EM, &SEML_EM, &odestruct_EM, OFTS_ORDER, OFS_ORDER, t_EM[0], t_EM[1]);
 
     //------------------------------------------------------------------------------------
     // Update the initial state in the orbit_EM, with the RCM coordinates
@@ -1295,13 +1295,13 @@ int refemlisemli(RefSt& refSt)
     //------------------------------------------------------------------------------------
     // Initialisation of the orbit structure
     //------------------------------------------------------------------------------------
-    OdeStruct driver_SEM;
+    OdeStruct odestruct_SEM;
     //Parameters
-OdeParams odeParams_SEM(&SEML_SEM);
+    OdeParams odeParams_SEM(&SEML_SEM, I_NCSEM);
     //Init ode structure
-    init_ode_structure(&driver_SEM, T, T_root, 6, qbcp_vfn, &odeParams_SEM);
+    init_ode_structure(&odestruct_SEM, T, T_root, 6, qbcp_vfn, &odeParams_SEM);
     //Init routine
-    Orbit orbit_SEM(&invman_SEM, &SEML_SEM, &driver_SEM, OFTS_ORDER, OFS_ORDER,
+    Orbit orbit_SEM(&invman_SEM, &SEML_SEM, &odestruct_SEM, OFTS_ORDER, OFS_ORDER,
                     t0_SEM, t0_SEM+5*SEML.us_sem.T);
 
     //------------------------------------------------------------------------------------
@@ -2504,9 +2504,9 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
         cout << filename << endl;
 
         readClosestIntProjCU_bin(filename, refSt.t0_des, t0_EM, tf_EM,
-                                        s1_CMU_EM, s2_CMU_EM, s3_CMU_EM, s4_CMU_EM, s5_CMU_EM,
-                                        pmin_dist_SEM, s1_CM_SEM, s2_CM_SEM, s3_CM_SEM, s4_CM_SEM,
-                                        sortId);
+                                 s1_CMU_EM, s2_CMU_EM, s3_CMU_EM, s4_CMU_EM, s5_CMU_EM,
+                                  pmin_dist_SEM, s1_CM_SEM, s2_CM_SEM, s3_CM_SEM, s4_CM_SEM,
+                                   sortId);
     }
     else
     {
@@ -2525,10 +2525,13 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
             break;
         }
         filename = filenameCUM(OFTS_ORDER, type, SEML.li_SEM);
-        readIntProjCU_bin(filename, t0_EM, tf_EM,
-                          s1_CMU_EM, s2_CMU_EM, s3_CMU_EM, s4_CMU_EM, s5_CMU_EM,
-                          pmin_dist_SEM, s1_CM_SEM, s2_CM_SEM, s3_CM_SEM, s4_CM_SEM,
-                          sortId);
+        cout << "selectemlisemli. The data will be retrieved from the server-computed file named:" << endl;
+        cout << filename << endl;
+        pressEnter(true);
+        readClosestIntProjCU_bin(filename, refSt.t0_des, t0_EM, tf_EM,
+                                 s1_CMU_EM, s2_CMU_EM, s3_CMU_EM, s4_CMU_EM, s5_CMU_EM,
+                                  pmin_dist_SEM, s1_CM_SEM, s2_CM_SEM, s3_CM_SEM, s4_CM_SEM,
+                                   sortId);
     }
 
 
@@ -2558,10 +2561,10 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
 
         cout << "Enter a value for tof_MIN (% of T, -1 if no use): ";
         cin >> tof_MIN;
-        tof_MIN *= SEML.us.T;
+        tof_MIN *= SEML.us->T;
         cout << "Enter a value for tof_MAX (% of T, -1 if no use): ";
         cin >> tof_MAX;
-        tof_MAX *= SEML.us.T;
+        tof_MAX *= SEML.us->T;
     }
     else
     {
@@ -3275,8 +3278,8 @@ int reffromcontemlisemli(RefSt& refSt)
     //====================================================================================
     // 2. Structures to compute the invariant manifolds
     //====================================================================================
-    Invman invman_EM(OFTS_ORDER, OFS_ORDER, SEML.cs);
-    Invman invman_SEM(OFTS_ORDER, OFS_ORDER, SEML_SEM.cs);
+    Invman invman_EM(OFTS_ORDER, OFS_ORDER, *SEML.cs);
+    Invman invman_SEM(OFTS_ORDER, OFS_ORDER, *SEML_SEM.cs);
 
     //====================================================================================
     // Select the parameters
@@ -3296,18 +3299,17 @@ int reffromcontemlisemli(RefSt& refSt)
         //--------------------------------------------------------------------------------
         // Initialisation of the orbit structure
         //--------------------------------------------------------------------------------
-        OdeStruct driver_EM;
+        OdeStruct odestruct_EM;
         //Root-finding
         const gsl_root_fsolver_type* T_root = gsl_root_fsolver_brent;
         //Stepper
         const gsl_odeiv2_step_type* T = gsl_odeiv2_step_rk8pd;
         //Parameters
-
-        OdeParams odeParams_EM(&SEML_EM);
+        OdeParams odeParams_EM(&SEML_EM, I_NCEM);
         //Init ode structure
-        init_ode_structure(&driver_EM, T, T_root, 6, qbcp_vfn, &odeParams_EM);
+        init_ode_structure(&odestruct_EM, T, T_root, 6, qbcp_vfn, &odeParams_EM);
         //Init routine
-        Orbit orbit_EM(&invman_EM, &SEML_EM, &driver_EM, OFTS_ORDER, OFS_ORDER, t_EM[0], t_EM[1]);
+        Orbit orbit_EM(&invman_EM, &SEML_EM, &odestruct_EM, OFTS_ORDER, OFS_ORDER, t_EM[0], t_EM[1]);
 
         //--------------------------------------------------------------------------------
         // Update the initial state in the orbit_EM, with the RCM coordinates
@@ -3321,13 +3323,13 @@ int reffromcontemlisemli(RefSt& refSt)
         //--------------------------------------------------------------------------------
         // Initialisation of the orbit structure
         //--------------------------------------------------------------------------------
-        OdeStruct driver_SEM;
+        OdeStruct odestruct_SEM;
         //Parameters
-        OdeParams odeParams_SEM(&SEML_SEM);
+        OdeParams odeParams_SEM(&SEML_SEM, I_NCSEM);
         //Init ode structure
-        init_ode_structure(&driver_SEM, T, T_root, 6, qbcp_vfn, &odeParams_SEM);
+        init_ode_structure(&odestruct_SEM, T, T_root, 6, qbcp_vfn, &odeParams_SEM);
         //Init routine
-        Orbit orbit_SEM(&invman_SEM, &SEML_SEM, &driver_SEM, OFTS_ORDER, OFS_ORDER,
+        Orbit orbit_SEM(&invman_SEM, &SEML_SEM, &odestruct_SEM, OFTS_ORDER, OFS_ORDER,
                         t0_SEM, t0_SEM+5*SEML.us_sem.T);
 
         //--------------------------------------------------------------------------------
@@ -3856,7 +3858,7 @@ int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst)
     //------------------------------------------------------------------------------------
     for(int p = 0; p <= final_index; p++)
     {
-        et_traj_jpl[p] = t_traj_jpl[p]/SEML.ss.n;
+        et_traj_jpl[p] = t_traj_jpl[p]/SEML.ss->n;
     }
 
     //====================================================================================
@@ -4188,14 +4190,14 @@ int comptojplref3d(int coord_type, RefSt& refSt)
     //------------------------------------------------------------------------------------
     //Time shift stored in SEML: it is needed to synchronize the QBCP and the JPL ephemerides
     //------------------------------------------------------------------------------------
-    SEML.ss.tshift = et0*SEML.ss.n - tsys0;
+    SEML.ss->tshift = et0*SEML.ss->n - tsys0;
 
     //====================================================================================
     //Compute the equivalent of the state along the trajectory in NJ2000 coordinates, to
     //compare with ECI QBCP coordinates!
     //====================================================================================
     // ECISEM -> NJ2000
-    coord2necistate_vec(y_traj_n, t_traj_n, y_jpl_temp, t_jpl_temp, final_index, coord_type, et0,  tsys0, eph_coord(coord_int), SEML.ss);
+    coord2necistate_vec(y_traj_n, t_traj_n, y_jpl_temp, t_jpl_temp, final_index, coord_type, et0,  tsys0, eph_coord(coord_int), *SEML.ss);
     //Plot
     gnuplot_plot_X(h4, y_jpl_temp, final_index+1, (char*)"Inertial state (NJ2000)", "lines", "1", "1", color);
 
@@ -4204,7 +4206,7 @@ int comptojplref3d(int coord_type, RefSt& refSt)
     spkezr_c ("MOON",  et0, DEFFRAME,  "NONE",  DEFOBS, RS1, &lt);
     spkezr_c ("EARTH",  et0, DEFFRAME,  "NONE",  DEFOBS, RE, &lt);
     spkezr_c ("EARTH MOON BARYCENTER", et0, DEFFRAME,  "NONE",  DEFOBS, REM, &lt);
-    ecl2neci(RS1, REM, RS2, SEML.ss);
+    ecl2neci(RS1, REM, RS2, *SEML.ss);
     RS2[2] = 0.0;
     gnuplot_plot_xyz(h4, RS2, RS2+1, RS2+2, 1, (char*)"Moon (NJ2000, projected)", "points", "3", "5", color);
 
@@ -4322,7 +4324,7 @@ int comptojplref3d(int coord_type, RefSt& refSt)
         //--------------------------------------------------------------------------------
         //The final time is shifted to be able to be plotted, using the right normalization
         //--------------------------------------------------------------------------------
-        for(int k = 0; k <= final_index; k++) t_traj_ecisem_s[k] = t_traj_ecisem_c[k] + SEML.ss.tshift;
+        for(int k = 0; k <= final_index; k++) t_traj_ecisem_s[k] = t_traj_ecisem_c[k] + SEML.ss->tshift;
 
         //--------------------------------------------------------------------------------
         //Trajectory on lines, segment by segment, using SHIFTED time
@@ -4416,7 +4418,7 @@ int jplfg3d_switch(double** y_traj_n, double* t_traj_n,
         break;
 
     case NJ2000:
-        coord2necistate_vec(y_traj_n, t_traj_n, y_traj_jpl, t_traj_jpl, final_index, coord_type, et0,  tsys0, eph_coord(coord_type), SEML.ss);
+        coord2necistate_vec(y_traj_n, t_traj_n, y_traj_jpl, t_traj_jpl, final_index, coord_type, et0,  tsys0, eph_coord(coord_type), *SEML.ss);
         break;
     }
 
@@ -4435,7 +4437,7 @@ int jplfg3d_switch(double** y_traj_n, double* t_traj_n,
         break;
 
     case NJ2000:
-        coord2necistate_vec(y_traj_n, t_traj_n, y_traj_jpl_n, t_traj_jpl_n, final_index, coord_type, et0,  tsys0_comp, eph_coord(comp_type), SEML.ss);
+        coord2necistate_vec(y_traj_n, t_traj_n, y_traj_jpl_n, t_traj_jpl_n, final_index, coord_type, et0,  tsys0_comp, eph_coord(comp_type), *SEML.ss);
         break;
     }
 
@@ -4547,7 +4549,7 @@ int jplfg3d_super_switch(double** y_traj_n, double* t_traj_n,
         break;
 
     case NJ2000:
-        coord2necistate_vec(y_traj_n, t_traj_n, y_traj_jpl, t_traj_jpl, final_index, coord_type, et0,  tsys0, eph_coord(coord_type), SEML.ss);
+        coord2necistate_vec(y_traj_n, t_traj_n, y_traj_jpl, t_traj_jpl, final_index, coord_type, et0,  tsys0, eph_coord(coord_type), *SEML.ss);
         break;
     }
 
@@ -4566,7 +4568,7 @@ int jplfg3d_super_switch(double** y_traj_n, double* t_traj_n,
         break;
 
     case NJ2000:
-        coord2necistate_vec(y_traj_n, t_traj_n, y_traj_jpl_n, t_traj_jpl_n, final_index, coord_type, et0,  tsys0_comp, eph_coord(comp_type), SEML.ss);
+        coord2necistate_vec(y_traj_n, t_traj_n, y_traj_jpl_n, t_traj_jpl_n, final_index, coord_type, et0,  tsys0_comp, eph_coord(comp_type), *SEML.ss);
         break;
     }
 
@@ -4629,7 +4631,7 @@ int jplfg3d_super_switch(double** y_traj_n, double* t_traj_n,
         break;
 
     case NJ2000:
-        coord2necistate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0, tsys0, eph_coord(coord_type), SEML.ss);
+        coord2necistate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0, tsys0, eph_coord(coord_type), *SEML.ss);
         break;
     }
 
@@ -4645,7 +4647,7 @@ int jplfg3d_super_switch(double** y_traj_n, double* t_traj_n,
         break;
 
     case NJ2000:
-        coord2necistate_vec(yms, tms, ymc_comp, tmc_comp, mRef, coord_type, et0, tsys0_comp, eph_coord(comp_type), SEML.ss);
+        coord2necistate_vec(yms, tms, ymc_comp, tmc_comp, mRef, coord_type, et0, tsys0_comp, eph_coord(comp_type), *SEML.ss);
         break;
     }
 
@@ -4692,7 +4694,7 @@ int jplfg3d_super_switch(double** y_traj_n, double* t_traj_n,
         break;
 
     case NJ2000:
-        coord2necistate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0, tsys0, eph_coord(coord_type), SEML.ss);
+        coord2necistate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0, tsys0, eph_coord(coord_type), *SEML.ss);
         break;
     }
 
@@ -4708,7 +4710,7 @@ int jplfg3d_super_switch(double** y_traj_n, double* t_traj_n,
         break;
 
     case NJ2000:
-        coord2necistate_vec(yms, tms, ymc_comp, tmc_comp, mRef, coord_type, et0, tsys0_comp, eph_coord(comp_type), SEML.ss);
+        coord2necistate_vec(yms, tms, ymc_comp, tmc_comp, mRef, coord_type, et0, tsys0_comp, eph_coord(comp_type), *SEML.ss);
         break;
     }
 
@@ -4832,7 +4834,7 @@ int jplfg3d_interpolation(double** y_traj_n, double* t_traj_n,
         break;
 
     case NJ2000:
-        coord2necistate_vec(y_traj_n, t_traj_n, *y_traj_jpl, *t_traj_jpl, final_index, coord_type, et0,  tsys0, eph_coord(coord_type), SEML.ss);
+        coord2necistate_vec(y_traj_n, t_traj_n, *y_traj_jpl, *t_traj_jpl, final_index, coord_type, et0,  tsys0, eph_coord(coord_type), *SEML.ss);
         break;
     }
 
@@ -4851,7 +4853,7 @@ int jplfg3d_interpolation(double** y_traj_n, double* t_traj_n,
         break;
 
     case NJ2000:
-        coord2necistate_vec(y_traj_n, t_traj_n, y_traj_jpl_n, t_traj_jpl_n, final_index, coord_type, et0,  tsys0_comp, eph_coord(comp_type), SEML.ss);
+        coord2necistate_vec(y_traj_n, t_traj_n, y_traj_jpl_n, t_traj_jpl_n, final_index, coord_type, et0,  tsys0_comp, eph_coord(comp_type), *SEML.ss);
         break;
     }
 
@@ -4949,7 +4951,7 @@ int jplfg3d_interpolation(double** y_traj_n, double* t_traj_n,
             break;
 
         case NJ2000:
-            coord2necistate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0, tsys0, eph_coord(coord_type), SEML.ss);
+            coord2necistate_vec(yms, tms, ymc, tmc, mRef, coord_type, et0, tsys0, eph_coord(coord_type), *SEML.ss);
             break;
         }
 
@@ -4965,7 +4967,7 @@ int jplfg3d_interpolation(double** y_traj_n, double* t_traj_n,
             break;
 
         case NJ2000:
-            coord2necistate_vec(yms, tms, ymc_comp, tmc_comp, mRef, coord_type, et0, tsys0_comp, eph_coord(comp_type), SEML.ss);
+            coord2necistate_vec(yms, tms, ymc_comp, tmc_comp, mRef, coord_type, et0, tsys0_comp, eph_coord(comp_type),*SEML.ss);
             break;
         }
 
@@ -5093,9 +5095,9 @@ int jplfg3d_interpolation(double** y_traj_n, double* t_traj_n,
  *  \brief Computes only a SEMLi orbit and test a JPL refinement.
  **/
 int compref3d_test_seml_synjpl(int man_grid_size_t,
-                                   int coord_type,
-                                   Orbit& orbit_SEM,
-                                   RefSt refSt)
+                               int coord_type,
+                               Orbit& orbit_SEM,
+                               RefSt refSt)
 
 {
     //====================================================================================
@@ -5393,15 +5395,15 @@ int compref3d_test_seml_synjpl(int man_grid_size_t,
         //====================================================================================
         cout << fname << ". Initialize associated VF..." << endl;
         int shift = 0;
-        OdeStruct driver_JPL;
+        OdeStruct odestruct_JPL;
         //Root-finding
         const gsl_root_fsolver_type* T_root = gsl_root_fsolver_brent;
         //Stepper
         const gsl_odeiv2_step_type* T = gsl_odeiv2_step_rk8pd;
         //Parameters
-        OdeParams odeParams(&SEML);
+        OdeParams odeParams(&SEML, dcs);
         //Init ode structure
-        init_ode_structure(&driver_JPL, T, T_root, 6, jpl_vf_syn, &odeParams);
+        init_ode_structure(&odestruct_JPL, T, T_root, 6, jpl_vf_syn, &odeParams);
 
         //====================================================================================
         // Search for best fit in  JPL ephemerides
@@ -5430,8 +5432,8 @@ int compref3d_test_seml_synjpl(int man_grid_size_t,
         //----------------------------------------------------------
         //Update the SEML
         //----------------------------------------------------------
-        SEML.ss.et0 = et0;
-        SEML.ss.t0  = tsys0;
+        SEML.ss->et0 = et0;
+        SEML.ss->t0  = tsys0;
 
         cout << "best fit (s) = " << et0 << endl;
 
@@ -5899,16 +5901,15 @@ int compref3d_test_eml_synjpl(int man_grid_size_t,
         //====================================================================================
         cout << fname << ". Initialize associated VF..." << endl;
         int shift = 0;
-        OdeStruct driver_JPL;
+        OdeStruct odestruct_JPL;
         //Root-finding
         const gsl_root_fsolver_type* T_root = gsl_root_fsolver_brent;
         //Stepper
         const gsl_odeiv2_step_type* T = gsl_odeiv2_step_rk8pd;
         //Parameters
-        int coll;
-        OdeParams odeParams(&SEML);
+        OdeParams odeParams(&SEML, dcs);
         //Init ode structure
-        init_ode_structure(&driver_JPL, T, T_root, 6, jpl_vf_syn, &odeParams);
+        init_ode_structure(&odestruct_JPL, T, T_root, 6, jpl_vf_syn, &odeParams);
 
         //====================================================================================
         // Search for best fit in  JPL ephemerides
@@ -5937,8 +5938,8 @@ int compref3d_test_eml_synjpl(int man_grid_size_t,
         //----------------------------------------------------------
         //Update the SEML
         //----------------------------------------------------------
-        SEML.ss.et0 = et0;
-        SEML.ss.t0  = tsys0;
+        SEML.ss->et0 = et0;
+        SEML.ss->t0  = tsys0;
 
         //====================================================================================
         // Change of coordinates
@@ -6225,16 +6226,16 @@ int compref3d_test_eml2seml_synjpl(int coord_type)
     //====================================================================================
     cout << fname << ". Initialize associated VF..." << endl;
     int shift = 0;
-    OdeStruct driver_JPL;
+    OdeStruct odestruct_JPL;
     //Root-finding
     const gsl_root_fsolver_type* T_root = gsl_root_fsolver_brent;
     //Stepper
     const gsl_odeiv2_step_type* T = gsl_odeiv2_step_rk8pd;
     //Parameters
     int coll;
-    OdeParams odeParams(&SEML);
+    OdeParams odeParams(&SEML, dcs);
     //Init ode structure
-    init_ode_structure(&driver_JPL, T, T_root, 6, jpl_vf_syn, &odeParams);
+    init_ode_structure(&odestruct_JPL, T, T_root, 6, jpl_vf_syn, &odeParams);
 
     //====================================================================================
     // Search for best fit in  JPL ephemerides
@@ -6262,8 +6263,8 @@ int compref3d_test_eml2seml_synjpl(int coord_type)
     //----------------------------------------------------------
     //Update the SEML
     //----------------------------------------------------------
-    SEML.ss.et0 = et0;
-    SEML.ss.t0  = tsys0;
+    SEML.ss->et0 = et0;
+    SEML.ss->t0  = tsys0;
 
     //====================================================================================
     // Change of coordinates
@@ -6761,7 +6762,7 @@ int plottrajsegbyseg(double** y_traj, double* t_traj,
             break;
 
         case NJ2000:
-            neci2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coordsys1, et0, tsys0, eph_coord(coordsys1), SEML.ss);
+            neci2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coordsys1, et0, tsys0, eph_coord(coordsys1), *SEML.ss);
             break;
 
         default:
@@ -6799,7 +6800,7 @@ int plottrajsegbyseg(double** y_traj, double* t_traj,
             break;
 
         case NJ2000:
-            neci2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coordsys2, et0, tsys0_comp, eph_coord(coordsys2), SEML.ss);
+            neci2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coordsys2, et0, tsys0_comp, eph_coord(coordsys2), *SEML.ss);
             break;
 
         default:
@@ -6936,7 +6937,7 @@ int savetrajsegbyseg(double** y_traj, double* t_traj,
             break;
 
         case NJ2000:
-            neci2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coordsys1, et0, tsys0, eph_coord(coordsys1), SEML.ss);
+            neci2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coordsys1, et0, tsys0, eph_coord(coordsys1), *SEML.ss);
             break;
 
         default:
@@ -6975,7 +6976,7 @@ int savetrajsegbyseg(double** y_traj, double* t_traj,
             break;
 
         case NJ2000:
-            neci2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coordsys2, et0, tsys0_comp, eph_coord(coordsys2), SEML.ss);
+            neci2coordstate_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, coordsys2, et0, tsys0_comp, eph_coord(coordsys2), *SEML.ss);
             break;
 
         default:
@@ -7662,7 +7663,7 @@ int writeCONT_bin(RefSt& refSt, string filename_traj, int dcs, int coord_type,
             vector<Oftsc> Fh;
             Fh.reserve(5);
             for(int i = 0; i < 5; i++) Fh.push_back(Oftsc(5, OFTS_ORDER, OFS_NV, OFS_ORDER));
-            readVOFTS_bin(Fh, SEML_SEM.cs.F_PMS+"rvf/fh");
+            readVOFTS_bin(Fh, SEML_SEM.cs->F_PMS+"rvf/fh");
 
             //----------------------------------------------------------------------------
             //For dot(s) = fh(s)

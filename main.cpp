@@ -94,7 +94,7 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         // Type of computation
         //--------------------------------------------------------------------------------
-        COMP_TYPE   = COMP_CM_EML2_TO_CM_SEML;
+        COMP_TYPE   = COMP_CM_EML2_TO_CMS_SEML;
 
         //--------------------------------------------------------------------------------
         // Model and libration points
@@ -264,8 +264,8 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         //Time grid: min, max and number of points on the grid
         //--------------------------------------------------------------------------------
-        projSt.TMIN  = 0.88*SEML.us.T;
-        projSt.TMAX  = 1.00*SEML.us.T;
+        projSt.TMIN  = 0.995*SEML.us_em.T;
+        projSt.TMAX  = 1.00*SEML.us_em.T;
 
         projSt.TSIZE    = 0;
         projSt.TLIM[0]  = projSt.TMIN;
@@ -294,7 +294,7 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         //Stable parameters (are not supposed to change)
         //--------------------------------------------------------------------------------
-        projSt.TM    = 12.0*SEML.us.T; // Maximum integration time
+        projSt.TM    = 12.0*SEML.us_em.T; // Maximum integration time
         projSt.MSIZE = 500;            // Number of points on each trajectory
         projSt.NSMIN = 20;             // Number of sorted solutions
         projSt.YNMAX = 0.6;            // The maximum norm (in SEM normalized units) for a projection to occur on the CM_NC of SEMLi
@@ -312,7 +312,7 @@ int main(int argc, char** argv)
         //rk: set REF_CONT_D_HARD_CASE for difficult cases
         //with REF_CONT_D (ex: EML2-SEMLi via SEML1...)
         refSt.type          = REF_CONT_D;                   // Type of refinement
-        refSt.dim           = REF_MIXED;                    // Type of dimensions planar or 3d?
+        refSt.dim           = REF_PLANAR;                    // Type of dimensions planar or 3d?
         refSt.t0xT_des      = 0.995;                        // Initial time (xT)
         refSt.t0_des        = refSt.t0xT_des*SEML.us_em.T;  // Initial time
 
@@ -354,10 +354,10 @@ int main(int argc, char** argv)
         refSt.nu0_vt = 3;       //with variable time
 
         //User parameters
-        refSt.isFlagOn      = 0;                  // do we have steps in the procedure - asking the user to press enter to go on?
+        refSt.isFlagOn      = 1;                  // do we have steps in the procedure - asking the user to press enter to go on?
         refSt.isPlotted     = 1;                  // do we plot the results during the computation?
         refSt.isSaved       = 1;                  // do we save the results in data files?
-        refSt.isFromServer  = 1;                  // does the raw data comes from server files?
+        refSt.isFromServer  = 0;                  // does the raw data comes from server files?
         refSt.isPar         = 0;                  //is parallel computation allowed?
 
         //Maximum angle around SEMLi if REF_COND_T is used (in degrees)
@@ -417,9 +417,9 @@ int main(int argc, char** argv)
             //----------------------------------------------------------------------------
             //Time grid: min, max and number of points on the grid
             //----------------------------------------------------------------------------
-            projSt.TMIN  = atof(argv[index++])*SEML.us.T;
-            projSt.TMAX  = atof(argv[index++])*SEML.us.T;
-            projSt.TM    = atof(argv[index++])*SEML.us.T;
+            projSt.TMIN  = atof(argv[index++])*SEML.us_em.T;
+            projSt.TMAX  = atof(argv[index++])*SEML.us_em.T;
+            projSt.TM    = atof(argv[index++])*SEML.us_em.T;
 
             projSt.TSIZE   = atoi(argv[index++]);
             projSt.TLIM[0] = projSt.TMIN;
@@ -473,7 +473,7 @@ int main(int argc, char** argv)
             refSt.type          = atoi(argv[index++]);            // Type of refinement
             refSt.dim           = atoi(argv[index++]);            // Type of dimensions planar or 3d?
             refSt.t0xT_des      = atof(argv[index++]);            // Initial time (xT)
-            refSt.t0_des        = refSt.t0xT_des*SEML.us.T;       // Initial time
+            refSt.t0_des        = refSt.t0xT_des*SEML.us_em.T;       // Initial time
 
             // Direction of the continuation procedure
             refSt.isDirUD       = atoi(argv[index++]);    // is it user defined?
@@ -497,8 +497,8 @@ int main(int argc, char** argv)
             refSt.isLimUD       = atoi(argv[index++]);
 
             //Limits for the time of flight during transfers - not used if negative
-            refSt.tof_MIN       = atof(argv[index++])*SEML.us.T;
-            refSt.tof_MAX       = atof(argv[index++])*SEML.us.T;
+            refSt.tof_MIN       = atof(argv[index++])*SEML.us_em.T;
+            refSt.tof_MAX       = atof(argv[index++])*SEML.us_em.T;
 
             // Number of steps in the continuation procedure
             refSt.cont_step_max    = atoi(argv[index++]);  // with fixed times
@@ -618,9 +618,9 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         // Compute initial conditions in CMU EML2 on a given grid
         //--------------------------------------------------------------------------------
-                tic();
-                compute_grid_CMU_EM(PROJ_EPSILON, projSt);
-                cout << "End of in compute_grid_CMU_EM in " << toc() << endl;
+        tic();
+        compute_grid_CMU_EM(PROJ_EPSILON, projSt);
+        cout << "End of in compute_grid_CMU_EM in " << toc() << endl;
 
         //--------------------------------------------------------------------------------
         // Integrate those initial conditions and project them on the CM SEMLi
@@ -766,7 +766,7 @@ int main(int argc, char** argv)
     case COMP_SINGLE_ORBIT:
     {
         //Reduced number of variables in the default invariant manifolds
-        reduced_nv = Invman::compRNV(SEML.cs);
+        reduced_nv = Invman::compRNV(SEML.cs_em);
         //----------------------------------------------------------------------------
         // Initial conditions
         //----------------------------------------------------------------------------
@@ -825,7 +825,7 @@ int main(int argc, char** argv)
         // Computation
         //----------------------------------------------------------------------------
         //oo_gridOrbit(st0, +6.016997770510415e+00, -2.793897158902917e+01, 1e-2);
-        oo_gridOrbit(st0, 0.0, 5*SEML.us.T, 1e-3*SEML.us.T);
+        oo_gridOrbit(st0, 0.0, 5*SEML.us->T, 1e-3*SEML.us->T);
         //gridOrbit(st0, +6.016997770510415e+00, -2.793897158902917e+01, 1e-2, CM_NC, CM_TFC, Mcoc, MIcoc, Vcoc);
 
         break;
@@ -836,7 +836,7 @@ int main(int argc, char** argv)
         //================================================================================
     case COMP_VF_TEST:
     {
-        qbtbp_test(SEML.us.T, SEML);
+        qbtbp_test(SEML.us->T, SEML);
         break;
     }
 
@@ -867,7 +867,7 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         Oftsc W  = Oftsc(reduced_nv, OFTS_ORDER, OFS_NV, OFS_ORDER);
         Oftsc W1 = Oftsc(1,          OFTS_ORDER, OFS_NV, OFS_ORDER);
-        fromVOFTStoVOFTS_bin(W, W1, SEML.cs.F_PMS+"W/Wh", SEML.cs.F_PMS+"W/Wh1");
+        fromVOFTStoVOFTS_bin(W, W1, SEML.cs->F_PMS+"W/Wh", SEML.cs->F_PMS+"W/Wh1");
 
         //--------------------------------------------------------------------------------
         //Test, only the 3 first orders
@@ -875,7 +875,7 @@ int main(int argc, char** argv)
         vector<Oftsc> W1v;
         W1v.reserve(2);
         for(int i = 0; i < 2; i++) W1v.push_back(Oftsc(1, min(3, OFTS_ORDER), OFS_NV, OFS_ORDER));
-        readVOFTS_bin(W1v, SEML.cs.F_PMS+"W/Wh1");
+        readVOFTS_bin(W1v, SEML.cs->F_PMS+"W/Wh1");
 
         cout << "Test:" << endl;
         for(int i = 0; i < 2; i++)

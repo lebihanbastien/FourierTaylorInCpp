@@ -286,7 +286,7 @@ struct QBCP_L
     //Unit systems
     USYS us_em;   //EM unit system
     USYS us_sem;  //SEM unit system
-    USYS us;      //default unit system
+    USYS *us;     //default unit system
 
     //Coordinate systems
     CSYS cs_em_l1;      //EM around L1
@@ -300,7 +300,7 @@ struct QBCP_L
     //Default coordinate systems
     CSYS cs_em;     //Default EM csys  (for cocs)
     CSYS cs_sem;    //Default SEM csys (for cocs)
-    CSYS cs;        //Default csys     (for integration)
+    CSYS *cs;       //Default csys     (for integration)
 
     //Is the Moon "on"? Allows to "wipe out" the Moon from the equations of motion
     //when using Sun-Earth or Sun-(Earth+Moon) coordinates systems.
@@ -312,7 +312,7 @@ struct QBCP_L
     double n_em;
 
     //Solar systems
-    SS ss;      //default
+    SS *ss;      //default
     SS ss_sem;  //focus on SEM
     SS ss_em;   //focus on EM
 };
@@ -341,6 +341,8 @@ struct OdeEvent
     //Crossings
     double crossings;
     double x1;
+    //Detection is on/off
+    int detection;
 
     /**
      *  \brief Constructor for OdeEvent
@@ -349,7 +351,19 @@ struct OdeEvent
      {
          coll  = FTC_SUCCESS;  //at initialisation, no collision so == FTC_SUCCESS
          crossings = 0.0;      //at initialisation, no crossing
-         x1 = -1;
+         x1        = -1;
+         detection = 0;
+     }
+
+     /**
+     *  \brief Constructor for OdeEvent
+     **/
+     OdeEvent(int detection_)
+     {
+         coll  = FTC_SUCCESS;  //at initialisation, no collision so == FTC_SUCCESS
+         crossings = 0.0;      //at initialisation, no crossing
+         x1        = -1;
+         detection = detection_;
      }
 };
 
@@ -361,18 +375,31 @@ struct OdeEvent
 typedef struct OdeParams OdeParams;
 struct OdeParams
 {
-    //Collisioner
+    //Event structure
     OdeEvent event;
     //Parameters
     QBCP_L *qbcp_l;
+    //DCS (default coordinate system)
+    int dcs;
 
     /**
      *  \brief Constructor for OdeParams
      **/
-     OdeParams(QBCP_L *qbcp_l_)
+     OdeParams(QBCP_L *qbcp_l_, int dcs_)
      {
-         event  = OdeEvent();
-         qbcp_l = qbcp_l_;
+         event     = OdeEvent();
+         qbcp_l    = qbcp_l_;
+         dcs       = dcs_;
+     }
+
+     /**
+     *  \brief Constructor for OdeParams
+     **/
+     OdeParams(QBCP_L *qbcp_l_, int dcs_, int detection_)
+     {
+         event     = OdeEvent(detection_);
+         qbcp_l    = qbcp_l_;
+         dcs       = dcs_;
      }
 };
 
@@ -497,7 +524,6 @@ extern QBCP SEM;               //Sun-Earth-Moon system
 extern QBCP_L SEML;            //Sun-Earth-Moon system around Li
 extern QBCP_L SEML_EM;         //Sun-Earth-Moon system around EMLi
 extern QBCP_L SEML_SEM;        //Sun-Earth-Moon system around SEMLi
-extern OdeParams ODESEML;     //global structure: SEML + variable parameters in ODE routines (collisionner...)
 
 /**
  *   \brief Initialization of the environnement (Sun, Earth, Moon, Li...).
@@ -547,6 +573,7 @@ void initCOC(matrix<Ofsc>& PC,
  *  \brief Change the default coordinate system
  **/
 void changeDCS(QBCP_L &qbcp_l, int coordsys);
+
 /**
  *  \brief Change the default coordinate system and the libration point for this coordinate system
  **/

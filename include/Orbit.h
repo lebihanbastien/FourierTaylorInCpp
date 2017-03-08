@@ -38,11 +38,11 @@ class Orbit
         //Macro structures and objects
         Invman const *invman; //The associated manifold (cannot be null)
         QBCP_L const *qbcp_l; //QBCP around a given Li point (parent)
-        OdeStruct *driver;    //NC ode struct
+        OdeStruct  *odestruct; //NC ode struct
 
 
     public:
-         Orbit(Invman const *invman, QBCP_L const *qbcp_l, OdeStruct *driver, int ofts_order,
+         Orbit(Invman const *invman, QBCP_L const *qbcp_l, OdeStruct *odestruct, int ofts_order,
                 int ofs_order, double t0, double tf);
         ~Orbit();
 

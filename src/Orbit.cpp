@@ -7,7 +7,7 @@
  *  \brief Constructor. Some values are hard coded, such as the default time interval of
  *         projection and the minimum time interval of projection
  **/
-Orbit::Orbit(Invman const *invman_, QBCP_L const *qbcp_l_, OdeStruct *driver_, int ofts_order_,
+Orbit::Orbit(Invman const *invman_, QBCP_L const *qbcp_l_, OdeStruct *odestruct_, int ofts_order_,
                 int ofs_order_, double t0_, double tf_):
 //----------------------------------------------------------------------------------------
 // Initialization list
@@ -43,9 +43,9 @@ Orbit::Orbit(Invman const *invman_, QBCP_L const *qbcp_l_, OdeStruct *driver_, i
     //------------------------------------------------------------------------------------
     // Macro structures and objects
     //------------------------------------------------------------------------------------
-    invman = invman_;
-    qbcp_l = qbcp_l_;
-    driver = driver_;
+    invman    = invman_;
+    qbcp_l    = qbcp_l_;
+    odestruct = odestruct_;
 }
 
 
@@ -62,7 +62,7 @@ Orbit::~Orbit()
     free_dvector(s0dx, 0, 2*reduced_nv-1);
     free_dvector(xfx,  0, 5);
     free_dcvector(s0x, 0, reduced_nv-1);
-    free_ode_structure(driver);
+    free_ode_structure(odestruct);
 }
 
 
@@ -246,9 +246,9 @@ int Orbit::gslc_proj_step(double yv[], double *t, double t0, double t1,
     //Evolve one step of z(t)
     //------------------------------------------------------------------------------------
     //Check that the direction of integration is consistent with the time interval
-    driver->h = (t1 >= *t)? fabs(driver->h):-fabs(driver->h);
+    odestruct->h = (t1 >= *t)? fabs(odestruct->h):-fabs(odestruct->h);
     //Advance one step
-    int status = gsl_odeiv2_evolve_apply(driver->e, driver->c, driver->s, &driver->sys, t, t1, &driver->h, yv);
+    int status = gsl_odeiv2_evolve_apply(odestruct->e, odestruct->c, odestruct->s, &odestruct->sys, t, t1, &odestruct->h, yv);
     //Check the status
     if (status != GSL_SUCCESS)
     {
@@ -303,7 +303,7 @@ int Orbit::gslc_proj_step(double yv[], double *t, double t0, double t1,
         //--------------------------------------------------------------------------------
         //Reset ode structure for next step
         //--------------------------------------------------------------------------------
-        reset_ode_structure(driver);
+        reset_ode_structure(odestruct);
 
         //--------------------------------------------------------------------------------
         //One additional reset
@@ -357,7 +357,7 @@ int Orbit::traj_int_grid(double tfc, double **yNCE, double *tNCE, int N, int isR
     //------------------------------------------------------------------------------------
     //Initialization
     //------------------------------------------------------------------------------------
-    int nvar = driver->dim;   //number of variables
+    int nvar = odestruct->dim;   //number of variables
     int status;               //current status
     double yv[nvar], t;       //current state and time
 
@@ -377,11 +377,11 @@ int Orbit::traj_int_grid(double tfc, double **yNCE, double *tNCE, int N, int isR
         // Initialize the integration
         //--------------------------------------------------------------------------------
         //Reset ode structure.
-        reset_ode_structure(driver);
+        reset_ode_structure(odestruct);
 
         //Change sign of step if necessary
-        if((tfc < t0x && driver->h>0)    || (tfc > t0x && driver->h<0)) driver->h *= -1;
-        if((tfc < t0x && driver->d->h>0) || (tfc > t0x && driver->d->h<0)) driver->d->h *= -1;
+        if((tfc < t0x && odestruct->h>0)    || (tfc > t0x && odestruct->h<0)) odestruct->h *= -1;
+        if((tfc < t0x && odestruct->d->h>0) || (tfc > t0x && odestruct->d->h<0)) odestruct->d->h *= -1;
 
         //Init the state & time
         for(int i = 0; i < nvar; i++) yv[i] = z0x[i];
@@ -402,7 +402,7 @@ int Orbit::traj_int_grid(double tfc, double **yNCE, double *tNCE, int N, int isR
         {
             ti = t0x + (double) nt *(tfc-t0x)/(1.0*N);
             if(isResetOn) status = this->gslc_proj_evolve(yv, &t, t0x, ti, &projdist, &nreset, isResetOn);
-            else  status = gsl_odeiv2_driver_apply (driver->d, &t, ti, yv);
+            else  status = gsl_odeiv2_driver_apply (odestruct->d, &t, ti, yv);
 
             for(int k = 0; k < nvar; k++) yNCE[k][nt] = yv[k];
             tNCE[nt] = ti;
@@ -475,7 +475,7 @@ int Orbit::traj_int_grid(double **yNCE, double *tgridNCE, int N, int isResetOn)
     //------------------------------------------------------------------------------------
     //Initialization
     //------------------------------------------------------------------------------------
-    int nvar = driver->dim;   //number of variables
+    int nvar = odestruct->dim;   //number of variables
     int status;               //current status
     double yv[nvar], t;       //current state and time
 
@@ -499,11 +499,11 @@ int Orbit::traj_int_grid(double **yNCE, double *tgridNCE, int N, int isResetOn)
         // Initialize the integration
         //--------------------------------------------------------------------------------
         //Reset ode structure.
-        reset_ode_structure(driver);
+        reset_ode_structure(odestruct);
 
         //Change sign of step if necessary
-        if((tfc < t0c && driver->h>0)    || (tfc > t0c && driver->h<0)) driver->h *= -1;
-        if((tfc < t0c && driver->d->h>0) || (tfc > t0c && driver->d->h<0)) driver->d->h *= -1;
+        if((tfc < t0c && odestruct->h>0)    || (tfc > t0c && odestruct->h<0)) odestruct->h *= -1;
+        if((tfc < t0c && odestruct->d->h>0) || (tfc > t0c && odestruct->d->h<0)) odestruct->d->h *= -1;
 
         //Init the state & time
         for(int i = 0; i < nvar; i++) yv[i] = z0x[i];
@@ -523,7 +523,7 @@ int Orbit::traj_int_grid(double **yNCE, double *tgridNCE, int N, int isResetOn)
         {
             ti = tgridNCE[nt];
             if(isResetOn) status = this->gslc_proj_evolve(yv, &t, t0c, ti, &projdist, &nreset, isResetOn);
-            else  status = gsl_odeiv2_driver_apply (driver->d, &t, ti, yv);
+            else  status = gsl_odeiv2_driver_apply (odestruct->d, &t, ti, yv);
 
             for(int k = 0; k < nvar; k++) yNCE[k][nt] = yv[k];
             //Advance one step
@@ -599,7 +599,7 @@ int Orbit::traj_int_var_grid(double tfc, double **yNCE, double *tNCE, int N, int
     //------------------------------------------------------------------------------------
     //Initialization
     //------------------------------------------------------------------------------------
-    int nvar = driver->dim;   //number of variables
+    int nvar = odestruct->dim;   //number of variables
     int status;               //current status
     double yv[nvar], t;       //current state and time
 
@@ -616,11 +616,11 @@ int Orbit::traj_int_var_grid(double tfc, double **yNCE, double *tNCE, int N, int
         // Initialize the integration
         //--------------------------------------------------------------------------------
         //Reset ode structure.
-        reset_ode_structure(driver);
+        reset_ode_structure(odestruct);
 
         //Change sign of step if necessary
-        if((tfc < t0x && driver->h>0)    || (tfc > t0x && driver->h<0)) driver->h *= -1;
-        if((tfc < t0x && driver->d->h>0) || (tfc > t0x && driver->d->h<0)) driver->d->h *= -1;
+        if((tfc < t0x && odestruct->h>0)    || (tfc > t0x && odestruct->h<0)) odestruct->h *= -1;
+        if((tfc < t0x && odestruct->d->h>0) || (tfc > t0x && odestruct->d->h<0)) odestruct->d->h *= -1;
 
         //Init the state & time
         for(int i = 0; i < nvar; i++) yv[i] = z0x[i];
@@ -755,9 +755,9 @@ int oo_gridOrbit(double st0[], double t0, double tf, double dt)
     //------------------------------------------------------------------------------------
     // Invariant manifold
     //------------------------------------------------------------------------------------
-    Invman invman(OFTS_ORDER, OFS_ORDER, SEML.cs);
+    Invman invman(OFTS_ORDER, OFS_ORDER, *SEML.cs);
     int ncs = invman.getNCS();
-    //int dcs = default_coordinate_system(ncs);
+    int dcs = default_coordinate_system(ncs);
 
     //------------------------------------------------------------------------------------
     // ODE
@@ -766,21 +766,20 @@ int oo_gridOrbit(double st0[], double t0, double tf, double dt)
     Config::configManager().C_PREC_HARD();
 
     //Driver
-    OdeStruct driver;
+    OdeStruct odestruct;
     //Root-finding
     const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
     //Stepper
     const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
     //Parameters
-    int coll;
-    OdeParams odeParams(&SEML);
+    OdeParams odeParams(&SEML, dcs);
     //Init ode structure
-    init_ode_structure(&driver, T, T_root, 6, qbcp_vfn, &odeParams);
+    init_ode_structure(&odestruct, T, T_root, 6, qbcp_vfn, &odeParams);
 
     //------------------------------------------------------------------------------------
     //Orbit
     //------------------------------------------------------------------------------------
-    Orbit orbit(&invman, &SEML, &driver, OFTS_ORDER, OFS_ORDER, t0, tf);
+    Orbit orbit(&invman, &SEML, &odestruct, OFTS_ORDER, OFS_ORDER, t0, tf);
 
     //Orbit IC
     orbit.update_ic(st0, t0);
@@ -821,7 +820,7 @@ int oo_gridOrbit(double st0[], double t0, double tf, double dt)
         }
 
         //Corresponding normalized times
-        tnSYS[k] = tNCE[k]/SEML.us.T;
+        tnSYS[k] = tNCE[k]/SEML.us->T;
     }
 
 

@@ -52,7 +52,7 @@ else
 fi
 
 # Parallel computation is on by default
-ISPAR=1		
+ISPAR=0		
 
 #-----------------------------------------------------
 # NOHUP condition
@@ -67,11 +67,11 @@ ISNOHUP=0
 # Parameters that change often
 #-----------------------------------------------------
 REFST_TYPE=$REF_CONT             # Type of refinement - rk: set REF_CONT_D_HARD_CASE for difficult cases with REF_CONT_D (ex: EML2-SEMLi via SEML1...)
-REFST_DIM=$REF_3D                # Type of dimensions planar or 3d?
+REFST_DIM=$REF_PLANAR            # Type of dimensions planar or 3d?
 REFST_T0_DES=0.995               # Initial time - given as %T, with T the SEM period   
 
 # Domain of search (min s1, max s1, min s2, max s2, min s3, max s3, min s4, max s4) for the first guess
-REFST_SI_CMU_EM_LIM=(-35 35 0 0 -35 35 0 0)
+REFST_SI_CMU_EM_LIM=(-26 -22 0 0 -26 -22 0 0)
 # Or, if we want the user to define such domain:
 REFST_ISLIMUD=0
 
@@ -103,7 +103,7 @@ REFST_DIR=-1    		 # if not, +1 or -1
 REFST_ISFLAGON=0   	         # do we have steps in the procedure - asking the user to press enter to go on?
 REFST_ISPLOTTED=1   		 # do we plot the results during the computation?
 REFST_ISSAVED=0     		 # do we save the results in data files?
-REFST_ISFROMSERVER=1		 # does the raw data comes from server files?
+REFST_ISFROMSERVER=0		 # does the raw data comes from server files?
 
 # Maximum angle around SEMLi if REF_COND_T is used (in degrees)
 REFST_THETAMAX=90                # should be a multiple of 90°

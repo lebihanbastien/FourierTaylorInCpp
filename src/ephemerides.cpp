@@ -76,7 +76,7 @@ double mean_motion(int coord_eph)
         return SEML.n_em;
     case J2000  :
     case NJ2000 :
-        return SEML.ss.n;
+        return SEML.ss->n;
     case VECLI  : //no normalization!
         return 1.0;
     default:
@@ -2502,15 +2502,15 @@ void test_asteroid()
     //====================================================================================
     // Initialize the vector field
     //====================================================================================
-    OdeStruct driver_JPL;
+    OdeStruct odestruct_JPL;
     //Root-finding
     const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
     //Stepper
     const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
     //Parameters
-    OdeParams odeParams(&SEML);
+    OdeParams odeParams(&SEML, I_ECLI);
     //Init ode structure
-    init_ode_structure(&driver_JPL, T, T_root, 6, jpl_vf, &odeParams);
+    init_ode_structure(&odestruct_JPL, T, T_root, 6, jpl_vf, &odeParams);
 
     //====================================================================================
     // Save values
@@ -2534,7 +2534,7 @@ void test_asteroid()
     do
     {
             eti = et_start + (double) nt *(et_end-et_start)/Npoints;
-            status = gsl_odeiv2_driver_apply (driver_JPL.d, &et, eti, Ri);
+            status = gsl_odeiv2_driver_apply (odestruct_JPL.d, &et, eti, Ri);
 
             for(int k = 0; k < 6; k++) y_from_int[k][nt] = Ri[k];
             t_from_int[nt] = eti;

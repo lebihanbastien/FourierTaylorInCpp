@@ -885,8 +885,11 @@ cdouble evzddot(const Ofsc& zt, const Ofsc& ztdot, const Ofsc& ztddot, double t,
 //----------------------------------------------------------------------------------------
 /**
  *  \brief RCOC: from inputType to outputType. Some specific checks are made.
- *         In particular, this routine makes sure that SEML is focused on the right system (either SEM or EM, depending on the inputType).
- *         The routine is able to make the COC between 8 different types of outputs: NCEM, VNCEM, PEM, VEM, and their equivalents in SEM coordinates.
+ *         In particular, this routine makes sure that SEML is focused on the right
+ *         system (either SEM or EM, depending on the inputType), via the use of changeDCS.
+ *         Hence, this routine CANNOT be used in parallel computing!
+ *         The routine is able to make the COC between 8 different types of outputs:
+ *         NCEM, VNCEM, PEM, VEM, and their equivalents in SEM coordinates.
  *         All 64 possibilities are available.
  **/
 void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
@@ -922,35 +925,35 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
     //-----------------------------------
     // 3.1 Parameters in coordsys units
     //-----------------------------------
-    double n     = SEML.us.n;
-    double ns    = SEML.us.ns;
-    double as    = SEML.us.as;
-    double ni    = SEML.us.ni;
-    double ai    = SEML.us.ai;
-    double gamma = SEML.cs.gamma;
+    double n     = SEML.us->n;
+    double ns    = SEML.us->ns;
+    double as    = SEML.us->as;
+    double ni    = SEML.us->ni;
+    double ai    = SEML.us->ai;
+    double gamma = SEML.cs->gamma;
 
     //-----------------------------------
     // 3.2 Jacobi decomposition (r, R)
     //     of the QBTBP in coordsys units
     //-----------------------------------
     //r
-    double r1 = creal(evz(SEML.cs.zt, t, n, ni, ai));
-    double r2 = cimag(evz(SEML.cs.zt, t, n, ni, ai));
+    double r1 = creal(evz(SEML.cs->zt, t, n, ni, ai));
+    double r2 = cimag(evz(SEML.cs->zt, t, n, ni, ai));
     double r  = sqrt(r1*r1 + r2*r2);
 
     //rdot
-    double r1dot = creal(evzdot(SEML.cs.zt, SEML.cs.ztdot, t, n, ni, ai));
-    double r2dot = cimag(evzdot(SEML.cs.zt, SEML.cs.ztdot, t, n, ni, ai));
+    double r1dot = creal(evzdot(SEML.cs->zt, SEML.cs->ztdot, t, n, ni, ai));
+    double r2dot = cimag(evzdot(SEML.cs->zt, SEML.cs->ztdot, t, n, ni, ai));
     double rdot  = 1.0/r*(r1*r1dot + r2*r2dot);
 
     //R
-    double R1 = creal(evz(SEML.cs.Zt, t, n, ns, as));
-    double R2 = cimag(evz(SEML.cs.Zt, t, n, ns, as));
+    double R1 = creal(evz(SEML.cs->Zt, t, n, ns, as));
+    double R2 = cimag(evz(SEML.cs->Zt, t, n, ns, as));
     double R  = sqrt(R1*R1 + R2*R2);
 
     //Rdot
-    double R1dot = creal(evzdot(SEML.cs.Zt, SEML.cs.Ztdot, t, n, ns, as));
-    double R2dot = cimag(evzdot(SEML.cs.Zt, SEML.cs.Ztdot, t, n, ns, as));
+    double R1dot = creal(evzdot(SEML.cs->Zt, SEML.cs->Ztdot, t, n, ns, as));
+    double R2dot = cimag(evzdot(SEML.cs->Zt, SEML.cs->Ztdot, t, n, ns, as));
     double Rdot  = 1.0/R*(R1*R1dot + R2*R2dot);
 
     //Additionnal parameters
@@ -973,7 +976,7 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
     // 3.3. Coefficients of the QBCP in coordsys units
     //-----------------------------------
     double alpha[3];
-    evaluateCoef(alpha, t, n, SEML.nf, SEML.cs.coeffs, 3);
+    evaluateCoef(alpha, t, n, SEML.nf, SEML.cs->coeffs, 3);
 
 
     //-----------------------------------
@@ -992,28 +995,28 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
     //-----------------------------------
     switch(inputType)
     {
-        //-----------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         // For inputType = VNCEM, NCEM, PEM, VEM, INEM, the focus of SEML is
         // on the EM SYSTEM
-        //-----------------------------------------------------------------
-        //-----------------------------------------------------------------
-        // VEM
-        //-----------------------------------------------------------------
+        //--------------------------------------------------------------------------------
+            //----------------------------------------------------------------------------
+            // VEM
+            //----------------------------------------------------------------------------
     case VEM:
         switch(outputType)
         {
 
         case VEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             // VEM -> VEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             gsl_matrix_set_identity(Rcoc);
             break;
 
         case INEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //VEM -> INEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //Set coefficient in Rcoc
             gsl_matrix_set(Rcoc, 0, 0,  r1);
             gsl_matrix_set(Rcoc, 0, 1, -r2);
@@ -1037,9 +1040,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case VNCEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //VEM -> VNCEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             gsl_matrix_set(Rcoc, 0, 0,  -1.0/gamma);
             gsl_matrix_set(Rcoc, 1, 1,  -1.0/gamma);
             gsl_matrix_set(Rcoc, 2, 2,  +1.0/gamma);
@@ -1049,9 +1052,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case PEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             // VEM -> PEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //Set coefficient in Rcoc
             gsl_matrix_set(Rcoc, 0, 0,  1.0);
             gsl_matrix_set(Rcoc, 1, 1,  1.0);
@@ -1070,9 +1073,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case NCEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             // VEM -> NCEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = EM_R_VEM
             rot_mat_coc(t, RA, VEM, PEM);
             //RB =  NCEM_R_EM
@@ -1082,9 +1085,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case INSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             // VEM -> INSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = INEM_R_VEM
             rot_mat_coc(t, RA, VEM, INEM);
             //RB =  INSEM_R_INEM
@@ -1093,9 +1096,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, RB , RA, 0.0, Rcoc);
 
         case VSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             // VEM -> VSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = INEM_R_VEM
             rot_mat_coc(t, RA, VEM, INEM);
             //RB =  INSEM_R_INEM
@@ -1113,9 +1116,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case PSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             // VEM -> PSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = INEM_R_VEM
             rot_mat_coc(t, RA, VEM, INEM);
             //RB =  INSEM_R_INEM
@@ -1139,9 +1142,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case NCSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             // VEM -> NCSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = PSEM_R_VEM
             rot_mat_coc(t, RA, VEM, PSEM);
             //RB =  NCSEM_R_PSEM - time must be in SEM units!
@@ -1152,9 +1155,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
 
 
         case VNCSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             // VEM -> VNCSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VSEM_R_VEM
             rot_mat_coc(t, RA, VEM, VSEM);
             //RB =  VNCSEM_R_VSEM - time must be in SEM units!
@@ -1165,23 +1168,23 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
         }
         break;
 
-        //-----------------------------------------------------------------
-        // VNCEM
-        //-----------------------------------------------------------------
+            //----------------------------------------------------------------------------
+            // VNCEM
+            //----------------------------------------------------------------------------
     case VNCEM:
         switch(outputType)
         {
         case VNCEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //VNCEM -> VNCEM nothing to do
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             gsl_matrix_set_identity(Rcoc);
             break;
 
         case VEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //VNCEM -> VEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //Rcoc = VEM_R_VNCEM
             gsl_matrix_set(Rcoc, 0, 0,  -gamma);
             gsl_matrix_set(Rcoc, 1, 1,  -gamma);
@@ -1192,9 +1195,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case NCEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //VNCEM -> NCEM: equivalent to VEM -> PEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //Rcoc = NCEM_R_VNCEM = PEM_R_VEM
             gsl_matrix_set(Rcoc, 0, 0,  1.0);
             gsl_matrix_set(Rcoc, 1, 1,  1.0);
@@ -1214,9 +1217,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case INEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //VNCEM -> INEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VEM_R_VNCEM
             rot_mat_coc(t, RA, VNCEM, VEM);
             //RB =  INEM_R_VEM
@@ -1226,9 +1229,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case PEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //VNCEM -> PEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VEM_R_VNCEM
             rot_mat_coc(t, RA, VNCEM, VEM);
             //RB =  PEM_R_VEM
@@ -1239,9 +1242,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
 
 
         case INSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //VNCEM -> INSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VEM_R_VNCEM
             rot_mat_coc(t, RA, VNCEM, VEM);
             //RB = INEM_R_VEM
@@ -1258,9 +1261,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case VSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //VNCEM -> VSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VEM_R_VNCEM
             rot_mat_coc(t, RA, VNCEM, VEM);
             //RB = INEM_R_VEM
@@ -1284,9 +1287,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case PSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //VNCEM -> PSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VEM_R_VNCEM
             rot_mat_coc(t, RA, VNCEM, VEM);
             //RB = INEM_R_VEM
@@ -1315,9 +1318,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
 
 
         case NCSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             // VNCEM -> NCSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = PSEM_R_VNCEM
             rot_mat_coc(t, RA, VNCEM, PSEM);
             //RB =  NCSEM_R_PSEM - time must be in SEM units!
@@ -1328,9 +1331,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
 
 
         case VNCSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             // VNCEM -> VNCSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VSEM_R_VNCEM
             rot_mat_coc(t, RA, VNCEM, VSEM);
             //RB =  VNCSEM_R_VSEM - time must be in SEM units!
@@ -1350,16 +1353,16 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
         {
 
         case NCEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //NCEM -> NCEM nothing to do
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             gsl_matrix_set_identity(Rcoc);
             break;
 
         case VNCEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //NCEM -> VNCEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //Rcoc = VNCEM_R_NCEM = VEM_R_PEM
             gsl_matrix_set(Rcoc, 0, 0,  1.0);
             gsl_matrix_set(Rcoc, 1, 1,  1.0);
@@ -1378,9 +1381,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case PEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //NCEM -> PEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //Rcoc = EM_R_NCEM
             gsl_matrix_set(Rcoc, 0, 0,  -gamma);
             gsl_matrix_set(Rcoc, 1, 1,  -gamma);
@@ -1391,9 +1394,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case VEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //NCEM -> VEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VNCEM_R_NCEM
             rot_mat_coc(t, RA, NCEM, VNCEM);
             //RB =  VEM_R_VNCEM
@@ -1403,9 +1406,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case INEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //NCEM -> INEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VNCEM_R_NCEM
             rot_mat_coc(t, RA, NCEM, VNCEM);
             //RB =  VEM_R_VNCEM
@@ -1422,9 +1425,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case INSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //NCEM -> INSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VNCEM_R_NCEM
             rot_mat_coc(t, RA, NCEM, VNCEM);
             //RB =  VEM_R_VNCEM
@@ -1447,9 +1450,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case VSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //NCEM -> VSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VNCEM_R_NCEM
             rot_mat_coc(t, RA, NCEM, VNCEM);
             //RB =  VEM_R_VNCEM
@@ -1477,9 +1480,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case PSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //NCEM -> PSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VNCEM_R_NCEM
             rot_mat_coc(t, RA, NCEM, VNCEM);
             //RB =  VEM_R_VNCEM
@@ -1514,9 +1517,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
 
 
         case NCSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             // NCEM -> NCSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = PSEM_R_NCEM
             rot_mat_coc(t, RA, NCEM, PSEM);
             //RB =  NCSEM_R_PSEM - time must be in SEM units!
@@ -1527,9 +1530,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
 
 
         case VNCSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             // NCEM -> VNCSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VSEM_R_NCEM
             rot_mat_coc(t, RA, NCEM, VSEM);
             //RB =  VNCSEM_R_VSEM - time must be in SEM units!
@@ -1547,16 +1550,16 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
         switch(outputType)
         {
         case PEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //PEM -> PEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             gsl_matrix_set_identity(Rcoc);
             break;
 
         case VEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             // PEM -> VEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //Rcoc = VEM_R_PEM = VNCEM_R_NCEM
             gsl_matrix_set(Rcoc, 0, 0,  1.0);
             gsl_matrix_set(Rcoc, 1, 1,  1.0);
@@ -1575,9 +1578,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case NCEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //PEM -> NCEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             gsl_matrix_set(Rcoc, 0, 0,  -1.0/gamma);
             gsl_matrix_set(Rcoc, 1, 1,  -1.0/gamma);
             gsl_matrix_set(Rcoc, 2, 2,  +1.0/gamma);
@@ -1587,9 +1590,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case VNCEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             // PEM -> VNCEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VEM_R_PEM
             rot_mat_coc(t, RA, PEM, VEM);
             //RB =  VNCEM_R_VEM
@@ -1599,9 +1602,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case INEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //PEM -> INEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VEM_R_PEM
             rot_mat_coc(t, RA, PEM, VEM);
             //RB =  INEM_R_VEM
@@ -1611,9 +1614,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case INSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //PEM -> INSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VEM_R_PEM
             rot_mat_coc(t, RA, PEM, VEM);
             //RB =  INEM_R_VEM
@@ -1630,9 +1633,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case VSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //PEM -> VSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VEM_R_PEM
             rot_mat_coc(t, RA, PEM, VEM);
             //RB =  INEM_R_VEM
@@ -1657,9 +1660,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
 
 
         case PSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //PEM -> PSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VEM_R_PEM
             rot_mat_coc(t, RA, PEM, VEM);
             //RB =  INEM_R_VEM
@@ -1687,9 +1690,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case NCSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             // PEM -> NCSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = PSEM_R_PEM
             rot_mat_coc(t, RA, PEM, PSEM);
             //RB =  NCSEM_R_PSEM - time must be in SEM units!
@@ -1700,9 +1703,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
 
 
         case VNCSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             // PEM -> VNCSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VSEM_R_PEM
             rot_mat_coc(t, RA, PEM, VSEM);
             //RB =  VNCSEM_R_VSEM - time must be in SEM units!
@@ -1724,16 +1727,16 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
         switch(outputType)
         {
         case VSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //VSEM -> VSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             gsl_matrix_set_identity(Rcoc);
             break;
 
         case PSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //VSEM -> PSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //Set coefficient in Rcoc
             gsl_matrix_set(Rcoc, 0, 0,  1.0);
             gsl_matrix_set(Rcoc, 1, 1,  1.0);
@@ -1752,9 +1755,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case INSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //VSEM -> INSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //Set coefficient in Rcoc
             gsl_matrix_set(Rcoc, 0, 0,  R1);
             gsl_matrix_set(Rcoc, 0, 1, -R2);
@@ -1778,9 +1781,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case VNCSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //VSEM -> VNCSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             gsl_matrix_set(Rcoc, 0, 0,  -1.0/gamma);
             gsl_matrix_set(Rcoc, 1, 1,  -1.0/gamma);
             gsl_matrix_set(Rcoc, 2, 2,  +1.0/gamma);
@@ -1791,9 +1794,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
 
 
         case NCSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //VSEM -> NCSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = SEM_R_VSEM
             rot_mat_coc(t, RA, VSEM, PSEM);
             //RB =  NCSEM_R_SEM
@@ -1804,9 +1807,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
 
 
         case INEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //VSEM -> INEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = INSEM_R_VSEM
             rot_mat_coc(t, RA, VSEM, INSEM);
             //RB =  INEM_R_INSEM
@@ -1815,9 +1818,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, RB , RA, 0.0, Rcoc);
 
         case VEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //VSEM -> VEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = INSEM_R_VSEM
             rot_mat_coc(t, RA, VSEM, INSEM);
             //RB =  INEM_R_INSEM
@@ -1834,9 +1837,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case PEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //VSEM -> PEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = INSEM_R_VSEM
             rot_mat_coc(t, RA, VSEM, INSEM);
             //RB =  INEM_R_INSEM
@@ -1860,9 +1863,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
 
 
         case NCEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             // VSEM -> NCEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = PEM_R_VSEM
             rot_mat_coc(t, RA, VSEM, PEM);
             //RB =  NCEM_R_PEM - time must be in EM units!
@@ -1873,9 +1876,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
 
 
         case VNCEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             // VSEM -> VNCEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VEM_R_VSEM
             rot_mat_coc(t, RA, VSEM, VEM);
             //RB =  VNCEM_R_VEM - time must be in EM units!
@@ -1895,16 +1898,16 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
         {
 
         case VNCSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //VNCSEM -> VNCSEM nothing to do
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             gsl_matrix_set_identity(Rcoc);
             break;
 
         case VSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //VNCEM -> VSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //Rcoc = VSEM_R_VNCSEM
             gsl_matrix_set(Rcoc, 0, 0,  -gamma);
             gsl_matrix_set(Rcoc, 1, 1,  -gamma);
@@ -1916,9 +1919,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
 
 
         case NCSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //VNCSEM -> NCSEM: equivalent to VSEM -> PSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //Rcoc = NCSEM_R_VNCSEM = PSEM_R_VSEM
             gsl_matrix_set(Rcoc, 0, 0,  1.0);
             gsl_matrix_set(Rcoc, 1, 1,  1.0);
@@ -1938,9 +1941,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case INSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //VNCSEM -> INSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VSEM_R_VNCSEM
             rot_mat_coc(t, RA, VNCSEM, VSEM);
             //RB =  INSEM_R_VSEM
@@ -1950,9 +1953,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case PSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //VNCSEM -> PSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VSEM_R_VNCSEM
             rot_mat_coc(t, RA, VNCSEM, VSEM);
             //RB =  PSEM_R_VSEM
@@ -1962,9 +1965,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case INEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //VNCSEM -> INEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VSEM_R_VNCSEM
             rot_mat_coc(t, RA, VNCSEM, VSEM);
             //RB = INSEM_R_VSEM
@@ -1981,9 +1984,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case VEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //VNCSEM -> VEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VSEM_R_VNCSEM
             rot_mat_coc(t, RA, VNCSEM, VSEM);
             //RB = INSEM_R_VSEM
@@ -2007,9 +2010,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case PEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //VNCSEM -> PEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VSEM_R_VNCSEM
             rot_mat_coc(t, RA, VNCSEM, VSEM);
             //RB = INSEM_R_VSEM
@@ -2038,9 +2041,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
 
 
         case NCEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             // VNCSEM -> NCEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = PEM_R_VNCSEM
             rot_mat_coc(t, RA, VNCSEM, PEM);
             //RB =  NCEM_R_PEM - time must be in EM units!
@@ -2051,9 +2054,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
 
 
         case VNCEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             // VNCSEM -> VNCEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VEM_R_VNCSEM
             rot_mat_coc(t, RA, VNCSEM, VEM);
             //RB =  VNCEM_R_VEM - time must be in EM units!
@@ -2073,16 +2076,16 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
         {
 
         case NCSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //NCSEM -> NCSEM nothing to do here
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             gsl_matrix_set_identity(Rcoc);
             break;
 
         case VNCSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //NCSEM -> VNCSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //Rcoc = VNCSEM_R_NCSEM = VSEM_R_PSEM
             gsl_matrix_set(Rcoc, 0, 0,  1.0);
             gsl_matrix_set(Rcoc, 1, 1,  1.0);
@@ -2102,9 +2105,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
 
 
         case PSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //NCSEM -> PSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //Rcoc = SEM_R_NCSEM
             gsl_matrix_set(Rcoc, 0, 0,  -gamma);
             gsl_matrix_set(Rcoc, 1, 1,  -gamma);
@@ -2115,9 +2118,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case VSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //NCSEM -> VSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VNCSEM_R_NCSEM
             rot_mat_coc(t, RA, NCSEM, VNCSEM);
             //RB =  VSEM_R_VNCSEM
@@ -2127,9 +2130,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case INSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //NCSEM -> INSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VNCSEM_R_NCSEM
             rot_mat_coc(t, RA, NCSEM, VNCSEM);
             //RB =  VSEM_R_VNCSEM
@@ -2146,9 +2149,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case INEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //NCSEM -> INEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VNCSEM_R_NCSEM
             rot_mat_coc(t, RA, NCSEM, VNCSEM);
             //RB =  VSEM_R_VNCSEM
@@ -2171,9 +2174,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case VEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //NCSEM -> VEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VNCSEM_R_NCSEM
             rot_mat_coc(t, RA, NCSEM, VNCSEM);
             //RB =  VSEM_R_VNCSEM
@@ -2201,9 +2204,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case PEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //NCSEM -> PEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VNCSEM_R_NCSEM
             rot_mat_coc(t, RA, NCSEM, VNCSEM);
             //RB =  VSEM_R_VNCSEM
@@ -2237,9 +2240,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
 
 
         case NCEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             // NCSEM -> NCEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = PEM_R_NCSEM
             rot_mat_coc(t, RA, NCSEM, PEM);
             //RB =  NCEM_R_PEM - time must be in EM units!
@@ -2250,9 +2253,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
 
 
         case VNCEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             // NCSEM -> VNCEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VEM_R_NCSEM
             rot_mat_coc(t, RA, NCSEM, VEM);
             //RB =  VNCEM_R_VEM - time must be in EM units!
@@ -2272,16 +2275,16 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
         {
 
         case PSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //PSEM -> PSEM nothing to do here
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             gsl_matrix_set_identity(Rcoc);
             break;
 
         case VSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //PSEM -> VSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //Rcoc = VSEM_R_PSEM = VNCSEM_R_NCSEM
             gsl_matrix_set(Rcoc, 0, 0,  1.0);
             gsl_matrix_set(Rcoc, 1, 1,  1.0);
@@ -2301,9 +2304,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
 
 
         case NCSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //PSEM -> NCSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             gsl_matrix_set(Rcoc, 0, 0,  -1.0/gamma);
             gsl_matrix_set(Rcoc, 1, 1,  -1.0/gamma);
             gsl_matrix_set(Rcoc, 2, 2,  +1.0/gamma);
@@ -2313,9 +2316,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case VNCSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //PSEM -> VNCSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VSEM_R_PSEM
             rot_mat_coc(t, RA, PSEM, VSEM);
             //RB =  VNCSEM_R_VSEM
@@ -2325,9 +2328,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case INSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //PSEM -> INSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VSEM_R_PSEM
             rot_mat_coc(t, RA, PSEM, VSEM);
             //RB =  INSEM_R_VSEM
@@ -2338,9 +2341,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
 
 
         case INEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //SEM -> INEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VSEM_R_PSEM
             rot_mat_coc(t, RA, PSEM, VSEM);
             //RB =  INSEM_R_VSEM
@@ -2358,9 +2361,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
 
 
         case VEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //PSEM -> VEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VSEM_R_PSEM
             rot_mat_coc(t, RA, PSEM, VSEM);
             //RB =  INSEM_R_VSEM
@@ -2384,9 +2387,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case PEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //PSEM -> PEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VSEM_R_PSEM
             rot_mat_coc(t, RA, PSEM, VSEM);
             //RB =  INSEM_R_VSEM
@@ -2415,9 +2418,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
 
 
         case NCEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             // PSEM -> NCEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = PEM_R_PSEM
             rot_mat_coc(t, RA, PSEM, PEM);
             //RB =  NCEM_R_PEM - time must be in EM units!
@@ -2428,9 +2431,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
 
 
         case VNCEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             // PSEM -> VNCEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //RA = VEM_R_PSEM
             rot_mat_coc(t, RA, PSEM, VEM);
             //RB =  VNCEM_R_VEM - time must be in EM units!
@@ -2448,16 +2451,16 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
         switch(outputType)
         {
         case INEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //INEM -> INEM nothing to do here
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             gsl_matrix_set_identity(Rcoc);
             break;
 
         case VEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //INEM -> VEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //Set coefficient in Rcoc
             gsl_matrix_set(Rcoc, 0, 0, +a1);
             gsl_matrix_set(Rcoc, 0, 1, +a2);
@@ -2481,9 +2484,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case INSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //INEM -> INSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             gsl_matrix_set(Rcoc, 0, 0,  1.0/SEML.us_em.as);
             gsl_matrix_set(Rcoc, 1, 1,  1.0/SEML.us_em.as);
             gsl_matrix_set(Rcoc, 2, 2,  1.0/SEML.us_em.as);
@@ -2502,16 +2505,16 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
         switch(outputType)
         {
         case INSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //INSEM -> INSEM nothing to do here
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             gsl_matrix_set_identity(Rcoc);
             break;
 
         case INEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //INSEM -> INEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             gsl_matrix_set(Rcoc, 0, 0, SEML.us_em.as);
             gsl_matrix_set(Rcoc, 1, 1, SEML.us_em.as);
             gsl_matrix_set(Rcoc, 2, 2, SEML.us_em.as);
@@ -2522,9 +2525,9 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
             break;
 
         case VSEM:
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //INSEM -> VSEM
-            //-----------------------------------------------------
+            //----------------------------------------------------------------------------
             //Set coefficient in Rcoc
             gsl_matrix_set(Rcoc, 0, 0, +A1);
             gsl_matrix_set(Rcoc, 0, 1, +A2);
@@ -2554,14 +2557,14 @@ void rot_mat_coc(double t, gsl_matrix* Rcoc, int inputType, int outputType)
 
     }
 
-    //=====================================================================
+    //====================================================================================
     // 4. Reset the focus in SEML, if necessary
-    //=====================================================================
+    //====================================================================================
     if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
 
-    //=====================================================================
+    //====================================================================================
     // 5. Free the temporary objects
-    //=====================================================================
+    //====================================================================================
     gsl_matrix_free(RA);
     gsl_matrix_free(RB);
     gsl_matrix_free(RC);

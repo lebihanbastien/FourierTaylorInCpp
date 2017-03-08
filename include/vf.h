@@ -328,6 +328,17 @@ int vf_stm(const double y[], gsl_matrix* Q, double alpha[],
 
 //========================================================================================
 //
+// All coordinates, 42 variables
+//
+//========================================================================================
+/**
+ *   \brief Vector field of the QBCP variationnal equations. The possible dcs are:
+ *          PEM, PSEM, VEM, VSEM, NCEM, NCSEM, VNCEM, VNCSEM.
+ **/
+int qbcp_varnonlin(double t, const double y[], double f[], void* params_void);
+
+//========================================================================================
+//
 // SUBROUTINES
 //
 //========================================================================================

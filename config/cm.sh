@@ -53,7 +53,7 @@ else
 fi
 
 # Parallel computation is on by default
-ISPAR=1		
+ISPAR=1
 
 #-----------------------------------------------------
 # NOHUP condition
@@ -77,7 +77,7 @@ GLIM_S1=(-35 +35)
 GLIM_S2=(-12 +12)
 GLIM_S3=(-35 +35)
 GLIM_S4=(-12 +12)
-GSIZE_SI=(+50 +6 +50 +6)
+GSIZE_SI=(+100 +6 +100 +6)
 
 #-----------------------------------------------------
 # Parameters that are stable

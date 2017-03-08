@@ -1803,12 +1803,12 @@ void rotmat_CC_R_RCM_CENTER_6(gsl_matrix_complex* CCM_R_RCM_CH)
 void test_evalCCMtoTFC()
 {
     //Reduced number of variables
-    int reduced_nv = Invman::compRNV(SEML.cs);
+    int reduced_nv = Invman::compRNV(*SEML.cs);
 
     //------------------------------------------------------------------------------------
     //Initialization of the manifold via Invman
     //------------------------------------------------------------------------------------
-    Invman invman(OFTS_ORDER, OFS_ORDER, SEML.cs);
+    Invman invman(OFTS_ORDER, OFS_ORDER, *SEML.cs);
 
     //------------------------------------------------------------------------------------
     //Initialization of the manifold via initOFS
@@ -1819,7 +1819,7 @@ void test_evalCCMtoTFC()
     vector<Oftsc> CM_NC;      //center manifold in NC coordinates
     vector<Oftsc> CM_TFC;     //center manifold in TFC coordinates
     //Init routine
-    initOFTS(CM_NC, CM_TFC, reduced_nv, OFTS_ORDER, OFS_ORDER, SEML.cs);
+    initOFTS(CM_NC, CM_TFC, reduced_nv, OFTS_ORDER, OFS_ORDER, *SEML.cs);
 
     //------------------------------------------------------------------------------------
     //Initial conditions (random)
@@ -1841,7 +1841,7 @@ void test_evalCCMtoTFC()
     tic();
     CCMtoTFC(s0, OFTS_ORDER, OFS_ORDER, CM_TFC, zIn, 0);
     cout << "With old version, isGS = 0 (reference), in " << toc() << endl;
-    for(int i = 0; i < 6; i++) zOld0[i] = zIn[i].evaluate(SEML.cs.us.n);
+    for(int i = 0; i < 6; i++) zOld0[i] = zIn[i].evaluate(SEML.cs->us.n);
     //vector_complex_printf_prec(zOld0, 6);
     cout << endl;
 
@@ -1849,7 +1849,7 @@ void test_evalCCMtoTFC()
     tic();
     CCMtoTFC(s0, OFTS_ORDER, OFS_ORDER, CM_TFC, zIn, 1);
     cout << "With old version, isGS = 1, in " << toc() << endl;
-    for(int i = 0; i < 6; i++) zOld1[i] = zIn[i].evaluate(SEML.cs.us.n);
+    for(int i = 0; i < 6; i++) zOld1[i] = zIn[i].evaluate(SEML.cs->us.n);
     //vector_complex_printf_prec(zOld1, 6);
     cout << "Delta with the reference = " << DENorm(zOld0, zOld1, 6) << endl;
     cout << endl;
@@ -1857,7 +1857,7 @@ void test_evalCCMtoTFC()
     tic();
     invman.evalCCMtoTFC(s0, zIn, OFTS_ORDER, OFS_ORDER);
     cout << "With new version, in " << toc() << endl;
-    for(int i = 0; i < 6; i++) zNew[i] = zIn[i].evaluate(SEML.cs.us.n);
+    for(int i = 0; i < 6; i++) zNew[i] = zIn[i].evaluate(SEML.cs->us.n);
     //vector_complex_printf_prec(zNew, 6);
     cout << "Delta with the reference = " << DENorm(zOld0, zNew, 6) << endl;
     cout << endl;
@@ -1869,12 +1869,12 @@ void test_evalCCMtoTFC()
 void test_evalDCCMtoTFC()
 {
     //Reduced number of variables
-    int reduced_nv = Invman::compRNV(SEML.cs);
+    int reduced_nv = Invman::compRNV(*SEML.cs);
 
     //------------------------------------------------------------------------------------
     //Initialization of the manifold via Invman
     //------------------------------------------------------------------------------------
-    Invman invman(OFTS_ORDER, OFS_ORDER, SEML.cs);
+    Invman invman(OFTS_ORDER, OFS_ORDER, *SEML.cs);
 
     //------------------------------------------------------------------------------------
     //Initialization of the manifold via initOFS
@@ -1883,7 +1883,7 @@ void test_evalDCCMtoTFC()
     //DCM_TFC : Jacobian of CM_TFC
     //--------------------------------------
     matrix<Oftsc> DCM_TFC(6, reduced_nv, reduced_nv, OFTS_ORDER-1, OFS_NV, OFS_ORDER);
-    readMOFTS_bin(DCM_TFC, SEML.cs.F_PMS+"DWf/DWhc");
+    readMOFTS_bin(DCM_TFC, SEML.cs->F_PMS+"DWf/DWhc");
 
     //------------------------------------------------------------------------------------
     //Initial conditions (random)
@@ -1910,7 +1910,7 @@ void test_evalDCCMtoTFC()
     cout << "With old version, isGS = 0 (reference), in " << toc() << endl;
     for(int i = 0; i < 6; i++)
     {
-        for(int j = 0; j < reduced_nv; j++)  zOld0[i][j] = mIn.getCoef(i,j).evaluate(SEML.cs.us.n);
+        for(int j = 0; j < reduced_nv; j++)  zOld0[i][j] = mIn.getCoef(i,j).evaluate(SEML.cs->us.n);
     }
     //matrix_complex_printf((cdouble **)zOld0, 6, reduced_nv);
     cout << endl;
@@ -1921,7 +1921,7 @@ void test_evalDCCMtoTFC()
     cout << "With old version, isGS = 1, in " << toc() << endl;
     for(int i = 0; i < 6; i++)
     {
-        for(int j = 0; j < reduced_nv; j++)  zOld1[i][j] = mIn.getCoef(i,j).evaluate(SEML.cs.us.n);
+        for(int j = 0; j < reduced_nv; j++)  zOld1[i][j] = mIn.getCoef(i,j).evaluate(SEML.cs->us.n);
     }
     //matrix_complex_printf((cdouble **)zOld1, 6, reduced_nv);
     cout << "Delta with the reference = " << DENorm((const cdouble**)zOld0, (const cdouble**)zOld1, 6, reduced_nv) << endl;
@@ -1932,7 +1932,7 @@ void test_evalDCCMtoTFC()
     cout << "With new version, in " << toc() << endl;
     for(int i = 0; i < 6; i++)
     {
-        for(int j = 0; j < reduced_nv; j++)  zNew[i][j] = mIn.getCoef(i,j).evaluate(SEML.cs.us.n);
+        for(int j = 0; j < reduced_nv; j++)  zNew[i][j] = mIn.getCoef(i,j).evaluate(SEML.cs->us.n);
     }
     //matrix_complex_printf((cdouble **)zNew, 6, reduced_nv);
     cout << "Delta with the reference = " << DENorm((const cdouble**)zOld0, (const cdouble**)zNew, 6, reduced_nv) << endl;
@@ -1945,12 +1945,12 @@ void test_evalDCCMtoTFC()
 void test_evalRCMtoNC()
 {
     //Reduced number of variables
-    int reduced_nv = Invman::compRNV(SEML.cs);
+    int reduced_nv = Invman::compRNV(*SEML.cs);
 
     //------------------------------------------------------------------------------------
     //Initialization of the manifold via Invman
     //------------------------------------------------------------------------------------
-    Invman invman(OFTS_ORDER, OFS_ORDER, SEML.cs);
+    Invman invman(OFTS_ORDER, OFS_ORDER, *SEML.cs);
 
     //------------------------------------------------------------------------------------
     //Initialization of the manifold via initOFS
@@ -1961,7 +1961,7 @@ void test_evalRCMtoNC()
     vector<Oftsc> CM_NC;      //center manifold in NC coordinates
     vector<Oftsc> CM_TFC;     //center manifold in TFC coordinates
     //Init routine
-    initOFTS(CM_NC, CM_TFC, reduced_nv, OFTS_ORDER, OFS_ORDER, SEML.cs);
+    initOFTS(CM_NC, CM_TFC, reduced_nv, OFTS_ORDER, OFS_ORDER, *SEML.cs);
 
     //--------------------------------------
     // COC objects
@@ -1979,7 +1979,7 @@ void test_evalRCMtoNC()
     //DCM_TFC : Jacobian of CM_TFC
     //--------------------------------------
     matrix<Oftsc> DCM_TFC(6, 4, reduced_nv, OFTS_ORDER-1, OFS_NV, OFS_ORDER);
-    readMOFTS_bin(DCM_TFC, SEML.cs.F_PMS+"DWf/DWhc");
+    readMOFTS_bin(DCM_TFC, SEML.cs->F_PMS+"DWf/DWhc");
 
     //------------------------------------------------------------------------------------
     //Initial conditions (random)
@@ -2002,13 +2002,13 @@ void test_evalRCMtoNC()
     cout << "---------------------------------------------------" << endl;
 
     tic();
-    RCMtoNCbyTFC(s0, t, SEML.us.n, OFTS_ORDER, OFS_ORDER, reduced_nv, CM_TFC, Mcoc, Vcoc, zOld0, 0);
+    RCMtoNCbyTFC(s0, t, SEML.us->n, OFTS_ORDER, OFS_ORDER, reduced_nv, CM_TFC, Mcoc, Vcoc, zOld0, 0);
     cout << "With old version, isGS = 0 (reference), in " << toc() << endl;
     //vector_printf_prec(zOld0, 6);
     cout << endl;
 
     tic();
-    RCMtoNCbyTFC(s0, t, SEML.us.n, OFTS_ORDER, OFS_ORDER, reduced_nv, CM_TFC, Mcoc, Vcoc, zOld1, 1);
+    RCMtoNCbyTFC(s0, t, SEML.us->n, OFTS_ORDER, OFS_ORDER, reduced_nv, CM_TFC, Mcoc, Vcoc, zOld1, 1);
     cout << "With old version, isGS = 1, in " << toc() << endl;
     //vector_printf_prec(zOld1, 6);
     cout << "Delta with the reference = " << DENorm(zOld0, zOld1, 6) << endl;
@@ -2028,12 +2028,12 @@ void test_evalRCMtoNC()
 void test_evalDRCMtoTFC()
 {
     //Reduced number of variables
-    int reduced_nv = Invman::compRNV(SEML.cs);
+    int reduced_nv = Invman::compRNV(*SEML.cs);
 
     //------------------------------------------------------------------------------------
     //Initialization of the manifold via Invman
     //------------------------------------------------------------------------------------
-    Invman invman(OFTS_ORDER, OFS_ORDER, SEML.cs);
+    Invman invman(OFTS_ORDER, OFS_ORDER, *SEML.cs);
 
     //------------------------------------------------------------------------------------
     //Initialization of the manifold via initOFS
@@ -2042,7 +2042,7 @@ void test_evalDRCMtoTFC()
     //DCM_TFC : Jacobian of CM_TFC
     //--------------------------------------
     matrix<Oftsc> DCM_TFC(6, reduced_nv, reduced_nv, OFTS_ORDER-1, OFS_NV, OFS_ORDER);
-    readMOFTS_bin(DCM_TFC, SEML.cs.F_PMS+"DWf/DWhc");
+    readMOFTS_bin(DCM_TFC, SEML.cs->F_PMS+"DWf/DWhc");
 
     //------------------------------------------------------------------------------------
     //Initial conditions (random)
@@ -2067,13 +2067,13 @@ void test_evalDRCMtoTFC()
     cout << "---------------------------------------------------" << endl;
 
     tic();
-    RCMtoTFC_JAC(s0, t, SEML.us.n, OFTS_ORDER, OFS_ORDER, reduced_nv, DCM_TFC, ofs, zOld0, 0);
+    RCMtoTFC_JAC(s0, t, SEML.us->n, OFTS_ORDER, OFS_ORDER, reduced_nv, DCM_TFC, ofs, zOld0, 0);
     cout << "With old version, isGS = 0 (reference), in " << toc() << endl;
     //gslc_matrix_complex_printf(zOld0);
     cout << endl;
 
     tic();
-    RCMtoTFC_JAC(s0, t, SEML.us.n, OFTS_ORDER, OFS_ORDER, reduced_nv, DCM_TFC, ofs, zOld1, 1);
+    RCMtoTFC_JAC(s0, t, SEML.us->n, OFTS_ORDER, OFS_ORDER, reduced_nv, DCM_TFC, ofs, zOld1, 1);
     cout << "With old version, isGS = 1, in " << toc() << endl;
     //gslc_matrix_complex_printf(zOld1);
     cout << "Delta with the reference = " << gslc_matrix_complex_diff_L2(zOld0, zOld1) << endl;

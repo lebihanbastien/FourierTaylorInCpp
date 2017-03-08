@@ -177,13 +177,6 @@ void orbit_update_ic(SingleOrbit &orbit, const double si[], const double z0[]);
 //
 //========================================================================================
 /**
- *  \brief Changing the scope of the computation:
- *       1. Set OFTS_ORDER=ofts_order
- *       2. Focus on the framework defined by focus (F_EM, F_SEM...).
- **/
-void changeScope(int ofts_order, int focus);
-
-/**
  *   \brief Display the current completion (percent) of a routine.
  **/
 void displayCompletion(string funcname, double percent);

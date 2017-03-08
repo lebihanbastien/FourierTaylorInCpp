@@ -468,12 +468,6 @@ int multiple_shooting_direct(double **ymd, double *tmd,
     int fwrk    = default_framework_dcs(dcs);
 
     //------------------------------------------------------------------------------------
-    // Check that the focus in SEML is in accordance with the dcs.
-    //------------------------------------------------------------------------------------
-    int fwrk0 = SEML.fwrk;
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
-
-    //------------------------------------------------------------------------------------
     // Get the correct integration routine
     //------------------------------------------------------------------------------------
     //by default, to avoid gcc warning
@@ -545,8 +539,6 @@ int multiple_shooting_direct(double **ymd, double *tmd,
             //----------------------------------------------------------------------------
             for(int i = 0; i < N; i++) yv[i] = ymdn[i][k];
             ode78_int(ym, tm, &ode78coll, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
-
-
 
             //----------------------------------------------------------------------------
             // Final position is at the end of ym
@@ -644,11 +636,6 @@ int multiple_shooting_direct(double **ymd, double *tmd,
     }
 
     //====================================================================================
-    // 9. Reset the focus in SEML, if necessary
-    //====================================================================================
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
-
-    //====================================================================================
     // Free
     //====================================================================================
     gslc_matrix_array_free(Ji , mgs);
@@ -713,11 +700,10 @@ int multiple_shooting_direct_variable_time(double **ymd, double *tmd,
     //by default, to avoid gcc warning
     int (*ode78_int)(double**, double*, int*, double, double, const double*y, int, int, int, int, int) = ode78;
 
-    //====================================================================================
-    // Check that the focus in SEML is in accordance with the dcs.
-    //====================================================================================
-    int fwrk0 = SEML.fwrk;
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
+    //------------------------------------------------------------------------------------
+    // Create a local OdeParams
+    //------------------------------------------------------------------------------------
+    OdeParams odeParams(&SEML, dcs);
 
     //------------------------------------------------------------------------------------
     // GSL matrices and vectors
@@ -813,7 +799,7 @@ int multiple_shooting_direct_variable_time(double **ymd, double *tmd,
             //--------------------------
             //Computing f[Q[k], t[k])
             for(int i = 0; i < 6; i++) yv[i] = ymdn[i][k];
-            vf(tmdn[k], yv, f, &ODESEML);
+            vf(tmdn[k], yv, f, &odeParams);
 
             //Kf = -f[Q[k], t[k])
             for(int i = 0; i < 6; i++) gsl_vector_set(Kf, i, -f[i]);
@@ -825,7 +811,7 @@ int multiple_shooting_direct_variable_time(double **ymd, double *tmd,
             //dF[k]/dt[k+1] = +f[Q[k+1], t[k+1])
             //--------------------------
             //Computing f[Q[k+1], t[k+1])
-            vf(tmdn[k+1], ye, f, &ODESEML);
+            vf(tmdn[k+1], ye, f, &odeParams);
 
 
             //----------------------------------------------------------------------------
@@ -917,12 +903,6 @@ int multiple_shooting_direct_variable_time(double **ymd, double *tmd,
 
 
     //====================================================================================
-    // Reset the focus in SEML, if necessary
-    //====================================================================================
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
-
-
-    //====================================================================================
     // Free
     //====================================================================================
     gslc_matrix_array_free(Ji , mgs);
@@ -964,15 +944,15 @@ int multiple_shooting_direct_deps(double **ymd, double *tmd,
     //------------------------------------------------------------------------------------
     //Driver
     //------------------------------------------------------------------------------------
-    OdeStruct driver;
+    OdeStruct odestruct;
     //Root-finding
     const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
     //Stepper
     const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
     //Parameters
-    OdeParams odeParams(&SEML);
+    OdeParams odeParams(&SEML, ECISEM);
     //Init ode structure
-    init_ode_structure(&driver, T, T_root, 48, qbcp_ecisem_cont_necijpl, &odeParams);
+    init_ode_structure(&odestruct, T, T_root, 48, qbcp_ecisem_cont_necijpl, &odeParams);
 
     //------------------------------------------------------------------------------------
     // GSL matrices and vectors
@@ -1040,7 +1020,7 @@ int multiple_shooting_direct_deps(double **ymd, double *tmd,
             // Integration
             //----------------------------------------------------------------------------
             t = tmdn[k];
-            status = gsl_odeiv2_driver_apply (driver.d, &t , tmdn[k+1] , yv);
+            status = gsl_odeiv2_driver_apply (odestruct.d, &t , tmdn[k+1] , yv);
 
             //----------------------------------------------------------------------------
             // Final position is at the end of yv

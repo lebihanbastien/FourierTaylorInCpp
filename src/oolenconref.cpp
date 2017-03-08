@@ -1161,12 +1161,10 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
     //------------------------------------------------------------------------------------
     vfptr vf  = ftc_select_vf(dcs, 6);
 
-
-    //====================================================================================
-    // Check that the focus in SEML is in accordance with the dcs.
-    //====================================================================================
-    int fwrk0 = SEML.fwrk;
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
+    //------------------------------------------------------------------------------------
+    // Create a local OdeParams
+    //------------------------------------------------------------------------------------
+    OdeParams odeParams(&SEML, dcs);
 
     //------------------------------------------------------------------------------------
     // Other initialization
@@ -1314,7 +1312,7 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
             //------------------------------------------
             //Computing f[Q[k], t[k])
             for(int i = 0; i < 6; i++) yv[i] = ymdn[i][k];
-            vf(tmdn[k], yv, f, &ODESEML);
+            vf(tmdn[k], yv, f, &odeParams);
 
             //Kf = -f[Q[k], t[k])
             for(int i = 0; i < 6; i++) gsl_vector_set(Kf, i, -f[i]);
@@ -1326,7 +1324,7 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
             //dF[k]/dt[k+1] = +f[Q[k+1], t[k+1])
             //------------------------------------------
             //Computing f[Q[k+1], t[k+1])
-            vf(te, ye, f, &ODESEML);
+            vf(te, ye, f, &odeParams);
 
             //Special case of the last point: dF[k]/dt[k+1] = +f[Q[k+1], t[k+1]) - dCM_SEM_NC/dt[k+1]
             if(k == mgs-1)
@@ -1539,11 +1537,6 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
     //------------------------------------------------------------------------------------
     if(refSt.isPlotted) gnuplot_plot_xyz(h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
 
-    //====================================================================================
-    // Reset the focus in SEML, if necessary
-    //====================================================================================
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
-
 
     //====================================================================================
     // 3. Compute the null vector: QR decomposition of DP^T
@@ -1713,11 +1706,10 @@ int msvtmixed(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
     vfptr vf  = ftc_select_vf(dcs, 6);
 
 
-    //====================================================================================
-    // Check that the focus in SEML is in accordance with the dcs.
-    //====================================================================================
-    int fwrk0 = SEML.fwrk;
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
+    //------------------------------------------------------------------------------------
+    // Create a local OdeParams
+    //------------------------------------------------------------------------------------
+    OdeParams odeParams(&SEML, dcs);
 
     //------------------------------------------------------------------------------------
     // Other initialization
@@ -1865,7 +1857,7 @@ int msvtmixed(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
             //------------------------------------------
             //Computing f[Q[k], t[k])
             for(int i = 0; i < 6; i++) yv[i] = ymdn[i][k];
-            vf(tmdn[k], yv, f, &ODESEML);
+            vf(tmdn[k], yv, f, &odeParams);
 
             //Kf = -f[Q[k], t[k])
             for(int i = 0; i < 6; i++) gsl_vector_set(Kf, i, -f[i]);
@@ -1877,7 +1869,7 @@ int msvtmixed(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
             //dF[k]/dt[k+1] = +f[Q[k+1], t[k+1])
             //------------------------------------------
             //Computing f[Q[k+1], t[k+1])
-            vf(te, ye, f, &ODESEML);
+            vf(te, ye, f, &odeParams);
 
             //Special case of the last point: dF[k]/dt[k+1] = +f[Q[k+1], t[k+1]) - dCM_SEM_NC/dt[k+1]
             if(k == mgs-1)
@@ -2093,11 +2085,6 @@ int msvtmixed(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
     //Last plot
     //------------------------------------------------------------------------------------
     if(refSt.isPlotted) gnuplot_plot_xyz(h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
-
-    //====================================================================================
-    // Reset the focus in SEML, if necessary
-    //====================================================================================
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
 
 
     //====================================================================================
@@ -2662,11 +2649,10 @@ int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
     //------------------------------------------------------------------------------------
     vfptr vf  = ftc_select_vf(dcs, 6);
 
-    //====================================================================================
-    // Check that the focus in SEML is in accordance with the dcs.
-    //====================================================================================
-    int fwrk0 = SEML.fwrk;
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
+    //------------------------------------------------------------------------------------
+    // Create a local OdeParams
+    //------------------------------------------------------------------------------------
+    OdeParams odeParams(&SEML, dcs);
 
     //------------------------------------------------------------------------------------
     // Other initialization
@@ -2809,7 +2795,7 @@ int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
             //------------------------------------------
             //Computing f[Q[k], t[k])
             for(int i = 0; i < 6; i++) yv[i] = ymdn[i][k];
-            vf(tmdn[k], yv, f, &ODESEML);
+            vf(tmdn[k], yv, f, &odeParams);
 
             //Kf = -f[Q[k], t[k])
             for(int i = 0; i < 6; i++) gsl_vector_set(Kf, i, -f[i]);
@@ -2821,7 +2807,7 @@ int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
             //dF[k]/dt[k+1] = +f[Q[k+1], t[k+1])
             //------------------------------------------
             //Computing f[Q[k+1], t[k+1])
-            vf(te, ye, f, &ODESEML);
+            vf(te, ye, f, &odeParams);
 
             //Special case of the last point: dF[k]/dt[k+1] = +f[Q[k+1], t[k+1]) - dCM_SEM_NC/dt[k+1]
             if(k == mgs-1)
@@ -3179,11 +3165,6 @@ int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
     *niter = iter;
 
     //====================================================================================
-    // Reset the focus in SEML, if necessary
-    //====================================================================================
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
-
-    //====================================================================================
     // 4. Free
     //====================================================================================
     free_dmatrix(ym, 0, 41, 0, mgs);
@@ -3261,11 +3242,10 @@ int msvltplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
     //------------------------------------------------------------------------------------
     vfptr vf  = ftc_select_vf(dcs, 6);
 
-    //====================================================================================
-    // Check that the focus in SEML is in accordance with the dcs.
-    //====================================================================================
-    int fwrk0 = SEML.fwrk;
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
+    //------------------------------------------------------------------------------------
+    // Create a local OdeParams
+    //------------------------------------------------------------------------------------
+    OdeParams odeParams(&SEML, dcs);
 
     //------------------------------------------------------------------------------------
     // Other initialization
@@ -3406,7 +3386,7 @@ int msvltplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
                 //dF[k]/dt[k+1] = +f[Q[k+1], t[k+1])
                 //------------------------------------------------------------------------
                 //Computing f[Q[k+1], t[k+1])
-                vf(te, ye, f, &ODESEML);
+                vf(te, ye, f, &odeParams);
 
                 //------------------------------------------------------------------------
                 // Then f = f - z1, with z1 = dCM_SEM_NC/dt[k+1]
@@ -3730,11 +3710,6 @@ int msvltplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
     *niter = iter;
 
     //====================================================================================
-    // Reset the focus in SEML, if necessary
-    //====================================================================================
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
-
-    //====================================================================================
     // 4. Free
     //====================================================================================
     free_dmatrix(ym, 0, 41, 0, mgs);
@@ -3802,11 +3777,11 @@ int msvftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
     //------------------------------------------------------------------------------------
     vfptr vf  = ftc_select_vf(dcs, 6);
 
-    //====================================================================================
-    // Check that the focus in SEML is in accordance with the dcs.
-    //====================================================================================
-    int fwrk0 = SEML.fwrk;
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
+    //------------------------------------------------------------------------------------
+    // Create a local OdeParams
+    //------------------------------------------------------------------------------------
+    OdeParams odeParams(&SEML, dcs);
+
 
     //------------------------------------------------------------------------------------
     // Other initialization
@@ -3975,7 +3950,7 @@ int msvftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
                 //------------------------------------------------------------------------
                 //Computing f[Q[k], t[k])
                 for(int i = 0; i < 6; i++) yv[i] = ymdn[i][k];
-                vf(tmdn[k], yv, f, &ODESEML);
+                vf(tmdn[k], yv, f, &odeParams);
 
                 //Kf = -f[Q[k], t[k])
                 for(int i = 0; i < 6; i++) gsl_vector_set(Kf, i, -f[i]);
@@ -4162,11 +4137,6 @@ int msvftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
     // 4. FINALLY, we update orbit_EM.tf, even if it is not necessary
     //====================================================================================
     orbit_EM.setTf(tmdn[mgs]/SEML.us_em.ns);
-
-    //====================================================================================
-    // Reset the focus in SEML, if necessary
-    //====================================================================================
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
 
     //====================================================================================
     // 5. Free

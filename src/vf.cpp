@@ -56,16 +56,29 @@ vfptr ftc_select_vf(int dcs, int nvar)
         {
         case I_PSEM:
         case I_PEM:
-            return qbcp_vf_varnonlin;
         case I_VNCEM:
         case I_VNCSEM:
-            return qbcp_vfn_varnonlin_xv;
         case I_NCSEM:
         case I_NCEM:
-            return qbcp_vfn_varnonlin;
         case I_VSEM:
         case I_VEM:
-            return qbcp_vf_varnonlin_xv;//;jpl_vf_syn_var;  //CAREFUL: JPL vf here!!!
+            return qbcp_varnonlin;
+
+
+        // OLD VERSION:
+        //        case I_PSEM:
+        //        case I_PEM:
+        //            return qbcp_vf_varnonlin;
+        //        case I_VNCEM:
+        //        case I_VNCSEM:
+        //            return qbcp_vfn_varnonlin_xv;
+        //        case I_NCSEM:
+        //        case I_NCEM:
+        //            return qbcp_vfn_varnonlin;
+        //        case I_VSEM:
+        //        case I_VEM:
+        //            return qbcp_vf_varnonlin_xv;//;jpl_vf_syn_var;  //CAREFUL: JPL vf here!!!
+
         case I_INSEM:
             return qbcp_vf_insem_var;
         case I_INEM:
@@ -118,7 +131,7 @@ void acc_center_from_vf(double et, double Ae[3],  double Rj[11][6], QBCP_L* qbp)
     //Select the center: if it is a primary, we go on with a simple Newtonian vf.
     //If it is the Earth-Moon barycenter, we need to compose two vfs.
     //------------------------------------------------------------------------------------
-    int center = qbp->ss.center;
+    int center = qbp->ss->center;
 
     if(center == EARTH_MOON_BARYCENTER)
     {
@@ -138,7 +151,7 @@ void acc_center_from_vf(double et, double Ae[3],  double Rj[11][6], QBCP_L* qbp)
         //--------------------------------------------------------------------------------
         //Loop on all primaries to compute the acceleration of the Earth and the Moon,
         //--------------------------------------------------------------------------------
-        for(int p = 0; p < qbp->ss.maxBodies; p++)
+        for(int p = 0; p < qbp->ss->maxBodies; p++)
         {
             //----------------------------------------------------------------------------
             //Acceleration of the Earth
@@ -152,7 +165,7 @@ void acc_center_from_vf(double et, double Ae[3],  double Rj[11][6], QBCP_L* qbp)
                 DR2 = vdot_c(DR, DR);
 
                 //A1 += Gmj/|DR|^3*DR
-                for(int i = 0; i < 3; i++) A1[i] += - qbp->ss.Gmi[p] / pow(DR2, 3.0 / 2) * DR[i];
+                for(int i = 0; i < 3; i++) A1[i] += - qbp->ss->Gmi[p] / pow(DR2, 3.0 / 2) * DR[i];
             }
 
             //----------------------------------------------------------------------------
@@ -167,15 +180,15 @@ void acc_center_from_vf(double et, double Ae[3],  double Rj[11][6], QBCP_L* qbp)
                 DR2 = vdot_c(DR, DR);
 
                 //A2 += Gmj/|DR|^3*DR
-                for(int i = 0; i < 3; i++) A2[i] += - qbp->ss.Gmi[p] / pow(DR2, 3.0 / 2) * DR[i];
+                for(int i = 0; i < 3; i++) A2[i] += - qbp->ss->Gmi[p] / pow(DR2, 3.0 / 2) * DR[i];
             }
         }
 
         //--------------------------------------------------------------------------------
         //Barycenter of Earth & Moon
         //--------------------------------------------------------------------------------
-        double Gme = qbp->ss.Gmi[3]; //Earth mass
-        double Gmm = qbp->ss.Gmi[4]; //Moon mass
+        double Gme = qbp->ss->Gmi[3]; //Earth mass
+        double Gmm = qbp->ss->Gmi[4]; //Moon mass
         for(int i = 0; i < 3; i++) Ae[i] = (Gme * A1[i] + Gmm * A2[i]) / (Gme + Gmm);
     }
     else{
@@ -187,7 +200,7 @@ void acc_center_from_vf(double et, double Ae[3],  double Rj[11][6], QBCP_L* qbp)
         //--------------------------------------------------------------------------------
         //Acceleration of the Earth
         //--------------------------------------------------------------------------------
-        for(int p = 0; p < qbp->ss.maxBodies; p++)
+        for(int p = 0; p < qbp->ss->maxBodies; p++)
         {
             if(p != 3)
             {
@@ -198,7 +211,7 @@ void acc_center_from_vf(double et, double Ae[3],  double Rj[11][6], QBCP_L* qbp)
                 DR2 = vdot_c(DR, DR);
 
                 //A1 += Gmj/|DR|^3*DR
-                for(int i = 0; i < 3; i++) Ae[i] += - qbp->ss.Gmi[p] / pow(DR2, 3.0 / 2) * DR[i];
+                for(int i = 0; i < 3; i++) Ae[i] += - qbp->ss->Gmi[p] / pow(DR2, 3.0 / 2) * DR[i];
             }
         }
     }
@@ -223,7 +236,7 @@ void acc_earth_from_vf(double et, double Ae[3],  double Rj[11][6], QBCP_L* qbp)
     //------------------------------------------------------------------------------------
     //Acceleration of the Earth
     //------------------------------------------------------------------------------------
-    for(int p = 0; p < qbp->ss.maxBodies; p++)
+    for(int p = 0; p < qbp->ss->maxBodies; p++)
     {
         if(p != 3)
         {
@@ -234,7 +247,7 @@ void acc_earth_from_vf(double et, double Ae[3],  double Rj[11][6], QBCP_L* qbp)
             DR2 = vdot_c(DR, DR);
 
             //A1 += Gmj/|DR|^3*DR
-            for(int i = 0; i < 3; i++) Ae[i] += - qbp->ss.Gmi[p] / pow(DR2, 3.0 / 2) * DR[i];
+            for(int i = 0; i < 3; i++) Ae[i] += - qbp->ss->Gmi[p] / pow(DR2, 3.0 / 2) * DR[i];
         }
     }
 }
@@ -246,10 +259,10 @@ void usspos(double et, double Rj[11][6], QBCP_L* qbp)
 {
     double Rb[6], lt;
 
-    for(int i = 0; i < qbp->ss.maxBodies; i++)
+    for(int i = 0; i < qbp->ss->maxBodies; i++)
     {
         //Retrieve position from SPICE kernel
-        spkez_c(qbp->ss.id[i], et, DEFFRAME,  "NONE", SSB, Rb, &lt);
+        spkez_c(qbp->ss->id[i], et, DEFFRAME,  "NONE", SSB, Rb, &lt);
 
         //Update Rj
         for(int j = 0; j < 6; j++) Rj[i][j] = Rb[j];
@@ -288,7 +301,7 @@ void acc_from_vf(double et, int pos1, int pos2, double A1[3], double A2[3],
         spkez_c (MOON,  et, DEFFRAME, "NONE", SSB, Rm, &lt);
 
         //Loop on all primaries
-        for(int p = 0; p < qbp->ss.maxBodies; p++)
+        for(int p = 0; p < qbp->ss->maxBodies; p++)
         {
             //Earth
             if(p != 3)
@@ -300,7 +313,7 @@ void acc_from_vf(double et, int pos1, int pos2, double A1[3], double A2[3],
                 DR2 = vdot_c(DR, DR);
 
                 //A1 += Gmj/|DR|^3*DR
-                for(int i = 0; i < 3; i++) A1[i] += - qbp->ss.Gmi[p] / pow(DR2, 3.0 / 2) * DR[i];
+                for(int i = 0; i < 3; i++) A1[i] += - qbp->ss->Gmi[p] / pow(DR2, 3.0 / 2) * DR[i];
             }
 
             //Moon
@@ -313,20 +326,20 @@ void acc_from_vf(double et, int pos1, int pos2, double A1[3], double A2[3],
                 DR2 = vdot_c(DR, DR);
 
                 //A2 += Gmj/|DR|^3*DR
-                for(int i = 0; i < 3; i++) A2[i] += - qbp->ss.Gmi[p] / pow(DR2, 3.0 / 2) * DR[i];
+                for(int i = 0; i < 3; i++) A2[i] += - qbp->ss->Gmi[p] / pow(DR2, 3.0 / 2) * DR[i];
             }
         }
 
         //Barycenter of Earth & Moon
-        double Gme = qbp->ss.Gmi[3]; //Earth mass
-        double Gmm = qbp->ss.Gmi[4]; //Moon mass
+        double Gme = qbp->ss->Gmi[3]; //Earth mass
+        double Gmm = qbp->ss->Gmi[4]; //Moon mass
 
         for(int i = 0; i < 3; i++) A2[i] = (Gme * A1[i] + Gmm * A2[i]) / (Gme + Gmm);
 
         //Sun
         for(int i = 0; i < 3; i++) A1[i] = 0;
 
-        for(int p = 0; p < qbp->ss.maxBodies; p++)
+        for(int p = 0; p < qbp->ss->maxBodies; p++)
         {
             if(p != pos1)
             {
@@ -337,7 +350,7 @@ void acc_from_vf(double et, int pos1, int pos2, double A1[3], double A2[3],
                 DR2 = vdot_c(DR, DR);
 
                 //A1 += Gmj/|DR|^3*DR
-                for(int i = 0; i < 3; i++) A1[i] += - qbp->ss.Gmi[p] / pow(DR2, 3.0 / 2) * DR[i];
+                for(int i = 0; i < 3; i++) A1[i] += - qbp->ss->Gmi[p] / pow(DR2, 3.0 / 2) * DR[i];
             }
         }
     }
@@ -346,7 +359,7 @@ void acc_from_vf(double et, int pos1, int pos2, double A1[3], double A2[3],
         //--------------------------------------------------------------------------------
         //Classic case
         //--------------------------------------------------------------------------------
-        for(int p = 0; p < qbp->ss.maxBodies; p++)
+        for(int p = 0; p < qbp->ss->maxBodies; p++)
         {
             //First primary
             if(p != pos1)
@@ -358,7 +371,7 @@ void acc_from_vf(double et, int pos1, int pos2, double A1[3], double A2[3],
                 DR2 = vdot_c(DR, DR);
 
                 //A1 += Gmj/|DR|^3*DR
-                for(int i = 0; i < 3; i++) A1[i] += - qbp->ss.Gmi[p] / pow(DR2, 3.0 / 2) * DR[i];
+                for(int i = 0; i < 3; i++) A1[i] += - qbp->ss->Gmi[p] / pow(DR2, 3.0 / 2) * DR[i];
             }
 
             //Second primary
@@ -371,7 +384,7 @@ void acc_from_vf(double et, int pos1, int pos2, double A1[3], double A2[3],
                 DR2 = vdot_c(DR, DR);
 
                 //A2 += Gmj/|DR|^3*DR
-                for(int i = 0; i < 3; i++) A2[i] += - qbp->ss.Gmi[p] / pow(DR2, 3.0 / 2) * DR[i];
+                for(int i = 0; i < 3; i++) A2[i] += - qbp->ss->Gmi[p] / pow(DR2, 3.0 / 2) * DR[i];
             }
 
         }
@@ -413,7 +426,7 @@ void jerk_from_vf(double et, int pos1, int pos2, double J1[3], double J2[3],
         spkez_c (MOON,  et, DEFFRAME, "NONE", SSB, Rm, &lt);
 
         //Loop on all primaries
-        for(int p = 0; p < qbp->ss.maxBodies; p++)
+        for(int p = 0; p < qbp->ss->maxBodies; p++)
         {
             //Earth
             if(p != 3)
@@ -430,7 +443,7 @@ void jerk_from_vf(double et, int pos1, int pos2, double J1[3], double J2[3],
                 DRV = vdot_c(DR, DV);
 
                 //J1 += Gmj*( 3 * DR * (DR . DV) / |DR|^5 - DV / |DR|^3)
-                for(int i = 0; i < 3; i++) J1[i] += qbp->ss.Gmi[p] * (3.0 * DR[i] * DRV / pow(DR2, 5.0 / 2) - DV[i] / pow(DR2, 3.0 / 2));
+                for(int i = 0; i < 3; i++) J1[i] += qbp->ss->Gmi[p] * (3.0 * DR[i] * DRV / pow(DR2, 5.0 / 2) - DV[i] / pow(DR2, 3.0 / 2));
             }
 
             //Moon
@@ -448,14 +461,14 @@ void jerk_from_vf(double et, int pos1, int pos2, double J1[3], double J2[3],
                 DRV = vdot_c(DR, DV);
 
                 //J2 += Gmj*( 3 * DR * (DR . DV) / |DR|^5 - DV / |DR|^3)
-                for(int i = 0; i < 3; i++) J2[i] += qbp->ss.Gmi[p] * (3.0 * DR[i] * DRV / pow(DR2, 5.0 / 2) - DV[i] / pow(DR2, 3.0 / 2));
+                for(int i = 0; i < 3; i++) J2[i] += qbp->ss->Gmi[p] * (3.0 * DR[i] * DRV / pow(DR2, 5.0 / 2) - DV[i] / pow(DR2, 3.0 / 2));
             }
 
         }
 
         //Barycenter of Earth & Moon
-        double Gme = qbp->ss.Gmi[3]; //Earth mass
-        double Gmm = qbp->ss.Gmi[4]; //Moon mass
+        double Gme = qbp->ss->Gmi[3]; //Earth mass
+        double Gmm = qbp->ss->Gmi[4]; //Moon mass
 
         for(int i = 0; i < 3; i++) J2[i] = (Gme * J1[i] + Gmm * J2[i]) / (Gme + Gmm);
 
@@ -465,7 +478,7 @@ void jerk_from_vf(double et, int pos1, int pos2, double J1[3], double J2[3],
         //------------------------------------------------
         for(int i = 0; i < 3; i++) J1[i] = 0;
 
-        for(int p = 0; p < qbp->ss.maxBodies; p++)
+        for(int p = 0; p < qbp->ss->maxBodies; p++)
         {
             if(p != pos1)
             {
@@ -481,7 +494,7 @@ void jerk_from_vf(double et, int pos1, int pos2, double J1[3], double J2[3],
                 DRV = vdot_c(DR, DV);
 
                 //J1 += Gmj*( 3 * DR * (DR . DV) / |DR|^5 - DV / |DR|^3)
-                for(int i = 0; i < 3; i++) J1[i] += qbp->ss.Gmi[p] * (3.0 * DR[i] * DRV / pow(DR2, 5.0 / 2) - DV[i] / pow(DR2, 3.0 / 2));
+                for(int i = 0; i < 3; i++) J1[i] += qbp->ss->Gmi[p] * (3.0 * DR[i] * DRV / pow(DR2, 5.0 / 2) - DV[i] / pow(DR2, 3.0 / 2));
             }
 
         }
@@ -492,7 +505,7 @@ void jerk_from_vf(double et, int pos1, int pos2, double J1[3], double J2[3],
         //--------------------------------------------------------------------------------
         //Classic case
         //--------------------------------------------------------------------------------
-        for(int p = 0; p < qbp->ss.maxBodies; p++)
+        for(int p = 0; p < qbp->ss->maxBodies; p++)
         {
             if(p != pos1)
             {
@@ -508,7 +521,7 @@ void jerk_from_vf(double et, int pos1, int pos2, double J1[3], double J2[3],
                 DRV = vdot_c(DR, DV);
 
                 //J1 += Gmj*( 3 * DR * (DR . DV) / |DR|^5 - DV / |DR|^3)
-                for(int i = 0; i < 3; i++) J1[i] += qbp->ss.Gmi[p] * (3.0 * DR[i] * DRV / pow(DR2, 5.0 / 2) - DV[i] / pow(DR2, 3.0 / 2));
+                for(int i = 0; i < 3; i++) J1[i] += qbp->ss->Gmi[p] * (3.0 * DR[i] * DRV / pow(DR2, 5.0 / 2) - DV[i] / pow(DR2, 3.0 / 2));
             }
 
             if(p != pos2)
@@ -525,7 +538,7 @@ void jerk_from_vf(double et, int pos1, int pos2, double J1[3], double J2[3],
                 DRV = vdot_c(DR, DV);
 
                 //J2 += Gmj*( 3 * DR * (DR . DV) / |DR|^5 - DV / |DR|^3)
-                for(int i = 0; i < 3; i++) J2[i] += qbp->ss.Gmi[p] * (3.0 * DR[i] * DRV / pow(DR2, 5.0 / 2) - DV[i] / pow(DR2, 3.0 / 2));
+                for(int i = 0; i < 3; i++) J2[i] += qbp->ss->Gmi[p] * (3.0 * DR[i] * DRV / pow(DR2, 5.0 / 2) - DV[i] / pow(DR2, 3.0 / 2));
             }
 
         }
@@ -569,14 +582,14 @@ int jpl_vf(double et, const double y[], double f[], void* params_void)
     double Rb[6], lt;
 
     //Loop on all the primaries
-    for(int i = 0; i < qbp->ss.maxBodies; i++)
+    for(int i = 0; i < qbp->ss->maxBodies; i++)
     {
         //Retrieve posiiton from SPICE kernel
-        spkez_c(qbp->ss.id[i], et, DEFFRAME,  "NONE", SSB, Rb, &lt);
+        spkez_c(qbp->ss->id[i], et, DEFFRAME,  "NONE", SSB, Rb, &lt);
         //Build the vector field
-        f[3] += - qbp->ss.Gmi[i] / pow((y[0] - Rb[0]) * (y[0] - Rb[0]) + (y[1] - Rb[1]) * (y[1] - Rb[1]) + (y[2] - Rb[2]) * (y[2] - Rb[2]), 3.0 / 2) * (y[0] - Rb[0]);
-        f[4] += - qbp->ss.Gmi[i] / pow((y[0] - Rb[0]) * (y[0] - Rb[0]) + (y[1] - Rb[1]) * (y[1] - Rb[1]) + (y[2] - Rb[2]) * (y[2] - Rb[2]), 3.0 / 2) * (y[1] - Rb[1]);
-        f[5] += - qbp->ss.Gmi[i] / pow((y[0] - Rb[0]) * (y[0] - Rb[0]) + (y[1] - Rb[1]) * (y[1] - Rb[1]) + (y[2] - Rb[2]) * (y[2] - Rb[2]), 3.0 / 2) * (y[2] - Rb[2]);
+        f[3] += - qbp->ss->Gmi[i] / pow((y[0] - Rb[0]) * (y[0] - Rb[0]) + (y[1] - Rb[1]) * (y[1] - Rb[1]) + (y[2] - Rb[2]) * (y[2] - Rb[2]), 3.0 / 2) * (y[0] - Rb[0]);
+        f[4] += - qbp->ss->Gmi[i] / pow((y[0] - Rb[0]) * (y[0] - Rb[0]) + (y[1] - Rb[1]) * (y[1] - Rb[1]) + (y[2] - Rb[2]) * (y[2] - Rb[2]), 3.0 / 2) * (y[1] - Rb[1]);
+        f[5] += - qbp->ss->Gmi[i] / pow((y[0] - Rb[0]) * (y[0] - Rb[0]) + (y[1] - Rb[1]) * (y[1] - Rb[1]) + (y[2] - Rb[2]) * (y[2] - Rb[2]), 3.0 / 2) * (y[2] - Rb[2]);
     }
 
 
@@ -638,26 +651,26 @@ int jpl_vf_var(double et, const double y[], double f[], void* params_void)
     //------------------------------------------------------------------------------------
     //Loop on all the primaries
     //------------------------------------------------------------------------------------
-    for(int i = 0; i < qbp->ss.maxBodies; i++)
+    for(int i = 0; i < qbp->ss->maxBodies; i++)
     {
         //Retrieve posiiton from SPICE kernel
-        spkez_c(qbp->ss.id[i], et, DEFFRAME,  "NONE", SSB, Rb, &lt);
+        spkez_c(qbp->ss->id[i], et, DEFFRAME,  "NONE", SSB, Rb, &lt);
 
         //Distance
         Rbe2 = (y[0] - Rb[0]) * (y[0] - Rb[0]) + (y[1] - Rb[1]) * (y[1] - Rb[1]) + (y[2] - Rb[2]) * (y[2] - Rb[2]);
 
         //Build the vector field
-        f[3] += - qbp->ss.Gmi[i] / pow(Rbe2, 3.0 / 2) * (y[0] - Rb[0]);
-        f[4] += - qbp->ss.Gmi[i] / pow(Rbe2, 3.0 / 2) * (y[1] - Rb[1]);
-        f[5] += - qbp->ss.Gmi[i] / pow(Rbe2, 3.0 / 2) * (y[2] - Rb[2]);
+        f[3] += - qbp->ss->Gmi[i] / pow(Rbe2, 3.0 / 2) * (y[0] - Rb[0]);
+        f[4] += - qbp->ss->Gmi[i] / pow(Rbe2, 3.0 / 2) * (y[1] - Rb[1]);
+        f[5] += - qbp->ss->Gmi[i] / pow(Rbe2, 3.0 / 2) * (y[2] - Rb[2]);
 
         //For differential equations
-        b[0] += Uij(y, Rb, Rbe2, qbp->ss.Gmi[i], 1.0, 0, 0);
-        b[1] += Uij(y, Rb, Rbe2, qbp->ss.Gmi[i], 1.0, 0, 1);
-        b[2] += Uij(y, Rb, Rbe2, qbp->ss.Gmi[i], 1.0, 1, 1);
-        b[3] += Uij(y, Rb, Rbe2, qbp->ss.Gmi[i], 1.0, 0, 2);
-        b[4] += Uij(y, Rb, Rbe2, qbp->ss.Gmi[i], 1.0, 1, 2);
-        b[5] += Uij(y, Rb, Rbe2, qbp->ss.Gmi[i], 1.0, 2, 2);
+        b[0] += Uij(y, Rb, Rbe2, qbp->ss->Gmi[i], 1.0, 0, 0);
+        b[1] += Uij(y, Rb, Rbe2, qbp->ss->Gmi[i], 1.0, 0, 1);
+        b[2] += Uij(y, Rb, Rbe2, qbp->ss->Gmi[i], 1.0, 1, 1);
+        b[3] += Uij(y, Rb, Rbe2, qbp->ss->Gmi[i], 1.0, 0, 2);
+        b[4] += Uij(y, Rb, Rbe2, qbp->ss->Gmi[i], 1.0, 1, 2);
+        b[5] += Uij(y, Rb, Rbe2, qbp->ss->Gmi[i], 1.0, 2, 2);
     }
 
 
@@ -756,7 +769,7 @@ int jpl_vf_eci(double t, const double y[], double f[], void* params_void)
     //------------------------------------------------------------------------------------
     //Loop on all the primaries
     //------------------------------------------------------------------------------------
-    for(int i = 0; i < qbp->ss.maxBodies; i++)
+    for(int i = 0; i < qbp->ss->maxBodies; i++)
     {
         //To ECI coordinates
         ecl2eci(Rj[i], Re, rb);
@@ -765,9 +778,9 @@ int jpl_vf_eci(double t, const double y[], double f[], void* params_void)
         rbe2 = (y[0] - rb[0]) * (y[0] - rb[0]) + (y[1] - rb[1]) * (y[1] - rb[1]) + (y[2] - rb[2]) * (y[2] - rb[2]);
 
         //Build the vector field
-        f[3] += - qbp->ss.Gmi[i] / pow(rbe2, 3.0 / 2) * (y[0] - rb[0]);
-        f[4] += - qbp->ss.Gmi[i] / pow(rbe2, 3.0 / 2) * (y[1] - rb[1]);
-        f[5] += - qbp->ss.Gmi[i] / pow(rbe2, 3.0 / 2) * (y[2] - rb[2]);
+        f[3] += - qbp->ss->Gmi[i] / pow(rbe2, 3.0 / 2) * (y[0] - rb[0]);
+        f[4] += - qbp->ss->Gmi[i] / pow(rbe2, 3.0 / 2) * (y[1] - rb[1]);
+        f[5] += - qbp->ss->Gmi[i] / pow(rbe2, 3.0 / 2) * (y[2] - rb[2]);
     }
 
     //------------------------------------------------------------------------------------
@@ -841,7 +854,7 @@ int jpl_vf_eci_var(double t, const double y[], double f[], void* params_void)
     //------------------------------------------------------------------------------------
     //Epoch in seconds
     //------------------------------------------------------------------------------------
-    //et = t*qbp->ss.n;
+    //et = t*qbp->ss->n;
     et = t;
 
     //------------------------------------------------------------------------------------
@@ -867,7 +880,7 @@ int jpl_vf_eci_var(double t, const double y[], double f[], void* params_void)
     //------------------------------------------------------------------------------------
     //Loop on all the primaries
     //------------------------------------------------------------------------------------
-    for(int i = 0; i < qbp->ss.maxBodies; i++)
+    for(int i = 0; i < qbp->ss->maxBodies; i++)
     {
         //To normalized coordinates
         ecl2eci(Rj[i], Re, rb);//, qbp->ss);
@@ -876,17 +889,17 @@ int jpl_vf_eci_var(double t, const double y[], double f[], void* params_void)
         rbe2 = (y[0] - rb[0]) * (y[0] - rb[0]) + (y[1] - rb[1]) * (y[1] - rb[1]) + (y[2] - rb[2]) * (y[2] - rb[2]);
 
         //Build the vector field
-        f[3] += - qbp->ss.Gmi[i] / pow(rbe2, 3.0 / 2) * (y[0] - rb[0]);
-        f[4] += - qbp->ss.Gmi[i] / pow(rbe2, 3.0 / 2) * (y[1] - rb[1]);
-        f[5] += - qbp->ss.Gmi[i] / pow(rbe2, 3.0 / 2) * (y[2] - rb[2]);
+        f[3] += - qbp->ss->Gmi[i] / pow(rbe2, 3.0 / 2) * (y[0] - rb[0]);
+        f[4] += - qbp->ss->Gmi[i] / pow(rbe2, 3.0 / 2) * (y[1] - rb[1]);
+        f[5] += - qbp->ss->Gmi[i] / pow(rbe2, 3.0 / 2) * (y[2] - rb[2]);
 
         //For differential equations
-        b[0] += Uij(y, rb, rbe2, qbp->ss.Gmi[i], 1.0, 0, 0);
-        b[1] += Uij(y, rb, rbe2, qbp->ss.Gmi[i], 1.0, 0, 1);
-        b[2] += Uij(y, rb, rbe2, qbp->ss.Gmi[i], 1.0, 1, 1);
-        b[3] += Uij(y, rb, rbe2, qbp->ss.Gmi[i], 1.0, 0, 2);
-        b[4] += Uij(y, rb, rbe2, qbp->ss.Gmi[i], 1.0, 1, 2);
-        b[5] += Uij(y, rb, rbe2, qbp->ss.Gmi[i], 1.0, 2, 2);
+        b[0] += Uij(y, rb, rbe2, qbp->ss->Gmi[i], 1.0, 0, 0);
+        b[1] += Uij(y, rb, rbe2, qbp->ss->Gmi[i], 1.0, 0, 1);
+        b[2] += Uij(y, rb, rbe2, qbp->ss->Gmi[i], 1.0, 1, 1);
+        b[3] += Uij(y, rb, rbe2, qbp->ss->Gmi[i], 1.0, 0, 2);
+        b[4] += Uij(y, rb, rbe2, qbp->ss->Gmi[i], 1.0, 1, 2);
+        b[5] += Uij(y, rb, rbe2, qbp->ss->Gmi[i], 1.0, 2, 2);
     }
 
     //------------------------------------------------------------------------------------
@@ -970,7 +983,7 @@ int jpl_vf_neci(double t, const double y[], double f[], void* params_void)
     //------------------------------------------------------------------------------------
     //Epoch in seconds
     //------------------------------------------------------------------------------------
-    et = t/qbp->ss.n;
+    et = t/qbp->ss->n;
 
     //------------------------------------------------------------------------------------
     // Update the positions of all the bodies
@@ -983,28 +996,28 @@ int jpl_vf_neci(double t, const double y[], double f[], void* params_void)
     //------------------------------------------------------------------------------------
     double Ae[3], ae[3];
     acc_center_from_vf(et, Ae, Rj, qbp);
-    for(int i = 0; i <3; i++) ae[i] = Ae[i]/(qbp->ss.a*qbp->ss.n*qbp->ss.n);
+    for(int i = 0; i <3; i++) ae[i] = Ae[i]/(qbp->ss->a*qbp->ss->n*qbp->ss->n);
 
     //Position of the Center
     double Re[6], lt;
-    spkez_c (qbp->ss.center, et, DEFFRAME, "NONE", SSB, Re, &lt);
+    spkez_c (qbp->ss->center, et, DEFFRAME, "NONE", SSB, Re, &lt);
 
 
     //------------------------------------------------------------------------------------
     //Loop on all the primaries
     //------------------------------------------------------------------------------------
-    for(int i = 0; i < qbp->ss.maxBodies; i++)
+    for(int i = 0; i < qbp->ss->maxBodies; i++)
     {
         //To NECI coordinates
-        ecl2neci(Rj[i], Re, rb, qbp->ss);
+        ecl2neci(Rj[i], Re, rb, *qbp->ss);
 
         //Distance
         rbe2 = (y[0] - rb[0]) * (y[0] - rb[0]) + (y[1] - rb[1]) * (y[1] - rb[1]) + (y[2] - rb[2]) * (y[2] - rb[2]);
 
         //Build the vector field
-        f[3] += - qbp->ss.mui[i] / pow(rbe2, 3.0 / 2) * (y[0] - rb[0]);
-        f[4] += - qbp->ss.mui[i] / pow(rbe2, 3.0 / 2) * (y[1] - rb[1]);
-        f[5] += - qbp->ss.mui[i] / pow(rbe2, 3.0 / 2) * (y[2] - rb[2]);
+        f[3] += - qbp->ss->mui[i] / pow(rbe2, 3.0 / 2) * (y[0] - rb[0]);
+        f[4] += - qbp->ss->mui[i] / pow(rbe2, 3.0 / 2) * (y[1] - rb[1]);
+        f[5] += - qbp->ss->mui[i] / pow(rbe2, 3.0 / 2) * (y[2] - rb[2]);
     }
 
     //------------------------------------------------------------------------------------
@@ -1020,16 +1033,16 @@ int jpl_vf_neci(double t, const double y[], double f[], void* params_void)
     //    cout << "--------------------------------------------------" << endl;
     //    cout << "NECI" << endl;
     //    cout << "--------------------------------------------------" << endl;
-    //    cout << "t    = " << t/qbp->ss.n               << endl;
-    //    cout << "y[0] = " << y[0]* pow(qbp->ss.a, 1.0) << endl;
-    //    cout << "y[1] = " << y[1]* pow(qbp->ss.a, 1.0) << endl;
-    //    cout << "y[2] = " << y[2]* pow(qbp->ss.a, 1.0) << endl;
-    //    cout << "y[3] = " << y[3]* pow(qbp->ss.a, 1.0)*qbp->ss.n << endl;
-    //    cout << "y[4] = " << y[4]* pow(qbp->ss.a, 1.0)*qbp->ss.n << endl;
-    //    cout << "y[5] = " << y[5]* pow(qbp->ss.a, 1.0)*qbp->ss.n << endl;
-    //    cout << "f[3] = " << f[3]* pow(qbp->ss.n, 2.0)* pow(qbp->ss.a, 1.0) << endl;
-    //    cout << "f[4] = " << f[4]* pow(qbp->ss.n, 2.0)* pow(qbp->ss.a, 1.0) << endl;
-    //    cout << "f[5] = " << f[5]* pow(qbp->ss.n, 2.0)* pow(qbp->ss.a, 1.0) << endl;
+    //    cout << "t    = " << t/qbp->ss->n               << endl;
+    //    cout << "y[0] = " << y[0]* pow(qbp->ss->a, 1.0) << endl;
+    //    cout << "y[1] = " << y[1]* pow(qbp->ss->a, 1.0) << endl;
+    //    cout << "y[2] = " << y[2]* pow(qbp->ss->a, 1.0) << endl;
+    //    cout << "y[3] = " << y[3]* pow(qbp->ss->a, 1.0)*qbp->ss->n << endl;
+    //    cout << "y[4] = " << y[4]* pow(qbp->ss->a, 1.0)*qbp->ss->n << endl;
+    //    cout << "y[5] = " << y[5]* pow(qbp->ss->a, 1.0)*qbp->ss->n << endl;
+    //    cout << "f[3] = " << f[3]* pow(qbp->ss->n, 2.0)* pow(qbp->ss->a, 1.0) << endl;
+    //    cout << "f[4] = " << f[4]* pow(qbp->ss->n, 2.0)* pow(qbp->ss->a, 1.0) << endl;
+    //    cout << "f[5] = " << f[5]* pow(qbp->ss->n, 2.0)* pow(qbp->ss->a, 1.0) << endl;
     //
     //    char ch;
     //    printf("Press ENTER to plot the Initial Guess\n");
@@ -1080,7 +1093,7 @@ int jpl_vf_neci_var(double t, const double y[], double f[], void* params_void)
     //------------------------------------------------------------------------------------
     //Epoch in seconds
     //------------------------------------------------------------------------------------
-    et = t/qbp->ss.n;
+    et = t/qbp->ss->n;
 
     //------------------------------------------------------------------------------------
     // Update the positions of all the bodies
@@ -1093,10 +1106,10 @@ int jpl_vf_neci_var(double t, const double y[], double f[], void* params_void)
     //------------------------------------------------------------------------------------
     double Ae[3], ae[3];
     acc_center_from_vf(et, Ae, Rj, qbp);
-    for(int i = 0; i <3; i++) ae[i] = Ae[i]/(qbp->ss.a*qbp->ss.n*qbp->ss.n);
+    for(int i = 0; i <3; i++) ae[i] = Ae[i]/(qbp->ss->a*qbp->ss->n*qbp->ss->n);
     //Position of the Earth
     double Re[6], lt;
-    spkez_c (qbp->ss.center, et, DEFFRAME, "NONE", SSB, Re, &lt);
+    spkez_c (qbp->ss->center, et, DEFFRAME, "NONE", SSB, Re, &lt);
 
     //------------------------------------------------------------------------------------
     //For differential equations
@@ -1106,26 +1119,26 @@ int jpl_vf_neci_var(double t, const double y[], double f[], void* params_void)
     //------------------------------------------------------------------------------------
     //Loop on all the primaries
     //------------------------------------------------------------------------------------
-    for(int i = 0; i < qbp->ss.maxBodies; i++)
+    for(int i = 0; i < qbp->ss->maxBodies; i++)
     {
         //To normalized coordinates
-        ecl2neci(Rj[i], Re, rb, qbp->ss);
+        ecl2neci(Rj[i], Re, rb, *qbp->ss);
 
         //Distance
         rbe2 = (y[0] - rb[0]) * (y[0] - rb[0]) + (y[1] - rb[1]) * (y[1] - rb[1]) + (y[2] - rb[2]) * (y[2] - rb[2]);
 
         //Build the vector field
-        f[3] += - qbp->ss.mui[i] / pow(rbe2, 3.0 / 2) * (y[0] - rb[0]);
-        f[4] += - qbp->ss.mui[i] / pow(rbe2, 3.0 / 2) * (y[1] - rb[1]);
-        f[5] += - qbp->ss.mui[i] / pow(rbe2, 3.0 / 2) * (y[2] - rb[2]);
+        f[3] += - qbp->ss->mui[i] / pow(rbe2, 3.0 / 2) * (y[0] - rb[0]);
+        f[4] += - qbp->ss->mui[i] / pow(rbe2, 3.0 / 2) * (y[1] - rb[1]);
+        f[5] += - qbp->ss->mui[i] / pow(rbe2, 3.0 / 2) * (y[2] - rb[2]);
 
         //For differential equations
-        b[0] += Uij(y, rb, rbe2, qbp->ss.mui[i], 1.0, 0, 0);
-        b[1] += Uij(y, rb, rbe2, qbp->ss.mui[i], 1.0, 0, 1);
-        b[2] += Uij(y, rb, rbe2, qbp->ss.mui[i], 1.0, 1, 1);
-        b[3] += Uij(y, rb, rbe2, qbp->ss.mui[i], 1.0, 0, 2);
-        b[4] += Uij(y, rb, rbe2, qbp->ss.mui[i], 1.0, 1, 2);
-        b[5] += Uij(y, rb, rbe2, qbp->ss.mui[i], 1.0, 2, 2);
+        b[0] += Uij(y, rb, rbe2, qbp->ss->mui[i], 1.0, 0, 0);
+        b[1] += Uij(y, rb, rbe2, qbp->ss->mui[i], 1.0, 0, 1);
+        b[2] += Uij(y, rb, rbe2, qbp->ss->mui[i], 1.0, 1, 1);
+        b[3] += Uij(y, rb, rbe2, qbp->ss->mui[i], 1.0, 0, 2);
+        b[4] += Uij(y, rb, rbe2, qbp->ss->mui[i], 1.0, 1, 2);
+        b[5] += Uij(y, rb, rbe2, qbp->ss->mui[i], 1.0, 2, 2);
     }
 
     //------------------------------------------------------------------------------------
@@ -1217,7 +1230,7 @@ int jpl_vf_neci_var(double t, const double y[], double f[], gsl_matrix *Q, void*
     //the QBCP/JPL synchronization. This is not the case e.g. in the other jpl_vf_neci_var
     //routine (for continuation purposes).
     //------------------------------------------------------------------------------------
-    et = (t + qbp->ss.tshift)/qbp->ss.n;
+    et = (t + qbp->ss->tshift)/qbp->ss->n;
 
     //------------------------------------------------------------------------------------
     // Update the positions of all the bodies
@@ -1230,10 +1243,10 @@ int jpl_vf_neci_var(double t, const double y[], double f[], gsl_matrix *Q, void*
     //------------------------------------------------------------------------------------
     double Ae[3], ae[3];
     acc_center_from_vf(et, Ae, Rj, qbp);
-    for(int i = 0; i <3; i++) ae[i] = Ae[i]/(qbp->ss.a*qbp->ss.n*qbp->ss.n);
+    for(int i = 0; i <3; i++) ae[i] = Ae[i]/(qbp->ss->a*qbp->ss->n*qbp->ss->n);
     //Position of the Earth
     double Re[6], lt;
-    spkez_c (qbp->ss.center, et, DEFFRAME, "NONE", SSB, Re, &lt);
+    spkez_c (qbp->ss->center, et, DEFFRAME, "NONE", SSB, Re, &lt);
 
     //------------------------------------------------------------------------------------
     //For differential equations
@@ -1243,26 +1256,26 @@ int jpl_vf_neci_var(double t, const double y[], double f[], gsl_matrix *Q, void*
     //------------------------------------------------------------------------------------
     //Loop on all the primaries
     //------------------------------------------------------------------------------------
-    for(int i = 0; i < qbp->ss.maxBodies; i++)
+    for(int i = 0; i < qbp->ss->maxBodies; i++)
     {
         //To normalized coordinates
-        ecl2neci(Rj[i], Re, rb, qbp->ss);
+        ecl2neci(Rj[i], Re, rb, *qbp->ss);
 
         //Distance
         rbe2 = (y[0] - rb[0]) * (y[0] - rb[0]) + (y[1] - rb[1]) * (y[1] - rb[1]) + (y[2] - rb[2]) * (y[2] - rb[2]);
 
         //Build the vector field
-        f[3] += - qbp->ss.mui[i] / pow(rbe2, 3.0 / 2) * (y[0] - rb[0]);
-        f[4] += - qbp->ss.mui[i] / pow(rbe2, 3.0 / 2) * (y[1] - rb[1]);
-        f[5] += - qbp->ss.mui[i] / pow(rbe2, 3.0 / 2) * (y[2] - rb[2]);
+        f[3] += - qbp->ss->mui[i] / pow(rbe2, 3.0 / 2) * (y[0] - rb[0]);
+        f[4] += - qbp->ss->mui[i] / pow(rbe2, 3.0 / 2) * (y[1] - rb[1]);
+        f[5] += - qbp->ss->mui[i] / pow(rbe2, 3.0 / 2) * (y[2] - rb[2]);
 
         //For differential equations
-        b[0] += Uij(y, rb, rbe2, qbp->ss.mui[i], 1.0, 0, 0);
-        b[1] += Uij(y, rb, rbe2, qbp->ss.mui[i], 1.0, 0, 1);
-        b[2] += Uij(y, rb, rbe2, qbp->ss.mui[i], 1.0, 1, 1);
-        b[3] += Uij(y, rb, rbe2, qbp->ss.mui[i], 1.0, 0, 2);
-        b[4] += Uij(y, rb, rbe2, qbp->ss.mui[i], 1.0, 1, 2);
-        b[5] += Uij(y, rb, rbe2, qbp->ss.mui[i], 1.0, 2, 2);
+        b[0] += Uij(y, rb, rbe2, qbp->ss->mui[i], 1.0, 0, 0);
+        b[1] += Uij(y, rb, rbe2, qbp->ss->mui[i], 1.0, 0, 1);
+        b[2] += Uij(y, rb, rbe2, qbp->ss->mui[i], 1.0, 1, 1);
+        b[3] += Uij(y, rb, rbe2, qbp->ss->mui[i], 1.0, 0, 2);
+        b[4] += Uij(y, rb, rbe2, qbp->ss->mui[i], 1.0, 1, 2);
+        b[5] += Uij(y, rb, rbe2, qbp->ss->mui[i], 1.0, 2, 2);
     }
 
     //------------------------------------------------------------------------------------
@@ -1328,28 +1341,28 @@ int jpl_vf_syn(double t, const double y[], double f[], void* params_void)
     //QBCP_L* qbp = (QBCP_L*) params_void;
     OdeParams* odeParams = (OdeParams*) params_void;
     QBCP_L* qbp = odeParams->qbcp_l;
-    int coord_eph = qbp->ss.coord_eph;        //Current coord_eph
-    double a      = qbp->ss.a;                //mean semi-major axis (in km)
-    double et0    = qbp->ss.et0;              //starting epoch
-    double t0     = qbp->ss.t0;               //starting time
-    double mu1    = qbp->ss.mu1;              //mass ratio
-    double mu2    = qbp->ss.mu2;              //1-mass ratio
-    double nsys   = qbp->ss.n;                //mean motion (in s)
-    double pos1   = qbp->ss.pos1;             //indix of m1
-    double pos2   = qbp->ss.pos2;             //indix of m2
+    int coord_eph = qbp->ss->coord_eph;        //Current coord_eph
+    double a      = qbp->ss->a;                //mean semi-major axis (in km)
+    double et0    = qbp->ss->et0;              //starting epoch
+    double t0     = qbp->ss->t0;               //starting time
+    double mu1    = qbp->ss->mu1;              //mass ratio
+    double mu2    = qbp->ss->mu2;              //1-mass ratio
+    double nsys   = qbp->ss->n;                //mean motion (in s)
+    double pos1   = qbp->ss->pos1;             //indix of m1
+    double pos2   = qbp->ss->pos2;             //indix of m2
     double et     = et0 + (t-t0)/nsys;        //Current time in seconds
 
     //------------------------------------------------------------------------------------
     //Display:
     //------------------------------------------------------------------------------------
-    //    cout << " a      = " << qbp->ss.a << endl;                //mean semi-major axis (in km)
-    //    cout << " et0    = " << qbp->ss.et0 << endl;              //starting epoch
-    //    cout << " t0     = " << qbp->ss.t0 << endl;               //starting time
-    //    cout << " mu1    = " << qbp->ss.mu1 << endl;              //mass ratio
-    //    cout << " mu2    = " << qbp->ss.mu2 << endl;              //1-mass ratio
-    //    cout << " nsys   = " << qbp->ss.n << endl;                //mean motion (in s)
-    //    cout << " pos1   = " << qbp->ss.pos1 << endl;             //indix of m1
-    //    cout << " pos2   = " << qbp->ss.pos2 << endl;             //indix of m2
+    //    cout << " a      = " << qbp->ss->a << endl;                //mean semi-major axis (in km)
+    //    cout << " et0    = " << qbp->ss->et0 << endl;              //starting epoch
+    //    cout << " t0     = " << qbp->ss->t0 << endl;               //starting time
+    //    cout << " mu1    = " << qbp->ss->mu1 << endl;              //mass ratio
+    //    cout << " mu2    = " << qbp->ss->mu2 << endl;              //1-mass ratio
+    //    cout << " nsys   = " << qbp->ss->n << endl;                //mean motion (in s)
+    //    cout << " pos1   = " << qbp->ss->pos1 << endl;             //indix of m1
+    //    cout << " pos2   = " << qbp->ss->pos2 << endl;             //indix of m2
     //    cout << " et     = " << et0 + (t-t0)/nsys << endl;        //Current time in seconds
 
     //------------------------------------------------------------------------------------
@@ -1524,7 +1537,7 @@ int jpl_vf_syn(double t, const double y[], double f[], void* params_void)
 
     double vin[3], vout[3];
 
-    for(int p = 0; p < qbp->ss.maxBodies; p++)
+    for(int p = 0; p < qbp->ss->maxBodies; p++)
     {
         for(int i = 0; i < 3; i++) vin[i] = Rj[p][i];
         ecl2synpos(vin, vout, B, C, k);
@@ -1542,7 +1555,7 @@ int jpl_vf_syn(double t, const double y[], double f[], void* params_void)
     f[5] = b[2]               - b[5] * y[4] + b[3] * y[5] + b[7] * y[0] - b[10]* y[1] + b[11] * y[2];
 
     //Loop on all the primaries
-    for(int p = 0; p < qbp->ss.maxBodies; p++)
+    for(int p = 0; p < qbp->ss->maxBodies; p++)
     {
         //DR = (x, y, z)^T - rj
         for(int i = 0; i < 3; i++) DR[i]  = y[i] - rj[p][i];
@@ -1550,9 +1563,9 @@ int jpl_vf_syn(double t, const double y[], double f[], void* params_void)
         //DR2 = DR . DR
         DR2 = vdot_c(DR, DR);
         //Build the vector field
-        f[3] += - b[12] * qbp->ss.mui[p] / pow(DR2, 3.0 / 2) * DR[0];
-        f[4] += - b[12] * qbp->ss.mui[p] / pow(DR2, 3.0 / 2) * DR[1];
-        f[5] += - b[12] * qbp->ss.mui[p] / pow(DR2, 3.0 / 2) * DR[2];
+        f[3] += - b[12] * qbp->ss->mui[p] / pow(DR2, 3.0 / 2) * DR[0];
+        f[4] += - b[12] * qbp->ss->mui[p] / pow(DR2, 3.0 / 2) * DR[1];
+        f[5] += - b[12] * qbp->ss->mui[p] / pow(DR2, 3.0 / 2) * DR[2];
     }
 
     return FTC_SUCCESS;
@@ -1582,16 +1595,16 @@ int jpl_vf_syn_var(double t, const double y[], double f[], void* params_void)
     //QBCP_L* qbp = (QBCP_L*) params_void;
     OdeParams* odeParams = (OdeParams*) params_void;
     QBCP_L* qbp = odeParams->qbcp_l;
-    int coord_eph = qbp->ss.coord_eph;        //Current coord_eph
-    double a      = qbp->ss.a;                //mean semi-major axis (in km)
-    double et0    = qbp->ss.et0;              //starting epoch
-    double t0     = qbp->ss.t0;               //starting time
-    double mu1    = qbp->ss.mu1;              //mass ratio
-    double mu2    = qbp->ss.mu2;              //1-mass ratio
-    double nsys   = qbp->ss.n;                //mean motion (in s)
-    double pos1   = qbp->ss.pos1;             //indix of m1
-    double pos2   = qbp->ss.pos2;             //indix of m2
-    double et     = et0 + (t - t0) / qbp->ss.n; //Current time in seconds
+    int coord_eph = qbp->ss->coord_eph;        //Current coord_eph
+    double a      = qbp->ss->a;                //mean semi-major axis (in km)
+    double et0    = qbp->ss->et0;              //starting epoch
+    double t0     = qbp->ss->t0;               //starting time
+    double mu1    = qbp->ss->mu1;              //mass ratio
+    double mu2    = qbp->ss->mu2;              //1-mass ratio
+    double nsys   = qbp->ss->n;                //mean motion (in s)
+    double pos1   = qbp->ss->pos1;             //indix of m1
+    double pos2   = qbp->ss->pos2;             //indix of m2
+    double et     = et0 + (t - t0) / qbp->ss->n; //Current time in seconds
 
     //------------------------------------------------------------------------------------
     //Phase space derivatives: x', y', z'
@@ -1765,7 +1778,7 @@ int jpl_vf_syn_var(double t, const double y[], double f[], void* params_void)
 
 
     //Loop on all the primaries
-    for(int p = 0; p < qbp->ss.maxBodies; p++)
+    for(int p = 0; p < qbp->ss->maxBodies; p++)
     {
         //Reduced position of the primaries
         for(int i = 0; i < 3; i++) vin[i] = Rj[p][i];
@@ -1778,18 +1791,18 @@ int jpl_vf_syn_var(double t, const double y[], double f[], void* params_void)
         DR2 = vdot_c(DR, DR);
 
         //Build the vector field
-        f[3] += - b[12] * qbp->ss.mui[p] / pow(DR2, 3.0 / 2) * DR[0];
-        f[4] += - b[12] * qbp->ss.mui[p] / pow(DR2, 3.0 / 2) * DR[1];
-        f[5] += - b[12] * qbp->ss.mui[p] / pow(DR2, 3.0 / 2) * DR[2];
+        f[3] += - b[12] * qbp->ss->mui[p] / pow(DR2, 3.0 / 2) * DR[0];
+        f[4] += - b[12] * qbp->ss->mui[p] / pow(DR2, 3.0 / 2) * DR[1];
+        f[5] += - b[12] * qbp->ss->mui[p] / pow(DR2, 3.0 / 2) * DR[2];
 
 
         //For differential equations
-        q[0] += Uij(y, rb, DR2, qbp->ss.mui[p], b[12], 0, 0);
-        q[1] += Uij(y, rb, DR2, qbp->ss.mui[p], b[12], 0, 1);
-        q[2] += Uij(y, rb, DR2, qbp->ss.mui[p], b[12], 1, 1);
-        q[3] += Uij(y, rb, DR2, qbp->ss.mui[p], b[12], 0, 2);
-        q[4] += Uij(y, rb, DR2, qbp->ss.mui[p], b[12], 1, 2);
-        q[5] += Uij(y, rb, DR2, qbp->ss.mui[p], b[12], 2, 2);
+        q[0] += Uij(y, rb, DR2, qbp->ss->mui[p], b[12], 0, 0);
+        q[1] += Uij(y, rb, DR2, qbp->ss->mui[p], b[12], 0, 1);
+        q[2] += Uij(y, rb, DR2, qbp->ss->mui[p], b[12], 1, 1);
+        q[3] += Uij(y, rb, DR2, qbp->ss->mui[p], b[12], 0, 2);
+        q[4] += Uij(y, rb, DR2, qbp->ss->mui[p], b[12], 1, 2);
+        q[5] += Uij(y, rb, DR2, qbp->ss->mui[p], b[12], 2, 2);
     }
 
     //------------------------------------------------------------------------------------
@@ -3013,42 +3026,35 @@ int qbcp_vf_inem_var(double t, const double y[], double f[], void* params_void)
 //----------------------------------------------------------------------------------------
 // NC coordinates, (X, P)
 //----------------------------------------------------------------------------------------
-//Vector field of the QBCP with EM units and Normalized-Li centered coordinates (no variationnal equations)
-int qbcp_vfn(double t, const double y[], double f[], void* params_void)
+/**
+ *  \brief Vector field of the QBCP with SYS units and Normalized-Li centered coordinates (no variationnal equations)
+ **/
+int sub_vfn(double t, const double y[], double f[], OdeParams *odeParams, USYS *us, CSYS *cs, int noc, int nf)
 {
     //------------------------------------------------------------------------------------
     // Misc parameters
     //------------------------------------------------------------------------------------
-    //Retrieving the parameters
-    //QBCP_L* qbp = (QBCP_L*) params_void;
-
-    OdeParams* odeParams = (OdeParams*) params_void;
-    QBCP_L* qbp = odeParams->qbcp_l;
-
-
-    int noc      = qbp->numberOfCoefs;
-    int nf       = qbp->nf;
-    double ms    = qbp->us.ms;
-    double me    = qbp->us.me;
-    double mm    = qbp->us.mm;
-    double n     = qbp->us.n;
-    double gamma = qbp->cs.gamma;
+    double ms    = us->ms;
+    double me    = us->me;
+    double mm    = us->mm;
+    double n     = us->n;
+    double gamma = cs->gamma;
 
     //------------------------------------------------------------------------------------
     //Evaluate the alphas @ t
     //------------------------------------------------------------------------------------
     double alpha[noc];
-    evaluateCoef(alpha, t, n, nf, qbp->cs.coeffs, noc);
+    evaluateCoef(alpha, t, n, nf, cs->coeffs, noc);
 
     //------------------------------------------------------------------------------------
     //Evaluate the primaries positions @ t
     //------------------------------------------------------------------------------------
     double ps[3];
-    evaluateCoef(ps, t, n, nf, qbp->cs.ps, 3);
+    evaluateCoef(ps, t, n, nf, cs->ps, 3);
     double pe[3];
-    evaluateCoef(pe, t, n, nf, qbp->cs.pe, 3);
+    evaluateCoef(pe, t, n, nf, cs->pe, 3);
     double pm[3];
-    evaluateCoef(pm, t, n, nf, qbp->cs.pm, 3);
+    evaluateCoef(pm, t, n, nf, cs->pm, 3);
 
     //------------------------------------------------------------------------------------
     // Distances to 2nd power
@@ -3066,8 +3072,8 @@ int qbcp_vfn(double t, const double y[], double f[], void* params_void)
     //------------------------------------------------------------------------------------
     //Check collision with primaries (not necessary with the Sun...)
     //------------------------------------------------------------------------------------
-    double re = SEML.cs_em.cr3bp.R1/(gamma*SEML.cs.cr3bp.L);
-    double rm = SEML.cs_em.cr3bp.R2/(gamma*SEML.cs.cr3bp.L);
+    double re = odeParams->qbcp_l->cs_em.cr3bp.R1/(gamma*cs->cr3bp.L);
+    double rm = odeParams->qbcp_l->cs_em.cr3bp.R2/(gamma*cs->cr3bp.L);
 
     //Collision with the Earth
     if(sqrt(qpe2) < re)
@@ -3086,27 +3092,64 @@ int qbcp_vfn(double t, const double y[], double f[], void* params_void)
     //------------------------------------------------------------------------------------
     //Check crossings of x = -1
     //------------------------------------------------------------------------------------
-    double x1 = odeParams->event.x1;
-    if(x1 == 0.0) odeParams->event.x1 = y[0] + 1.0;
-    else
-    {
-        double x2 = y[0] + 1.0;
-
-        if(x1 > 0 && x2 < 0)
-        {
-            if(y[1] > 0) odeParams->event.crossings += 1.0;    //clockwise
-            else         odeParams->event.crossings += 0.1;    //counterclockwise
-        }
-        else if(x1 < 0 && x2 > 0)
-        {
-            if(y[1] < 0) odeParams->event.crossings += 1.0;    //clockwise
-            else         odeParams->event.crossings += 0.1;    //counterclockwise
-        }
-
-        odeParams->event.x1 = x2;
-    }
+    //    double x1 = odeParams->event.x1;
+    //    if(x1 == -1.0) odeParams->event.x1 = y[0] + 1.0; //first use
+    //    else
+    //    {
+    //        double x2 = y[0] + 1.0;
+    //
+    //        if(x1 > 0 && x2 < 0)
+    //        {
+    //            if(y[1] > 0) odeParams->event.crossings += 1.0;    //clockwise
+    //            else         odeParams->event.crossings += 0.1;    //counterclockwise
+    //        }
+    //        else if(x1 < 0 && x2 > 0)
+    //        {
+    //            if(y[1] < 0) odeParams->event.crossings += 1.0;    //clockwise
+    //            else         odeParams->event.crossings += 0.1;    //counterclockwise
+    //        }
+    //
+    //        odeParams->event.x1 = x2;
+    //    }
     return FTC_SUCCESS;
 }
+
+/**
+ *  \brief Vector field of the QBCP with SYS units and Normalized-Li centered coordinates (no variationnal equations)
+ **/
+int qbcp_vfn(double t, const double y[], double f[], void* params_void)
+{
+    //------------------------------------------------------------------------------------
+    // Retrieving the parameters
+    //------------------------------------------------------------------------------------
+    OdeParams* odP = (OdeParams*) params_void;
+
+    //------------------------------------------------------------------------------------
+    // Switch
+    //------------------------------------------------------------------------------------
+    switch(odP->dcs)
+    {
+        case I_NCEM:
+        {
+            sub_vfn(t, y, f, odP, &odP->qbcp_l->us_em, &odP->qbcp_l->cs_em,
+                   odP->qbcp_l->numberOfCoefs, odP->qbcp_l->nf);
+            break;
+        }
+        case I_NCSEM:
+        {
+            sub_vfn(t, y, f, odP, &odP->qbcp_l->us_sem, &odP->qbcp_l->cs_sem,
+                   odP->qbcp_l->numberOfCoefs, odP->qbcp_l->nf);
+            break;
+        }
+
+        default:
+            cout << "qbcp_vf: wrong dcs." << endl;
+            return GSL_FAILURE;
+    }
+
+    return GSL_SUCCESS;
+}
+
 
 //Update the normalized vector field of the state. Note that alpha[14] (alpha15) is zero for the QBCP
 int vfn_state(const double y[], double f[], double alpha[],
@@ -3164,45 +3207,136 @@ int vfn_state(const double y[], double f[], double alpha[],
 }
 
 
-//----------------------------------------------------------------------------------------
-// NC coordinates, (X, V)
-//----------------------------------------------------------------------------------------
-// Vector field of the QBCP with EM units and Normalized-Li centered coordinates
-// (no variationnal equations). The state is here (x, xdot), and not (x, px)
-int qbcp_vfn_xv(double t, const double y[], double f[], void* params_void)
+/**
+ *  \brief Vector field of the QBCP with EM units and Normalized-Li centered coordinates (no variationnal equations)
+ **/
+int qbcp_vfn_backup(double t, const double y[], double f[], void* params_void)
 {
     //------------------------------------------------------------------------------------
     // Misc parameters
     //------------------------------------------------------------------------------------
     //Retrieving the parameters
     //QBCP_L* qbp = (QBCP_L*) params_void;
+
     OdeParams* odeParams = (OdeParams*) params_void;
     QBCP_L* qbp = odeParams->qbcp_l;
+
     int noc      = qbp->numberOfCoefs;
     int nf       = qbp->nf;
-    double ms    = qbp->us.ms;
-    double me    = qbp->us.me;
-    double mm    = qbp->us.mm;
-    double n     = qbp->us.n;
-    double gamma = qbp->cs.gamma;
+    double ms    = qbp->us->ms;
+    double me    = qbp->us->me;
+    double mm    = qbp->us->mm;
+    double n     = qbp->us->n;
+    double gamma = qbp->cs->gamma;
 
     //------------------------------------------------------------------------------------
-    //Evaluate the alphas @ t, as well as the derivatives of the first 3 alphas
+    //Evaluate the alphas @ t
     //------------------------------------------------------------------------------------
     double alpha[noc];
-    evaluateCoef(alpha, t, n, nf, qbp->cs.coeffs, noc);
-    double alphad[3];
-    evaluateCoefDerivatives(alphad, t, n, nf, qbp->cs.coeffs, 3);
+    evaluateCoef(alpha, t, n, nf, qbp->cs->coeffs, noc);
 
     //------------------------------------------------------------------------------------
     //Evaluate the primaries positions @ t
     //------------------------------------------------------------------------------------
     double ps[3];
-    evaluateCoef(ps, t, n, nf, qbp->cs.ps, 3);
+    evaluateCoef(ps, t, n, nf, qbp->cs->ps, 3);
     double pe[3];
-    evaluateCoef(pe, t, n, nf, qbp->cs.pe, 3);
+    evaluateCoef(pe, t, n, nf, qbp->cs->pe, 3);
     double pm[3];
-    evaluateCoef(pm, t, n, nf, qbp->cs.pm, 3);
+    evaluateCoef(pm, t, n, nf, qbp->cs->pm, 3);
+
+    //------------------------------------------------------------------------------------
+    // Distances to 2nd power
+    //------------------------------------------------------------------------------------
+    double qpe2 = (y[0] - pe[0]) * (y[0] - pe[0]) + (y[1] - pe[1]) * (y[1] - pe[1]) + (y[2] - pe[2]) * (y[2] - pe[2]);
+    double qps2 = (y[0] - ps[0]) * (y[0] - ps[0]) + (y[1] - ps[1]) * (y[1] - ps[1]) + (y[2] - ps[2]) * (y[2] - ps[2]);
+    double qpm2 = (y[0] - pm[0]) * (y[0] - pm[0]) + (y[1] - pm[1]) * (y[1] - pm[1]) + (y[2] - pm[2]) * (y[2] - pm[2]);
+
+    //------------------------------------------------------------------------------------
+    //Phase space derivatives: x', y', z', px', py', pz'
+    //------------------------------------------------------------------------------------
+    vfn_state(y, f, alpha, ps, pe, pm, qps2, qpe2, qpm2, ms, me, mm, gamma);
+
+
+    //------------------------------------------------------------------------------------
+    //Check collision with primaries (not necessary with the Sun...)
+    //------------------------------------------------------------------------------------
+    double re = qbp->cs_em.cr3bp.R1/(gamma*qbp->cs->cr3bp.L);
+    double rm = qbp->cs_em.cr3bp.R2/(gamma*qbp->cs->cr3bp.L);
+
+    //Collision with the Earth
+    if(sqrt(qpe2) < re)
+    {
+        odeParams->event.coll = EARTH;
+        //cout << "Earth collision!" << endl;
+    }
+
+    //Collision with the Moon
+    if(sqrt(qpm2) < rm)
+    {
+        odeParams->event.coll = MOON;
+        //cout << "Moon collision!" << endl;
+    }
+
+    //------------------------------------------------------------------------------------
+    //Check crossings of x = -1
+    //------------------------------------------------------------------------------------
+    double x1 = odeParams->event.x1;
+    if(x1 == 0.0) odeParams->event.x1 = y[0] + 1.0;
+    else
+    {
+        double x2 = y[0] + 1.0;
+
+        if(x1 > 0 && x2 < 0)
+        {
+            if(y[1] > 0) odeParams->event.crossings += 1.0;    //clockwise
+            else         odeParams->event.crossings += 0.1;    //counterclockwise
+        }
+        else if(x1 < 0 && x2 > 0)
+        {
+            if(y[1] < 0) odeParams->event.crossings += 1.0;    //clockwise
+            else         odeParams->event.crossings += 0.1;    //counterclockwise
+        }
+
+        odeParams->event.x1 = x2;
+    }
+    return FTC_SUCCESS;
+}
+
+//----------------------------------------------------------------------------------------
+// NC coordinates, (X, V)
+//----------------------------------------------------------------------------------------
+/**
+ *  \brief Vector field of the QBCP with USYS units and CSYS reference frame.
+ **/
+int sub_vfn_xv(double t, const double y[], double f[], USYS *us, CSYS *cs, int noc, int nf)
+{
+    //------------------------------------------------------------------------------------
+    // Misc parameters
+    //------------------------------------------------------------------------------------
+    double ms    = us->ms;
+    double me    = us->me;
+    double mm    = us->mm;
+    double n     = us->n;
+    double gamma = cs->gamma;
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the alphas @ t, as well as the derivatives of the first 3 alphas
+    //------------------------------------------------------------------------------------
+    double alpha[noc];
+    evaluateCoef(alpha, t, n, nf, cs->coeffs, noc);
+    double alphad[3];
+    evaluateCoefDerivatives(alphad, t, n, nf, cs->coeffs, 3);
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the primaries positions @ t
+    //------------------------------------------------------------------------------------
+    double ps[3];
+    evaluateCoef(ps, t, n, nf, cs->ps, 3);
+    double pe[3];
+    evaluateCoef(pe, t, n, nf, cs->pe, 3);
+    double pm[3];
+    evaluateCoef(pm, t, n, nf, cs->pm, 3);
 
 
     //------------------------------------------------------------------------------------
@@ -3219,6 +3353,93 @@ int qbcp_vfn_xv(double t, const double y[], double f[], void* params_void)
 
     return FTC_SUCCESS;
 }
+
+/**
+ *  \brief Vector field of the QBCP in (x, v) format
+ **/
+int qbcp_vfn_xv(double t, const double y[], double f[], void* params_void)
+{
+    //------------------------------------------------------------------------------------
+    // Retrieving the parameters
+    //------------------------------------------------------------------------------------
+    OdeParams* odP = (OdeParams*) params_void;
+
+    //------------------------------------------------------------------------------------
+    // Switch
+    //------------------------------------------------------------------------------------
+    switch(odP->dcs)
+    {
+        case I_VNCEM:
+        {
+            sub_vfn_xv(t, y, f, &odP->qbcp_l->us_em, &odP->qbcp_l->cs_em,
+                   odP->qbcp_l->numberOfCoefs, odP->qbcp_l->nf);
+            break;
+        }
+        case I_VNCSEM:
+        {
+            sub_vfn_xv(t, y, f, &odP->qbcp_l->us_sem, &odP->qbcp_l->cs_sem,
+                   odP->qbcp_l->numberOfCoefs, odP->qbcp_l->nf);
+            break;
+        }
+
+        default:
+            cout << "qbcp_vfn_xv: wrong dcs." << endl;
+            return GSL_FAILURE;
+    }
+
+    return GSL_SUCCESS;
+}
+
+
+int qbcp_vfn_xv_backup(double t, const double y[], double f[], void* params_void)
+{
+    //------------------------------------------------------------------------------------
+    // Misc parameters
+    //------------------------------------------------------------------------------------
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
+    int noc      = qbp->numberOfCoefs;
+    int nf       = qbp->nf;
+    double ms    = qbp->us->ms;
+    double me    = qbp->us->me;
+    double mm    = qbp->us->mm;
+    double n     = qbp->us->n;
+    double gamma = qbp->cs->gamma;
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the alphas @ t, as well as the derivatives of the first 3 alphas
+    //------------------------------------------------------------------------------------
+    double alpha[noc];
+    evaluateCoef(alpha, t, n, nf, qbp->cs->coeffs, noc);
+    double alphad[3];
+    evaluateCoefDerivatives(alphad, t, n, nf, qbp->cs->coeffs, 3);
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the primaries positions @ t
+    //------------------------------------------------------------------------------------
+    double ps[3];
+    evaluateCoef(ps, t, n, nf, qbp->cs->ps, 3);
+    double pe[3];
+    evaluateCoef(pe, t, n, nf, qbp->cs->pe, 3);
+    double pm[3];
+    evaluateCoef(pm, t, n, nf, qbp->cs->pm, 3);
+
+
+    //------------------------------------------------------------------------------------
+    // Distances to 2nd power
+    //------------------------------------------------------------------------------------
+    double qpe2 = (y[0] - pe[0]) * (y[0] - pe[0]) + (y[1] - pe[1]) * (y[1] - pe[1]) + (y[2] - pe[2]) * (y[2] - pe[2]);
+    double qps2 = (y[0] - ps[0]) * (y[0] - ps[0]) + (y[1] - ps[1]) * (y[1] - ps[1]) + (y[2] - ps[2]) * (y[2] - ps[2]);
+    double qpm2 = (y[0] - pm[0]) * (y[0] - pm[0]) + (y[1] - pm[1]) * (y[1] - pm[1]) + (y[2] - pm[2]) * (y[2] - pm[2]);
+
+    //------------------------------------------------------------------------------------
+    //Phase space derivatives: x', y', z', px', py', pz'
+    //------------------------------------------------------------------------------------
+    vfn_state_xv(y, f, alpha, alphad, ps, pe, pm, qps2, qpe2, qpm2, ms, me, mm, gamma);
+
+    return FTC_SUCCESS;
+}
+
 
 // Update the normalized vector field of the state. The state is here (x, xdot),
 // and not (x, px)
@@ -3289,23 +3510,17 @@ int vfn_state_xv(const double y[], double f[], double alpha[], double alphad[],
 // SYS coordinates, (X, P)
 //----------------------------------------------------------------------------------------
 /**
- *  \brief Vector field of the QBCP with EM units and EM reference frame.
+ *  \brief Vector field of the QBCP with USYS units and CSYS reference frame.
  **/
-int qbcp_vf(double t, const double y[], double f[], void* params_void)
+int sub_vf(double t, const double y[], double f[], USYS *us, CSYS *cs, int noc, int nf)
 {
-
     //------------------------------------------------------------------------------------
     // Misc parameters
     //------------------------------------------------------------------------------------
-    //Retrieving the parameters
-    //QBCP_L* qbp = (QBCP_L*) params_void;
-    OdeParams* odeParams = (OdeParams*) params_void;
-    QBCP_L* qbp = odeParams->qbcp_l;
-    int noc   = qbp->numberOfCoefs;
-    double ms = qbp->us.ms;
-    double me = qbp->us.me;
-    double mm = qbp->us.mm;
-    double n  = qbp->us.n;
+    double ms = us->ms;
+    double me = us->me;
+    double mm = us->mm;
+    double n  = us->n;
 
     //------------------------------------------------------------------------------------
     //Evaluate the alphas @t
@@ -3313,17 +3528,17 @@ int qbcp_vf(double t, const double y[], double f[], void* params_void)
     //2, 5, 8 odd
     //------------------------------------------------------------------------------------
     double alpha[noc];
-    evaluateCoef(alpha, t, n, qbp->nf, qbp->cs.coeffs, noc);
+    evaluateCoef(alpha, t, n, nf, cs->coeffs, noc);
 
     //------------------------------------------------------------------------------------
     //Evaluate the primaries positions @ t
     //------------------------------------------------------------------------------------
     double Ps[3];
-    evaluateCoef(Ps, t, n, qbp->nf, qbp->cs.Ps, 3);
+    evaluateCoef(Ps, t, n, nf, cs->Ps, 3);
     double Pe[3];
-    evaluateCoef(Pe, t, n, qbp->nf, qbp->cs.Pe, 3);
+    evaluateCoef(Pe, t, n, nf, cs->Pe, 3);
     double Pm[3];
-    evaluateCoef(Pm, t, n, qbp->nf, qbp->cs.Pm, 3);
+    evaluateCoef(Pm, t, n, nf, cs->Pm, 3);
 
     //------------------------------------------------------------------------------------
     // Distances to 2nd power
@@ -3336,6 +3551,43 @@ int qbcp_vf(double t, const double y[], double f[], void* params_void)
     //Phase space derivatives: x', y', z', px', py', pz'
     //------------------------------------------------------------------------------------
     vf_state(y, f, alpha, Ps, Pe, Pm, qPs2, qPe2, qPm2, ms, me, mm);
+
+    return GSL_SUCCESS;
+}
+
+
+/**
+ *  \brief Vector field of the QBCP with EM units and EM reference frame.
+ **/
+int qbcp_vf(double t, const double y[], double f[], void* params_void)
+{
+    //------------------------------------------------------------------------------------
+    // Retrieving the parameters
+    //------------------------------------------------------------------------------------
+    OdeParams* odP = (OdeParams*) params_void;
+
+    //------------------------------------------------------------------------------------
+    // Switch
+    //------------------------------------------------------------------------------------
+    switch(odP->dcs)
+    {
+        case I_PEM:
+        {
+            sub_vf(t, y, f, &odP->qbcp_l->us_em, &odP->qbcp_l->cs_em,
+                   odP->qbcp_l->numberOfCoefs, odP->qbcp_l->nf);
+            break;
+        }
+        case I_PSEM:
+        {
+            sub_vf(t, y, f, &odP->qbcp_l->us_sem, &odP->qbcp_l->cs_sem,
+                   odP->qbcp_l->numberOfCoefs, odP->qbcp_l->nf);
+            break;
+        }
+
+        default:
+            cout << "qbcp_vf: wrong dcs." << endl;
+            return GSL_FAILURE;
+    }
 
     return GSL_SUCCESS;
 }
@@ -3397,14 +3649,206 @@ int vf_state( const double y[], double f[], double alpha[],
     return GSL_SUCCESS;
 }
 
+/**
+ *  \brief Vector field of the QBCP with EM units and EM reference frame.
+ **/
+int qbcp_vf_backup(double t, const double y[], double f[], void* params_void)
+{
+
+    //------------------------------------------------------------------------------------
+    // Misc parameters
+    //------------------------------------------------------------------------------------
+    //Retrieving the parameters
+    //QBCP_L* qbp = (QBCP_L*) params_void;
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
+    int noc   = qbp->numberOfCoefs;
+
+    double ms = qbp->us->ms;
+    double me = qbp->us->me;
+    double mm = qbp->us->mm;
+    double n  = qbp->us->n;
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the alphas @t
+    //1, 3, 4, 6, 7 even
+    //2, 5, 8 odd
+    //------------------------------------------------------------------------------------
+    double alpha[noc];
+    evaluateCoef(alpha, t, n, qbp->nf, qbp->cs->coeffs, noc);
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the primaries positions @ t
+    //------------------------------------------------------------------------------------
+    double Ps[3];
+    evaluateCoef(Ps, t, n, qbp->nf, qbp->cs->Ps, 3);
+    double Pe[3];
+    evaluateCoef(Pe, t, n, qbp->nf, qbp->cs->Pe, 3);
+    double Pm[3];
+    evaluateCoef(Pm, t, n, qbp->nf, qbp->cs->Pm, 3);
+
+    //------------------------------------------------------------------------------------
+    // Distances to 2nd power
+    //------------------------------------------------------------------------------------
+    double qPe2 = (y[0] - Pe[0]) * (y[0] - Pe[0]) + (y[1] - Pe[1]) * (y[1] - Pe[1]) + (y[2] - Pe[2]) * (y[2] - Pe[2]);
+    double qPs2 = (y[0] - Ps[0]) * (y[0] - Ps[0]) + (y[1] - Ps[1]) * (y[1] - Ps[1]) + (y[2] - Ps[2]) * (y[2] - Ps[2]);
+    double qPm2 = (y[0] - Pm[0]) * (y[0] - Pm[0]) + (y[1] - Pm[1]) * (y[1] - Pm[1]) + (y[2] - Pm[2]) * (y[2] - Pm[2]);
+
+    //------------------------------------------------------------------------------------
+    //Phase space derivatives: x', y', z', px', py', pz'
+    //------------------------------------------------------------------------------------
+    vf_state(y, f, alpha, Ps, Pe, Pm, qPs2, qPe2, qPm2, ms, me, mm);
+
+    return GSL_SUCCESS;
+}
+
 
 //----------------------------------------------------------------------------------------
 // SYS coordinates, (X, V)
 //----------------------------------------------------------------------------------------
 /**
+ *   \brief Vector field of the QBCP with EM units and system units centered coordinates
+ *   (no variationnal equations). The state is here (x, xdot), and not (x, px)
+ **/
+int sub_vf_xv(double t, const double y[], double f[], USYS *us, CSYS *cs, int noc, int nf)
+{
+    //------------------------------------------------------------------------------------
+    // Misc parameters
+    //------------------------------------------------------------------------------------
+    double ms    = us->ms;
+    double me    = us->me;
+    double mm    = us->mm;
+    double n     = us->n;
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the alphas @ t, as well as the derivatives of the first 3 alphas
+    //------------------------------------------------------------------------------------
+    double alpha[noc];
+    evaluateCoef(alpha, t, n, nf, cs->coeffs, noc);
+    double alphad[3];
+    evaluateCoefDerivatives(alphad, t, n, nf, cs->coeffs, 3);
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the primaries positions @ t
+    //------------------------------------------------------------------------------------
+    double ps[3];
+    evaluateCoef(ps, t, n, nf, cs->Ps, 3);
+    double pe[3];
+    evaluateCoef(pe, t, n, nf, cs->Pe, 3);
+    double pm[3];
+    evaluateCoef(pm, t, n, nf, cs->Pm, 3);
+
+
+    //------------------------------------------------------------------------------------
+    // Distances to 2nd power
+    //------------------------------------------------------------------------------------
+    double qpe2 = (y[0] - pe[0]) * (y[0] - pe[0]) + (y[1] - pe[1]) * (y[1] - pe[1]) + (y[2] - pe[2]) * (y[2] - pe[2]);
+    double qps2 = (y[0] - ps[0]) * (y[0] - ps[0]) + (y[1] - ps[1]) * (y[1] - ps[1]) + (y[2] - ps[2]) * (y[2] - ps[2]);
+    double qpm2 = (y[0] - pm[0]) * (y[0] - pm[0]) + (y[1] - pm[1]) * (y[1] - pm[1]) + (y[2] - pm[2]) * (y[2] - pm[2]);
+
+    //------------------------------------------------------------------------------------
+    //Phase space derivatives: x', y', z', px', py', pz'
+    //------------------------------------------------------------------------------------
+    vf_state_xv(y, f, alpha, alphad, ps, pe, pm, qps2, qpe2, qpm2, ms, me, mm);
+
+    return FTC_SUCCESS;
+}
+
+/**
+ *   \brief Vector field of the QBCP with EM units and system units centered coordinates
+ *   (no variationnal equations). The state is here (x, xdot), and not (x, px)
+ **/
+int qbcp_vf_xv(double t, const double y[], double f[], void* params_void)
+{
+    //------------------------------------------------------------------------------------
+    // Retrieving the parameters
+    //------------------------------------------------------------------------------------
+    OdeParams* odP = (OdeParams*) params_void;
+
+    //------------------------------------------------------------------------------------
+    // Switch
+    //------------------------------------------------------------------------------------
+    switch(odP->dcs)
+    {
+        case I_VEM:
+        {
+            sub_vf_xv(t, y, f, &odP->qbcp_l->us_em, &odP->qbcp_l->cs_em,
+                   odP->qbcp_l->numberOfCoefs, odP->qbcp_l->nf);
+            break;
+        }
+        case I_VSEM:
+        {
+            sub_vf_xv(t, y, f, &odP->qbcp_l->us_sem, &odP->qbcp_l->cs_sem,
+                   odP->qbcp_l->numberOfCoefs, odP->qbcp_l->nf);
+            break;
+        }
+
+        default:
+            cout << "qbcp_vfn_xv: wrong dcs." << endl;
+            return GSL_FAILURE;
+    }
+
+    return GSL_SUCCESS;
+}
+
+/**
+ *   \brief Vector field of the QBCP with EM units and system units centered coordinates
+ *   (no variationnal equations). The state is here (x, xdot), and not (x, px)
+ **/
+int qbcp_vf_xv_backup(double t, const double y[], double f[], void* params_void)
+{
+    //------------------------------------------------------------------------------------
+    // Misc parameters
+    //------------------------------------------------------------------------------------
+    //Retrieving the parameters
+    //QBCP_L* qbp = (QBCP_L*) params_void;
+    OdeParams* odeParams = (OdeParams*) params_void;
+    QBCP_L* qbp = odeParams->qbcp_l;
+    int noc      = qbp->numberOfCoefs;
+    int nf       = qbp->nf;
+    double ms    = qbp->us->ms;
+    double me    = qbp->us->me;
+    double mm    = qbp->us->mm;
+    double n     = qbp->us->n;
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the alphas @ t, as well as the derivatives of the first 3 alphas
+    //------------------------------------------------------------------------------------
+    double alpha[noc];
+    evaluateCoef(alpha, t, n, nf, qbp->cs->coeffs, noc);
+    double alphad[3];
+    evaluateCoefDerivatives(alphad, t, n, nf, qbp->cs->coeffs, 3);
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the primaries positions @ t
+    //------------------------------------------------------------------------------------
+    double ps[3];
+    evaluateCoef(ps, t, n, nf, qbp->cs->Ps, 3);
+    double pe[3];
+    evaluateCoef(pe, t, n, nf, qbp->cs->Pe, 3);
+    double pm[3];
+    evaluateCoef(pm, t, n, nf, qbp->cs->Pm, 3);
+
+
+    //------------------------------------------------------------------------------------
+    // Distances to 2nd power
+    //------------------------------------------------------------------------------------
+    double qpe2 = (y[0] - pe[0]) * (y[0] - pe[0]) + (y[1] - pe[1]) * (y[1] - pe[1]) + (y[2] - pe[2]) * (y[2] - pe[2]);
+    double qps2 = (y[0] - ps[0]) * (y[0] - ps[0]) + (y[1] - ps[1]) * (y[1] - ps[1]) + (y[2] - ps[2]) * (y[2] - ps[2]);
+    double qpm2 = (y[0] - pm[0]) * (y[0] - pm[0]) + (y[1] - pm[1]) * (y[1] - pm[1]) + (y[2] - pm[2]) * (y[2] - pm[2]);
+
+    //------------------------------------------------------------------------------------
+    //Phase space derivatives: x', y', z', px', py', pz'
+    //------------------------------------------------------------------------------------
+    vf_state_xv(y, f, alpha, alphad, ps, pe, pm, qps2, qpe2, qpm2, ms, me, mm);
+
+    return FTC_SUCCESS;
+}
+
+/**
  *  \brief Vector field of the QBCP with EM units and EM coordinates. The state is here (x, xdot), and not (x, px)
  **/
-int qbcp_vf_varnonlin_xv(double t, const double y[], double f[], void* params_void)
+int sub_vf_varnonlin_xv(double t, const double y[],  double f[], USYS *us, CSYS *cs, int noc, int nf)
 {
     //------------------------------------------------------------------------------------
     // Memory allocation
@@ -3416,15 +3860,10 @@ int qbcp_vf_varnonlin_xv(double t, const double y[], double f[], void* params_vo
     //------------------------------------------------------------------------------------
     // Misc parameters
     //------------------------------------------------------------------------------------
-    //Retrieving the parameters
-    //QBCP_L* qbp = (QBCP_L*) params_void;
-    OdeParams* odeParams = (OdeParams*) params_void;
-    QBCP_L* qbp = odeParams->qbcp_l;
-    int noc      = qbp->numberOfCoefs;
-    double ms    = qbp->us.ms;
-    double me    = qbp->us.me;
-    double mm    = qbp->us.mm;
-    double n     = qbp->us.n;
+    double ms    = us->ms;
+    double me    = us->me;
+    double mm    = us->mm;
+    double n     = us->n;
 
     //------------------------------------------------------------------------------------
     //Evaluate the alphas and their derivatives @ t
@@ -3432,19 +3871,19 @@ int qbcp_vf_varnonlin_xv(double t, const double y[], double f[], void* params_vo
     //2, 5, 8 odd
     //------------------------------------------------------------------------------------
     double alpha[noc];
-    evaluateCoef(alpha, t, n, qbp->nf, qbp->cs.coeffs, noc);
+    evaluateCoef(alpha, t, n, nf, cs->coeffs, noc);
     double alphad[3];
-    evaluateCoefDerivatives(alphad, t, n, qbp->nf, qbp->cs.coeffs, 3);
+    evaluateCoefDerivatives(alphad, t, n, nf, cs->coeffs, 3);
 
     //------------------------------------------------------------------------------------
     //Evaluate the primaries positions @ t
     //------------------------------------------------------------------------------------
     double ps[3];
-    evaluateCoef(ps, t, n, qbp->nf, qbp->cs.Ps, 3);
+    evaluateCoef(ps, t, n, nf, cs->Ps, 3);
     double pe[3];
-    evaluateCoef(pe, t, n, qbp->nf, qbp->cs.Pe, 3);
+    evaluateCoef(pe, t, n, nf, cs->Pe, 3);
     double pm[3];
-    evaluateCoef(pm, t, n, qbp->nf, qbp->cs.Pm, 3);
+    evaluateCoef(pm, t, n, nf, cs->Pm, 3);
 
     //------------------------------------------------------------------------------------
     // Distances to 2nd power
@@ -3485,10 +3924,18 @@ int qbcp_vf_varnonlin_xv(double t, const double y[], double f[], void* params_vo
     return GSL_SUCCESS;
 }
 
-// Vector field of the QBCP with EM units and system units centered coordinates
-// (no variationnal equations). The state is here (x, xdot), and not (x, px)
-int qbcp_vf_xv(double t, const double y[], double f[], void* params_void)
+/**
+ *  \brief Vector field of the QBCP with EM units and EM coordinates. The state is here (x, xdot), and not (x, px)
+ **/
+int qbcp_vf_varnonlin_xv(double t, const double y[], double f[], void* params_void)
 {
+    //------------------------------------------------------------------------------------
+    // Memory allocation
+    //------------------------------------------------------------------------------------
+    gsl_matrix* STM  = gsl_matrix_calloc(6, 6);
+    gsl_matrix* STMd = gsl_matrix_calloc(6, 6);
+    gsl_matrix* Q    = gsl_matrix_calloc(6, 6);
+
     //------------------------------------------------------------------------------------
     // Misc parameters
     //------------------------------------------------------------------------------------
@@ -3497,30 +3944,30 @@ int qbcp_vf_xv(double t, const double y[], double f[], void* params_void)
     OdeParams* odeParams = (OdeParams*) params_void;
     QBCP_L* qbp = odeParams->qbcp_l;
     int noc      = qbp->numberOfCoefs;
-    int nf       = qbp->nf;
-    double ms    = qbp->us.ms;
-    double me    = qbp->us.me;
-    double mm    = qbp->us.mm;
-    double n     = qbp->us.n;
+    double ms    = qbp->us->ms;
+    double me    = qbp->us->me;
+    double mm    = qbp->us->mm;
+    double n     = qbp->us->n;
 
     //------------------------------------------------------------------------------------
-    //Evaluate the alphas @ t, as well as the derivatives of the first 3 alphas
+    //Evaluate the alphas and their derivatives @ t
+    //1, 3, 4, 6, 7 even
+    //2, 5, 8 odd
     //------------------------------------------------------------------------------------
     double alpha[noc];
-    evaluateCoef(alpha, t, n, nf, qbp->cs.coeffs, noc);
+    evaluateCoef(alpha, t, n, qbp->nf, qbp->cs->coeffs, noc);
     double alphad[3];
-    evaluateCoefDerivatives(alphad, t, n, nf, qbp->cs.coeffs, 3);
+    evaluateCoefDerivatives(alphad, t, n, qbp->nf, qbp->cs->coeffs, 3);
 
     //------------------------------------------------------------------------------------
     //Evaluate the primaries positions @ t
     //------------------------------------------------------------------------------------
     double ps[3];
-    evaluateCoef(ps, t, n, nf, qbp->cs.Ps, 3);
+    evaluateCoef(ps, t, n, qbp->nf, qbp->cs->Ps, 3);
     double pe[3];
-    evaluateCoef(pe, t, n, nf, qbp->cs.Pe, 3);
+    evaluateCoef(pe, t, n, qbp->nf, qbp->cs->Pe, 3);
     double pm[3];
-    evaluateCoef(pm, t, n, nf, qbp->cs.Pm, 3);
-
+    evaluateCoef(pm, t, n, qbp->nf, qbp->cs->Pm, 3);
 
     //------------------------------------------------------------------------------------
     // Distances to 2nd power
@@ -3534,9 +3981,32 @@ int qbcp_vf_xv(double t, const double y[], double f[], void* params_void)
     //------------------------------------------------------------------------------------
     vf_state_xv(y, f, alpha, alphad, ps, pe, pm, qps2, qpe2, qpm2, ms, me, mm);
 
-    return FTC_SUCCESS;
-}
+    //------------------------------------------------------------------------------------
+    //Variationnal equations, nonlinear case
+    //------------------------------------------------------------------------------------
+    gsl_matrix_set_zero(Q);
+    vf_stm_xv(y, Q, alpha, alphad, ps, pe, pm, qps2, qpe2, qpm2, ms, me, mm);
 
+    //------------------------------------------------------------------------------------
+    //STM update & dot(STM) computation
+    //------------------------------------------------------------------------------------
+    //STM update
+    gslc_vectorToMatrix(STM, y, 6, 6, 6);
+
+    //dot(STM) = Q * STM
+    gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, Q, STM, 0.0, STMd);
+
+
+    //dot(STM) stored in f
+    gslc_matrixToVector(f, STMd, 6, 6 , 6);
+
+    //Memory release
+    gsl_matrix_free(STMd);
+    gsl_matrix_free(STM);
+    gsl_matrix_free(Q);
+
+    return GSL_SUCCESS;
+}
 
 
 // Update the vector field of the state. The state is here (x, xdot),
@@ -3661,10 +4131,87 @@ int vf_stm_xv(const double y[], gsl_matrix* Q, double alpha[], double alphad[],
 }
 
 
-
 //----------------------------------------------------------------------------------------
 // NC coordinates, (X, P)
 //----------------------------------------------------------------------------------------
+/**
+ *  \brief Vector field of the QBCP with EM units and Normalized-Centered coordinates.
+ **/
+int sub_vfn_varnonlin(double t, const double y[], double f[], USYS *us, CSYS *cs, int noc, int nf)
+{
+    //------------------------------------------------------------------------------------
+    // Memory allocation
+    //------------------------------------------------------------------------------------
+    gsl_matrix* STM  = gsl_matrix_calloc(6, 6);
+    gsl_matrix* STMd = gsl_matrix_calloc(6, 6);
+    gsl_matrix* Q    = gsl_matrix_calloc(6, 6);
+
+    //------------------------------------------------------------------------------------
+    // Misc parameters
+    //------------------------------------------------------------------------------------
+    double ms    = us->ms;
+    double me    = us->me;
+    double mm    = us->mm;
+    double n     = us->n;
+    double gamma = cs->gamma;
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the alphas and their derivatives @ t
+    //1, 3, 4, 6, 7 even
+    //2, 5, 8 odd
+    //------------------------------------------------------------------------------------
+    double alpha[noc];
+    evaluateCoef(alpha, t, n, nf, cs->coeffs, noc);
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the primaries positions @ t
+    //------------------------------------------------------------------------------------
+    double ps[3];
+    evaluateCoef(ps, t, n, nf, cs->ps, 3);
+    double pe[3];
+    evaluateCoef(pe, t, n, nf, cs->pe, 3);
+    double pm[3];
+    evaluateCoef(pm, t, n, nf, cs->pm, 3);
+
+    //------------------------------------------------------------------------------------
+    // Distances to 2nd power
+    //------------------------------------------------------------------------------------
+    double qpe2 = (y[0] - pe[0]) * (y[0] - pe[0]) + (y[1] - pe[1]) * (y[1] - pe[1]) + (y[2] - pe[2]) * (y[2] - pe[2]);
+    double qps2 = (y[0] - ps[0]) * (y[0] - ps[0]) + (y[1] - ps[1]) * (y[1] - ps[1]) + (y[2] - ps[2]) * (y[2] - ps[2]);
+    double qpm2 = (y[0] - pm[0]) * (y[0] - pm[0]) + (y[1] - pm[1]) * (y[1] - pm[1]) + (y[2] - pm[2]) * (y[2] - pm[2]);
+
+    //------------------------------------------------------------------------------------
+    //Phase space derivatives: x', y', z', px', py', pz'
+    //------------------------------------------------------------------------------------
+    vfn_state(y, f, alpha, ps, pe, pm, qps2, qpe2, qpm2, ms, me, mm, gamma);
+
+    //------------------------------------------------------------------------------------
+    //Variationnal equations, nonlinear case
+    //------------------------------------------------------------------------------------
+    gsl_matrix_set_zero(Q);
+    vfn_stm(y, Q, alpha, ps, pe, pm, qps2, qpe2, qpm2, ms, me, mm, gamma);
+
+    //------------------------------------------------------------------------------------
+    //STM update & dot(STM) computation
+    //------------------------------------------------------------------------------------
+    //STM update
+    gslc_vectorToMatrix(STM, y, 6, 6, 6);
+
+    //dot(STM) = Q * STM
+    gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, Q, STM, 0.0, STMd);
+
+
+    //dot(STM) stored in f
+    gslc_matrixToVector(f, STMd, 6, 6 , 6);
+
+    //Memory release
+    gsl_matrix_free(STMd);
+    gsl_matrix_free(STM);
+    gsl_matrix_free(Q);
+
+    return GSL_SUCCESS;
+}
+
 /**
  *  \brief Vector field of the QBCP with EM units and Normalized-Centered coordinates.
  **/
@@ -3685,11 +4232,11 @@ int qbcp_vfn_varnonlin(double t, const double y[], double f[], void* params_void
     OdeParams* odeParams = (OdeParams*) params_void;
     QBCP_L* qbp = odeParams->qbcp_l;
     int noc      = qbp->numberOfCoefs;
-    double ms    = qbp->us.ms;
-    double me    = qbp->us.me;
-    double mm    = qbp->us.mm;
-    double n     = qbp->us.n;
-    double gamma = qbp->cs.gamma;
+    double ms    = qbp->us->ms;
+    double me    = qbp->us->me;
+    double mm    = qbp->us->mm;
+    double n     = qbp->us->n;
+    double gamma = qbp->cs->gamma;
 
     //------------------------------------------------------------------------------------
     //Evaluate the alphas and their derivatives @ t
@@ -3697,17 +4244,17 @@ int qbcp_vfn_varnonlin(double t, const double y[], double f[], void* params_void
     //2, 5, 8 odd
     //------------------------------------------------------------------------------------
     double alpha[noc];
-    evaluateCoef(alpha, t, n, qbp->nf, qbp->cs.coeffs, noc);
+    evaluateCoef(alpha, t, n, qbp->nf, qbp->cs->coeffs, noc);
 
     //------------------------------------------------------------------------------------
     //Evaluate the primaries positions @ t
     //------------------------------------------------------------------------------------
     double ps[3];
-    evaluateCoef(ps, t, n, qbp->nf, qbp->cs.ps, 3);
+    evaluateCoef(ps, t, n, qbp->nf, qbp->cs->ps, 3);
     double pe[3];
-    evaluateCoef(pe, t, n, qbp->nf, qbp->cs.pe, 3);
+    evaluateCoef(pe, t, n, qbp->nf, qbp->cs->pe, 3);
     double pm[3];
-    evaluateCoef(pm, t, n, qbp->nf, qbp->cs.pm, 3);
+    evaluateCoef(pm, t, n, qbp->nf, qbp->cs->pm, 3);
 
     //------------------------------------------------------------------------------------
     // Distances to 2nd power
@@ -3843,6 +4390,87 @@ int vfn_stm(const double y[], gsl_matrix* Q, double alpha[],
 /**
  *  \brief Vector field of the QBCP with EM units and Normalized-Centered coordinates. The state is here (x, xdot), and not (x, px)
  **/
+int sub_vfn_varnonlin_xv(double t, const double y[], double f[], USYS *us, CSYS *cs, int noc, int nf)
+{
+    //------------------------------------------------------------------------------------
+    // Memory allocation
+    //------------------------------------------------------------------------------------
+    gsl_matrix* STM  = gsl_matrix_calloc(6, 6);
+    gsl_matrix* STMd = gsl_matrix_calloc(6, 6);
+    gsl_matrix* Q    = gsl_matrix_calloc(6, 6);
+
+    //------------------------------------------------------------------------------------
+    // Misc parameters
+    //------------------------------------------------------------------------------------
+    double ms    = us->ms;
+    double me    = us->me;
+    double mm    = us->mm;
+    double n     = us->n;
+    double gamma = cs->gamma;
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the alphas and their derivatives @ t
+    //1, 3, 4, 6, 7 even
+    //2, 5, 8 odd
+    //------------------------------------------------------------------------------------
+    double alpha[noc];
+    evaluateCoef(alpha, t, n, nf, cs->coeffs, noc);
+    double alphad[3];
+    evaluateCoefDerivatives(alphad, t, n, nf, cs->coeffs, 3);
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the primaries positions @ t
+    //------------------------------------------------------------------------------------
+    double ps[3];
+    evaluateCoef(ps, t, n, nf, cs->ps, 3);
+    double pe[3];
+    evaluateCoef(pe, t, n, nf, cs->pe, 3);
+    double pm[3];
+    evaluateCoef(pm, t, n, nf, cs->pm, 3);
+
+    //------------------------------------------------------------------------------------
+    // Distances to 2nd power
+    //------------------------------------------------------------------------------------
+    double qpe2 = (y[0] - pe[0]) * (y[0] - pe[0]) + (y[1] - pe[1]) * (y[1] - pe[1]) + (y[2] - pe[2]) * (y[2] - pe[2]);
+    double qps2 = (y[0] - ps[0]) * (y[0] - ps[0]) + (y[1] - ps[1]) * (y[1] - ps[1]) + (y[2] - ps[2]) * (y[2] - ps[2]);
+    double qpm2 = (y[0] - pm[0]) * (y[0] - pm[0]) + (y[1] - pm[1]) * (y[1] - pm[1]) + (y[2] - pm[2]) * (y[2] - pm[2]);
+
+    //------------------------------------------------------------------------------------
+    //Phase space derivatives: x', y', z', px', py', pz'
+    //------------------------------------------------------------------------------------
+    vfn_state_xv(y, f, alpha, alphad, ps, pe, pm, qps2, qpe2, qpm2, ms, me, mm, gamma);
+
+    //------------------------------------------------------------------------------------
+    //Variationnal equations, nonlinear case
+    //------------------------------------------------------------------------------------
+    gsl_matrix_set_zero(Q);
+    vfn_stm_xv(y, Q, alpha, alphad, ps, pe, pm, qps2, qpe2, qpm2, ms, me, mm, gamma);
+
+    //------------------------------------------------------------------------------------
+    //STM update & dot(STM) computation
+    //------------------------------------------------------------------------------------
+    //STM update
+    gslc_vectorToMatrix(STM, y, 6, 6, 6);
+
+    //dot(STM) = Q * STM
+    gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, Q, STM, 0.0, STMd);
+
+
+    //dot(STM) stored in f
+    gslc_matrixToVector(f, STMd, 6, 6 , 6);
+
+    //Memory release
+    gsl_matrix_free(STMd);
+    gsl_matrix_free(STM);
+    gsl_matrix_free(Q);
+
+    return GSL_SUCCESS;
+}
+
+
+/**
+ *  \brief Vector field of the QBCP with EM units and Normalized-Centered coordinates. The state is here (x, xdot), and not (x, px)
+ **/
 int qbcp_vfn_varnonlin_xv(double t, const double y[], double f[], void* params_void)
 {
     //------------------------------------------------------------------------------------
@@ -3860,11 +4488,11 @@ int qbcp_vfn_varnonlin_xv(double t, const double y[], double f[], void* params_v
     OdeParams* odeParams = (OdeParams*) params_void;
     QBCP_L* qbp = odeParams->qbcp_l;
     int noc      = qbp->numberOfCoefs;
-    double ms    = qbp->us.ms;
-    double me    = qbp->us.me;
-    double mm    = qbp->us.mm;
-    double n     = qbp->us.n;
-    double gamma = qbp->cs.gamma;
+    double ms    = qbp->us->ms;
+    double me    = qbp->us->me;
+    double mm    = qbp->us->mm;
+    double n     = qbp->us->n;
+    double gamma = qbp->cs->gamma;
 
     //------------------------------------------------------------------------------------
     //Evaluate the alphas and their derivatives @ t
@@ -3872,19 +4500,19 @@ int qbcp_vfn_varnonlin_xv(double t, const double y[], double f[], void* params_v
     //2, 5, 8 odd
     //------------------------------------------------------------------------------------
     double alpha[noc];
-    evaluateCoef(alpha, t, n, qbp->nf, qbp->cs.coeffs, noc);
+    evaluateCoef(alpha, t, n, qbp->nf, qbp->cs->coeffs, noc);
     double alphad[3];
-    evaluateCoefDerivatives(alphad, t, n, qbp->nf, qbp->cs.coeffs, 3);
+    evaluateCoefDerivatives(alphad, t, n, qbp->nf, qbp->cs->coeffs, 3);
 
     //------------------------------------------------------------------------------------
     //Evaluate the primaries positions @ t
     //------------------------------------------------------------------------------------
     double ps[3];
-    evaluateCoef(ps, t, n, qbp->nf, qbp->cs.ps, 3);
+    evaluateCoef(ps, t, n, qbp->nf, qbp->cs->ps, 3);
     double pe[3];
-    evaluateCoef(pe, t, n, qbp->nf, qbp->cs.pe, 3);
+    evaluateCoef(pe, t, n, qbp->nf, qbp->cs->pe, 3);
     double pm[3];
-    evaluateCoef(pm, t, n, qbp->nf, qbp->cs.pm, 3);
+    evaluateCoef(pm, t, n, qbp->nf, qbp->cs->pm, 3);
 
     //------------------------------------------------------------------------------------
     // Distances to 2nd power
@@ -4025,6 +4653,83 @@ int vfn_stm_xv(const double y[], gsl_matrix* Q, double alpha[], double alphad[],
 /**
  *  \brief Vector field of the QBCP with EM units and EM reference frame. Variational equations included.
  **/
+int sub_vf_varnonlin(double t, const double y[], double f[], USYS *us, CSYS *cs, int noc, int nf)
+{
+    //------------------------------------------------------------------------------------
+    // Memory allocation
+    //------------------------------------------------------------------------------------
+    gsl_matrix* STM  = gsl_matrix_calloc(6, 6);
+    gsl_matrix* STMd = gsl_matrix_calloc(6, 6);
+    gsl_matrix* B    = gsl_matrix_calloc(6, 6);
+
+    //------------------------------------------------------------------------------------
+    // Misc parameters
+    //------------------------------------------------------------------------------------
+    double ms = us->ms;
+    double me = us->me;
+    double mm = us->mm;
+    double n  = us->n;
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the alphas @t
+    //1, 3, 4, 6, 7 even
+    //2, 5, 8 odd
+    //------------------------------------------------------------------------------------
+    double alpha[noc];
+    evaluateCoef(alpha, t, n, nf, cs->coeffs, noc);
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the primaries positions @ t
+    //------------------------------------------------------------------------------------
+    double Ps[3];
+    evaluateCoef(Ps, t, n, nf, cs->Ps, 3);
+    double Pe[3];
+    evaluateCoef(Pe, t, n, nf, cs->Pe, 3);
+    double Pm[3];
+    evaluateCoef(Pm, t, n, nf, cs->Pm, 3);
+
+    //------------------------------------------------------------------------------------
+    // Distances to 2nd power
+    //------------------------------------------------------------------------------------
+    double qPe2 = (y[0] - Pe[0]) * (y[0] - Pe[0]) + (y[1] - Pe[1]) * (y[1] - Pe[1]) + (y[2] - Pe[2]) * (y[2] - Pe[2]);
+    double qPs2 = (y[0] - Ps[0]) * (y[0] - Ps[0]) + (y[1] - Ps[1]) * (y[1] - Ps[1]) + (y[2] - Ps[2]) * (y[2] - Ps[2]);
+    double qPm2 = (y[0] - Pm[0]) * (y[0] - Pm[0]) + (y[1] - Pm[1]) * (y[1] - Pm[1]) + (y[2] - Pm[2]) * (y[2] - Pm[2]);
+
+    //------------------------------------------------------------------------------------
+    //Phase space derivatives: x', y', z', px', py', pz'
+    //------------------------------------------------------------------------------------
+    vf_state(y, f, alpha, Ps, Pe, Pm, qPs2, qPe2, qPm2, ms, me, mm);
+
+    //------------------------------------------------------------------------------------
+    //Variationnal equations, nonlinear case
+    //------------------------------------------------------------------------------------
+    gsl_matrix_set_zero(B);
+    vf_stm(y, B, alpha, Ps, Pe, Pm, qPs2, qPe2, qPm2, ms, me, mm);
+
+    //------------------------------------------------------------------------------------
+    //STM update & dot(STM) computation
+    //------------------------------------------------------------------------------------
+    //STM update
+    gslc_vectorToMatrix(STM, y, 6, 6, 6);
+
+    //dot(STM) = B * STM
+    gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, B, STM, 0.0, STMd);
+
+    //dot(STM) stored in f
+    gslc_matrixToVector(f, STMd, 6, 6 , 6);
+
+    //Memory release
+    gsl_matrix_free(STMd);
+    gsl_matrix_free(STM);
+    gsl_matrix_free(B);
+
+    return GSL_SUCCESS;
+}
+
+
+/**
+ *  \brief Vector field of the QBCP with EM units and EM reference frame. Variational equations included.
+ **/
 int qbcp_vf_varnonlin(double t, const double y[], double f[], void* params_void)
 {
     //------------------------------------------------------------------------------------
@@ -4041,10 +4746,10 @@ int qbcp_vf_varnonlin(double t, const double y[], double f[], void* params_void)
     //QBCP_L* qbp = (QBCP_L*) params_void;
     OdeParams* odeParams = (OdeParams*) params_void;
     QBCP_L* qbp = odeParams->qbcp_l;
-    double ms = qbp->us.ms;
-    double me = qbp->us.me;
-    double mm = qbp->us.mm;
-    double n  = qbp->us.n;
+    double ms = qbp->us->ms;
+    double me = qbp->us->me;
+    double mm = qbp->us->mm;
+    double n  = qbp->us->n;
     int noc   = qbp->numberOfCoefs;
 
     //------------------------------------------------------------------------------------
@@ -4053,17 +4758,17 @@ int qbcp_vf_varnonlin(double t, const double y[], double f[], void* params_void)
     //2, 5, 8 odd
     //------------------------------------------------------------------------------------
     double alpha[noc];
-    evaluateCoef(alpha, t, n, qbp->nf, qbp->cs.coeffs, noc);
+    evaluateCoef(alpha, t, n, qbp->nf, qbp->cs->coeffs, noc);
 
     //------------------------------------------------------------------------------------
     //Evaluate the primaries positions @ t
     //------------------------------------------------------------------------------------
     double Ps[3];
-    evaluateCoef(Ps, t, n, qbp->nf, qbp->cs.Ps, 3);
+    evaluateCoef(Ps, t, n, qbp->nf, qbp->cs->Ps, 3);
     double Pe[3];
-    evaluateCoef(Pe, t, n, qbp->nf, qbp->cs.Pe, 3);
+    evaluateCoef(Pe, t, n, qbp->nf, qbp->cs->Pe, 3);
     double Pm[3];
-    evaluateCoef(Pm, t, n, qbp->nf, qbp->cs.Pm, 3);
+    evaluateCoef(Pm, t, n, qbp->nf, qbp->cs->Pm, 3);
 
     //------------------------------------------------------------------------------------
     // Distances to 2nd power
@@ -4161,6 +4866,100 @@ int vf_stm(const double y[], gsl_matrix* Q, double alpha[],
 
 //========================================================================================
 //
+// All coordinates, 42 variables
+//
+//========================================================================================
+/**
+ *   \brief Vector field of the QBCP variationnal equations. The possible dcs are:
+ *          PEM, PSEM, VEM, VSEM, NCEM, NCSEM, VNCEM, VNCSEM.
+ **/
+int qbcp_varnonlin(double t, const double y[], double f[], void* params_void)
+{
+    //------------------------------------------------------------------------------------
+    // Retrieving the parameters
+    //------------------------------------------------------------------------------------
+    OdeParams* odP = (OdeParams*) params_void;
+
+    //------------------------------------------------------------------------------------
+    // Switch
+    //------------------------------------------------------------------------------------
+    switch(odP->dcs)
+    {
+        //--------------------------------------------------------------------------------
+        // PEM/PSEM
+        //--------------------------------------------------------------------------------
+        case I_PEM:
+        {
+            sub_vf_varnonlin(t, y, f, &odP->qbcp_l->us_em, &odP->qbcp_l->cs_em,
+                   odP->qbcp_l->numberOfCoefs, odP->qbcp_l->nf);
+            break;
+        }
+        case I_PSEM:
+        {
+            sub_vf_varnonlin(t, y, f, &odP->qbcp_l->us_sem, &odP->qbcp_l->cs_sem,
+                   odP->qbcp_l->numberOfCoefs, odP->qbcp_l->nf);
+            break;
+        }
+
+        //--------------------------------------------------------------------------------
+        // VEM/VSEM
+        //--------------------------------------------------------------------------------
+        case I_VEM:
+        {
+            sub_vf_varnonlin_xv(t, y, f, &odP->qbcp_l->us_em, &odP->qbcp_l->cs_em,
+                   odP->qbcp_l->numberOfCoefs, odP->qbcp_l->nf);
+            break;
+        }
+        case I_VSEM:
+        {
+            sub_vf_varnonlin_xv(t, y, f, &odP->qbcp_l->us_sem, &odP->qbcp_l->cs_sem,
+                   odP->qbcp_l->numberOfCoefs, odP->qbcp_l->nf);
+            break;
+        }
+
+        //--------------------------------------------------------------------------------
+        // NCEM/NCSEM
+        //--------------------------------------------------------------------------------
+        case I_NCEM:
+        {
+            sub_vfn_varnonlin(t, y, f, &odP->qbcp_l->us_em, &odP->qbcp_l->cs_em,
+                   odP->qbcp_l->numberOfCoefs, odP->qbcp_l->nf);
+            break;
+        }
+        case I_NCSEM:
+        {
+            sub_vfn_varnonlin(t, y, f, &odP->qbcp_l->us_sem, &odP->qbcp_l->cs_sem,
+                   odP->qbcp_l->numberOfCoefs, odP->qbcp_l->nf);
+            break;
+        }
+
+        //--------------------------------------------------------------------------------
+        // VNCEM/VNCSEM
+        //--------------------------------------------------------------------------------
+        case I_VNCEM:
+        {
+            sub_vfn_varnonlin_xv(t, y, f, &odP->qbcp_l->us_em, &odP->qbcp_l->cs_em,
+                   odP->qbcp_l->numberOfCoefs, odP->qbcp_l->nf);
+            break;
+        }
+        case I_VNCSEM:
+        {
+            sub_vfn_varnonlin_xv(t, y, f, &odP->qbcp_l->us_sem, &odP->qbcp_l->cs_sem,
+                   odP->qbcp_l->numberOfCoefs, odP->qbcp_l->nf);
+            break;
+        }
+
+        default:
+            cout << "qbcp_vfn_xv: wrong dcs." << endl;
+            return GSL_FAILURE;
+    }
+
+    return GSL_SUCCESS;
+}
+
+
+//========================================================================================
+//
 // SUBROUTINES
 //
 //========================================================================================
@@ -4232,10 +5031,10 @@ double qbcp_H(double t, const double y[], void* params_void)
     OdeParams* odeParams = (OdeParams*) params_void;
     QBCP_L* qbp = odeParams->qbcp_l;
     int noc   = qbp->numberOfCoefs;
-    double ms = qbp->us.ms;
-    double me = qbp->us.me;
-    double mm = qbp->us.mm;
-    double n  = qbp->us.n;
+    double ms = qbp->us->ms;
+    double me = qbp->us->me;
+    double mm = qbp->us->mm;
+    double n  = qbp->us->n;
 
     //------------------------------------------------------------------------------------
     //Evaluate the alphas @t
@@ -4243,17 +5042,17 @@ double qbcp_H(double t, const double y[], void* params_void)
     //2, 5, 8 odd
     //------------------------------------------------------------------------------------
     double alpha[noc];
-    evaluateCoef(alpha, t, n, qbp->nf, qbp->cs.coeffs, noc);
+    evaluateCoef(alpha, t, n, qbp->nf, qbp->cs->coeffs, noc);
 
     //------------------------------------------------------------------------------------
     //Evaluate the primaries positions @ t
     //------------------------------------------------------------------------------------
     double Ps[3];
-    evaluateCoef(Ps, t, n, qbp->nf, qbp->cs.Ps, 3);
+    evaluateCoef(Ps, t, n, qbp->nf, qbp->cs->Ps, 3);
     double Pe[3];
-    evaluateCoef(Pe, t, n, qbp->nf, qbp->cs.Pe, 3);
+    evaluateCoef(Pe, t, n, qbp->nf, qbp->cs->Pe, 3);
     double Pm[3];
-    evaluateCoef(Pm, t, n, qbp->nf, qbp->cs.Pm, 3);
+    evaluateCoef(Pm, t, n, qbp->nf, qbp->cs->Pm, 3);
 
     //------------------------------------------------------------------------------------
     // Distances to 2nd power
@@ -4345,30 +5144,30 @@ double qbcp_Hn(double t, const double y[], void *params_void)
     //Retrieving the parameters
     QBCP_L* qbp = (QBCP_L *) params_void;
     int noc      = qbp->numberOfCoefs;
-    double ms    = qbp->us.ms;
-    double me    = qbp->us.me;
-    double mm    = qbp->us.mm;
-    double n     = qbp->us.n;
-    double gamma = qbp->cs.gamma;
-    //double c1    = qbp->cs.c1;
+    double ms    = qbp->us->ms;
+    double me    = qbp->us->me;
+    double mm    = qbp->us->mm;
+    double n     = qbp->us->n;
+    double gamma = qbp->cs->gamma;
+    //double c1    = qbp->cs->c1;
 
     //------------------------------------------------------------------------------------
     //Evaluate the alphas @ t
     //------------------------------------------------------------------------------------
     double alpha[noc];
-    evaluateCoef(alpha, t, n, qbp->nf, qbp->cs.coeffs, noc);
+    evaluateCoef(alpha, t, n, qbp->nf, qbp->cs->coeffs, noc);
     //double alphad[3];
-    //evaluateCoefDerivatives(alphad, t, n, qbp->nf, qbp->cs.coeffs, 3);
+    //evaluateCoefDerivatives(alphad, t, n, qbp->nf, qbp->cs->coeffs, 3);
 
     //------------------------------------------------------------------------------------
     //Evaluate the primaries positions @ t
     //------------------------------------------------------------------------------------
     double ps[3];
-    evaluateCoef(ps, t, n, qbp->nf, qbp->cs.ps, 3);
+    evaluateCoef(ps, t, n, qbp->nf, qbp->cs->ps, 3);
     double pe[3];
-    evaluateCoef(pe, t, n, qbp->nf, qbp->cs.pe, 3);
+    evaluateCoef(pe, t, n, qbp->nf, qbp->cs->pe, 3);
     double pm[3];
-    evaluateCoef(pm, t, n, qbp->nf, qbp->cs.pm, 3);
+    evaluateCoef(pm, t, n, qbp->nf, qbp->cs->pm, 3);
 
     //-------------------------------------------------------------------------------
     // Distances to 2nd power
@@ -4959,9 +5758,9 @@ void qbtbp_test(double t1, QBCP_L& qbcp_l)
     gnuplot_plot_xy(h1, tvec, yEM_vs_IN_M, Nplot + 1, (char*)"Moon", "lines", "3", "2", 4);
     gnuplot_plot_xy(h1, tvec, yEM_vs_IN_S, Nplot + 1, (char*)"Sun", "lines", "3", "2", 5);
 
-    gnuplot_fplot_xy(tvec, yEM_vs_IN_E, Nplot + 1, (char*) (qbcp_l.cs.F_PLOT + "QBTBP_EM_vs_IN_E.txt").c_str());
-    gnuplot_fplot_xy(tvec, yEM_vs_IN_M, Nplot + 1, (char*) (qbcp_l.cs.F_PLOT + "QBTBP_EM_vs_IN_M.txt").c_str());
-    gnuplot_fplot_xy(tvec, yEM_vs_IN_S, Nplot + 1, (char*) (qbcp_l.cs.F_PLOT + "QBTBP_EM_vs_IN_S.txt").c_str());
+    gnuplot_fplot_xy(tvec, yEM_vs_IN_E, Nplot + 1, (char*) (qbcp_l.cs->F_PLOT + "QBTBP_EM_vs_IN_E.txt").c_str());
+    gnuplot_fplot_xy(tvec, yEM_vs_IN_M, Nplot + 1, (char*) (qbcp_l.cs->F_PLOT + "QBTBP_EM_vs_IN_M.txt").c_str());
+    gnuplot_fplot_xy(tvec, yEM_vs_IN_S, Nplot + 1, (char*) (qbcp_l.cs->F_PLOT + "QBTBP_EM_vs_IN_S.txt").c_str());
 
 
     //------------------------------------------------------------------------------------
@@ -4971,9 +5770,9 @@ void qbtbp_test(double t1, QBCP_L& qbcp_l)
     gnuplot_plot_xy(h2, tvec, ySEM_vs_IN_M, Nplot + 1, (char*)"Moon", "lines", "3", "2", 4);
     gnuplot_plot_xy(h2, tvec, ySEM_vs_IN_S, Nplot + 1, (char*)"Sun", "lines", "3", "2", 5);
 
-    gnuplot_fplot_xy(tvec, ySEM_vs_IN_E, Nplot + 1, (char*) (qbcp_l.cs.F_PLOT + "QBTBP_SEM_vs_IN_E.txt").c_str());
-    gnuplot_fplot_xy(tvec, ySEM_vs_IN_M, Nplot + 1, (char*) (qbcp_l.cs.F_PLOT + "QBTBP_SEM_vs_IN_M.txt").c_str());
-    gnuplot_fplot_xy(tvec, ySEM_vs_IN_S, Nplot + 1, (char*) (qbcp_l.cs.F_PLOT + "QBTBP_SEM_vs_IN_S.txt").c_str());
+    gnuplot_fplot_xy(tvec, ySEM_vs_IN_E, Nplot + 1, (char*) (qbcp_l.cs->F_PLOT + "QBTBP_SEM_vs_IN_E.txt").c_str());
+    gnuplot_fplot_xy(tvec, ySEM_vs_IN_M, Nplot + 1, (char*) (qbcp_l.cs->F_PLOT + "QBTBP_SEM_vs_IN_M.txt").c_str());
+    gnuplot_fplot_xy(tvec, ySEM_vs_IN_S, Nplot + 1, (char*) (qbcp_l.cs->F_PLOT + "QBTBP_SEM_vs_IN_S.txt").c_str());
 
     //====================================================================================
     //Final state

@@ -15,8 +15,8 @@
 //========================================================================================
 /**
  *  \brief COC: from inputType to outputType. Some specific checks are made.
- *         In particular, this routine makes sure that SEML is focused on the right system (either SEM or EM, depending on the inputType).
- *         The routine is able to make the COC between 8 different types of outputs: NCEM, VNCEM, PEM, VEM, and their equivalents in SEM coordinates.
+ *         The routine is able to make the COC between 8 different types of outputs:
+ *         NCEM, VNCEM, PEM, VEM, and their equivalents in SEM coordinates.
  *         All 64 possibilities are available.
  **/
 void qbcp_coc(double t, const double y0[], double yout[], int inputType, int outputType)
@@ -62,23 +62,9 @@ void qbcp_coc(double t, const double y0[], double yout[], int inputType, int out
 
 
         //--------------------------------------------------------------------------------
-        // 2.2 Check that the focus in SEML is
-        // in accordance with the inputType.
-        //--------------------------------------------------------------------------------
-        int fwrk0 = SEML.fwrk;
-        if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
-
-
-        //--------------------------------------------------------------------------------
-        // 2.3 Updating output
+        // 2.2 Updating output
         //--------------------------------------------------------------------------------
         qbcp_coc_fwrk(t, y0, yout, inputType, outputType);
-
-
-        //--------------------------------------------------------------------------------
-        // 2.4 Reset the focus in SEML, if necessary
-        //--------------------------------------------------------------------------------
-        if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
     }
     else
     {
@@ -91,8 +77,8 @@ void qbcp_coc(double t, const double y0[], double yout[], int inputType, int out
 
 /**
  *  \brief COC: from inputType to outputType. With a time update in tout. Some specific checks are made.
- *         In particular, this routine makes sure that SEML is focused on the right system (either SEM or EM, depending on the inputType).
- *         The routine is able to make the COC between 8 different types of outputs: NCEM, VNCEM, PEM, VEM, and their equivalents in SEM coordinates.
+ *         The routine is able to make the COC between 8 different types of outputs:
+ *         NCEM, VNCEM, PEM, VEM, and their equivalents in SEM coordinates.
  *         All 64 possibilities are available.
  **/
 void qbcp_coc(double t, const double y0[], double yout[], double *tout, int inputType, int outputType)
@@ -184,26 +170,12 @@ void qbcp_coc(double t, const double y0[], double yout[], double *tout, int inpu
             break;
         }
 
-
         //--------------------------------------------------------------------------------
-        // 2.2 Check that the focus in SEML is
-        // in accordance with the inputType.
-        //--------------------------------------------------------------------------------
-        int fwrk0 = SEML.fwrk;
-        if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
-
-
-        //--------------------------------------------------------------------------------
-        // 2.3 Updating output
+        // 2.2 Updating output
         //--------------------------------------------------------------------------------
         qbcp_coc_fwrk(t, y0, yout, inputType, outputType);
         *tout = tfactor*t;
 
-
-        //--------------------------------------------------------------------------------
-        // 2.4 Reset the focus in SEML, if necessary
-        //--------------------------------------------------------------------------------
-        if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
     }
     else
     {
@@ -217,8 +189,8 @@ void qbcp_coc(double t, const double y0[], double yout[], double *tout, int inpu
 
 /**
  *  \brief COC: from inputType to outputType, in vector form. Some specific checks are made.
- *         In particular, this routine makes sure that SEML is focused on the right system (either SEM or EM, depending on the inputType).
- *         The routine is able to make the COC between 8 different types of outputs: NCEM, VNCEM, PEM, VEM, and their equivalents in SEM coordinates.
+ *         The routine is able to make the COC between 8 different types of outputs:
+ *         NCEM, VNCEM, PEM, VEM, and their equivalents in SEM coordinates.
  *         All 64 possibilities are available.
  **/
 void qbcp_coc_vec(double** y0, double* t0, double** yout, double* tout, int N, int inputType, int outputType)
@@ -310,17 +282,8 @@ void qbcp_coc_vec(double** y0, double* t0, double** yout, double* tout, int N, i
             break;
         }
 
-
         //--------------------------------------------------------------------------------
-        // 2.2 Check that the focus in SEML is
-        // in accordance with the inputType.
-        //--------------------------------------------------------------------------------
-        int fwrk0 = SEML.fwrk;
-        if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
-
-
-        //--------------------------------------------------------------------------------
-        // 2.3 Updating output
+        // 2.2 Updating output
         //--------------------------------------------------------------------------------
         double yt[6], yt2[6];
         //Loop on all elements in yNCEM
@@ -330,23 +293,17 @@ void qbcp_coc_vec(double** y0, double* t0, double** yout, double* tout, int N, i
             for(int k = 0; k < 6; k++) yt[k] = y0[k][p];
             //Perform COC
             qbcp_coc_fwrk(t0[p], yt, yt2, inputType, outputType);
-            //Copy result in yout
+            //Copy result in youtS
             for(int k = 0; k < 6; k++) yout[k][p] = yt2[k];
             //time
             tout[p] = t0[p]*tfactor;
         }
-
-
-        //--------------------------------------------------------------------------------
-        // 2.4 Reset the focus in SEML, if necessary
-        //--------------------------------------------------------------------------------
-        if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
         }
         else
         {
-            //--------------------------------------------------------------------------------
+            //----------------------------------------------------------------------------
             // Simple copy
-            //--------------------------------------------------------------------------------
+            //----------------------------------------------------------------------------
             for(int p = 0; p <= N; p++)
             {
                 for(int k = 0; k < 6; k++) yout[k][p] = y0[k][p];
@@ -357,8 +314,8 @@ void qbcp_coc_vec(double** y0, double* t0, double** yout, double* tout, int N, i
 
 /**
  *  \brief COC: from inputType to outputType, in vector form. Version with no time vector output. Some specific checks are made.
- *         In particular, this routine makes sure that SEML is focused on the right system (either SEM or EM, depending on the inputType).
- *         The routine is able to make the COC between 8 different types of outputs: NCEM, VNCEM, PEM, VEM, and their equivalents in SEM coordinates.
+ *         The routine is able to make the COC between 8 different types of outputs:
+ *         NCEM, VNCEM, PEM, VEM, and their equivalents in SEM coordinates.
  *         All 64 possibilities are available.
  **/
 void qbcp_coc_vec(double** y0, double* t0, double** yout, int N, int inputType, int outputType)
@@ -406,17 +363,8 @@ void qbcp_coc_vec(double** y0, double* t0, double** yout, int N, int inputType, 
             break;
         }
 
-
         //--------------------------------------------------------------------------------
-        // 2.2 Check that the focus in SEML is
-        // in accordance with the inputType.
-        //--------------------------------------------------------------------------------
-        int fwrk0 = SEML.fwrk;
-        if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
-
-
-        //--------------------------------------------------------------------------------
-        // 2.3 Updating output
+        // 2.2 Updating output
         //--------------------------------------------------------------------------------
         double yt[6], yt2[6];
         //Loop on all elements in yNCEM
@@ -430,11 +378,6 @@ void qbcp_coc_vec(double** y0, double* t0, double** yout, int N, int inputType, 
             for(int k = 0; k < 6; k++) yout[k][p] = yt2[k];
         }
 
-
-        //--------------------------------------------------------------------------------
-        // 2.4 Reset the focus in SEML, if necessary
-        //--------------------------------------------------------------------------------
-        if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
         }
         else
         {
@@ -458,10 +401,12 @@ void qbcp_coc_vec(double** y0, double* t0, double** yout, int N, int inputType, 
 void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, int outputType)
 {
     double ytemp[6], ytemp2[6], ytemp3[6], ttemp;
+    double tfactor  = SEML.us_em.ns;
+
     switch(inputType)
     {
         //--------------------------------------------------------------------------------
-        // For inputType = VNCEM, NCEM, PEM, VEM, INEM, the focus of SEML is
+        // For inputType = VNCEM, NCEM, PEM, VEM, INEM, the focus is
         // on the EM SYSTEM
         //--------------------------------------------------------------------------------
         //--------------------------------------------------------------------------------
@@ -475,9 +420,9 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //VNCEM -> INEM
             //----------------------------------------------------------------------------
             //VNCEM -> VEM
-            NCvtoSYSv(y0, ytemp, &SEML);
+            NCvtoSYSv(y0, ytemp, &SEML_EM);
             //VEM -> INEM
-            EMvtoIN(t, ytemp, yout, &SEML);
+            EMvtoIN(t, ytemp, yout, &SEML_EM);
             break;
 
         case VNCEM:
@@ -491,50 +436,50 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //----------------------------------------------------------------------------
             //VNCEM -> NCEM nothing to do
             //----------------------------------------------------------------------------
-            VELtoMOM(t, y0, yout, &SEML);
+            VELtoMOM(t, y0, yout, &SEML_EM);
             break;
 
         case PEM:
             //----------------------------------------------------------------------------
             //VNCEM -> PEM
             //----------------------------------------------------------------------------
-            VELtoMOM(t, y0, ytemp, &SEML);
-            NCtoSYS(t, ytemp, yout, &SEML);
+            VELtoMOM(t, y0, ytemp, &SEML_EM);
+            NCtoSYS(t, ytemp, yout, &SEML_EM);
             break;
 
         case VEM:
             //----------------------------------------------------------------------------
             //VNCEM -> VEM
             //----------------------------------------------------------------------------
-            NCEMvtoEMv(y0, yout, &SEML);
+            NCEMvtoEMv(y0, yout, &SEML_EM);
             break;
 
         case NCSEM:
             //----------------------------------------------------------------------------
             //VNCEM -> NCSEM
             //----------------------------------------------------------------------------
-            NCEMvtoNCSEMm(t, y0, yout, &SEML);
+            NCEMvtoNCSEMm(t, y0, yout, &SEML_EM);
             break;
 
         case PSEM:
             //----------------------------------------------------------------------------
             //VNCEM -> PSEM
             //----------------------------------------------------------------------------
-            NCEMvtoSEMm(t, y0, yout, &SEML);
+            NCEMvtoSEMm(t, y0, yout, &SEML_EM);
             break;
 
         case VSEM:
             //----------------------------------------------------------------------------
             //VNCEM -> VSEM
             //----------------------------------------------------------------------------
-            NCEMvtoSEMv(t, y0, yout, &SEML);
+            NCEMvtoSEMv(t, y0, yout, &SEML_EM);
             break;
 
         case VNCSEM:
             //----------------------------------------------------------------------------
             //VNCEM -> VNCSEM
             //----------------------------------------------------------------------------
-            NCEMvtoNCSEMv(t, y0, yout, &SEML);
+            NCEMvtoNCSEMv(t, y0, yout, &SEML_EM);
             break;
 
         case INSEM:
@@ -542,12 +487,12 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //VNCEM -> INSEM
             //----------------------------------------------------------------------------
             //VNCEM -> VEM
-            NCvtoSYSv(y0, ytemp, &SEML);
+            NCvtoSYSv(y0, ytemp, &SEML_EM);
             //VEM -> INEM
-            EMvtoIN(t, ytemp, yout, &SEML);
+            EMvtoIN(t, ytemp, yout, &SEML_EM);
             //INEM -> INSEM
             ttemp = t;
-            usem2ussem(&ttemp, yout, &SEML);
+            usem2ussem(&ttemp, yout, &SEML_EM);
             break;
 
         case ECISEM:
@@ -555,14 +500,14 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //VNCEM -> ECISEM
             //----------------------------------------------------------------------------
             //VNCEM -> VEM
-            NCvtoSYSv(y0, ytemp, &SEML);
+            NCvtoSYSv(y0, ytemp, &SEML_EM);
             //VEM -> INEM
-            EMvtoIN(t, ytemp, ytemp2, &SEML);
+            EMvtoIN(t, ytemp, ytemp2, &SEML_EM);
             //INEM -> INSEM
             ttemp = t;
-            usem2ussem(&ttemp, ytemp2, &SEML);
+            usem2ussem(&ttemp, ytemp2, &SEML_EM);
             //INSEM -> ECISEM
-            INSEMtoECISEM(ttemp, ytemp2, yout, &SEML);
+            INSEMtoECISEM(ttemp, ytemp2, yout, &SEML_SEM);
             break;
         }
         break;
@@ -578,18 +523,18 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //NCEM -> INEM
             //----------------------------------------------------------------------------
             //NCEM -> VNCEM
-            MOMtoVEL(t, y0, ytemp, &SEML);
+            MOMtoVEL(t, y0, ytemp, &SEML_EM);
             //VNCEM -> VEM
-            NCvtoSYSv(ytemp, ytemp2, &SEML);
+            NCvtoSYSv(ytemp, ytemp2, &SEML_EM);
             //VEM -> INEM
-            EMvtoIN(t, ytemp2, yout, &SEML);
+            EMvtoIN(t, ytemp2, yout, &SEML_EM);
             break;
 
         case VNCEM:
             //----------------------------------------------------------------------------
             //NCEM -> VNCEM
             //----------------------------------------------------------------------------
-            MOMtoVEL(t, y0, yout, &SEML);
+            MOMtoVEL(t, y0, yout, &SEML_EM);
             break;
 
         case NCEM:
@@ -603,53 +548,53 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //----------------------------------------------------------------------------
             //NCEM -> PEM
             //----------------------------------------------------------------------------
-            NCtoSYS(t, y0, yout, &SEML);
+            NCtoSYS(t, y0, yout, &SEML_EM);
             break;
 
         case VEM:
             //----------------------------------------------------------------------------
             //NCEM -> VEM
             //----------------------------------------------------------------------------
-            NCtoSYS(t, y0, ytemp, &SEML);
-            MOMtoVEL(t, ytemp, yout, &SEML);
+            NCtoSYS(t, y0, ytemp, &SEML_EM);
+            MOMtoVEL(t, ytemp, yout, &SEML_EM);
             break;
 
         case NCSEM:
             //----------------------------------------------------------------------------
             //NCEM -> NCSEM
             //----------------------------------------------------------------------------
-            NCEMmtoNCSEMm(t, y0, yout, &SEML);
+            NCEMmtoNCSEMm(t, y0, yout, &SEML_EM);
             break;
 
         case PSEM:
             //----------------------------------------------------------------------------
             //NCEM -> PSEM
             //----------------------------------------------------------------------------
-            NCEMmtoSEMm(t, y0, yout, &SEML);
+            NCEMmtoSEMm(t, y0, yout, &SEML_EM);
             break;
 
         case VSEM:
             //----------------------------------------------------------------------------
             //NCEM -> VSEM
             //----------------------------------------------------------------------------
-            NCEMmtoSEMm(t, y0, ytemp, &SEML);
+            NCEMmtoSEMm(t, y0, ytemp, &SEML_EM);
             //Careful here:
             // 1. The time must be in SEM units.
             // 2. The SEML_SEM structure must be used, in order to
             // get the SEM coefficients
-            MOMtoVEL(t*SEML.us_em.ns, ytemp, yout, &SEML_SEM);
+            MOMtoVEL(t*tfactor, ytemp, yout, &SEML_SEM);
             break;
 
         case VNCSEM:
             //----------------------------------------------------------------------------
             //NCEM -> VNCSEM
             //----------------------------------------------------------------------------
-            NCEMmtoNCSEMm(t, y0, ytemp, &SEML);
+            NCEMmtoNCSEMm(t, y0, ytemp, &SEML_EM);
             //Careful here:
             // 1. The time must be in SEM units.
             // 2. The SEML_SEM structure must be used, in order to
             // get the SEM coefficients
-            MOMtoVEL(t*SEML.us_em.ns, ytemp, yout, &SEML_SEM);
+            MOMtoVEL(t*tfactor, ytemp, yout, &SEML_SEM);
             break;
 
         case INSEM:
@@ -657,14 +602,14 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //NCEM -> INSEM
             //----------------------------------------------------------------------------
             //NCEM -> VNCEM
-            MOMtoVEL(t, y0, ytemp, &SEML);
+            MOMtoVEL(t, y0, ytemp, &SEML_EM);
             //VNCEM -> VEM
-            NCvtoSYSv(ytemp, ytemp2, &SEML);
+            NCvtoSYSv(ytemp, ytemp2, &SEML_EM);
             //VEM -> INEM
-            EMvtoIN(t, ytemp2, yout, &SEML);
+            EMvtoIN(t, ytemp2, yout, &SEML_EM);
             //INEM -> INSEM
             ttemp = t;
-            usem2ussem(&ttemp, yout, &SEML);
+            usem2ussem(&ttemp, yout, &SEML_EM);
             break;
 
         case ECISEM:
@@ -672,16 +617,16 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //NCEM -> ECISEM
             //----------------------------------------------------------------------------
             //NCEM -> VNCEM
-            MOMtoVEL(t, y0, ytemp, &SEML);
+            MOMtoVEL(t, y0, ytemp, &SEML_EM);
             //VNCEM -> VEM
-            NCvtoSYSv(ytemp, ytemp2, &SEML);
+            NCvtoSYSv(ytemp, ytemp2, &SEML_EM);
             //VEM -> INEM
-            EMvtoIN(t, ytemp2, ytemp3, &SEML);
+            EMvtoIN(t, ytemp2, ytemp3, &SEML_EM);
             //INEM -> INSEM
             ttemp = t;
-            usem2ussem(&ttemp, ytemp3, &SEML);
+            usem2ussem(&ttemp, ytemp3, &SEML_EM);
             //INSEM -> ECISEM
-            INSEMtoECISEM(ttemp, ytemp3, yout, &SEML);
+            INSEMtoECISEM(ttemp, ytemp3, yout, &SEML_SEM);
             break;
         }
         break;
@@ -697,16 +642,16 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //PEM -> INEM
             //----------------------------------------------------------------------------
             //PEM -> VEM
-            MOMtoVEL(t, y0, ytemp, &SEML);
+            MOMtoVEL(t, y0, ytemp, &SEML_EM);
             //VEM -> INEM
-            EMvtoIN(t, ytemp, yout, &SEML);
+            EMvtoIN(t, ytemp, yout, &SEML_EM);
             break;
 
         case NCEM:
             //----------------------------------------------------------------------------
             //PEM -> NCEM
             //----------------------------------------------------------------------------
-            SYStoNC(t, y0, yout, &SEML);
+            SYStoNC(t, y0, yout, &SEML_EM);
             break;
 
         case PEM:
@@ -720,51 +665,51 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //----------------------------------------------------------------------------
             // PEM -> VEM
             //----------------------------------------------------------------------------
-            MOMtoVEL(t, y0, yout, &SEML);
+            MOMtoVEL(t, y0, yout, &SEML_EM);
             break;
 
         case VNCEM:
             //----------------------------------------------------------------------------
             // PEM -> VNCEM
             //----------------------------------------------------------------------------
-            SYStoNC(t, y0, ytemp, &SEML);
-            MOMtoVEL(t, ytemp, yout, &SEML);
+            SYStoNC(t, y0, ytemp, &SEML_EM);
+            MOMtoVEL(t, ytemp, yout, &SEML_EM);
             break;
 
         case NCSEM:
             //----------------------------------------------------------------------------
             //PEM -> NCSEM
             //----------------------------------------------------------------------------
-            EMmtoSEMm(t, y0, ytemp, &SEML);
+            EMmtoSEMm(t, y0, ytemp, &SEML_EM);
             //Careful here: the time must be in SEM units.
-            SEMmtoNCSEMm(t*SEML.us_em.ns, ytemp, yout, &SEML);
+            SEMmtoNCSEMm(t*tfactor, ytemp, yout, &SEML_SEM);
             break;
 
         case PSEM:
             //----------------------------------------------------------------------------
             //PEM -> PSEM
             //----------------------------------------------------------------------------
-            EMmtoSEMm(t, y0, yout, &SEML);
+            EMmtoSEMm(t, y0, yout, &SEML_EM);
             break;
 
         case VSEM:
             //----------------------------------------------------------------------------
             //PEM -> VSEM
             //----------------------------------------------------------------------------
-            EMmtoSEMv(t, y0, yout, &SEML);
+            EMmtoSEMv(t, y0, yout, &SEML_EM);
             break;
 
         case VNCSEM:
             //----------------------------------------------------------------------------
             //PEM -> VNCSEM
             //----------------------------------------------------------------------------
-            SYStoNC(t, y0, ytemp, &SEML);
-            NCEMmtoNCSEMm(t, ytemp, ytemp2, &SEML);
+            SYStoNC(t, y0, ytemp, &SEML_EM);
+            NCEMmtoNCSEMm(t, ytemp, ytemp2, &SEML_EM);
             //Careful here:
             // 1. The time must be in SEM units.
             // 2. The SEML_SEM structure must be used, in order to
             // get the SEM coefficients
-            MOMtoVEL(t*SEML.us_em.ns, ytemp2, yout, &SEML_SEM);
+            MOMtoVEL(t*tfactor, ytemp2, yout, &SEML_SEM);
             break;
 
         case INSEM:
@@ -772,12 +717,12 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //PEM -> INSEM
             //----------------------------------------------------------------------------
             //PEM -> VEM
-            MOMtoVEL(t, y0, ytemp, &SEML);
+            MOMtoVEL(t, y0, ytemp, &SEML_EM);
             //VEM -> INEM
-            EMvtoIN(t, ytemp, yout, &SEML);
+            EMvtoIN(t, ytemp, yout, &SEML_EM);
             //INEM -> INSEM
             ttemp = t;
-            usem2ussem(&ttemp, yout, &SEML);
+            usem2ussem(&ttemp, yout, &SEML_EM);
             break;
 
         case ECISEM:
@@ -785,14 +730,14 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //PEM -> ECISEM
             //----------------------------------------------------------------------------
             //PEM -> VEM
-            MOMtoVEL(t, y0, ytemp, &SEML);
+            MOMtoVEL(t, y0, ytemp, &SEML_EM);
             //VEM -> INEM
-            EMvtoIN(t, ytemp, ytemp2, &SEML);
+            EMvtoIN(t, ytemp, ytemp2, &SEML_EM);
             //INEM -> INSEM
             ttemp = t;
-            usem2ussem(&ttemp, ytemp2, &SEML);
+            usem2ussem(&ttemp, ytemp2, &SEML_EM);
             //INSEM -> ECISEM
-            INSEMtoECISEM(ttemp, ytemp2, yout, &SEML);
+            INSEMtoECISEM(ttemp, ytemp2, yout, &SEML_SEM);
             break;
         }
         break;
@@ -807,22 +752,22 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //----------------------------------------------------------------------------
             //VEM -> INEM
             //----------------------------------------------------------------------------
-            EMvtoIN(t, y0, yout, &SEML);
+            EMvtoIN(t, y0, yout, &SEML_EM);
             break;
 
         case NCEM:
             //----------------------------------------------------------------------------
             // VEM -> NCEM
             //----------------------------------------------------------------------------
-            VELtoMOM(t, y0, ytemp, &SEML);
-            SYStoNC(t, ytemp, yout, &SEML);
+            VELtoMOM(t, y0, ytemp, &SEML_EM);
+            SYStoNC(t, ytemp, yout, &SEML_EM);
             break;
 
         case PEM:
             //----------------------------------------------------------------------------
             // VEM -> PEM
             //----------------------------------------------------------------------------
-            VELtoMOM(t, y0, yout, &SEML);
+            VELtoMOM(t, y0, yout, &SEML_EM);
             break;
 
         case VEM:
@@ -836,37 +781,37 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //----------------------------------------------------------------------------
             //VEM -> VNCEM
             //----------------------------------------------------------------------------
-            EMvtoNCEMv(y0, yout, &SEML);
+            EMvtoNCEMv(y0, yout, &SEML_EM);
             break;
 
         case NCSEM:
             //----------------------------------------------------------------------------
             // VEM -> NCSEM
             //----------------------------------------------------------------------------
-            EMvtoSEMm(t, y0, ytemp, &SEML);
+            EMvtoSEMm(t, y0, ytemp, &SEML_EM);
             //Careful here: the time must be in SEM units.
-            SEMmtoNCSEMm(t*SEML.us_em.ns, ytemp, yout, &SEML);
+            SEMmtoNCSEMm(t*tfactor, ytemp, yout, &SEML_SEM);
             break;
 
         case PSEM:
             //----------------------------------------------------------------------------
             // VEM -> PSEM
             //----------------------------------------------------------------------------
-            EMvtoSEMm(t, y0, yout, &SEML);
+            EMvtoSEMm(t, y0, yout, &SEML_EM);
             break;
 
         case VSEM:
             //----------------------------------------------------------------------------
             // VEM -> VSEM
             //----------------------------------------------------------------------------
-            EMvtoSEMv(t, y0, yout, &SEML);
+            EMvtoSEMv(t, y0, yout, &SEML_EM);
             break;
 
         case VNCSEM:
             //----------------------------------------------------------------------------
             // VEM -> VNCSEM
             //----------------------------------------------------------------------------
-            EMvtoSEMv(t, y0, ytemp, &SEML);
+            EMvtoSEMv(t, y0, ytemp, &SEML_EM);
             //Careful here:
             // The SEML_SEM structure must be used, in order to
             // get the SEM coefficients
@@ -877,22 +822,22 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //----------------------------------------------------------------------------
             //VEM -> INSEM
             //----------------------------------------------------------------------------
-            EMvtoIN(t, y0, yout, &SEML);
+            EMvtoIN(t, y0, yout, &SEML_EM);
             //INEM -> INSEM
             ttemp = t;
-            usem2ussem(&ttemp, yout, &SEML);
+            usem2ussem(&ttemp, yout, &SEML_EM);
             break;
 
         case ECISEM:
             //----------------------------------------------------------------------------
             //VEM -> ECISEM
             //----------------------------------------------------------------------------
-            EMvtoIN(t, y0, ytemp, &SEML);
+            EMvtoIN(t, y0, ytemp, &SEML_EM);
             //INEM -> INSEM
             ttemp = t;
-            usem2ussem(&ttemp, ytemp, &SEML);
+            usem2ussem(&ttemp, ytemp, &SEML_EM);
             //INSEM -> ECISEM
-            INSEMtoECISEM(ttemp, ytemp, yout, &SEML);
+            INSEMtoECISEM(ttemp, ytemp, yout, &SEML_SEM);
             break;
         }
         break;
@@ -914,32 +859,32 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //----------------------------------------------------------------------------
             // INEM -> NCEM
             //----------------------------------------------------------------------------
-            INtoEM(t, y0, ytemp, &SEML);
-            VELtoMOM(t, ytemp, ytemp2, &SEML);
-            SYStoNC(t, ytemp2, yout, &SEML);
+            INtoEM(t, y0, ytemp, &SEML_EM);
+            VELtoMOM(t, ytemp, ytemp2, &SEML_EM);
+            SYStoNC(t, ytemp2, yout, &SEML_EM);
             break;
 
         case PEM:
             //----------------------------------------------------------------------------
             // INEM -> PEM
             //----------------------------------------------------------------------------
-            INtoEM(t, y0, ytemp, &SEML);
-            VELtoMOM(t, ytemp, yout, &SEML);
+            INtoEM(t, y0, ytemp, &SEML_EM);
+            VELtoMOM(t, ytemp, yout, &SEML_EM);
             break;
 
         case VEM:
             //----------------------------------------------------------------------------
             // INEM -> VEM
             //----------------------------------------------------------------------------
-            INtoEM(t, y0, yout, &SEML);
+            INtoEM(t, y0, yout, &SEML_EM);
             break;
 
         case VNCEM:
             //----------------------------------------------------------------------------
             //INEM -> VNCEM
             //----------------------------------------------------------------------------
-            INtoEM(t, y0, ytemp, &SEML);
-            EMvtoNCEMv(ytemp, yout, &SEML);
+            INtoEM(t, y0, ytemp, &SEML_EM);
+            EMvtoNCEMv(ytemp, yout, &SEML_EM);
             break;
 
         case NCSEM:
@@ -947,23 +892,23 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             // INEM -> NCSEM
             //----------------------------------------------------------------------------
             //INEM -> VSEM
-            INEMvtoSEMv(t, y0, ytemp, &SEML);
+            INEMvtoSEMv(t, y0, ytemp, &SEML_EM);
             //VSEM to NCSEM. Careful here: the time must be in SEM units.
-            SEMvtoNCSEMm(t*SEML.us_em.ns, ytemp, yout, &SEML);
+            SEMvtoNCSEMm(t*tfactor, ytemp, yout, &SEML_SEM);
             break;
 
         case PSEM:
             //----------------------------------------------------------------------------
             // INEM -> PSEM
             //----------------------------------------------------------------------------
-            INEMvtoSEMm(t, y0, yout, &SEML);
+            INEMvtoSEMm(t, y0, yout, &SEML_EM);
             break;
 
         case VSEM:
             //----------------------------------------------------------------------------
             // INEM -> VSEM
             //----------------------------------------------------------------------------
-            INEMvtoSEMv(t, y0, yout, &SEML);
+            INEMvtoSEMv(t, y0, yout, &SEML_EM);
             break;
 
         case VNCSEM:
@@ -971,9 +916,9 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             // INEM -> VNCSEM
             //----------------------------------------------------------------------------
             //INEM -> VSEM
-            INEMvtoSEMv(t, y0, ytemp, &SEML);
+            INEMvtoSEMv(t, y0, ytemp, &SEML_EM);
             //VSEM -> VNCSEM.
-            SEMvtoNCSEMv(ytemp, yout, &SEML);
+            SEMvtoNCSEMv(ytemp, yout, &SEML_SEM);
             break;
 
         case INSEM:
@@ -982,7 +927,7 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //----------------------------------------------------------------------------
             for(int i = 0; i < 6; i++) yout[i] = y0[i];
             ttemp = t;
-            usem2ussem(&ttemp, yout, &SEML);
+            usem2ussem(&ttemp, yout, &SEML_EM);
             break;
 
         case ECISEM:
@@ -991,16 +936,16 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //----------------------------------------------------------------------------
             for(int i = 0; i < 6; i++) ytemp[i] = y0[i];
             ttemp = t;
-            usem2ussem(&ttemp, ytemp, &SEML);
+            usem2ussem(&ttemp, ytemp, &SEML_EM);
             //INSEM -> ECISEM
-            INSEMtoECISEM(ttemp, ytemp, yout, &SEML);
+            INSEMtoECISEM(ttemp, ytemp, yout, &SEML_SEM);
             break;
         }
         break;
 
 
         //--------------------------------------------------------------------------------
-        // For inputType = VNCSEM, NCSEM, PSEM, VSEM, INSEM, the focus of SEML is
+        // For inputType = VNCSEM, NCSEM, PSEM, VSEM, INSEM, the focus is
         // on the SEM SYSTEM
         //--------------------------------------------------------------------------------
         //--------------------------------------------------------------------------------
@@ -1014,39 +959,39 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //VNCSEM -> INEM
             //----------------------------------------------------------------------------
             //VNCSEM to VSEM
-            NCSEMvtoSEMv(y0, ytemp, &SEML);
+            NCSEMvtoSEMv(y0, ytemp, &SEML_SEM);
             //VSEM to VEM
-            SEMvtoEMv(t, ytemp, ytemp2, &SEML);
+            SEMvtoEMv(t, ytemp, ytemp2, &SEML_SEM);
             //VEM to INEM. Careful here:
             // 1. The time must be in EM units.
-            EMvtoIN(t/SEML.us_em.ns, ytemp2, yout, &SEML);
+            EMvtoIN(t/tfactor, ytemp2, yout, &SEML_EM);
             break;
         case VNCEM:
             //----------------------------------------------------------------------------
             //VNCSEM -> VNCEM
             //----------------------------------------------------------------------------
             //VNCSEM to VSEM
-            NCSEMvtoSEMv(y0, ytemp, &SEML);
+            NCSEMvtoSEMv(y0, ytemp, &SEML_SEM);
             //VSEM to VEM
-            SEMvtoEMv(t, ytemp, ytemp2, &SEML);
+            SEMvtoEMv(t, ytemp, ytemp2, &SEML_SEM);
             //VEM to VNCEM.
-            EMvtoNCEMv(ytemp2, yout, &SEML);
+            EMvtoNCEMv(ytemp2, yout, &SEML_EM);
             break;
 
         case NCEM:
             //----------------------------------------------------------------------------
             //VNCSEM -> NCEM
             //----------------------------------------------------------------------------
-            VELtoMOM(t, y0, ytemp, &SEML);
-            NCSEMmtoNCEMm(t, ytemp, yout, &SEML);
+            VELtoMOM(t, y0, ytemp, &SEML_SEM);
+            NCSEMmtoNCEMm(t, ytemp, yout, &SEML_SEM);
             break;
 
         case PEM:
             //----------------------------------------------------------------------------
             //VNCSEM -> PEM
             //----------------------------------------------------------------------------
-            VELtoMOM(t, y0, ytemp, &SEML);
-            NCSEMmtoEMm(t, ytemp, yout, &SEML);
+            VELtoMOM(t, y0, ytemp, &SEML_SEM);
+            NCSEMmtoEMm(t, ytemp, yout, &SEML_SEM);
             break;
 
         case VEM:
@@ -1054,31 +999,31 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //VNCSEM -> VEM
             //----------------------------------------------------------------------------
             //VNCSEM to VSEM
-            NCSEMvtoSEMv(y0, ytemp, &SEML);
+            NCSEMvtoSEMv(y0, ytemp, &SEML_SEM);
             //VSEM to VEM
-            SEMvtoEMv(t, ytemp, yout, &SEML);
+            SEMvtoEMv(t, ytemp, yout, &SEML_SEM);
             break;
 
         case NCSEM:
             //----------------------------------------------------------------------------
             //VNCSEM -> NCSEM
             //----------------------------------------------------------------------------
-            VELtoMOM(t, y0, yout, &SEML);
+            VELtoMOM(t, y0, yout, &SEML_SEM);
             break;
 
         case PSEM:
             //----------------------------------------------------------------------------
             //VNCEM -> PSEM
             //----------------------------------------------------------------------------
-            VELtoMOM(t, y0, ytemp, &SEML);
-            NCtoSYS(t, ytemp, yout, &SEML);
+            VELtoMOM(t, y0, ytemp, &SEML_SEM);
+            NCtoSYS(t, ytemp, yout, &SEML_SEM);
             break;
 
         case VSEM:
             //----------------------------------------------------------------------------
             //VNCEM -> VSEM
             //----------------------------------------------------------------------------
-            NCSEMvtoSEMv(y0, yout, &SEML);
+            NCSEMvtoSEMv(y0, yout, &SEML_SEM);
             break;
 
         case VNCSEM:
@@ -1092,18 +1037,18 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //----------------------------------------------------------------------------
             //VNCEM -> INSEM
             //----------------------------------------------------------------------------
-            NCSEMvtoSEMv(y0, ytemp, &SEML);
-            SEMtoIN(t, ytemp, yout, &SEML);
+            NCSEMvtoSEMv(y0, ytemp, &SEML_SEM);
+            SEMtoIN(t, ytemp, yout, &SEML_SEM);
             break;
 
         case ECISEM:
             //----------------------------------------------------------------------------
             //VNCEM -> ECISEM
             //----------------------------------------------------------------------------
-            NCSEMvtoSEMv(y0, ytemp, &SEML);
-            SEMtoIN(t, ytemp, ytemp2, &SEML);
+            NCSEMvtoSEMv(y0, ytemp, &SEML_SEM);
+            SEMtoIN(t, ytemp, ytemp2, &SEML_SEM);
             //INSEM -> ECISEM
-            INSEMtoECISEM(t, ytemp2, yout, &SEML);
+            INSEMtoECISEM(t, ytemp2, yout, &SEML_SEM);
             break;
         }
         break;
@@ -1119,49 +1064,49 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //NCSEM -> INEM
             //----------------------------------------------------------------------------
             //NCSEM -> EM
-            NCSEMmtoEMm(t, y0, ytemp, &SEML);
+            NCSEMmtoEMm(t, y0, ytemp, &SEML_SEM);
             //EM -> VEM
-            MOMtoVEL(t/SEML.us_em.ns, ytemp, ytemp2, &SEML_EM);
+            MOMtoVEL(t/tfactor, ytemp, ytemp2, &SEML_EM);
             //VEM to INEM
-            EMvtoIN(t/SEML.us_em.ns, ytemp2, yout, &SEML_EM);
+            EMvtoIN(t/tfactor, ytemp2, yout, &SEML_EM);
             break;
 
         case VNCEM:
             //----------------------------------------------------------------------------
             //NCSEM -> VNCEM
             //----------------------------------------------------------------------------
-            NCSEMmtoNCEMm(t, y0, ytemp, &SEML);
+            NCSEMmtoNCEMm(t, y0, ytemp, &SEML_SEM);
             //Careful here:
             // 1. The time must be in EM units.
             // 2. The SEML_EM structure must be used, in order to
             // get the EM coefficients
-            MOMtoVEL(t/SEML.us_em.ns, ytemp, yout, &SEML_EM);
+            MOMtoVEL(t/tfactor, ytemp, yout, &SEML_EM);
             break;
 
         case NCEM:
             //----------------------------------------------------------------------------
             //NCSEM -> NCEM
             //----------------------------------------------------------------------------
-            NCSEMmtoNCEMm(t, y0, yout, &SEML);
+            NCSEMmtoNCEMm(t, y0, yout, &SEML_SEM);
             break;
 
         case PEM:
             //----------------------------------------------------------------------------
             //NCSEM -> PEM
             //----------------------------------------------------------------------------
-            NCSEMmtoEMm(t, y0, yout, &SEML);
+            NCSEMmtoEMm(t, y0, yout, &SEML_SEM);
             break;
 
         case VEM:
             //----------------------------------------------------------------------------
             //NCSEM -> VEM
             //----------------------------------------------------------------------------
-            NCSEMmtoEMm(t, y0, ytemp, &SEML);
+            NCSEMmtoEMm(t, y0, ytemp, &SEML_SEM);
             //Careful here:
             // 1. The time must be in EM units.
             // 2. The SEML_EM structure must be used, in order to
             // get the EM coefficients
-            MOMtoVEL(t/SEML.us_em.ns, ytemp, yout, &SEML_EM);
+            MOMtoVEL(t/tfactor, ytemp, yout, &SEML_EM);
             break;
 
         case NCSEM:
@@ -1175,42 +1120,42 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //----------------------------------------------------------------------------
             //NCSEM -> PSEM
             //----------------------------------------------------------------------------
-            NCtoSYS(t, y0, yout, &SEML);
+            NCtoSYS(t, y0, yout, &SEML_SEM);
             break;
 
         case VSEM:
             //----------------------------------------------------------------------------
             //NCSEM -> VSEM
             //----------------------------------------------------------------------------
-            NCtoSYS(t, y0, ytemp, &SEML);
-            MOMtoVEL(t, ytemp, yout, &SEML);
+            NCtoSYS(t, y0, ytemp, &SEML_SEM);
+            MOMtoVEL(t, ytemp, yout, &SEML_SEM);
             break;
 
         case VNCSEM:
             //----------------------------------------------------------------------------
             //NCSEM -> VNCSEM
             //----------------------------------------------------------------------------
-            MOMtoVEL(t, y0, yout, &SEML);
+            MOMtoVEL(t, y0, yout, &SEML_SEM);
             break;
 
         case INSEM:
             //----------------------------------------------------------------------------
             //NCSEM -> INSEM
             //----------------------------------------------------------------------------
-            NCtoSYS(t, y0, ytemp, &SEML);
-            MOMtoVEL(t, ytemp, ytemp2, &SEML);
-            SEMtoIN(t, ytemp2, yout, &SEML);
+            NCtoSYS(t, y0, ytemp, &SEML_SEM);
+            MOMtoVEL(t, ytemp, ytemp2, &SEML_SEM);
+            SEMtoIN(t, ytemp2, yout, &SEML_SEM);
             break;
 
         case ECISEM:
             //----------------------------------------------------------------------------
             //NCSEM -> ECISEM
             //----------------------------------------------------------------------------
-            NCtoSYS(t, y0, ytemp, &SEML);
-            MOMtoVEL(t, ytemp, ytemp2, &SEML);
-            SEMtoIN(t, ytemp2, ytemp3, &SEML);
+            NCtoSYS(t, y0, ytemp, &SEML_SEM);
+            MOMtoVEL(t, ytemp, ytemp2, &SEML_SEM);
+            SEMtoIN(t, ytemp2, ytemp3, &SEML_SEM);
             //INSEM -> ECISEM
-            INSEMtoECISEM(t, ytemp3, yout, &SEML);
+            INSEMtoECISEM(t, ytemp3, yout, &SEML_SEM);
             break;
         }
         break;
@@ -1226,51 +1171,51 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //SEM -> INEM
             //----------------------------------------------------------------------------
             //SEM -> VEM
-            SEMmtoEMv(t, y0, ytemp, &SEML);
+            SEMmtoEMv(t, y0, ytemp, &SEML_SEM);
             //VEM to INEM
-            EMvtoIN(t/SEML.us_em.ns, ytemp, yout, &SEML_EM);
+            EMvtoIN(t/tfactor, ytemp, yout, &SEML_EM);
             break;
 
         case VNCEM:
             //----------------------------------------------------------------------------
             //PSEM -> VNCEM
             //----------------------------------------------------------------------------
-            SYStoNC(t, y0, ytemp, &SEML);
-            NCSEMmtoNCEMm(t, ytemp, ytemp2, &SEML);
+            SYStoNC(t, y0, ytemp, &SEML_SEM);
+            NCSEMmtoNCEMm(t, ytemp, ytemp2, &SEML_SEM);
             //Careful here:
             // 1. The time must be in EM units.
             // 2. The SEML_EM structure must be used, in order to
             // get the EM coefficients
-            MOMtoVEL(t/SEML.us_em.ns, ytemp2, yout, &SEML_EM);
+            MOMtoVEL(t/tfactor, ytemp2, yout, &SEML_EM);
             break;
 
         case NCEM:
             //----------------------------------------------------------------------------
             //PSEM -> NCEM
             //----------------------------------------------------------------------------
-            SYStoNC(t, y0, ytemp, &SEML);
-            NCSEMmtoNCEMm(t, ytemp, yout, &SEML);
+            SYStoNC(t, y0, ytemp, &SEML_SEM);
+            NCSEMmtoNCEMm(t, ytemp, yout, &SEML_SEM);
             break;
 
         case PEM:
             //----------------------------------------------------------------------------
             //PSEM -> PEM
             //----------------------------------------------------------------------------
-            SEMmtoEMm(t, y0, yout, &SEML);
+            SEMmtoEMm(t, y0, yout, &SEML_SEM);
             break;
 
         case VEM:
             //----------------------------------------------------------------------------
             //PSEM -> VEM
             //----------------------------------------------------------------------------
-            SEMmtoEMv(t, y0, yout, &SEML);
+            SEMmtoEMv(t, y0, yout, &SEML_SEM);
             break;
 
         case NCSEM:
             //----------------------------------------------------------------------------
             //PSEM -> NCSEM
             //----------------------------------------------------------------------------
-            SYStoNC(t, y0, yout, &SEML);
+            SYStoNC(t, y0, yout, &SEML_SEM);
             break;
 
         case PSEM:
@@ -1284,33 +1229,33 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //----------------------------------------------------------------------------
             //PSEM -> VSEM
             //----------------------------------------------------------------------------
-            MOMtoVEL(t, y0, yout, &SEML);
+            MOMtoVEL(t, y0, yout, &SEML_SEM);
             break;
 
         case VNCSEM:
             //----------------------------------------------------------------------------
             //PSEM -> VNCSEM
             //----------------------------------------------------------------------------
-            SYStoNC(t, y0, ytemp, &SEML);
-            MOMtoVEL(t, ytemp, yout, &SEML);
+            SYStoNC(t, y0, ytemp, &SEML_SEM);
+            MOMtoVEL(t, ytemp, yout, &SEML_SEM);
             break;
 
         case INSEM:
             //----------------------------------------------------------------------------
             //PSEM -> INSEM
             //----------------------------------------------------------------------------
-            MOMtoVEL(t, y0, ytemp, &SEML);
-            SEMtoIN(t, ytemp, yout, &SEML);
+            MOMtoVEL(t, y0, ytemp, &SEML_SEM);
+            SEMtoIN(t, ytemp, yout, &SEML_SEM);
             break;
 
         case ECISEM:
             //----------------------------------------------------------------------------
             //PSEM -> ECISEM
             //----------------------------------------------------------------------------
-            MOMtoVEL(t, y0, ytemp, &SEML);
-            SEMtoIN(t, ytemp, ytemp2, &SEML);
+            MOMtoVEL(t, y0, ytemp, &SEML_SEM);
+            SEMtoIN(t, ytemp, ytemp2, &SEML_SEM);
             //INSEM -> ECISEM
-            INSEMtoECISEM(t, ytemp2, yout, &SEML);
+            INSEMtoECISEM(t, ytemp2, yout, &SEML_SEM);
             break;
         }
         break;
@@ -1326,62 +1271,62 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //VSEM -> INEM
             //----------------------------------------------------------------------------
             //VSEM -> VEM
-            SEMvtoEMv(t, y0, ytemp, &SEML);
+            SEMvtoEMv(t, y0, ytemp, &SEML_SEM);
             //VEM to INEM
-            EMvtoIN(t/SEML.us_em.ns, ytemp, yout, &SEML_EM);
+            EMvtoIN(t/tfactor, ytemp, yout, &SEML_EM);
             break;
 
         case VNCEM:
             //----------------------------------------------------------------------------
             //VSEM -> VNCEM
             //----------------------------------------------------------------------------
-            VELtoMOM(t, y0, ytemp, &SEML);
-            SYStoNC(t, ytemp, ytemp2, &SEML);
-            NCSEMmtoNCEMm(t, ytemp2, ytemp3, &SEML);
+            VELtoMOM(t, y0, ytemp, &SEML_SEM);
+            SYStoNC(t, ytemp, ytemp2, &SEML_SEM);
+            NCSEMmtoNCEMm(t, ytemp2, ytemp3, &SEML_SEM);
             //Careful here:
             // 1. The time must be in EM units.
             // 2. The SEML_EM structure must be used, in order to
             // get the EM coefficients
-            MOMtoVEL(t/SEML.us_em.ns, ytemp3, yout, &SEML_EM);
+            MOMtoVEL(t/tfactor, ytemp3, yout, &SEML_EM);
             break;
 
         case NCEM:
             //----------------------------------------------------------------------------
             //VSEM -> NCEM
             //----------------------------------------------------------------------------
-            VELtoMOM(t, y0, ytemp, &SEML);
-            SYStoNC(t, ytemp, ytemp2, &SEML);
-            NCSEMmtoNCEMm(t, ytemp2, yout, &SEML);
+            VELtoMOM(t, y0, ytemp, &SEML_SEM);
+            SYStoNC(t, ytemp, ytemp2, &SEML_SEM);
+            NCSEMmtoNCEMm(t, ytemp2, yout, &SEML_SEM);
             break;
 
         case PEM:
             //----------------------------------------------------------------------------
             //VSEM -> PEM
             //----------------------------------------------------------------------------
-            VELtoMOM(t, y0, ytemp, &SEML);
-            SEMmtoEMm(t, ytemp, yout, &SEML);
+            VELtoMOM(t, y0, ytemp, &SEML_SEM);
+            SEMmtoEMm(t, ytemp, yout, &SEML_SEM);
             break;
 
         case VEM:
             //----------------------------------------------------------------------------
             //VSEM -> VEM
             //----------------------------------------------------------------------------
-            SEMvtoEMv(t, y0, yout, &SEML);
+            SEMvtoEMv(t, y0, yout, &SEML_SEM);
             break;
 
         case NCSEM:
             //----------------------------------------------------------------------------
             //VSEM -> NCSEM
             //----------------------------------------------------------------------------
-            VELtoMOM(t, y0, ytemp, &SEML);
-            SYStoNC(t, ytemp, yout, &SEML);
+            VELtoMOM(t, y0, ytemp, &SEML_SEM);
+            SYStoNC(t, ytemp, yout, &SEML_SEM);
             break;
 
         case PSEM:
             //----------------------------------------------------------------------------
             //VSEM -> PSEM
             //----------------------------------------------------------------------------
-            VELtoMOM(t, y0, yout, &SEML);
+            VELtoMOM(t, y0, yout, &SEML_SEM);
             break;
 
         case VSEM:
@@ -1395,23 +1340,23 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //----------------------------------------------------------------------------
             //VSEM -> VNCSEM
             //----------------------------------------------------------------------------
-            SEMvtoNCSEMv(y0, yout, &SEML);
+            SEMvtoNCSEMv(y0, yout, &SEML_SEM);
             break;
 
         case INSEM:
             //----------------------------------------------------------------------------
             //VSEM -> INSEM
             //----------------------------------------------------------------------------
-            SEMtoIN(t, y0, yout, &SEML);
+            SEMtoIN(t, y0, yout, &SEML_SEM);
             break;
 
         case ECISEM:
             //----------------------------------------------------------------------------
             //VSEM -> ECISEM
             //----------------------------------------------------------------------------
-            SEMtoIN(t, y0, ytemp, &SEML);
+            SEMtoIN(t, y0, ytemp, &SEML_SEM);
             //INSEM -> ECISEM
-            INSEMtoECISEM(t, ytemp, yout, &SEML);
+            INSEMtoECISEM(t, ytemp, yout, &SEML_SEM);
             break;
         }
         break;
@@ -1428,7 +1373,7 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //----------------------------------------------------------------------------
             for(int i = 0; i <6; i++) yout[i] = y0[i];
             ttemp = t;
-            ussem2usem(&ttemp, yout, &SEML);
+            ussem2usem(&ttemp, yout, &SEML_SEM);
             break;
 
         case VNCEM:
@@ -1436,7 +1381,7 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //INSEM -> VNCEM
             //----------------------------------------------------------------------------
             //INSEM -> VEM
-            INSEMvtoEMv(t, y0, ytemp, &SEML);
+            INSEMvtoEMv(t, y0, ytemp, &SEML_SEM);
             //VEM -> VNCEM
             EMvtoNCEMv(ytemp, yout, &SEML_EM);
             break;
@@ -1446,55 +1391,55 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //INSEM -> NCEM
             //----------------------------------------------------------------------------
             //INSEM -> VEM
-            INSEMvtoEMv(t, y0, ytemp, &SEML);
+            INSEMvtoEMv(t, y0, ytemp, &SEML_SEM);
             //VEM -> NCEM. The time must be set in EM units
-            EMvtoNCEMm(t/SEML.us_em.ns, ytemp, yout, &SEML_EM);
+            EMvtoNCEMm(t/tfactor, ytemp, yout, &SEML_EM);
             break;
 
         case PEM:
             //----------------------------------------------------------------------------
             //INSEM -> PEM
             //----------------------------------------------------------------------------
-            INSEMvtoEMm(t, y0, yout, &SEML);
+            INSEMvtoEMm(t, y0, yout, &SEML_SEM);
             break;
 
         case VEM:
             //----------------------------------------------------------------------------
             //INSEM -> VEM
             //----------------------------------------------------------------------------
-            INSEMvtoEMv(t, y0, yout, &SEML);
+            INSEMvtoEMv(t, y0, yout, &SEML_SEM);
             break;
 
         case NCSEM:
             //----------------------------------------------------------------------------
             //INSEM -> NCSEM
             //----------------------------------------------------------------------------
-            INtoSEM(t, y0, ytemp, &SEML);
-            VELtoMOM(t, ytemp, ytemp2, &SEML);
-            SYStoNC(t, ytemp2, yout, &SEML);
+            INtoSEM(t, y0, ytemp, &SEML_SEM);
+            VELtoMOM(t, ytemp, ytemp2, &SEML_SEM);
+            SYStoNC(t, ytemp2, yout, &SEML_SEM);
             break;
 
         case PSEM:
             //----------------------------------------------------------------------------
             //INSEM -> PSEM
             //----------------------------------------------------------------------------
-            INtoSEM(t, y0, ytemp, &SEML);
-            VELtoMOM(t, ytemp, yout, &SEML);
+            INtoSEM(t, y0, ytemp, &SEML_SEM);
+            VELtoMOM(t, ytemp, yout, &SEML_SEM);
             break;
 
         case VSEM:
             //----------------------------------------------------------------------------
             //INSEM -> VSEM
             //----------------------------------------------------------------------------
-            INtoSEM(t, y0, yout, &SEML);
+            INtoSEM(t, y0, yout, &SEML_SEM);
             break;
 
         case VNCSEM:
             //----------------------------------------------------------------------------
             //INSEM -> VNCSEM
             //----------------------------------------------------------------------------
-            INtoSEM(t, y0, ytemp, &SEML);
-            SEMvtoNCSEMv(ytemp, yout, &SEML);
+            INtoSEM(t, y0, ytemp, &SEML_SEM);
+            SEMvtoNCSEMv(ytemp, yout, &SEML_SEM);
             break;
 
         case INSEM:
@@ -1508,7 +1453,7 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //----------------------------------------------------------------------------
             //INSEM -> ECISEM
             //----------------------------------------------------------------------------
-            INSEMtoECISEM(t, y0, yout, &SEML);
+            INSEMtoECISEM(t, y0, yout, &SEML_SEM);
             break;
         }
         break;
@@ -1523,9 +1468,9 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //----------------------------------------------------------------------------
             //ECISEM -> INEM
             //----------------------------------------------------------------------------
-            ECISEMtoINSEM(t, y0, yout, &SEML);
+            ECISEMtoINSEM(t, y0, yout, &SEML_SEM);
             ttemp = t;
-            ussem2usem(&ttemp, yout, &SEML);
+            ussem2usem(&ttemp, yout, &SEML_SEM);
             break;
 
         case VNCEM:
@@ -1533,9 +1478,9 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //ECISEM -> VNCEM
             //----------------------------------------------------------------------------
             //ECISEM -> INSEM
-            ECISEMtoINSEM(t, y0, ytemp, &SEML);
+            ECISEMtoINSEM(t, y0, ytemp, &SEML_SEM);
             //INSEM -> VEM
-            INSEMvtoEMv(t, ytemp, ytemp2, &SEML);
+            INSEMvtoEMv(t, ytemp, ytemp2, &SEML_SEM);
             //VEM -> VNCEM
             EMvtoNCEMv(ytemp2, yout, &SEML_EM);
             break;
@@ -1545,11 +1490,11 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //ECISEM -> NCEM
             //----------------------------------------------------------------------------
             //ECISEM -> INSEM
-            ECISEMtoINSEM(t, y0, ytemp, &SEML);
+            ECISEMtoINSEM(t, y0, ytemp, &SEML_SEM);
             //INSEM -> VEM
-            INSEMvtoEMv(t, ytemp, ytemp2, &SEML);
+            INSEMvtoEMv(t, ytemp, ytemp2, &SEML_SEM);
             //VEM -> NCEM. The time must be set in EM units
-            EMvtoNCEMm(t/SEML.us_em.ns, ytemp2, yout, &SEML_EM);
+            EMvtoNCEMm(t/tfactor, ytemp2, yout, &SEML_EM);
             break;
 
         case PEM:
@@ -1557,9 +1502,9 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //ECISEM -> PEM
             //----------------------------------------------------------------------------
             //ECISEM -> INSEM
-            ECISEMtoINSEM(t, y0, ytemp, &SEML);
+            ECISEMtoINSEM(t, y0, ytemp, &SEML_SEM);
             //INSEM -> PEM
-            INSEMvtoEMm(t, ytemp, yout, &SEML);
+            INSEMvtoEMm(t, ytemp, yout, &SEML_SEM);
             break;
 
         case VEM:
@@ -1567,52 +1512,52 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
             //ECISEM -> VEM
             //----------------------------------------------------------------------------
             //ECISEM -> INSEM
-            ECISEMtoINSEM(t, y0, ytemp, &SEML);
+            ECISEMtoINSEM(t, y0, ytemp, &SEML_SEM);
             //INSEM -> VEM
-            INSEMvtoEMv(t, ytemp, yout, &SEML);
+            INSEMvtoEMv(t, ytemp, yout, &SEML_SEM);
             break;
 
         case NCSEM:
             //----------------------------------------------------------------------------
             //ECISEM -> NCSEM
             //----------------------------------------------------------------------------
-            ECISEMtoINSEM(t, y0, ytemp, &SEML);
-            INtoSEM(t, ytemp, ytemp2, &SEML);
-            VELtoMOM(t, ytemp2, ytemp3, &SEML);
-            SYStoNC(t, ytemp3, yout, &SEML);
+            ECISEMtoINSEM(t, y0, ytemp, &SEML_SEM);
+            INtoSEM(t, ytemp, ytemp2, &SEML_SEM);
+            VELtoMOM(t, ytemp2, ytemp3, &SEML_SEM);
+            SYStoNC(t, ytemp3, yout, &SEML_SEM);
             break;
 
         case PSEM:
             //----------------------------------------------------------------------------
             //ECISEM -> PSEM
             //----------------------------------------------------------------------------
-            ECISEMtoINSEM(t, y0, ytemp, &SEML);
-            INtoSEM(t, ytemp, ytemp2, &SEML);
-            VELtoMOM(t, ytemp2, yout, &SEML);
+            ECISEMtoINSEM(t, y0, ytemp, &SEML_SEM);
+            INtoSEM(t, ytemp, ytemp2, &SEML_SEM);
+            VELtoMOM(t, ytemp2, yout, &SEML_SEM);
             break;
 
         case VSEM:
             //----------------------------------------------------------------------------
             //ECISEM -> VSEM
             //----------------------------------------------------------------------------
-            ECISEMtoINSEM(t, y0, ytemp, &SEML);
-            INtoSEM(t, ytemp, yout, &SEML);
+            ECISEMtoINSEM(t, y0, ytemp, &SEML_SEM);
+            INtoSEM(t, ytemp, yout, &SEML_SEM);
             break;
 
         case VNCSEM:
             //----------------------------------------------------------------------------
             //ECISEM -> VNCSEM
             //----------------------------------------------------------------------------
-            ECISEMtoINSEM(t, y0, ytemp, &SEML);
-            INtoSEM(t, ytemp, ytemp2, &SEML);
-            SEMvtoNCSEMv(ytemp2, yout, &SEML);
+            ECISEMtoINSEM(t, y0, ytemp, &SEML_SEM);
+            INtoSEM(t, ytemp, ytemp2, &SEML_SEM);
+            SEMvtoNCSEMv(ytemp2, yout, &SEML_SEM);
             break;
 
         case INSEM:
             //----------------------------------------------------------------------------
             //ECISEM -> INSEM
             //----------------------------------------------------------------------------
-            ECISEMtoINSEM(t, y0, yout, &SEML);
+            ECISEMtoINSEM(t, y0, yout, &SEML_SEM);
             break;
 
         case ECISEM:
@@ -1734,9 +1679,9 @@ void NCtoSYS(double t, const double yNC[], double yEM[], QBCP_L *qbp)
     //------------------------------------------------------------------------------------
     // Misc parameters
     //------------------------------------------------------------------------------------
-    double n     =  qbp->us.n;
-    double gamma =  qbp->cs.gamma;
-    double c1    =  qbp->cs.c1;
+    double n     =  qbp->us->n;
+    double gamma =  qbp->cs->gamma;
+    double c1    =  qbp->cs->c1;
 
     //------------------------------------------------------------------------------------
     //Evaluate the alphas and their derivatives @ t
@@ -1744,7 +1689,7 @@ void NCtoSYS(double t, const double yNC[], double yEM[], QBCP_L *qbp)
     //2, 5, 8 odd
     //------------------------------------------------------------------------------------
     double alpha[8];
-    evaluateCoef(alpha, t, n, qbp->nf, qbp->cs.coeffs, 8);
+    evaluateCoef(alpha, t, n, qbp->nf, qbp->cs->coeffs, 8);
 
     //------------------------------------------------------------------------------------
     //CoC
@@ -1772,9 +1717,9 @@ void SYStoNC(double t, const double yEM[], double yNC[], QBCP_L *qbp)
     //------------------------------------------------------------------------------------
     // Misc parameters
     //------------------------------------------------------------------------------------
-    double n     =  qbp->us.n;
-    double gamma =  qbp->cs.gamma;
-    double c1    =  qbp->cs.c1;
+    double n     =  qbp->us->n;
+    double gamma =  qbp->cs->gamma;
+    double c1    =  qbp->cs->c1;
 
     //------------------------------------------------------------------------------------
     //Evaluate the alphas and their derivatives @ t
@@ -1782,7 +1727,7 @@ void SYStoNC(double t, const double yEM[], double yNC[], QBCP_L *qbp)
     //2, 5, 8 odd
     //------------------------------------------------------------------------------------
     double alpha[8];
-    evaluateCoef(alpha, t, n, qbp->nf, qbp->cs.coeffs, 8);
+    evaluateCoef(alpha, t, n, qbp->nf, qbp->cs->coeffs, 8);
 
     //------------------------------------------------------------------------------------
     //CoC
@@ -1971,8 +1916,8 @@ void NCvtoSYSv(const double yNC[], double yEM[], QBCP_L *qbp)
     //------------------------------------------------------------------------------------
     // Misc parameters
     //------------------------------------------------------------------------------------
-    double gamma =  qbp->cs.gamma;
-    double c1    =  qbp->cs.c1;
+    double gamma =  qbp->cs->gamma;
+    double c1    =  qbp->cs->c1;
 
     //------------------------------------------------------------------------------------
     //CoC
@@ -2000,8 +1945,8 @@ void SYSvtoNCv(const double yEM[], double yNC[], QBCP_L *qbp)
     //------------------------------------------------------------------------------------
     // Misc parameters
     //------------------------------------------------------------------------------------
-    double gamma =  qbp->cs.gamma;
-    double c1    =  qbp->cs.c1;
+    double gamma =  qbp->cs->gamma;
+    double c1    =  qbp->cs->c1;
 
     //------------------------------------------------------------------------------------
     //CoC
@@ -2293,7 +2238,7 @@ void VELtoMOM(double t, const double ySYSv[], double ySYSm[], void *params_void)
     // Misc parameters
     //------------------------------------------------------------------------------------
     QBCP_L* qbp  = (QBCP_L*) params_void;
-    double n     =  qbp->us.n;
+    double n     =  qbp->us->n;
 
     //------------------------------------------------------------------------------------
     //Evaluate the alphas and their derivatives @ t
@@ -2301,7 +2246,7 @@ void VELtoMOM(double t, const double ySYSv[], double ySYSm[], void *params_void)
     //2, 5, 8 odd
     //------------------------------------------------------------------------------------
     double alpha[3];
-    evaluateCoef(alpha, t, n, qbp->nf, qbp->cs.coeffs, 3);
+    evaluateCoef(alpha, t, n, qbp->nf, qbp->cs->coeffs, 3);
 
     //------------------------------------------------------------------------------------
     //Position to position
@@ -2329,7 +2274,7 @@ void MOMtoVEL(double t, const double ySYSm[], double ySYSv[], void *params_void)
     // Misc parameters
     //------------------------------------------------------------------------------------
     QBCP_L* qbp  = (QBCP_L*) params_void;
-    double n     =  qbp->us.n;
+    double n     =  qbp->us->n;
 
     //------------------------------------------------------------------------------------
     //Evaluate the alphas and their derivatives @ t
@@ -2337,7 +2282,7 @@ void MOMtoVEL(double t, const double ySYSm[], double ySYSv[], void *params_void)
     //2, 5, 8 odd
     //------------------------------------------------------------------------------------
     double alpha[3];
-    evaluateCoef(alpha, t, n, qbp->nf, qbp->cs.coeffs, 3);
+    evaluateCoef(alpha, t, n, qbp->nf, qbp->cs->coeffs, 3);
 
     //------------------------------------------------------------------------------------
     //Position to position
@@ -3810,9 +3755,9 @@ int default_coordinate_system(int coord_type)
 /**
  * \brief Get the default type of coordinates, from the dcs (inverse of default_coordinate_system).
  **/
-int default_coordinate_type(int coord_type)
+int default_coordinate_type(int dcs)
 {
-    switch(coord_type)
+    switch(dcs)
     {
     case I_PSEM:
         return PSEM;

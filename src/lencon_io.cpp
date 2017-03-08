@@ -1337,9 +1337,9 @@ void readClosestIntProjCU_bin(string filename, double t0_des,
 
     //    cout << "--------------------------------------" << endl;
     //    cout << "The first entry for this time is:" << endl;
-    //    cout << "t0_EM    = " << t0_CMU_EM[ind]/SEML.us.T                  << " x T" << endl;
-    //    cout << "tf_EM    = " << tf_man_SEM[ind]/(SEML.us_em.ns*SEML.us.T) << " x T" << endl;
-    //    cout << "tof_EM   = " << tf_man_SEM[ind]/(SEML.us_em.ns*SEML.us.T) - t0_CMU_EM[ind]/SEML.us.T  << " x T" << endl;
+    //    cout << "t0_EM    = " << t0_CMU_EM[ind]/SEML.us->T                  << " x T" << endl;
+    //    cout << "tf_EM    = " << tf_man_SEM[ind]/(SEML.us_em.ns*SEML.us->T) << " x T" << endl;
+    //    cout << "tof_EM   = " << tf_man_SEM[ind]/(SEML.us_em.ns*SEML.us->T) - t0_CMU_EM[ind]/SEML.us->T  << " x T" << endl;
     //    cout << "pmin_SEM = " << pmin_dist_SEM[ind] << endl;
     //    cout << "s_CM_EM  = (" << s1_CMU_EM[ind] << ", " << s2_CMU_EM[ind] << ", " << s3_CMU_EM[ind] << ", " << s4_CMU_EM[ind] << ")" << endl;
     //    cout << "s_CM_SEM = (" << s1_CM_SEM[ind] << ", " << s2_CM_SEM[ind] << ", " << s3_CM_SEM[ind] << ", " << s4_CM_SEM[ind] << ")" << endl;
@@ -1347,9 +1347,9 @@ void readClosestIntProjCU_bin(string filename, double t0_des,
     //    cout << "--------------------------------------" << endl;
     //    cout << "The last entry for this time is:" << endl;
     //    ind = indRes[indRes.size()-1];
-    //    cout << "t0_EM    = " << t0_CMU_EM[ind]/SEML.us.T                  << " x T" << endl;
-    //    cout << "tf_EM    = " << tf_man_SEM[ind]/(SEML.us_em.ns*SEML.us.T) << " x T" << endl;
-    //    cout << "tof_EM   = " << tf_man_SEM[ind]/(SEML.us_em.ns*SEML.us.T) - t0_CMU_EM[ind]/SEML.us.T  << " x T" << endl;
+    //    cout << "t0_EM    = " << t0_CMU_EM[ind]/SEML.us->T                  << " x T" << endl;
+    //    cout << "tf_EM    = " << tf_man_SEM[ind]/(SEML.us_em.ns*SEML.us->T) << " x T" << endl;
+    //    cout << "tof_EM   = " << tf_man_SEM[ind]/(SEML.us_em.ns*SEML.us->T) - t0_CMU_EM[ind]/SEML.us->T  << " x T" << endl;
     //    cout << "pmin_SEM = " << pmin_dist_SEM[ind] << endl;
     //    cout << "s_CM_EM  = (" << s1_CMU_EM[ind] << ", " << s2_CMU_EM[ind] << ", " << s3_CMU_EM[ind] << ", " << s4_CMU_EM[ind] << ")" << endl;
     //    cout << "s_CM_SEM = (" << s1_CM_SEM[ind] << ", " << s2_CM_SEM[ind] << ", " << s3_CM_SEM[ind] << ", " << s4_CM_SEM[ind] << ")" << endl;
@@ -1386,9 +1386,9 @@ void readClosestIntProjCU_bin(string filename, double t0_des,
     cout << "--------------------------------------" << endl;
     cout << "The min and max time of flights are:" << endl;
     ind = sortId[0];
-    cout << "min(tof_EM)  = " << tf_man_EM_0[ind]/SEML.us.T - t0_CMU_EM_0[ind]/SEML.us.T  << " x T" << endl;
+    cout << "min(tof_EM)  = " << tf_man_EM_0[ind]/SEML.us->T - t0_CMU_EM_0[ind]/SEML.us->T  << " x T" << endl;
     ind = sortId[tf_man_EM_0.size() -1];
-    cout << "max(tof_EM)  = " << tf_man_EM_0[ind]/SEML.us.T - t0_CMU_EM_0[ind]/SEML.us.T  << " x T" << endl;
+    cout << "max(tof_EM)  = " << tf_man_EM_0[ind]/SEML.us->T - t0_CMU_EM_0[ind]/SEML.us->T  << " x T" << endl;
 
     //====================================================================================
     // Sort data wrt to the projection distance
