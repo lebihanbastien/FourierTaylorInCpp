@@ -3,219 +3,6 @@ int COMPLETION = 0;
 
 //========================================================================================
 //
-//          SingleOrbit structure
-//
-//========================================================================================
-/**
- *   \brief Initialize one SingleOrbit structure
- **/
-void init_orbit(SingleOrbit &orbit,
-                vector<Oftsc>*  W,
-                vector<Oftsc>*  Wh,
-                matrix<Ofsc>*  PC,
-                matrix<Ofsc>*  CQ,
-                vector<Ofsc>*  V,
-                Ofsc* orbit_ofs,
-                int ofts_order,
-                int ofs_order,
-                int isGS,
-                double t0,
-                double tf,
-                double tproj,
-                OdeStruct *driver,
-                QBCP_L *qbcp_l)
-{
-    //-----------
-    //Parameterization (common to all orbits)
-    //-----------
-    orbit.W   =  W;            //z(t) = W(s(t), t)
-    orbit.Wh  =  Wh;           //zh(t) = Wh(s(t), t)
-
-    //-----------
-    //COC (common to all orbits)
-    //-----------
-    orbit.PC  = PC;            //COC matrix
-    orbit.CQ  = CQ;            //inv COC matrix
-    orbit.V   = V;             //COC vector
-
-    //-----------
-    //Orders
-    //-----------
-    orbit.reduced_nv =  (*Wh)[0].getNV();   //reduced number of variables, taken from the parameterization directly
-    orbit.ofs        =  orbit_ofs;          //Auxiliary Ofs object
-    orbit.order      =  ofts_order;         //ofts_order of the expansions
-    orbit.ofs_order  =  ofs_order;          //ofts_order of the Fourier coefficients
-    orbit.isGS       =  isGS;               //Was the pm obtained through graph style?
-
-    //-----------
-    //Characteristics
-    //-----------
-    orbit.z0  = dvector(0, 5);                        //Initial position in NC coordinates dim = 6
-    orbit.si  = dvector(0, orbit.reduced_nv-1);       //Initial RCM configuration dim = 4
-    orbit.s0d = dvector(0, 2*orbit.reduced_nv-1);     //Initial position in CCM8 coordinates (real+imag part) dim = 8
-    orbit.xf  = dvector(0, 5);                        //Final position NC dim = 6
-    orbit.s0  = dcvector(0,orbit.reduced_nv-1);       //Initial position in CCM4 coordinates (real+imag part) dim = 4
-    orbit.t0  = t0;                                   //Initial time
-    orbit.tf  = tf;                                   //Final time after computation
-    orbit.tproj  = tproj;                             //default time between each projection
-    orbit.tprojmin  = 1e-4*qbcp_l->us->T;              //minimum time between each projection
-    orbit.ePmax = (qbcp_l->fwrk == F_SEM)? 5e-3:5e-5; //maximum projection distance allowed
-
-    //-----------
-    //OLD VALUE
-    //-----------
-    //  orbit.ePmax = (qbcp_l->fwrk == F_SEM)? 5e-4:1e-5;
-
-
-    //-----------
-    //ODE integration
-    //-----------
-    orbit.driver  = driver;              //NC ode struct
-
-    //-----------
-    //Parent
-    //-----------
-    orbit.qbcp_l = qbcp_l;  //QBCP around a given Li point (parent)
-
-    //-----------
-    //Pulsation
-    //-----------
-    orbit.n = qbcp_l->us->n;
-}
-
-
-/**
- *   \brief Free one orbit
- **/
-void free_orbit(SingleOrbit *orbit)
-{
-    //-----------
-    //Characteristics
-    //-----------
-    free_dvector(orbit->z0,  0, 5);
-    free_dvector(orbit->si,  0, orbit->reduced_nv-1);
-    free_dvector(orbit->s0d, 0, 2*orbit->reduced_nv-1);
-    free_dvector(orbit->xf,  0, 5);
-    free_dcvector(orbit->s0, 0, orbit->reduced_nv-1);
-    //-----------
-    //Ode
-    //-----------
-    free_ode_structure(orbit->driver);
-}
-
-//========================================================================================
-//
-//          Initial conditions
-//
-//========================================================================================
-/**
- *   \brief Update the initial conditions (si, s0, z0 and s0d) of the orbit given an array of initial TFC conditions si
- **/
-void orbit_update_ic(SingleOrbit &orbit, const double si[], double t0)
-{
-    //------------------------------------------------------------------------------------
-    // 1. Update si
-    //------------------------------------------------------------------------------------
-    for(int p = 0; p < orbit.reduced_nv; p++) orbit.si[p] = si[p];
-
-    //------------------------------------------------------------------------------------
-    // 2. Update s0
-    //------------------------------------------------------------------------------------
-    RCMtoCCM(si, orbit.s0, orbit.reduced_nv);
-
-    //------------------------------------------------------------------------------------
-    // 2. Update s0d
-    //------------------------------------------------------------------------------------
-    RCMtoCCM8(si, orbit.s0d, orbit.reduced_nv);
-
-    //------------------------------------------------------------------------------------
-    // 4. Update z0
-    //------------------------------------------------------------------------------------
-    //z0 = W(si, t0)
-    RCMtoNCbyTFC(si,
-                 t0,
-                 orbit.n,
-                 orbit.order,
-                 orbit.ofs_order,
-                 orbit.reduced_nv,
-                *orbit.Wh,
-                *orbit.PC,
-                *orbit.V,
-                 orbit.z0,
-                 orbit.isGS);
-}
-
-/**
- *   \brief Update the initial conditions (si, s0, z0 and s0d) of the orbit given an array of initial TFC conditions si
- *          and an array of initial NC conditions z0.
- **/
-void orbit_update_ic(SingleOrbit &orbit, const double si[], const double z0[])
-{
-    //------------------------------------------------------------------------------------
-    // 1. Update si
-    //------------------------------------------------------------------------------------
-    for(int p = 0; p < orbit.reduced_nv; p++) orbit.si[p] = si[p];
-
-    //------------------------------------------------------------------------------------
-    // 2. Update s0
-    //------------------------------------------------------------------------------------
-    RCMtoCCM(si, orbit.s0, orbit.reduced_nv);
-
-    //------------------------------------------------------------------------------------
-    // 2. Update s0d
-    //------------------------------------------------------------------------------------
-    RCMtoCCM8(si, orbit.s0d, orbit.reduced_nv);
-
-    //------------------------------------------------------------------------------------
-    // 4. Update z0
-    //------------------------------------------------------------------------------------
-    //z0 = W(si, 0.0)
-    for(int p = 0; p < NV; p++) orbit.z0[p] = z0[p];
-}
-
-
-
-//========================================================================================
-//
-// ANNEXES
-//
-//========================================================================================
-/**
- *   \brief Display the current completion (percent) of a routine.
- **/
-void displayCompletion(string funcname, double percent)
-{
-    if(floor(percent*0.1) > COMPLETION)
-    {
-        cout << resetiosflags(ios::floatfield) << resetiosflags(ios::showpos);
-        cout << cout <<  setw(5) << setprecision(5);
-        cout << "\r" << funcname << ": " << percent << "% completed: ";
-        cout << string((int)floor(0.1*percent), '|') << endl;
-        cout.flush();
-        cout << std::showpos << setiosflags(ios::scientific);
-        COMPLETION++;
-    }
-}
-
-/**
- *  Routine for comparison of indexes
- **/
-vector<size_t> sort_indexes(const vector<double> &v)
-{
-
-    // initialize original index locations
-    vector<size_t> idx(v.size());
-    for (size_t i = 0; i != idx.size(); ++i) idx[i] = i;
-
-    // sort indexes based on comparing values in v
-    sort(idx.begin(), idx.end(), IdxCompare(v));
-
-    return idx;
-}
-
-
-//========================================================================================
-//
 //          Integration - main routines
 //
 //========================================================================================
@@ -495,263 +282,27 @@ int ode78(double **yv, double *tv, int *ode78coll,
           int nvar, int nGrid, int dcs,
           int inputType, int outputType)
 {
-    //====================================================================================
-    // 1. Do some checks on the inputs
-    //====================================================================================
-    string fname = "ode78";
-
-    //Size of the variable vector
-    if(nvar!=6 && nvar!=42)
-    cerr << fname << ". The number of variables (nvar) must be of size 6 or 42." << endl;
-
-    //Type of default coordinate system (dcs) for integration
-    if(dcs > I_NJ2000) cerr << fname << ". Unknown dcs." << endl;
-
-    //Type of inputs
-    if(inputType > NJ2000) cerr << fname << ". Unknown inputType" << endl;
-
-    //Type of outputs
-    if(outputType > NJ2000)
-        cerr << fname << ". Unknown outputType" << endl;
-
-    //If nvar == 42, the dcs and the outputType must match,
-    //otherwise the variational equations make no sense with the outputs
-    if(nvar == 42)
-    {
-        if(dcs != default_coordinate_system(outputType))
-        {
-            cerr << fname << ". If the variational equations are desired, the "  << endl;
-            cerr << "outputType must match the default coordinate system (dcs)." << endl;
-        }
-    }
-
-    //If the JPL integration is required, the dcs, the outputType and the inputType
-    //must match! This is to simplify  the change of coordinates afterwards
-    if(dcs > I_ECISEM)
-    {
-        if(dcs != default_coordinate_system(outputType) ||
-        dcs != default_coordinate_system(inputType))
-        {
-            cerr << fname << ". If a JPL integration is desired, the "  << endl;
-            cerr << "outputType must match the default coordinate system (dcs)." << endl;
-        }
-    }
-
-
-    //====================================================================================
-    // 2. Define the framework from the default coordinate system
-    //    Define also the default variable type that will be used throughout the computation
-    //====================================================================================
-    int fwrk    = default_framework_dcs(dcs);
-    int varType = default_coordinate_type(dcs);
-
-    //====================================================================================
-    // 4. Selection of the vector field
-    //====================================================================================
-    vfptr vf = ftc_select_vf(dcs, nvar);
-
-    //====================================================================================
-    // 5. ODE system
-    //====================================================================================
-    OdeStruct odestruct;
-    //Root-finding
-    const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
-    //Stepper
-    const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
-    //Parameters
-    OdeParams odeParams(&SEML, dcs);
-    //Init ode structure
-    init_ode_structure(&odestruct, T, T_root, nvar, vf, &odeParams);
-
-
-    //====================================================================================
-    // 6. to NCFWRK coordinates.
-    //====================================================================================
-    double y0[nvar];
-    double t0 = 0, tf = 0;
+    //------------------------------------------------------------------------------------
+    // Use of the other ode78 with OdeEvent.
+    //------------------------------------------------------------------------------------
+    OdeEvent odeEvent;
+    int status = ode78(yv, tv, &odeEvent, t0NC, tfNC, y0NC,
+                       nvar, nGrid, dcs, inputType, outputType);
 
     //------------------------------------------------------------------------------------
-    //From inputType to varType, if we are using a QBCP integration
+    // Update of ode78coll from the information in the OdeEvent.
     //------------------------------------------------------------------------------------
-    switch(dcs)
-    {
-        //--------------------------------------------------------------------------------
-        // If we are dealing with a JPL integration, there is no need for a COC
-        //--------------------------------------------------------------------------------
-        case  I_ECLI:
-        case  I_J2000:
-        case  I_NJ2000:
-        {
-            for(int i =  0; i < nvar; i++) y0[i] = y0NC[i];
-            break;
-        }
-        //--------------------------------------------------------------------------------
-        // Else, we proceed
-        //--------------------------------------------------------------------------------
-        default:
-        qbcp_coc(t0NC, y0NC, y0, inputType, varType);
-    }
+    *ode78coll = odeEvent.coll;
 
-
-    //------------------------------------------------------------------------------------
-    //For the initial and final time, a switch is necessary
-    //------------------------------------------------------------------------------------
-    switch(dcs)
-    {
-        //--------------------------------------------------------------------------------
-        // If I_PSEM/I_VSEM, etc... the system is focused on the SEM system via SEML
-        //--------------------------------------------------------------------------------
-    case I_NCSEM:
-    case I_VNCSEM:
-    case I_PSEM:
-    case I_VSEM:
-    case I_INSEM:
-    case I_ECISEM:
-    {
-        //Time
-        switch(inputType)
-        {
-        case PSEM:
-        case NCSEM:
-        case VNCSEM:
-        case VSEM:
-        case INSEM:
-        case ECISEM:
-            //Time is already in SEM units
-            t0 = t0NC;
-            tf = tfNC;
-            break;
-        case PEM:
-        case NCEM:
-        case VNCEM:
-        case VEM:
-        case INEM:
-            //Time is now in SEM units
-            t0 = t0NC*SEML.us_em.ns;
-            tf = tfNC*SEML.us_em.ns;
-            break;
-        }
-        break;
-    }
-        //--------------------------------------------------------------------------------
-        // If I_PEM/I_VEM, etc, the system is focused on the EM system via SEML
-        //--------------------------------------------------------------------------------
-    case I_NCEM:
-    case I_VNCEM:
-    case I_PEM:
-    case I_VEM:
-    case I_INEM:
-    {
-        //Time
-        switch(inputType)
-        {
-        case PSEM:
-        case NCSEM:
-        case VNCSEM:
-        case INSEM:
-        case VSEM:
-        case ECISEM:
-            //Time is now in EM units
-            t0 = t0NC/SEML.us_em.ns;
-            tf = tfNC/SEML.us_em.ns;
-            break;
-        case PEM:
-        case NCEM:
-        case VNCEM:
-        case VEM:
-        case INEM:
-            //Time is already in EM units
-            t0 = t0NC;
-            tf = tfNC;
-            break;
-        }
-        break;
-    }
-        //--------------------------------------------------------------------------------
-        // The default case will apply on the JPL integration schemes, for which the time
-        // is already in the right units (seconds, or normalized time)
-        //--------------------------------------------------------------------------------
-    default:
-    {
-        t0 = t0NC;
-        tf = tfNC;
-    }
-    }
-
-    //------------------------------------------------------------------------------------
-    // Add the identity matrix if necessary
-    //------------------------------------------------------------------------------------
-    if(nvar == 42)
-    {
-        //Identity matrix eye(6)
-        gsl_matrix *Id = gsl_matrix_alloc(6,6);
-        gsl_matrix_set_identity (Id);
-        //Storing eye(6) into the initial vector
-        gslc_matrixToVector(y0, Id, 6, 6, 6);
-        gsl_matrix_free(Id);
-    }
-
-    //====================================================================================
-    // 7. Integration, for 2 outputs
-    //====================================================================================
-    double **yvIN, *tvIN;
-    yvIN  = dmatrix(0, nvar-1, 0, nGrid);
-    tvIN  = dvector(0, nGrid);
-
-    //Integration in yvIN/tvIN
-    int status = ode78_grid(&odestruct, t0, tf, y0, yvIN, tvIN, nGrid);
-
-    //====================================================================================
-    // 8. To the right outputs: varType to outputType, if necessary
-    //====================================================================================
-    switch(dcs)
-    {
-        //--------------------------------------------------------------------------------
-        // If we are dealing with a JPL integration, there is no need for a COC
-        //--------------------------------------------------------------------------------
-    case  I_ECLI:
-    case  I_J2000:
-    case  I_NJ2000:
-    {
-        for(int p = 0; p <= nGrid; p++)
-        {
-            for(int i = 0; i < nvar; i++) yv[i][p] = yvIN[i][p];
-            tv[p] = tvIN[p];
-        }
-        break;
-    }
-        //--------------------------------------------------------------------------------
-        // Else, we proceed to the COC
-        //--------------------------------------------------------------------------------
-    default:
-    {
-        qbcp_coc_vec(yvIN, tvIN, yv, tv, nGrid, varType, outputType);
-        // Add the STM if necessary
-        if(nvar == 42)
-        {
-            for(int p = 0; p <= nGrid; p++)
-                for(int i = 6; i < 42; i++) yv[i][p] = yvIN[i][p];
-        }
-    }
-    }
-
-    //====================================================================================
-    // Update the collisionner
-    //====================================================================================
-    *ode78coll = odeParams.event.coll;
-
-    //====================================================================================
-    // 10. Free memory
-    //====================================================================================
-    free_dmatrix(yvIN, 0, nvar-1, 0, nGrid);
-    free_dvector(tvIN, 0, nGrid);
-
-    //====================================================================================
-    // 11. Something went wrong inside the stepper?
-    //====================================================================================
     return status;
 }
 
+
+//========================================================================================
+//
+//          Integration - with event
+//
+//========================================================================================
 /**
  * \brief Integrates the QBCP vector field from any input type to any output type.
  *        The output are states and time corresponding to a particular event stored
@@ -1011,6 +562,12 @@ int ode78_qbcp_event(double **ye, double *te, int *ode78coll,
     return nEvents+1;
 }
 
+
+//========================================================================================
+//
+//          Integration - variable and given time grids (not really used)
+//
+//========================================================================================
 /**
  * \brief Integrates the QBCP vector field from any input type to any output type. Return the last position that is filled on the grid.
  **/
@@ -1981,7 +1538,7 @@ int ode78_jpl(double **yv, double *tv, int *ode78coll,
 
 //========================================================================================
 //
-//          Integration - General
+//          Integration - subroutines
 //
 //========================================================================================
 /**
@@ -1997,7 +1554,6 @@ int ode78_grid(OdeStruct *odestruct, double t0, double tf, double *y0, double **
     //Parameters
     //------------------------------------------------------------------------------------
     OdeParams* odP = (OdeParams*) odestruct->sys.params;
-
 
     //------------------------------------------------------------------------------------
     //Initialization of the parameters
@@ -2050,44 +1606,16 @@ int ode78_grid(OdeStruct *odestruct, double t0, double tf, double *y0, double **
         //Evolve up to ti
         ti = tNCE[nt];
 
-
-        // Old version: just one line
-        //status = gsl_odeiv2_driver_apply(odestruct->d, &t , ti, yv);
-
-        // New version: everything that's in the the "do"
-        do
+        if(odP->event.detection)
         {
-            //----------------------------------------------------------------------------
-            //Evolve one step
-            //----------------------------------------------------------------------------
-            status = gsl_odeiv2_evolve_apply (odestruct->e, odestruct->c, odestruct->s, &odestruct->sys, &t, ti, &odestruct->h, yv);
-
-            //----------------------------------------------------------------------------
-            //Check crossings of x = -1, if desired
-            //----------------------------------------------------------------------------
-            if(odP->event.detection)
-            {
-                x1 = odP->event.x1;
-                if(x1 == -1.0) odP->event.x1 = yv[0] + 1.0; //first use
-                else
-                {
-                    x2 = yv[0] + 1.0;
-
-                    if(x1 > 0 && x2 < 0)
-                    {
-                        if(yv[1] > 0) odP->event.crossings += 1.0;    //clockwise
-                        else          odP->event.crossings += 0.1;    //counterclockwise
-                    }
-                    else if(x1 < 0 && x2 > 0)
-                    {
-
-                        if(yv[1] < 0) odP->event.crossings += 1.0;    //clockwise
-                        else          odP->event.crossings += 0.1;    //counterclockwise
-                    }
-                    odP->event.x1 = x2;
-                }
-            }
-        }while((status == GSL_SUCCESS) && fabs(t - ti) != 0);
+            // New version: gslc_event_evolve, including event detection via odP
+            status = gslc_event_evolve(odestruct, odP, yv, &t, ti);
+        }
+        else
+        {
+            // Old version: gsl_odeiv2_driver_apply from GSL
+            status = gsl_odeiv2_driver_apply(odestruct->d, &t , ti, yv);
+        }
 
         //Update the storage
         for(int k = 0; k < nvar; k++) yNCE[k][nt] = yv[k];
@@ -2107,6 +1635,63 @@ int ode78_grid(OdeStruct *odestruct, double t0, double tf, double *y0, double **
     }
 
     return FTC_SUCCESS;
+}
+
+/**
+ *  \brief Stepper that includes detections of event as described in OdeParams.
+ **/
+int gslc_event_step(OdeStruct* odestruct, OdeParams* odP, double yv[], double* t, double t1)
+{
+    //------------------------------------------------------------------------------------
+    //Initialize
+    //------------------------------------------------------------------------------------
+    double x1, x2;
+
+    //------------------------------------------------------------------------------------
+    //Evolve one step
+    //------------------------------------------------------------------------------------
+    int status = gsl_odeiv2_evolve_apply (odestruct->e, odestruct->c, odestruct->s, &odestruct->sys, t, t1, &odestruct->h, yv);
+
+    //------------------------------------------------------------------------------------
+    //Check crossings of x = -1
+    //------------------------------------------------------------------------------------
+        x1 = odP->event.x1;
+        if(x1 == -1.0) odP->event.x1 = yv[0] + 1.0; //first use
+        else
+        {
+            x2 = yv[0] + 1.0;
+
+            if(x1 > 0 && x2 < 0)
+            {
+                if(yv[1] > 0) odP->event.crossings += 1.0;    //clockwise
+                else          odP->event.crossings += 0.1;    //counterclockwise
+            }
+            else if(x1 < 0 && x2 > 0)
+            {
+
+                if(yv[1] < 0) odP->event.crossings += 1.0;    //clockwise
+                else          odP->event.crossings += 0.1;    //counterclockwise
+            }
+            odP->event.x1 = x2;
+        }
+
+    return status;
+}
+
+/**
+ *   \brief Integrates the current state yv up to t = t1, includes detections of event as described in OdeParams.
+ **/
+int gslc_event_evolve(OdeStruct* odestruct, OdeParams* odP, double yv[], double* t, double t1)
+{
+    int status;
+    do
+    {
+            //Evolve one step
+            gslc_event_step(odestruct, odP, yv, t, t1);
+
+    }while((status == GSL_SUCCESS) && fabs(*t - t1) != 0);
+
+    return status;
 }
 
 /**
@@ -2258,7 +1843,7 @@ int ode78_grid_gg(OdeStruct *odestruct, double *y0, double **yNCE, const double 
 
 //========================================================================================
 //
-//          Integration - SingleOrbit (dep.)
+//          Integration - SingleOrbit (deprecated)
 //
 //========================================================================================
 /**
@@ -2440,11 +2025,6 @@ int trajectory_integration_variable_grid(SingleOrbit &orbit, double t0, double t
     return nt-1;
 }
 
-//========================================================================================
-//
-//          Integration - steppers
-//
-//========================================================================================
 /**
  *   \brief Integrates one step the current state yv using projection on the CM if necessary
  **/
@@ -2530,7 +2110,6 @@ int gslc_proj_step(SingleOrbit &orbit,
 }
 
 
-
 /**
  *   \brief Integrates the current state yv up to t = t1, using projection on the CM if necessary
  **/
@@ -2557,7 +2136,7 @@ int gslc_proj_evolve(SingleOrbit &orbit,
 
 //========================================================================================
 //
-//          Projection on (un)stable manifold
+//          Projection on (un)stable manifold - deprecated
 //
 //========================================================================================
 /**
@@ -3400,20 +2979,14 @@ void qbcp_test(QBCP_L &qbcp_l)
 
 //========================================================================================
 //
-//          Orbit on a grid
+//          Orbit on a grid - deprecated
 //
 //========================================================================================
 /**
  *  \brief Computes an orbit on a given time grid [t0 t1], with initial conditions st0, on the center manifold CM.
  **/
-int gridOrbit(double st0[],
-              double t0,
-              double tf,
-              double dt,
-              vector<Oftsc> &CM,
-              vector<Oftsc> &CM_TFC,
-              matrix<Ofsc>  &Mcoc,
-              matrix<Ofsc>  &MIcoc,
+int gridOrbit(double st0[], double t0, double tf, double dt, vector<Oftsc> &CM,
+              vector<Oftsc> &CM_TFC, matrix<Ofsc>  &Mcoc, matrix<Ofsc>  &MIcoc,
               vector<Ofsc>  &Vcoc)
 {
     //------------------------------------------------------------------------------------
@@ -3505,3 +3078,162 @@ int gridOrbit(double st0[],
     return status;
 }
 
+//========================================================================================
+//
+//          SingleOrbit structure - deprecated
+//
+//========================================================================================
+/**
+ *   \brief Initialize one SingleOrbit structure
+ **/
+void init_orbit(SingleOrbit &orbit, vector<Oftsc>*  W, vector<Oftsc>*  Wh,
+                matrix<Ofsc>*  PC, matrix<Ofsc>*  CQ, vector<Ofsc>*  V,
+                Ofsc* orbit_ofs, int ofts_order, int ofs_order, int isGS, double t0,
+                double tf, double tproj, OdeStruct *driver, QBCP_L *qbcp_l)
+{
+    //-----------
+    //Parameterization (common to all orbits)
+    //-----------
+    orbit.W   =  W;            //z(t) = W(s(t), t)
+    orbit.Wh  =  Wh;           //zh(t) = Wh(s(t), t)
+
+    //-----------
+    //COC (common to all orbits)
+    //-----------
+    orbit.PC  = PC;            //COC matrix
+    orbit.CQ  = CQ;            //inv COC matrix
+    orbit.V   = V;             //COC vector
+
+    //-----------
+    //Orders
+    //-----------
+    orbit.reduced_nv =  (*Wh)[0].getNV();   //reduced number of variables, taken from the parameterization directly
+    orbit.ofs        =  orbit_ofs;          //Auxiliary Ofs object
+    orbit.order      =  ofts_order;         //ofts_order of the expansions
+    orbit.ofs_order  =  ofs_order;          //ofts_order of the Fourier coefficients
+    orbit.isGS       =  isGS;               //Was the pm obtained through graph style?
+
+    //-----------
+    //Characteristics
+    //-----------
+    orbit.z0  = dvector(0, 5);                        //Initial position in NC coordinates dim = 6
+    orbit.si  = dvector(0, orbit.reduced_nv-1);       //Initial RCM configuration dim = 4
+    orbit.s0d = dvector(0, 2*orbit.reduced_nv-1);     //Initial position in CCM8 coordinates (real+imag part) dim = 8
+    orbit.xf  = dvector(0, 5);                        //Final position NC dim = 6
+    orbit.s0  = dcvector(0,orbit.reduced_nv-1);       //Initial position in CCM4 coordinates (real+imag part) dim = 4
+    orbit.t0  = t0;                                   //Initial time
+    orbit.tf  = tf;                                   //Final time after computation
+    orbit.tproj  = tproj;                             //default time between each projection
+    orbit.tprojmin  = 1e-4*qbcp_l->us->T;              //minimum time between each projection
+    orbit.ePmax = (qbcp_l->fwrk == F_SEM)? 5e-3:5e-5; //maximum projection distance allowed
+
+    //-----------
+    //OLD VALUE
+    //-----------
+    //  orbit.ePmax = (qbcp_l->fwrk == F_SEM)? 5e-4:1e-5;
+
+
+    //-----------
+    //ODE integration
+    //-----------
+    orbit.driver  = driver;              //NC ode struct
+
+    //-----------
+    //Parent
+    //-----------
+    orbit.qbcp_l = qbcp_l;  //QBCP around a given Li point (parent)
+
+    //-----------
+    //Pulsation
+    //-----------
+    orbit.n = qbcp_l->us->n;
+}
+
+/**
+ *   \brief Free one orbit
+ **/
+void free_orbit(SingleOrbit *orbit)
+{
+    //-----------
+    //Characteristics
+    //-----------
+    free_dvector(orbit->z0,  0, 5);
+    free_dvector(orbit->si,  0, orbit->reduced_nv-1);
+    free_dvector(orbit->s0d, 0, 2*orbit->reduced_nv-1);
+    free_dvector(orbit->xf,  0, 5);
+    free_dcvector(orbit->s0, 0, orbit->reduced_nv-1);
+    //-----------
+    //Ode
+    //-----------
+    free_ode_structure(orbit->driver);
+}
+
+//========================================================================================
+//
+//          Initial conditions - deprecated
+//
+//========================================================================================
+/**
+ *   \brief Update the initial conditions (si, s0, z0 and s0d) of the orbit given an array of initial TFC conditions si
+ **/
+void orbit_update_ic(SingleOrbit &orbit, const double si[], double t0)
+{
+    //------------------------------------------------------------------------------------
+    // 1. Update si
+    //------------------------------------------------------------------------------------
+    for(int p = 0; p < orbit.reduced_nv; p++) orbit.si[p] = si[p];
+
+    //------------------------------------------------------------------------------------
+    // 2. Update s0
+    //------------------------------------------------------------------------------------
+    RCMtoCCM(si, orbit.s0, orbit.reduced_nv);
+
+    //------------------------------------------------------------------------------------
+    // 2. Update s0d
+    //------------------------------------------------------------------------------------
+    RCMtoCCM8(si, orbit.s0d, orbit.reduced_nv);
+
+    //------------------------------------------------------------------------------------
+    // 4. Update z0
+    //------------------------------------------------------------------------------------
+    //z0 = W(si, t0)
+    RCMtoNCbyTFC(si,
+                 t0,
+                 orbit.n,
+                 orbit.order,
+                 orbit.ofs_order,
+                 orbit.reduced_nv,
+                *orbit.Wh,
+                *orbit.PC,
+                *orbit.V,
+                 orbit.z0,
+                 orbit.isGS);
+}
+
+/**
+ *   \brief Update the initial conditions (si, s0, z0 and s0d) of the orbit given an array of initial TFC conditions si
+ *          and an array of initial NC conditions z0.
+ **/
+void orbit_update_ic(SingleOrbit &orbit, const double si[], const double z0[])
+{
+    //------------------------------------------------------------------------------------
+    // 1. Update si
+    //------------------------------------------------------------------------------------
+    for(int p = 0; p < orbit.reduced_nv; p++) orbit.si[p] = si[p];
+
+    //------------------------------------------------------------------------------------
+    // 2. Update s0
+    //------------------------------------------------------------------------------------
+    RCMtoCCM(si, orbit.s0, orbit.reduced_nv);
+
+    //------------------------------------------------------------------------------------
+    // 2. Update s0d
+    //------------------------------------------------------------------------------------
+    RCMtoCCM8(si, orbit.s0d, orbit.reduced_nv);
+
+    //------------------------------------------------------------------------------------
+    // 4. Update z0
+    //------------------------------------------------------------------------------------
+    //z0 = W(si, 0.0)
+    for(int p = 0; p < NV; p++) orbit.z0[p] = z0[p];
+}

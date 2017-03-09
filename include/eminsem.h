@@ -55,11 +55,22 @@ void qbcp_coc_vec(double **y0, double *t0, double **yout, int N, int inputType, 
  **/
 void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, int outputType);
 
-
 /**
  *  \brief COC: from inputType to outputType, in vector form, for time vectors only.
  **/
 void qbcp_coc_time(double *t0, double *tout, int N, int inputType, int outputType);
+
+//========================================================================================
+//
+// Hamiltonian
+//
+//========================================================================================
+/**
+ *  \brief Computes the Hamiltonian at (t0, y0),  given in inputType coordinates.
+ *         The result is given in outputType coordinates, that can be:
+ *         NCSEM, NCEM, PEM, PSEM.
+ **/
+double qbcp_H_complete(double t0, const double y0[], int inputType, int outputType);
 
 
 //=============================================================================================

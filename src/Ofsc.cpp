@@ -690,14 +690,22 @@ void readOFS_txt(Ofsc& xFFT, string filename)
 
     //Reading
     readStream.open((filename+".txt").c_str());
-    for(int i = -fftN; i<=fftN; i++)
+
+    if (readStream.is_open())
     {
-        readStream >> ct;  //current order
-        readStream >> cr;  //real part
-        readStream >> ci;  //imag part
-        xFFT.setCoef(cr+I*ci, i);
+        for(int i = -fftN; i<=fftN; i++)
+        {
+            readStream >> ct;  //current order
+            readStream >> cr;  //real part
+            readStream >> ci;  //imag part
+            xFFT.setCoef(cr+I*ci, i);
+        }
+        readStream.close();
     }
-    readStream.close();
+    else
+    {
+        cout << "readOFS_txt. No impossible to read " << filename << endl;
+    }
 }
 
 //----------------------------------------------------------------------------------------

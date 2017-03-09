@@ -6,10 +6,26 @@
 #include <vector>       // std::vector
 #include <iterator>
 
+#include <stdio.h>
+#include <string.h>
+#include <errno.h>
+#include <sys/stat.h>
+
 #include "single_orbit.h"
 
 
 using namespace std;
+
+//========================================================================================
+// Function: fileExists
+//========================================================================================
+/**
+ *   Check if a file exists
+ *   @param[in] filename - the name of the file to check
+ *   @return    true if the file exists, else false
+ *
+ */
+bool fileExists(const std::string& filename);
 
 //========================================================================================
 //
@@ -44,7 +60,7 @@ void writeCOMP_txt(double *t_traj_n, double **y_traj_n, int final_index);
  *         the data vectors should be initialized accordingly by the user prior to the use
  *         of this routine.
  **/
-void readCOMP_txt(double *t_traj_n, double **y_traj_n, int final_index);
+int readCOMP_txt(double *t_traj_n, double **y_traj_n, int final_index);
 
 /**
  *  \brief Get the length of the final_index+1 points trajectory contained in a
@@ -155,6 +171,8 @@ void writeIntProjCU_bin(string filename,
                         double min_proj_dist_SEM,             //minimum distance of projection in SEM units
                         double dv_at_projection_SEM,          //associated dv
                         double* t_man_SEM,                    //time grid on manifold leg in SEM units
+                        double crossings_NCSEM,               //number of crossings of the x = -1 line (clock/counterclockwise)
+                        int collision_NCEM,                   //collision flag, from NCEM flow
                         int kmin,
                         int ks1,
                         int ks3,
@@ -179,6 +197,8 @@ void writeIntProjCU_bin_3D(string filename,
                            double min_proj_dist_SEM,           //minimum distance of projection in SEM units
                            double dv_at_projection_SEM,        //associated dv
                            double* t_man_SEM,                  //time grid on manifold leg in SEM units
+                           double crossings_NCSEM,               //number of crossings of the x = -1 line (clock/counterclockwise)
+                           int collision_NCEM,                   //collision flag, from NCEM flow
                            int kmin,
                            int ks3,
                            int kt);
@@ -189,6 +209,25 @@ void writeIntProjCU_bin_3D(string filename,
 //
 //========================================================================================
 /**
+ *  \struct IdxCompare
+ *  \brief  Structure for comparison of indexes (see sort_indexes);
+ **/
+struct IdxCompare
+{
+    const std::vector<double>& target;
+    IdxCompare(const std::vector<double>& target): target(target) {}
+    bool operator()(int a, int b) const
+    {
+        return target[a] < target[b];
+    }
+};
+
+/**
+ *  Routine for comparison of indexes
+ **/
+vector<size_t> sort_indexes(const vector<double> &v);
+
+/**
  *   \brief Resize a vector to its vector of unique elemnts
  **/
 void vector_getUnique(vector<double>& v0U);
@@ -198,23 +237,13 @@ void vector_getUnique(vector<double>& v0U);
  **/
 void vector_getIndices(vector<size_t>& indRes, vector<double>& t0_CMU_EM, double t0);
 
-/**
- *  \brief Read in a data file the connections between EML2 and SEML1,2.
- **/
-void readIntProjCU_bin(string filename,
-                       vector<double>& t0_CMU_EM_0, vector<double>& tf_man_EM_0,
-                       vector<double>& s1_CMU_EM_0, vector<double>& s2_CMU_EM_0,
-                       vector<double>& s3_CMU_EM_0, vector<double>& s4_CMU_EM_0,
-                       vector<double>& s5_CMU_EM_0, vector<double>& pmin_dist_SEM_0,
-                       vector<double>& s1_CM_SEM_0, vector<double>& s2_CM_SEM_0,
-                       vector<double>& s3_CM_SEM_0, vector<double>& s4_CM_SEM_0,
-                       vector<size_t>& sortId);
+
 
 /**
  *  \brief Read in a data file the connections between EML2 and SEML1,2.
  *         Find the data that are the closest to the desired t0 at EML2 departures.
  **/
-void readClosestIntProjCU_bin(string filename, double t0_des,
+int readClosestIntProjCU_bin(string filename, double t0_des,
                               vector<double>& t0_CMU_EM_0, vector<double>& tf_man_EM_0,
                               vector<double>& s1_CMU_EM_0, vector<double>& s2_CMU_EM_0,
                               vector<double>& s3_CMU_EM_0, vector<double>& s4_CMU_EM_0,
@@ -244,5 +273,14 @@ void writeIntProjSortCU_bin(string filename,
                             vector<double>& t0_min_EM, vector<double>& tf_min_EM,
                             vector<double>& distMin, int number_of_sol);
 
+//========================================================================================
+//
+//          Display completion
+//
+//========================================================================================
+/**
+ *   \brief Display the current completion (percent) of a routine.
+ **/
+void displayCompletion(string funcname, double percent);
 
 #endif // SINGLE_ORBIT_IO_H_INCLUDED

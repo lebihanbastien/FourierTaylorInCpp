@@ -48,34 +48,10 @@ extern "C" {
 
 extern int COMPLETION;
 
-//========================================================================================
-//
-//          Sorting structure
-//
-//========================================================================================
-/**
- *  \struct IdxCompare
- *  \brief  Structure for comparison of indexes (see sort_indexes);
- **/
-struct IdxCompare
-{
-    const std::vector<double>& target;
-    IdxCompare(const std::vector<double>& target): target(target) {}
-    bool operator()(int a, int b) const
-    {
-        return target[a] < target[b];
-    }
-};
-
-/**
- *  Routine for comparison of indexes
- **/
-vector<size_t> sort_indexes(const vector<double> &v);
-
 
 //========================================================================================
 //
-//          SingleOrbit structure
+//          SingleOrbit structure - deprecated
 //
 //========================================================================================
 /**
@@ -131,321 +107,33 @@ struct SingleOrbit
 
 
 
-/**
- *   \brief Initialize one SingleOrbit structure
- **/
-void init_orbit(SingleOrbit &orbit,
-                vector<Oftsc>*  W,
-                vector<Oftsc>*  Wh,
-                matrix<Ofsc>*  PC,
-                matrix<Ofsc>*  CQ,
-                vector<Ofsc>*  V,
-                Ofsc* orbit_ofs,
-                int ofts_order,
-                int ofs_order,
-                int isGS,
-                double t0,
-                double tf,
-                double tproj,
-                OdeStruct *driver,
-                QBCP_L *qbcp_l);
-
-/**
- *   \brief Free one orbit
- **/
-void free_orbit(SingleOrbit *orbit);
-
 //========================================================================================
 //
-//          Initial conditions
+//          Integration - main routines
 //
 //========================================================================================
 /**
- *   \brief Update the initial conditions (si, s0, z0 and s0d) of the orbit given an array of initial TFC conditions si
+ * \brief Integrates a generic vector field from any input type to any output type.
  **/
-void orbit_update_ic(SingleOrbit &orbit, const double si[], double t0);
-/**
- *   \brief Update the initial conditions (si, s0, z0 and s0d) of the orbit given an array of initial TFC conditions si
- *          and an array of initial NC conditions z0.
- **/
-void orbit_update_ic(SingleOrbit &orbit, const double si[], const double z0[]);
-
-
-//========================================================================================
-//
-// ANNEXES
-//
-//========================================================================================
-/**
- *   \brief Display the current completion (percent) of a routine.
- **/
-void displayCompletion(string funcname, double percent);
-
-/**
- *  Routine for comparison of indexes
- **/
-vector<size_t> sort_indexes(const vector<double> &v);
-
-//========================================================================================
-//
-//          I/O (2). Used in manOrbit/manOrbitProj/manOrbitPostProcess/manOrbitSEM
-//
-//========================================================================================
-/**
- * \brief Store the manifold (tTens, yTens) in the  data file filenameOrbit(ofts_order, sizeOrbit, type). The manifodl is composed of N+1 branches, each of them
- * described by Nman+1 points.
- **/
-int writeManifold_bin(double **tTens, double ***yTens, int ofts_order, int sizeOrbit, int N, int Nman, int type);
-
-/**
-* \brief Read the manifold (tTens, yTens) in the  data file filenameOrbit(ofts_order, sizeOrbit, type). The manifodl is composed of N+1 branches, each of them
-* described by Nman+1 points.
-**/
-int readManifold_bin(double **tTens, double ***yTens, int ofts_order, int sizeOrbit, int N, int Nman, int type);
-
-/**
- * \brief Get the length of the data file filenameOrbit(ofts_order, sizeOrbit, type) containing the manifold (tTens, yTens). The manifodl is composed of N+1 branches, each of them
- * described by Nman+1 points.
- **/
-int getLenghtManifold_bin(int ofts_order, int sizeOrbit, int *N, int *Nman, int type);
-
-//========================================================================================
-//
-//          Main routines (2): connections with a fixed orbit
-//
-//========================================================================================
-/**
- *  \brief Computes an orbit on a given time grid [t0 t1], with initial conditions st0, on the center manifold CM.
- **/
-int gridOrbit(double st0[],
-              double t0,
-              double tf,
-              double dt,
-              vector<Oftsc> &CM,
-              vector<Oftsc> &CM_TFC,
-              matrix<Ofsc>  &Mcoc,
-              matrix<Ofsc>  &MIcoc,
-              vector<Ofsc>  &Vcoc);
-
-/**
- *  \brief Computes the unstable directions of a discrete set of points on an orbit stored in a data file (obtained from gridOrbit).
- **/
-int cusOrbit(int ofts_order,
-             int sizeOrbit,
-             double epsilon,
-             vector<Oftsc> &CM_TFC,
-             matrix<Ofsc>  &Mcoc,
-             matrix<Ofsc>  &MIcoc,
-             vector<Ofsc>  &Vcoc,
-             bool isPar);
-
-/**
- *  \brief Computes the manifold branches from a discrete set of unstable directions along a given LPO (obtained from cusOrbit)
- **/
-int manOrbit(double tmax_on_manifold_EM,
-             int ofts_order,
-             int sizeOrbit,
-             int number_of_sol,
-             int Nman,
-             int isPar,
-             vector<Oftsc> &CM,
-             vector<Oftsc> &CM_TFC,
-             matrix<Ofsc>  &Mcoc,
-             matrix<Ofsc>  &Pcoc,
-             matrix<Ofsc>  &MIcoc,
-             matrix<Ofsc>  &PIcoc,
-             vector<Ofsc>  &Vcoc);
-
-/**
- *  \brief Postprocess of the manifold branches obtained with manOrbit. Sort with them with respect to the integrated distance between the current state along
- * the trajectories and the SEMLi point selected in the SEML structure.
- **/
-void manOrbitPostProcess(int ofts_order,
-                         int sizeOrbit,
-                         int Nex,
-                         int isPar);
-
-
-/**
- *  \brief Projection of the manifold branches obtained with manOrbit+manOrbitPostProcess. Each state on the manifold branches are projected on the Center Manifold
- *   of the SEMLi point selected in the SEML structure. Then, the corresponding solutions are stored in a data file.
- **/
-void manOrbitProj(int order_em,
-                  int size_em,
-                  int type_em,
-                  int order_sem,
-                  int Nex,
-                  int Nmant,
-                  matrix<Ofsc>  &Mcoc,
-                  matrix<Ofsc>  &Pcoc,
-                  matrix<Ofsc>  &MIcoc,
-                  matrix<Ofsc>  &PIcoc,
-                  vector<Ofsc>  &Vcoc,
-                  int isPar);
-/**
- *  \brief Differential correction process on the solutions obtained with manOrbit+manOrbitPostProcess+manOrbitProj. WORK IN PROGRESS
- **/
-void manOrbitLambert(int order_em,
-                     int size_em,
-                     int type_em,
-                     int order_sem,
-                     vector<Oftsc> &CM,
-                     vector<Oftsc> &CM_TFC,
-                     matrix<Ofsc>  &Mcoc,
-                     matrix<Ofsc>  &Pcoc,
-                     matrix<Ofsc>  &MIcoc,
-                     matrix<Ofsc>  &PIcoc,
-                     vector<Ofsc>  &Vcoc);
-
-/**
- *  \brief Plot of the manifold branches obtained with manOrbit+manOrbitPostProcess.
- **/
-void manOrbitPlot(int ofts_order,
-                  int sizeOrbit,
-                  int number_of_sol,
-                  int Nmant,
-                  int type);
-
-/**
- *  \brief Same as manOrbit, but with integration in the SEM units and coordinates.
- **/
-int manOrbitSEM(double tmax_on_manifold_EM,
-                int ofts_order,
-                int sizeOrbit,
-                int number_of_sol,
-                int Nman,
-                int isPar,
-                vector<Oftsc> &CM,
-                vector<Oftsc> &CM_TFC,
-                matrix<Ofsc>  &Mcoc,
-                matrix<Ofsc>  &Pcoc,
-                matrix<Ofsc>  &MIcoc,
-                matrix<Ofsc>  &PIcoc,
-                vector<Ofsc>  &Vcoc);
-
-
-
-//========================================================================================
-//
-//          Main routines (3): old versions of connections
-//
-//========================================================================================
-/**
- * Exponential moving average with alpha = 1/N.
- * See http://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average
- **/
-double approxRollingAverage (double avg, double input, int N);
-
-/**
- * Get Exponential moving average with alpha = 1/N.
- * See http://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average
- **/
-double getDeltaMovingAverage(double delta, list<double> &listDeltaMA, unsigned int N);
-
-/**
- *  \brief Computes an orbit on a given time grid [t0 tf tf+tmax_on_manifold_EM], with initial conditions st0, on the center-unstable manifold CM.
- *         Then, computes the minimum distance to the center-manifold of a SEM libration point.
- **/
-int eml2Tosemli2(double st0[],
-                 double t0,
-                 double tf,
-                 double tmax_on_manifold_EM,
-                 double tplot,
-                 vector<Oftsc> &CM,
-                 vector<Oftsc> &CM_TFC,
-                 matrix<Ofsc>  &Mcoc,
-                 matrix<Ofsc>  &Pcoc,
-                 matrix<Ofsc>  &MIcoc,
-                 matrix<Ofsc>  &PIcoc,
-                 vector<Ofsc>  &Vcoc);
-
-/**
- *  \brief Computes an orbit on a given time grid [t0 tf tf+tmax_on_manifold_EM], with initial conditions st0, on the center-unstable manifold CM.
- *         Then, computes the minimum distance to the center-manifold of a SEM libration point.
- **/
-int eml2Tosemli_torb_vs_tman(double st0[],
-                             double t0,
-                             double tf,
-                             double tmax_on_manifold_EM,
-                             vector<Oftsc> &CM,
-                             vector<Oftsc> &CM_TFC,
-                             matrix<Ofsc>  &Mcoc,
-                             matrix<Ofsc>  &Pcoc,
-                             matrix<Ofsc>  &MIcoc,
-                             matrix<Ofsc>  &PIcoc,
-                             vector<Ofsc>  &Vcoc);
-
-/**
- *  \brief Computes an orbit on a given time grid [t0 tf tf+tmax_on_manifold_EM], with initial conditions st0, on the center-(un)stable manifold CM.
- **/
-int orbit_cus(double st0[],
-              double t0,
-              double tf,
-              double tmax_on_manifold_EM,
-              vector<Oftsc> &CM,
-              vector<Oftsc> &CM_TFC,
-              matrix<Ofsc>  &Mcoc,
-              matrix<Ofsc>  &Pcoc,
-              matrix<Ofsc>  &MIcoc,
-              matrix<Ofsc>  &PIcoc,
-              vector<Ofsc>  &Vcoc);
-
-/**
- *  \brief Computes an orbit on a given time grid [t0 tf tf+tmax_on_manifold_EM], with initian conditions st0, on the center-unstable manifold CM (SEM framework).
- **/
-int orbit_cu_sem(double st0[],
-                 double t0,
-                 double tf,
-                 double tmax_on_manifold_EM,
-                 vector<Oftsc> &CM,
-                 vector<Oftsc> &CM_TFC,
-                 matrix<Ofsc>  &Mcoc,
-                 matrix<Ofsc>  &Pcoc,
-                 matrix<Ofsc>  &MIcoc,
-                 matrix<Ofsc>  &PIcoc,
-                 vector<Ofsc>  &Vcoc);
-/**
- *  \brief Computes an orbit on a given time grid [t0 tf tf+tmax_on_manifold_EM], with initial conditions st0, on the center-unstable manifold CM.
- *         Then, computes the minimum distance to the center-manifold of a SEM libration point.
- **/
-int semliToseml2(double st0[],
-                 double t0,
-                 double tf,
-                 double tmax_on_manifold_EM,
-                 vector<Oftsc> &CM,
-                 vector<Oftsc> &CM_TFC,
-                 matrix<Ofsc>  &Mcoc,
-                 matrix<Ofsc>  &Pcoc,
-                 matrix<Ofsc>  &MIcoc,
-                 matrix<Ofsc>  &PIcoc,
-                 vector<Ofsc>  &Vcoc);
-
-//========================================================================================
-//
-//          Integration
-//
-//========================================================================================
-/**
- * \brief Integrates the Ephemerides vector field. Only VECLI coordinates are used for now.
- **/
-int ode78_jpl(double **yv, double *tv, int *ode78coll,
-                  double t0NC, double tfNC, const double *y0NC,
-                  int nvar, int nGrid, int dcs,
-                  int inputType, int outputType);
-
 int ode78(double **yv, double *tv, OdeEvent *odeEvent,
           double t0NC, double tfNC, const double *y0NC,
           int nvar, int nGrid, int dcs,
           int inputType, int outputType);
 
 /**
- * \brief Integrates the QBCP vector field from any input type to any output type.
+ * \brief Integrates a generic vector field from any input type to any output type.
  **/
 int ode78(double **yv, double *tv, int *ode78coll,
           double t0NC, double tfNC, const double *y0NC,
           int nvar, int nGrid, int dcs,
           int inputType, int outputType);
 
+
+//========================================================================================
+//
+//          Integration - with event
+//
+//========================================================================================
 /**
  * \brief Integrates the QBCP vector field from any input type to any output type.
  *        The output are states and time corresponding to a particular event stored
@@ -457,6 +145,11 @@ int ode78_qbcp_event(double **ye, double *te, int *ode78coll,
                      int inputType, int outputType,
                      value_params* val_par);
 
+//========================================================================================
+//
+//          Integration - variable and given time grids (not really used)
+//
+//========================================================================================
 /**
  * \brief Integrates the QBCP vector field from any input type to any output type. Return the last position that is filled on the grid.
  **/
@@ -475,21 +168,56 @@ int ode78_qbcp_gg(double **yv, double *tvf, int *ode78coll,
                   int nvar, int nGrid, int dcs,
                   int inputType, int outputType);
 
+
+//========================================================================================
+//
+//          Integration - JPL (deprecated)
+//
+//========================================================================================
+/**
+ * \brief Integrates the Ephemerides vector field. Only VECLI, VSEM and VEM coordinates are used for now.
+ **/
+int ode78_jpl(double **yv, double *tv, int *ode78coll,
+              double t0NC, double tfNC, const double *y0NC,
+              int nvar, int nGrid, int dcs,
+              int inputType, int outputType);
+
+
+//========================================================================================
+//
+//          Integration - subroutines
+//
+//========================================================================================
 /**
  *   \brief Integrates a given trajectory up to tf, on a given grid
  **/
-int ode78_grid(OdeStruct *driver, double t0, double tf, double *y0, double **yNCE, double *tNCE, int N);
+int ode78_grid(OdeStruct *odestruct, double t0, double tf, double *y0, double **yNCE, double *tNCE, int N);
+
+/**
+ *  \brief Stepper that includes detections of event as described in OdeParams.
+ **/
+int gslc_event_step(OdeStruct* odestruct, OdeParams* odP, double yv[], double* t, double t1);
+
+/**
+ *   \brief Integrates the current state yv up to t = t1, includes detections of event as described in OdeParams.
+ **/
+int gslc_event_evolve(OdeStruct* odestruct, OdeParams* odP, double yv[], double* t, double t1);
 
 /**
  *   \brief Integrates a given trajectory up to tf, on a variable grid. Return the last position that is filled on the grid.
  **/
-int ode78_variable_grid(OdeStruct *driver, double t0, double tf, double *y0, double **yNCE, double *tNCE, int N);
+int ode78_variable_grid(OdeStruct *odestruct, double t0, double tf, double *y0, double **yNCE, double *tNCE, int N);
 
 /**
  *   \brief Integrates a given trajectory up to tf, on a given grid. The time grid is given as input
  **/
-int ode78_grid_gg(OdeStruct *driver, double *y0, double **yNCE, const double *tNCEi, int N);
+int ode78_grid_gg(OdeStruct *odestruct, double *y0, double **yNCE, const double *tNCEi, int N);
 
+//========================================================================================
+//
+//          Integration - SingleOrbit (deprecated)
+//
+//========================================================================================
 /**
  *   \brief Integrates a given trajectory up to tf, on a given grid
  **/
@@ -500,11 +228,6 @@ int trajectory_integration_grid(SingleOrbit &orbit, double t0, double tf, double
  **/
 int trajectory_integration_variable_grid(SingleOrbit &orbit, double t0, double tf, double **yNCE, double *tNCE, int N, int isResetOn);
 
-//========================================================================================
-//
-//          Integration
-//
-//========================================================================================
 /**
  *   \brief Integrates one step the current state yv using projection on the CM if necessary
  **/
@@ -530,10 +253,9 @@ int gslc_proj_evolve(SingleOrbit &orbit,
                      int *nreset,
                      int isResetOn);
 
-
 //========================================================================================
 //
-//          Projection on (un)stable manifold
+//          Projection on (un)stable manifold - deprecated
 //
 //========================================================================================
 /**
@@ -542,10 +264,12 @@ int gslc_proj_evolve(SingleOrbit &orbit,
  **/
 void NCprojCCMtoCUS(double *yv, double tv, double n, double sti[5], vector<Oftsc> &CM_TFC, double epsilon, matrix<Ofsc>  &MIcoc, vector<Ofsc>  &Vcoc);
 
+
 /**
  * \brief Projects in sti a given NC state on the corresponding center manifold given by (CM_TFC, MIcoc, Vcoc).
  **/
-void NCprojCCMtoCM(double *yv, double tv, double n,  double sti[5], vector<Oftsc> &CM_TFC, matrix<Ofsc>  &MIcoc, vector<Ofsc>  &Vcoc);
+void NCprojCCMtoCM(double *yv, double tv, double n, double sti[5], vector<Oftsc> &CM_TFC, matrix<Ofsc>  &MIcoc, vector<Ofsc>  &Vcoc);
+
 
 //========================================================================================
 //
@@ -562,10 +286,12 @@ void HSEM_vec(double *tSEM, double **ySEM, double *Hvec, int N, QBCP_L *qbcp_l);
  **/
 void HSEMLi_vec(double *tSEM, double *Hvec, int N, QBCP_L *qbcp_l);
 
+
 /**
  *  \brief Hamiltonian along the dyneq of EMLi for a given time vector in SEM units and SEM coordinates
  **/
 void HEMLi_in_SEM_vec(double *tEM, double *Hvec, int N, QBCP_L *qbcp_l);
+
 
 //========================================================================================
 //
@@ -606,6 +332,7 @@ void emPlot(gnuplot_ctrl *h1, double **emP);
  *  \brief Sets notable points in SEM system on the gnuplot window ctrl h2
  **/
 void semPlot(gnuplot_ctrl *h2, double **semP);
+
 
 //========================================================================================
 //
@@ -654,12 +381,74 @@ int readOrbit(double *tNCE, double **yNCE, double **sNCE, int ofts_order, int si
  */
 int qbcp_derivatives_em_in(double t, const double y[], double f[], void *params);
 
-
 /**
  *  \brief Test function to compare the analytical solution of the QBTBP to the numerical integration of the equations of motion.
  */
 void qbcp_test(QBCP_L &qbcp_l);
 
 //========================================================================================
+//
+//          Orbit on a grid - deprecated
+//
+//========================================================================================
+/**
+ *  \brief Computes an orbit on a given time grid [t0 t1], with initial conditions st0, on the center manifold CM.
+ **/
+int gridOrbit(double st0[],
+              double t0,
+              double tf,
+              double dt,
+              vector<Oftsc> &CM,
+              vector<Oftsc> &CM_TFC,
+              matrix<Ofsc>  &Mcoc,
+              matrix<Ofsc>  &MIcoc,
+              vector<Ofsc>  &Vcoc);
+
+
+//========================================================================================
+//
+//          SingleOrbit structure - deprecated
+//
+//========================================================================================
+/**
+ *   \brief Initialize one SingleOrbit structure
+ **/
+void init_orbit(SingleOrbit &orbit,
+                vector<Oftsc>*  W,
+                vector<Oftsc>*  Wh,
+                matrix<Ofsc>*  PC,
+                matrix<Ofsc>*  CQ,
+                vector<Ofsc>*  V,
+                Ofsc* orbit_ofs,
+                int ofts_order,
+                int ofs_order,
+                int isGS,
+                double t0,
+                double tf,
+                double tproj,
+                OdeStruct *driver,
+                QBCP_L *qbcp_l);
+
+/**
+ *   \brief Free one orbit
+ **/
+void free_orbit(SingleOrbit *orbit);
+
+//========================================================================================
+//
+//          Initial conditions - deprecated
+//
+//========================================================================================
+/**
+ *   \brief Update the initial conditions (si, s0, z0 and s0d) of the orbit given an array of initial TFC conditions si
+ **/
+void orbit_update_ic(SingleOrbit &orbit, const double si[], double t0);
+
+/**
+ *   \brief Update the initial conditions (si, s0, z0 and s0d) of the orbit given an array of initial TFC conditions si
+ *          and an array of initial NC conditions z0.
+ **/
+void orbit_update_ic(SingleOrbit &orbit, const double si[], const double z0[]);
+
 
 #endif // SINGLE_ORBIT_H_INCLUDED

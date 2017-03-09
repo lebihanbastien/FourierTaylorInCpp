@@ -15,10 +15,12 @@ enum {
   FTC_SUCCESS  =  0,            //equal to GSL_SUCCESS =  0 for consistency
   FTC_FAILURE  = -1,            //equal to GSL_FAILURE = -1 for consistency
   FTC_EDOM     =  1,            //input domain error, equal to GSL_EDOM =  1 for consistency
+  FTC_ENOENT   = -33,           //No such file or directory
 
   //For refinement procedures
   REF_EOUTOFDPC = -2,     //out of the domain of practical convergence (DPC) of the semi-analytical tools
   REF_EMAXITREACH = -3,   //the maximum iteration number is reached.
+
 
   //For orbit procedures
   ORBIT_EINT     = -4,  //integration failed

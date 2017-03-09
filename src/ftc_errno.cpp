@@ -15,6 +15,8 @@ ref_strerror (const int ref_errno)
         return "failure" ;
     case FTC_EDOM:
         return "input domain error" ;
+    case FTC_ENOENT:
+        return "no such file or directory" ;
 
     //------------------------------------------------------------------------------------
     //For refinement procedures

@@ -409,6 +409,12 @@ int int_proj_CMU_EM_on_CM_SEM_3D(ProjSt &projSt)
     offset = getLenghtCU_bin_3D(si_grid_size, &t_grid_size,
                                 OFTS_ORDER, TYPE_CU_3D, SEML.li_SEM);
 
+    if(offset < 0)
+    {
+        cout << "int_proj_CMU_EM_on_CM_SEM_3D. Impossible to get length of the data file." << endl;
+        return FTC_FAILURE;
+    }
+
 
     //====================================================================================
     // Splash screen
@@ -442,9 +448,9 @@ int int_proj_CMU_EM_on_CM_SEM_3D(ProjSt &projSt)
     Invman invman_SEM(OFTS_ORDER, OFS_ORDER, *SEML_SEM.cs);
 
 
-    //----------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //To store
-    //----------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double** final_state_CMU_SEM      = dmatrix(0, 5, 0, si_grid_size[2]);
     double** projected_state_CMU_SEM  = dmatrix(0, 5, 0, si_grid_size[2]);
     double** projected_state_CMU_RCM  = dmatrix(0, 3, 0, si_grid_size[2]);
@@ -494,6 +500,12 @@ int int_proj_CMU_EM_on_CM_SEM_3D(ProjSt &projSt)
         offset = readTCU_bin_3D(offset, init_time_grid_EM, kt,
                                 OFTS_ORDER, TYPE_CU_3D, SEML.li_SEM);
 
+        if(offset < 0)
+        {
+            cout << "int_proj_CMU_EM_on_CM_SEM_3D. Impossible to read the data file." << endl;
+            return FTC_FAILURE;
+        }
+
         for(int ks2 = 0; ks2 <= si_grid_size[1]; ks2++)
         {
             for(int ks4 = 0; ks4 <= si_grid_size[3]; ks4++)
@@ -506,6 +518,11 @@ int int_proj_CMU_EM_on_CM_SEM_3D(ProjSt &projSt)
                     offset = readCU_bin_3D(offset, init_state_CMU_NCEM,
                                            init_state_CMU_RCM, si_grid_size, OFTS_ORDER,
                                            TYPE_CU_3D, SEML.li_SEM);
+                    if(offset < 0)
+                    {
+                        cout << "int_proj_CMU_EM_on_CM_SEM_3D. Impossible to read the data file." << endl;
+                        return FTC_FAILURE;
+                    }
 
                     //--------------------------------------------------------------------
                     //Most inner loop is parallelized
@@ -550,7 +567,8 @@ int int_proj_CMU_EM_on_CM_SEM_3D(ProjSt &projSt)
                         //----------------------------------------------------------
                         Ofsc ofs(OFS_ORDER);
                         double yvproj_NCSEM[6], sproj[4], yv_SEM[6], yvproj_SEM[6], yvEM[6], yv_VSEM[6], yvproj_VSEM[6];
-                        double proj_dist_SEM, min_proj_dist_SEM = ePdef, dv_at_projection_SEM = 0.0, y_man_norm_NCSEM = 0.0;
+                        double proj_dist_SEM, min_proj_dist_SEM = ePdef, dv_at_projection_SEM = 0.0, y_man_norm_NCSEM = 0.0, crossings_NCSEM = 0.0;
+                        int collision_NCEM = 0;
                         int kmin = 0;
 
                         //----------------------------------------------------------------
@@ -633,11 +651,7 @@ int int_proj_CMU_EM_on_CM_SEM_3D(ProjSt &projSt)
                             //------------------------------------------------------------
                             if(ode78coll)
                             {
-                                //If ode78coll !=  0 a collision has occured, and we
-                                //send back the code of the associated primary in the
-                                //dv_at_projection_SEM.
-                                //cout << "Collision! with " << ode78coll << endl;
-                                dv_at_projection_SEM = ode78coll;
+                                collision_NCEM = ode78coll;
                             }
 
 
@@ -663,18 +677,23 @@ int int_proj_CMU_EM_on_CM_SEM_3D(ProjSt &projSt)
                                 //Minimum projection distance
                                 min_proj_dist_tens_SEM[ks3] = min_proj_dist_SEM;
 
-                                //----------------------------------------------------------
+                                //--------------------------------------------------------
                                 //Open datafile
-                                //----------------------------------------------------------
-                                writeIntProjCU_bin_3D(filename, init_time_grid_EM, init_state_CMU_NCEM,
-                                init_state_CMU_SEM, init_state_CMU_RCM, final_state_CMU_SEM, projected_state_CMU_SEM,
-                                projected_state_CMU_RCM, min_proj_dist_SEM, dv_at_projection_SEM, t_man_SEM, kmin, ks3, kt);
+                                //--------------------------------------------------------
+                                writeIntProjCU_bin_3D(filename, init_time_grid_EM,
+                                                      init_state_CMU_NCEM, init_state_CMU_SEM,
+                                                      init_state_CMU_RCM, final_state_CMU_SEM,
+                                                      projected_state_CMU_SEM, projected_state_CMU_RCM,
+                                                      min_proj_dist_SEM, dv_at_projection_SEM,
+                                                      t_man_SEM,
+                                                      crossings_NCSEM, collision_NCEM,
+                                                      kmin, ks3, kt);
                             }
                         }
 
-                        //----------------------------------------------------------
+                        //----------------------------------------------------------------
                         //Display completion
-                        //----------------------------------------------------------
+                        //----------------------------------------------------------------
                         #pragma omp critical
                         {
                             displayCompletion("int_proj_CMU_EM_on_CM_SEM_3D", 100.0*index++/noe);
@@ -747,7 +766,13 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt)
     //Read data size
     //----------------------------------------------------------
     int t_grid_size, s1_grid_size, s3_grid_size;
-    getLenghtCU_bin(&s1_grid_size, &s3_grid_size, &t_grid_size, OFTS_ORDER, TYPE_CU, SEML.li_SEM);
+    int status = getLenghtCU_bin(&s1_grid_size, &s3_grid_size, &t_grid_size, OFTS_ORDER, TYPE_CU, SEML.li_SEM);
+
+    if(status != FTC_SUCCESS)
+    {
+        cout << "int_proj_CMU_EM_on_CM_SEM. Impossible to get length of the data file." << endl;
+        return FTC_FAILURE;
+    }
 
     //----------------------------------------------------------
     //To store all data
@@ -759,8 +784,14 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt)
     //----------------------------------------------------------
     //Read data from file
     //----------------------------------------------------------
-    readCU_bin(init_state_CMU_NCEM, init_state_CMU_RCM, init_time_grid_EM,
-               s1_grid_size, s3_grid_size, t_grid_size, OFTS_ORDER, TYPE_CU, SEML.li_SEM);
+    status = readCU_bin(init_state_CMU_NCEM, init_state_CMU_RCM, init_time_grid_EM,
+                            s1_grid_size, s3_grid_size, t_grid_size, OFTS_ORDER, TYPE_CU, SEML.li_SEM);
+
+    if(status != FTC_SUCCESS)
+    {
+        cout << "int_proj_CMU_EM_on_CM_SEM. Impossible to read data file." << endl;
+        return FTC_FAILURE;
+    }
 
     //====================================================================================
     // Splash screen
@@ -885,7 +916,8 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt)
                 //------------------------------------------------------------------------
                 Ofsc ofs(OFS_ORDER);
                 double yvproj_NCSEM[6], sproj[4], yv_SEM[6], yvproj_SEM[6], yvEM[6], yv_VSEM[6], yvproj_VSEM[6];
-                double proj_dist_SEM, min_proj_dist_SEM = ePdef, dv_at_projection_SEM = 0.0, y_man_norm_NCSEM = 0.0;
+                double proj_dist_SEM, min_proj_dist_SEM = ePdef, dv_at_projection_SEM = 0.0, y_man_norm_NCSEM = 0.0, crossings_NCSEM = 0.0;
+                int collision_NCEM = 0;
                 int ksort = (s1_grid_size+1)*(s3_grid_size+1)*kt + (s3_grid_size+1)*ks1 + ks3;
                 int kmin = 0;
 
@@ -896,7 +928,7 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt)
                 {
                     // If status != 0, something went wrong during the integration
                     // in ode78 and we use the maximum value ePdef (the solution
-                    // is basically discarded
+                    // is basically discarded)
                     proj_dist_SEM = ePdef;
                 }
                 else
@@ -981,24 +1013,29 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt)
                     //--------------------------------------------------------------------
                     if(min_proj_dist_SEM < ePdef)
                     {
+                        // Init temporary objects
                         OdeEvent odeEvent_purge(true);
                         double** y_purge = dmatrix(0, 5, 0, 2);
                         double* t_purge  = dvector(0, 2);
-                        tv  = init_time_grid_EM[kt];
 
+                        // Initial condition in NCEM coordinates
+                        tv  = init_time_grid_EM[kt];
                         for(int i = 0; i < 6; i++) yv[i] = init_state_CMU_NCEM[i][kt][ks1][ks3];
 
+                        // Compute the event using ode78 on [tv, t_man_EM[kmin]]
                         ode78(y_purge, t_purge, &odeEvent_purge, tv, t_man_SEM[kmin]/SEML.us_em.ns, yv, 6, 2, I_NCSEM, NCEM, NCSEM);
 
+                        // Save value in crossings_NCSEM
+                        crossings_NCSEM = odeEvent_purge.crossings;
+
+                        // Free temporary objects
                         free_dmatrix(y_purge, 0, 5, 0, 2);
                         free_dvector(t_purge, 0, 2);
 
-                        dv_at_projection_SEM = odeEvent_purge.crossings;
-                        //cout << "odeEvent_purge.crossings = " << odeEvent_purge.crossings << endl;
-
                         //----------------------------------------------------------------
-                        // SECOND CHECK
+                        // Second check for crossings - older version
                         //----------------------------------------------------------------
+                        /*
                         double crossings = 0.0;
                         double x1, x2, y1;
                         for(int kman = kmin; kman >= 1; kman--)
@@ -1037,6 +1074,7 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt)
                             cout << "odeEvent_purge.crossings = " << odeEvent_purge.crossings << endl;
                             cout << "crossings = " << crossings << endl;
                         }
+                        */
                     }
 
                     //--------------------------------------------------------------------
@@ -1044,11 +1082,7 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt)
                     //--------------------------------------------------------------------
                     if(odeEvent.coll)
                     {
-                        //If ode78coll !=  0 a collision has occured, and we
-                        //send back the code of the associated primary in the
-                        //dv_at_projection_SEM.
-                        //cout << "Collision! with " << ode78coll << endl;
-                        dv_at_projection_SEM = odeEvent.coll;
+                        collision_NCEM = odeEvent.coll;
                     }
                 }
 
@@ -1084,22 +1118,23 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt)
                         ktMin[ksort]    = (int) kt;
                         distMin[ksort]  =  min_proj_dist_SEM;
 
-                        //----------------------------------------------------------
+                        //----------------------------------------------------------------
                         //Open datafile
-                        //----------------------------------------------------------
+                        //----------------------------------------------------------------
                         writeIntProjCU_bin(filename, init_time_grid_EM,
-                        init_state_CMU_NCEM, init_state_CMU_SEM,
-                        init_state_CMU_RCM, final_state_CMU_SEM,
-                        projected_state_CMU_SEM,
-                        projected_state_CMU_RCM,
-                        min_proj_dist_SEM, dv_at_projection_SEM,
-                        t_man_SEM, kmin, ks1, ks3, kt);
+                                           init_state_CMU_NCEM, init_state_CMU_SEM,
+                                           init_state_CMU_RCM, final_state_CMU_SEM,
+                                           projected_state_CMU_SEM,
+                                           projected_state_CMU_RCM,
+                                           min_proj_dist_SEM, dv_at_projection_SEM,
+                                           t_man_SEM, crossings_NCSEM, collision_NCEM,
+                                           kmin, ks1, ks3, kt);
                     }
                 }
 
-                //----------------------------------------------------------
+                //------------------------------------------------------------------------
                 //Display completion
-                //----------------------------------------------------------
+                //------------------------------------------------------------------------
                 #pragma omp critical
                 {
                     displayCompletion("int_proj_CMU_EM_on_CM_SEM", 100.0*index++/((1+s1_grid_size)*(1+s3_grid_size)*(1+t_grid_size)));
@@ -1119,9 +1154,9 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt)
     //====================================================================================
     vector<size_t> sortId = sort_indexes(distMin);
 
-    //----------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Saving the projSt.NSMIN best results or all results if less than 50 have been computed
-    //----------------------------------------------------------
+    //------------------------------------------------------------------------------------
     int number_of_sol  = min(projSt.NSMIN, Nsort-2);
 
     //------------------------------------------------------------------------------------
@@ -2514,24 +2549,20 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
         switch(refSt.dim)
         {
         case REF_PLANAR:
-            //type = refSt.isFromServer? TYPE_MAN_PROJ_FROM_SERVER:TYPE_MAN_PROJ;
             type = TYPE_MAN_PROJ;
             break;
 
         case REF_3D:
         case REF_MIXED:
-            //type = refSt.isFromServer? TYPE_MAN_PROJ_3D_FROM_SERVER:TYPE_MAN_PROJ_3D;
             type = TYPE_MAN_PROJ_3D;
             break;
         }
         filename = filenameCUM(OFTS_ORDER, type, SEML.li_SEM);
-        cout << "selectemlisemli. The data will be retrieved from the server-computed file named:" << endl;
-        cout << filename << endl;
-        pressEnter(true);
+
         readClosestIntProjCU_bin(filename, refSt.t0_des, t0_EM, tf_EM,
                                  s1_CMU_EM, s2_CMU_EM, s3_CMU_EM, s4_CMU_EM, s5_CMU_EM,
-                                  pmin_dist_SEM, s1_CM_SEM, s2_CM_SEM, s3_CM_SEM, s4_CM_SEM,
-                                   sortId);
+                                 pmin_dist_SEM, s1_CM_SEM, s2_CM_SEM, s3_CM_SEM, s4_CM_SEM,
+                                 sortId);
     }
 
 
@@ -3606,13 +3637,26 @@ int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst)
     //Local variables to store the refined trajectory
     //------------------------------------------------------------------------------------
     int final_index = getLengthCOMP_txt();
+
+    if(final_index == FTC_ENOENT)
+    {
+        cout << fname << ". Impossible to read the data file." << endl;
+        return FTC_FAILURE;
+    }
+
     double** y_traj_n   = dmatrix(0, 41, 0, final_index);
     double* t_traj_n    = dvector(0, final_index);
 
     //------------------------------------------------------------------------------------
     //Read the data stored in a data file
     //------------------------------------------------------------------------------------
-    readCOMP_txt(t_traj_n, y_traj_n, final_index);
+    status = readCOMP_txt(t_traj_n, y_traj_n, final_index);
+
+    if(status != FTC_SUCCESS)
+    {
+        cout << fname << ". Impossible to read the data file." << endl;
+        return FTC_FAILURE;
+    }
 
     //====================================================================================
     // 2. Local parameters
@@ -4000,13 +4044,26 @@ int comptojplref3d(int coord_type, RefSt& refSt)
     //Local variables to store the refined trajectory
     //------------------------------------------------------------------------------------
     int final_index = getLengthCOMP_txt();
+
+    if(final_index == FTC_ENOENT)
+    {
+        cout << fname << ". Impossible to read the data file." << endl;
+        return FTC_FAILURE;
+    }
+
     double** y_traj_n   = dmatrix(0, 41, 0, final_index);
     double* t_traj_n    = dvector(0, final_index);
 
     //------------------------------------------------------------------------------------
     //Read the data stored in a data file
     //------------------------------------------------------------------------------------
-    readCOMP_txt(t_traj_n, y_traj_n, final_index);
+    status = readCOMP_txt(t_traj_n, y_traj_n, final_index);
+
+    if(status != FTC_SUCCESS)
+    {
+        cout << fname << ". Impossible to read the data file." << endl;
+        return FTC_FAILURE;
+    }
 
     //------------------------------------------------------------------------------------
     //Arbitrarily reduce the number of points by a factor
@@ -6115,13 +6172,26 @@ int compref3d_test_eml2seml_synjpl(int coord_type)
     //Local variables to store the refined trajectory
     //------------------------------------------------------------------------------------
     int final_index = getLengthCOMP_txt();
+
+    if(final_index == FTC_ENOENT)
+    {
+        cout << fname << ". Impossible to read the data file." << endl;
+        return FTC_FAILURE;
+    }
+
     double** y_traj_n   = dmatrix(0, 41, 0, final_index);
     double* t_traj_n    = dvector(0, final_index);
 
     //------------------------------------------------------------------------------------
     //Read the data stored in a data file
     //------------------------------------------------------------------------------------
-    readCOMP_txt(t_traj_n, y_traj_n, final_index);
+    int status = readCOMP_txt(t_traj_n, y_traj_n, final_index);
+
+    if(status != FTC_SUCCESS)
+    {
+        cout << fname << ". Impossible to read the data file." << endl;
+        return FTC_FAILURE;
+    }
 
     //====================================================================================
     // 2. Local parameters
@@ -7078,9 +7148,9 @@ void writeCONT_txt(Orbit& orbit_EM, Orbit& orbit_SEM,
 
     if(isFirst)
     {
-        //====================================================================================
+        //================================================================================
         // If it is the first entry, the title of the columns are written
-        //====================================================================================
+        //================================================================================
         filestream.open (filename.c_str(), ios::out);
         //Title
         filestream << "t0_CMU_EM  s1_CMU_EM  s2_CMU_EM  s3_CMU_EM  s4_CMU_EM s5_CMU_EM ";
@@ -7088,7 +7158,10 @@ void writeCONT_txt(Orbit& orbit_EM, Orbit& orbit_SEM,
         filestream << "x0_CMU_NCEM  y0_CMU_NCEM z0_CMU_NCEM px0_CMU_NCEM py0_CMU_NCEM pz0_CMU_NCEM ";
         filestream << "x0_CMS_NCSEM y0_CMS_NCSEM z0_CMS_NCSEM px0_CMS_NCSEM py0_CMS_NCSEM pz0_CMS_NCSEM ";
         filestream << "te_NCSEM xe_CMS_NCSEM ye_CMS_NCSEM ze_CMS_NCSEM pxe_CMS_NCSEM pye_CMS_NCSEM pze_CMS_NCSEM ";
-        filestream << "H0_NCEM He_NCEM H0_NCSEM He_NCSEM";
+        filestream << "H0_NCEM H0_NCSEM H0_EM H0_SEM ";
+        filestream << "H0_emli_NCEM H0_emli_NCSEM H0_emli_EM H0_emli_SEM ";
+        filestream << "Hf_NCEM Hf_NCSEM Hf_EM Hf_SEM ";
+        filestream << "Hf_semli_NCEM Hf_semli_NCSEM Hf_semli_EM Hf_semli_SEM ";
         filestream << endl;
     }
     else
@@ -7126,48 +7199,80 @@ void writeCONT_txt(Orbit& orbit_EM, Orbit& orbit_SEM,
 
 
     //------------------------------------------------------------------------------------
-    // Computing Energies
+    // Computing Energies at t = t0 & t = tf
     //------------------------------------------------------------------------------------
-    double H0_NCEM, He_NCEM, H0_NCSEM, He_NCSEM;
+    double H0_NCEM, H0_NCSEM, H0_EM, H0_SEM;
+    double H0_emli_NCEM, H0_emli_NCSEM, H0_emli_EM, H0_emli_SEM;
+    double Hf_NCEM, Hf_NCSEM, Hf_EM, Hf_SEM;
+    double Hf_semli_NCEM, Hf_semli_NCSEM, Hf_semli_EM, Hf_semli_SEM;
+
     double yv_NCEM[6], yv_NCSEM[6];
-    double t0_EM, t0_SEM, te_EM, te_SEM;
+    double yv_emli_NCEM[6], yv_semli_NCSEM[6];
+    double tv_EM, tv_SEM;
+
+    //Origins at both ends
+    for(int i = 0; i <6; i++)
+    {
+        yv_emli_NCEM[i]   = 0.0;
+        yv_semli_NCSEM[i] = 0.0;
+    }
 
     //t0, z0 in NCEM coordinates
-    t0_EM = orbit_EM.getT0();
+    tv_EM = orbit_EM.getT0();
     for(int i = 0; i <6; i++) yv_NCEM[i] = orbit_EM.getZ0()[i];
-    //t0, z0 in NCSEM coordinates
-    qbcp_coc(t0_EM, yv_NCEM, yv_NCSEM, &t0_SEM, NCEM, NCSEM);
 
-    //Initial energy in NCEM coordinates
-    H0_NCEM = qbcp_Hn_EM(t0_EM, yv_NCEM, &SEML);
-    //Initial energy in NCSEM coordinates
-    H0_NCSEM = qbcp_Hn_SEM(t0_SEM, yv_NCSEM, &SEML);
+    // H0 at IC
+    H0_NCEM  = qbcp_H_complete(tv_EM, yv_NCEM, NCEM, NCEM);
+    H0_NCSEM = qbcp_H_complete(tv_EM, yv_NCEM, NCEM, NCSEM);
+    H0_EM    = qbcp_H_complete(tv_EM, yv_NCEM, NCEM, PEM);
+    H0_SEM   = qbcp_H_complete(tv_EM, yv_NCEM, NCEM, PSEM);
 
-    //te, ze in NCSEM coordinates
-    te_EM  = orbit_EM.getTf();                  //in EM units
+    // H0 at emli
+    H0_emli_NCEM  = qbcp_H_complete(tv_EM, yv_emli_NCEM, NCEM, NCEM);
+    H0_emli_NCSEM = qbcp_H_complete(tv_EM, yv_emli_NCEM, NCEM, NCSEM);
+    H0_emli_EM    = qbcp_H_complete(tv_EM, yv_emli_NCEM, NCEM, PEM);
+    H0_emli_SEM   = qbcp_H_complete(tv_EM, yv_emli_NCEM, NCEM, PSEM);
 
-    te_SEM = orbit_EM.getTf()*SEML.us_em.ns;    //in SEM units
+    //tf, yf in NCSEM coordinates
+    tv_SEM = orbit_EM.getTf()*SEML.us_em.ns;
     for(int i = 0; i <6; i++) yv_NCSEM[i] = orbit_SEM.getZ0()[i];
 
-    //te, ze in NCEM coordinates
-    qbcp_coc(te_SEM, yv_NCSEM, yv_NCEM, &te_EM, NCSEM, NCEM);
+    // Hf
+    Hf_NCEM  = qbcp_H_complete(tv_SEM, yv_NCSEM, NCSEM, NCEM);
+    Hf_NCSEM = qbcp_H_complete(tv_SEM, yv_NCSEM, NCSEM, NCSEM);
+    Hf_EM    = qbcp_H_complete(tv_SEM, yv_NCSEM, NCSEM, PEM);
+    Hf_SEM   = qbcp_H_complete(tv_SEM, yv_NCSEM, NCSEM, PSEM);
 
-    //Final energy in NCEM coordinates
-    He_NCEM = qbcp_Hn_EM(te_EM, yv_NCEM, &SEML);
-    //Final energy in NCSEM coordinates
-    He_NCSEM = qbcp_Hn_SEM(te_SEM, yv_NCSEM, &SEML);
+    // Hf at semli
+    Hf_semli_NCEM  = qbcp_H_complete(tv_SEM, yv_semli_NCSEM, NCSEM, NCEM);
+    Hf_semli_NCSEM = qbcp_H_complete(tv_SEM, yv_semli_NCSEM, NCSEM, NCSEM);
+    Hf_semli_EM    = qbcp_H_complete(tv_SEM, yv_semli_NCSEM, NCSEM, PEM);
+    Hf_semli_SEM   = qbcp_H_complete(tv_SEM, yv_semli_NCSEM, NCSEM, PSEM);
+
 
     //------------------------------------------------------------------------------------
     // Storing Energies
     //------------------------------------------------------------------------------------
-    // 9.  Initial energy in NCEM coordinates
-    filestream << H0_NCEM << "  ";
-    // 10. Final energy in NCEM coordinates
-    filestream << He_NCEM << "  ";
-    // 11. Initial energy in NCSEM coordinates
+    filestream << H0_NCEM  << "  ";
     filestream << H0_NCSEM << "  ";
-    // 12. Final energy in NCSEM coordinates
-    filestream << He_NCSEM << "  ";
+    filestream << H0_EM    << "  ";
+    filestream << H0_SEM   << "  ";
+
+    filestream << H0_emli_NCEM  << "  ";
+    filestream << H0_emli_NCSEM << "  ";
+    filestream << H0_emli_EM    << "  ";
+    filestream << H0_emli_SEM   << "  ";
+
+    filestream << Hf_NCEM  << "  ";
+    filestream << Hf_NCSEM << "  ";
+    filestream << Hf_EM    << "  ";
+    filestream << Hf_SEM   << "  ";
+
+    filestream << Hf_semli_NCEM  << "  ";
+    filestream << Hf_semli_NCSEM << "  ";
+    filestream << Hf_semli_EM    << "  ";
+    filestream << Hf_semli_SEM   << "  ";
+
     filestream << endl;
 
     filestream.close();
@@ -7182,6 +7287,15 @@ int getLengthCONT_txt(double t0xT)
     // Initialize the I/O objects
     //====================================================================================
     string filename  = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF, SEML.li_SEM, t0xT);
+
+    //Check the existence of the file
+    if(!fileExists(filename))
+    {
+        cout << "getLengthCONT_txt. " << filename << ": " << strerror(errno) << endl;
+        return FTC_ENOENT;
+    }
+
+
     fstream filestream;
     filestream.open (filename.c_str(), ios::in);
 

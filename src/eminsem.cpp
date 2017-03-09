@@ -1665,6 +1665,53 @@ void qbcp_coc_time(double *t0, double *tout, int N, int inputType, int outputTyp
 
 //========================================================================================
 //
+// Hamiltonian
+//
+//========================================================================================
+double qbcp_H_complete(double t0, const double y0[], int inputType, int outputType)
+{
+    //------------------------------------------------------------------------------------
+    // 1. Do some checks on the inputs
+    //------------------------------------------------------------------------------------
+    //Type of inputs
+    if(inputType > ECISEM)
+    {
+        perror("Unknown inputType");
+        return -1;
+    }
+
+    //Type of outputs
+    if(outputType != NCEM && outputType != NCSEM &&  outputType != PEM && outputType != PSEM)
+    {
+        perror("Unknown outputType");
+        return -1;
+    }
+
+    //------------------------------------------------------------------------------------
+    // COC
+    //------------------------------------------------------------------------------------
+    double yv[6], tv;
+    qbcp_coc(t0, y0, yv, &tv, inputType, outputType);
+
+
+    //------------------------------------------------------------------------------------
+    // Hamiltonian computation
+    //------------------------------------------------------------------------------------
+    switch(outputType)
+    {
+        case NCEM:
+            return qbcp_Hn_EM(tv, yv, &SEML);
+        case NCSEM:
+            return qbcp_Hn_SEM(tv, yv, &SEML);
+        case PEM:
+            return qbcp_H(tv, yv, &SEML_EM); //qbcp_H_EM does not exist, but we can use qbcp_H with SEML_EM...
+        case PSEM:
+            return qbcp_H_SEM(tv, yv, &SEML);
+    }
+}
+
+//========================================================================================
+//
 // Change of coordinates: NC <-> SYS
 //
 //========================================================================================

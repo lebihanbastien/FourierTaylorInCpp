@@ -94,7 +94,7 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         // Type of computation
         //--------------------------------------------------------------------------------
-        COMP_TYPE   = COMP_CM_EML2_TO_CMS_SEML;
+        COMP_TYPE   = COMP_CM_EML2_TO_CM_SEML;
 
         //--------------------------------------------------------------------------------
         // Model and libration points
@@ -732,7 +732,7 @@ int main(int argc, char** argv)
 
 
         //Read data file
-        readIntProjCU_bin(filename, t0_CMU_EM, tf_man_EM,
+        readClosestIntProjCU_bin(filename, -1, t0_CMU_EM, tf_man_EM,
                           s1_CMU_EM, s2_CMU_EM, s3_CMU_EM,
                           s4_CMU_EM, s5_CMU_EM,
                           pmin_dist_SEM, s1_CM_SEM, s2_CM_SEM,

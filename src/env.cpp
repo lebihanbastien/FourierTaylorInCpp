@@ -1773,8 +1773,8 @@ void EMtoNC_prim(double Zc[3], double zc[3], double c1, double gamma)
  **/
 void changeDCS(QBCP_L& qbcp_l, int fwrk)
 {
-    cout << "WARNING: changeDCS is used. Press enter to go on." << endl;
-    pressEnter(true);
+    //cout << "WARNING: changeDCS is used. Press enter to go on." << endl;
+    //pressEnter(true);
 
     qbcp_l.fwrk = fwrk;
     switch(fwrk)

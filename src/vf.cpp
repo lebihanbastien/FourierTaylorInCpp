@@ -5021,15 +5021,11 @@ int qbfbp_fh(double t, const double y[], double f[], void* params_void)
 /**
  *  \brief Hamiltonian of the QBCP with SYS units and SYS coordinates. Note that alpha[14] (alpha15) is zero for the QBCP
  **/
-double qbcp_H(double t, const double y[], void* params_void)
+double qbcp_H(double t, const double y[], QBCP_L* qbp)
 {
     //------------------------------------------------------------------------------------
     // Misc parameters
     //------------------------------------------------------------------------------------
-    //Retrieving the parameters
-    //QBCP_L* qbp = (QBCP_L*) params_void;
-    OdeParams* odeParams = (OdeParams*) params_void;
-    QBCP_L* qbp = odeParams->qbcp_l;
     int noc   = qbp->numberOfCoefs;
     double ms = qbp->us->ms;
     double me = qbp->us->me;
@@ -5075,19 +5071,14 @@ double qbcp_H(double t, const double y[], void* params_void)
     return H;
 }
 
-
 /**
  *  \brief Hamiltonian of the QBCP with SEM units and SEM coordinates
  **/
-double qbcp_H_SEM(double t, const double y[], void* params_void)
+double qbcp_H_SEM(double t, const double y[], QBCP_L* qbp)
 {
     //------------------------------------------------------------------------------------
     // Misc parameters
     //------------------------------------------------------------------------------------
-    //Retrieving the parameters
-    //QBCP_L* qbp = (QBCP_L*) params_void;
-    OdeParams* odeParams = (OdeParams*) params_void;
-    QBCP_L* qbp = odeParams->qbcp_l;
     int noc   = qbp->numberOfCoefs;
     double ms = qbp->us_sem.ms;
     double me = qbp->us_sem.me;
@@ -5136,13 +5127,11 @@ double qbcp_H_SEM(double t, const double y[], void* params_void)
 /**
  *  \brief Hamiltonian of the QBCP with SYS units and Normalized-Centered coordinates. Note that alpha[14] (alpha15) is zero for the QBCP
  **/
-double qbcp_Hn(double t, const double y[], void *params_void)
+double qbcp_Hn(double t, const double y[], QBCP_L* qbp)
 {
     //------------------------------------------------------------------------------------
     // Misc parameters
     //------------------------------------------------------------------------------------
-    //Retrieving the parameters
-    QBCP_L* qbp = (QBCP_L *) params_void;
     int noc      = qbp->numberOfCoefs;
     double ms    = qbp->us->ms;
     double me    = qbp->us->me;
@@ -5200,16 +5189,14 @@ double qbcp_Hn(double t, const double y[], void *params_void)
     return H;
 }
 
-
 /**
  *  \brief Hamiltonian of the QBCP with SEM units and Normalized-Centered coordinates. Note that alpha[14] (alpha15) is zero for the QBCP
  **/
-double qbcp_Hn_SEM(double t, const double y[], void *params_void)
+double qbcp_Hn_SEM(double t, const double y[], QBCP_L* qbp)
 {
     //------------------------------------------------------------------------------------
     //Retrieving the parameters
     //------------------------------------------------------------------------------------
-    QBCP_L* qbp = (QBCP_L *) params_void;
     int noc      = qbp->numberOfCoefs;
     double ms    = qbp->us_sem.ms;
     double me    = qbp->us_sem.me;
@@ -5257,12 +5244,11 @@ double qbcp_Hn_SEM(double t, const double y[], void *params_void)
 /**
  *  \brief Hamiltonian of the QBCP with EM units and Normalized-Centered coordinates. Note that alpha[14] (alpha15) is zero for the QBCP
  **/
-double qbcp_Hn_EM(double t, const double y[], void *params_void)
+double qbcp_Hn_EM(double t, const double y[], QBCP_L* qbp)
 {
     //------------------------------------------------------------------------------------
     //Retrieving the parameters
     //------------------------------------------------------------------------------------
-    QBCP_L* qbp = (QBCP_L *) params_void;
     int noc      = qbp->numberOfCoefs;
     double ms    = qbp->us_em.ms;
     double me    = qbp->us_em.me;
