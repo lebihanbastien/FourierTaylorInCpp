@@ -3316,8 +3316,11 @@ int reffromcontemlisemli(RefSt& refSt)
     // Select the parameters
     //====================================================================================
     int isFirst = 1;
-    for(int k = 0; k < fsize; k+=50)
+    for(int k = 0; k < fsize; k+=10)
     {
+        cout << "##################################" << endl;
+        cout << "k = " << k  << "/" << fsize         << endl;
+        cout << "##################################" << endl;
         double t_EM[2] = {t0_CMU_EM[k], tf_CMU_EM[k]};
         double st_EM[5]  = {si_CMU_EM[0][k], si_CMU_EM[1][k], si_CMU_EM[2][k], si_CMU_EM[3][k], si_CMU_EM[4][k]};
 
