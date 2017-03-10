@@ -61,7 +61,6 @@ int ode78(double **yv, double *tv, OdeEvent *odeEvent,
     // 2. Define the framework from the default coordinate system
     //    Define also the default variable type that will be used throughout the computation
     //====================================================================================
-    int fwrk    = default_framework_dcs(dcs);
     int varType = default_coordinate_type(dcs);
 
     //====================================================================================
@@ -356,33 +355,26 @@ int ode78_qbcp_event(double **ye, double *te, int *ode78coll,
     // 2. Define the framework from the default coordinate system
     //    Define also the default variable type that will be used throughout the computation
     //====================================================================================
-    int fwrk    = 0;
     int varType = 0;
     switch(dcs)
     {
     case I_PSEM:
         varType = PSEM;
-        fwrk = F_SEM;
         break;
     case I_NCSEM:
         varType = NCSEM;
-        fwrk = F_SEM;
         break;
     case I_VNCSEM:
         varType = VNCSEM;
-        fwrk = F_SEM;
         break;
     case I_PEM:
         varType = PEM;
-        fwrk = F_EM;
         break;
     case I_NCEM:
         varType = NCEM;
-        fwrk = F_EM;
         break;
     case I_VNCEM:
         varType = VNCEM;
-        fwrk = F_EM;
         break;
     }
 
@@ -618,36 +610,7 @@ int ode78_qbcp_vg(double **yv, double *tv, int *ode78coll,
     // 2. Define the framework from the default coordinate system
     //    Define also the default variable type that will be used throughout the computation
     //====================================================================================
-    int fwrk = 0;
-    int varType = 0;
-    switch(dcs)
-    {
-    case I_PSEM:
-        varType = PSEM;
-        fwrk = F_SEM;
-        break;
-    case I_NCSEM:
-        varType = NCSEM;
-        fwrk = F_SEM;
-        break;
-    case I_VNCSEM:
-        varType = VNCSEM;
-        fwrk = F_SEM;
-        break;
-    case I_PEM:
-        varType = PEM;
-        fwrk = F_EM;
-        break;
-    case I_NCEM:
-        varType = NCEM;
-        fwrk = F_EM;
-        break;
-    case I_VNCEM:
-        varType = VNCEM;
-        fwrk = F_EM;
-        break;
-    }
-
+    int varType = default_coordinate_type(dcs);
 
     //====================================================================================
     // 4. Selection of the vector field
@@ -879,7 +842,6 @@ int ode78_qbcp_gg(double **yv, double *tvf, int *ode78coll,
     // 2. Define the framework from the default coordinate system
     //    Define also the default variable type that will be used throughout the computation
     //====================================================================================
-    int fwrk    = default_framework_dcs(dcs);
     int varType = default_coordinate_type(dcs);
 
 
@@ -1132,25 +1094,6 @@ int ode78_jpl(double **yv, double *tv, int *ode78coll,
             perror("If the variational equations are desired, the outputType must match the default coordinate system (dcs).");
     }
 
-    //====================================================================================
-    // 2. Define the framework from the default coordinate system
-    //====================================================================================
-    int fwrk = 0;
-    switch(dcs)
-    {
-    case I_ECLI:
-    case I_VSEM:
-        fwrk = F_SEM;
-        break;
-    case I_VEM:
-        fwrk = F_EM;
-        break;
-    case I_J2000:
-    case I_NJ2000:
-        fwrk = SEML.fwrk;
-
-        break;
-    }
 
     //====================================================================================
     // 4. Selection of the vector field
@@ -1563,7 +1506,6 @@ int ode78_grid(OdeStruct *odestruct, double t0, double tf, double *y0, double **
     double yv[nvar], t;       //current state and time
     int nt;
     double ti;
-    double x1, x2;
 
     //------------------------------------------------------------------------------------
     //Initialization of the odestruct
@@ -1687,7 +1629,7 @@ int gslc_event_evolve(OdeStruct* odestruct, OdeParams* odP, double yv[], double*
     do
     {
             //Evolve one step
-            gslc_event_step(odestruct, odP, yv, t, t1);
+            status = gslc_event_step(odestruct, odP, yv, t, t1);
 
     }while((status == GSL_SUCCESS) && fabs(*t - t1) != 0);
 
@@ -2484,10 +2426,6 @@ string filenameOrbit(int ofts_order, int sizeOrbit, int type)
         return SEML.cs->F_PLOT+"cs_order_"+numTostring(ofts_order)+"_size_"+numTostring(sizeOrbit)+".txt";
     case TYPE_MAN:
         return SEML.cs->F_PLOT+"man_order_"+numTostring(ofts_order)+"_size_"+numTostring(sizeOrbit)+".bin";
-    case TYPE_MAN_SORT_DR:
-        return SEML.cs->F_PLOT+"man_sort_dr_order_"+numTostring(ofts_order)+"_size_"+numTostring(sizeOrbit)+".bin";
-    case TYPE_MAN_SORT_DH:
-        return SEML.cs->F_PLOT+"man_sort_dh_order_"+numTostring(ofts_order)+"_size_"+numTostring(sizeOrbit)+".bin";
     case TYPE_MAN_PROJ:
         return SEML.cs->F_PLOT+"man_proj_"+numTostring(ofts_order)+"_size_"+numTostring(sizeOrbit)+".bin";
     default:

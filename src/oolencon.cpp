@@ -749,8 +749,7 @@ int int_proj_CMU_EM_on_CM_SEM_3D(ProjSt &projSt)
  *                         practical convergence of CM_SEM_NC.
  *
  * The output data are saved in a binary file of the form
- * "plot/QBCP/EM/L2/projcu_order_16.bin", and
- * "plot/QBCP/EM/L2/sortprojcu_order_16.bin" for the projSt.NSMIN best solutions.
+ * "plot/QBCP/EM/L2/projcu_order_16.bin"
  **/
 int int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt)
 {
@@ -1148,28 +1147,6 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt)
             }
         }
     }
-
-    //====================================================================================
-    // 4. Sorting the best solutions
-    //====================================================================================
-    vector<size_t> sortId = sort_indexes(distMin);
-
-    //------------------------------------------------------------------------------------
-    //Saving the projSt.NSMIN best results or all results if less than 50 have been computed
-    //------------------------------------------------------------------------------------
-    int number_of_sol  = min(projSt.NSMIN, Nsort-2);
-
-    //------------------------------------------------------------------------------------
-    //Filename
-    //------------------------------------------------------------------------------------
-    filename = filenameCUM(OFTS_ORDER, TYPE_MAN_SORT, SEML.li_SEM);
-
-    //------------------------------------------------------------------------------------
-    //Write sorted solutions
-    //------------------------------------------------------------------------------------
-    writeIntProjSortCU_bin(filename, init_state_CMU_NCEM, init_state_CMU_RCM,
-                           final_state_CMU_SEM,  projected_state_CMU_SEM, projected_state_CMU_RCM,
-                           min_proj_dist_tens_SEM, sortId, ktMin, ks1Min, ks3Min, t0_min_EM, tf_min_EM, distMin, number_of_sol);
 
 
     //------------------------------------------------------------------------------------
@@ -2454,6 +2431,7 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
     vector<double> s2_CM_SEM;
     vector<double> s3_CM_SEM;
     vector<double> s4_CM_SEM;
+    vector<double> crossings;
     vector<size_t> sortId;
 
     //------------------------------------------------------------------------------------
@@ -2487,13 +2465,18 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
         switch(refSt.dim)
         {
 
-            case REF_PLANAR:
+        case REF_PLANAR:
+        {
+            if(SEML.li_EM == 2)
             {
-                if(SEML.li_EM == 2)
-                {
-                    if(SEML.li_SEM == 2) filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_dest_L2_tspan_";
-                    else filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_dest_L1_tspan_";
+                if(SEML.li_SEM == 2) filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_dest_L2_tspan_";
+                else filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_dest_L1_tspan_";
 
+                if(refSt.crossings > 0)
+                {
+                    filename += "0T_T.bin";
+                }else
+                {
                     if(t0_des_mod >= 0 && t0_des_mod < 0.25)
                     {
                         filename += "0T_025T_FINAL.bin";
@@ -2510,17 +2493,18 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
                     {
                         filename += "075T_T_FINAL.bin";
                     }
+                }
 
-                    //filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_t0_099T.bin";
-                }
-                else
-                {
-                    if(SEML.li_SEM == 2) filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_dest_L2.bin";
-                    else filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_dest_L1.bin";
-                }
+                //filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_t0_099T.bin";
+            }
+            else
+            {
+                if(SEML.li_SEM == 2) filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_dest_L2.bin";
+                else filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_dest_L1.bin";
+            }
 
             break;
-            }
+        }
 
         case REF_3D:
         case REF_MIXED:
@@ -2540,8 +2524,8 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
 
         readClosestIntProjCU_bin(filename, refSt.t0_des, t0_EM, tf_EM,
                                  s1_CMU_EM, s2_CMU_EM, s3_CMU_EM, s4_CMU_EM, s5_CMU_EM,
-                                  pmin_dist_SEM, s1_CM_SEM, s2_CM_SEM, s3_CM_SEM, s4_CM_SEM,
-                                   sortId);
+                                 pmin_dist_SEM, s1_CM_SEM, s2_CM_SEM, s3_CM_SEM, s4_CM_SEM,
+                                 crossings, sortId);
     }
     else
     {
@@ -2557,12 +2541,13 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
             type = TYPE_MAN_PROJ_3D;
             break;
         }
+
         filename = filenameCUM(OFTS_ORDER, type, SEML.li_SEM);
 
         readClosestIntProjCU_bin(filename, refSt.t0_des, t0_EM, tf_EM,
                                  s1_CMU_EM, s2_CMU_EM, s3_CMU_EM, s4_CMU_EM, s5_CMU_EM,
                                  pmin_dist_SEM, s1_CM_SEM, s2_CM_SEM, s3_CM_SEM, s4_CM_SEM,
-                                 sortId);
+                                 crossings, sortId);
     }
 
 
@@ -2578,9 +2563,9 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
 
     if(refSt.isLimUD)
     {
-        cout << "-----------------------------------------------------" << endl;
+        cout << "-------------------------------------------------------" << endl;
         cout << "   selectemlisemli. User-defined interval of research  " << endl;
-        cout << "-----------------------------------------------------" << endl;
+        cout << "-------------------------------------------------------" << endl;
         cout << "Enter a value for s1_CMU_EM_MIN: ";
         cin >> s1_CMU_EM_MIN;
         cout << "Enter a value for s1_CMU_EM_MAX: ";
@@ -2630,14 +2615,25 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
         cst  = (s1_CMU_EM[kpor] >= s1_CMU_EM_MIN) & (s1_CMU_EM[kpor] <= s1_CMU_EM_MAX);
         cst  = cst & (s3_CMU_EM[kpor] >= s3_CMU_EM_MIN) & (s3_CMU_EM[kpor] <= s3_CMU_EM_MAX);
 
-        cst  = cst & (s2_CMU_EM[kpor] >= s2_CMU_EM_MIN) & (s2_CMU_EM[kpor] <= s2_CMU_EM_MAX);
-        cst  = cst & (s4_CMU_EM[kpor] >= s4_CMU_EM_MIN) & (s4_CMU_EM[kpor] <= s4_CMU_EM_MAX);
+        if(refSt.is3D())
+        {
+            cst  = cst & (s2_CMU_EM[kpor] >= s2_CMU_EM_MIN) & (s2_CMU_EM[kpor] <= s2_CMU_EM_MAX);
+            cst  = cst & (s4_CMU_EM[kpor] >= s4_CMU_EM_MIN) & (s4_CMU_EM[kpor] <= s4_CMU_EM_MAX);
+        }
 
         //--------------------------------------------------------------------------------
         // Limits in the time of flight (TOF) if necessary
         //--------------------------------------------------------------------------------
         if(tof_MIN > 0) cst = cst & ( (tf_EM[kpor] - t0_EM[kpor]) > tof_MIN );
         if(tof_MAX > 0) cst = cst & ( (tf_EM[kpor] - t0_EM[kpor]) < tof_MAX );
+
+        //--------------------------------------------------------------------------------
+        // Limits in the crossings if necessary
+        //--------------------------------------------------------------------------------
+        if(refSt.crossings > 0)
+        {
+                cst = cst & (crossings[kpor] == refSt.crossings);
+        }
 
         if(cst)
         {
@@ -3762,20 +3758,20 @@ int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst)
     //------------------------------------------------------------------------------------
     // Select the coordinate system and the frawemork for future integration
     //------------------------------------------------------------------------------------
-    int coord_int = 0, fwrk_int = 0, fwrk0 = SEML.fwrk;
+    int coord_int = 0, fwrk0 = SEML.fwrk;// fwrk_int = 0;
     switch(choice)
     {
     case VECLI:
         coord_int = VECLI;
-        fwrk_int  = I_ECLI;
+        //fwrk_int  = I_ECLI;
         break;
     case J2000:
         coord_int = J2000;
-        fwrk_int  = I_J2000;
+        //fwrk_int  = I_J2000;
         break;
     case NJ2000:
         coord_int = NJ2000;
-        fwrk_int  = I_NJ2000;
+        //fwrk_int  = I_NJ2000;
 
         //Change focus, if necessary
         if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
@@ -3787,7 +3783,7 @@ int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst)
         cout << "NJ2000 has been chosen: changeDCS is applied to match " << endl;
         cout << " the framework associated to coord_type.";
         coord_int = NJ2000;
-        fwrk_int  = I_NJ2000;
+        //fwrk_int  = I_NJ2000;
         if(fwrk0 != fwrk) changeDCS(SEML, fwrk);
         break;
     }
@@ -3891,7 +3887,7 @@ int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst)
     double* et_traj_jpl   = dvector(0, final_index);
 
     double** y_earth_spice = dmatrix(0, 5, 0, final_index);
-    double** y_moon_spice  = dmatrix(0, 5, 0, final_index);
+    //double** y_moon_spice  = dmatrix(0, 5, 0, final_index);
     double** y_l2_spice    = dmatrix(0, 5, 0, final_index);
 
     ymc_v       = dmatrix(0, 5, 0, mPlot*final_index);
@@ -4926,7 +4922,7 @@ int jplfg3d_interpolation(double** y_traj_n, double* t_traj_n,
     int p0 = 0, p1 = final_index;
     int pmin = p0;
     int p = p0;
-    double dmin = 0.0, dminmin = 0.0;
+    double dmin = 0.0;//, dminmin = 0.0;
     bool start = true, dte = false;
     double distanceToEarth = 0.0;
     double pe[3];
@@ -4949,7 +4945,7 @@ int jplfg3d_interpolation(double** y_traj_n, double* t_traj_n,
         if(start && dte)
         {
             pmin = p;
-            dminmin = dmin;
+            //dminmin = dmin;
             start = false;
         }
         else
@@ -6305,7 +6301,6 @@ int compref3d_test_eml2seml_synjpl(int coord_type)
     //Stepper
     const gsl_odeiv2_step_type* T = gsl_odeiv2_step_rk8pd;
     //Parameters
-    int coll;
     OdeParams odeParams(&SEML, dcs);
     //Init ode structure
     init_ode_structure(&odestruct_JPL, T, T_root, 6, jpl_vf_syn, &odeParams);

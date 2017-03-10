@@ -150,13 +150,6 @@ int readCU_bin_3D(int offset, double** yNCE, double** sNCE, int* si_grid_size,
 // Int CU
 //----------------------------------------------------------------------------------------
 /**
- *  \brief Get the length of the data file containing the best connections between EML2 and SEML1,2.
- *         Used in int_sorted_sol_CMU_EM_to_CM_SEM/ref_CMU_EM_to_CM_SEM_MSD
- **/
-int getLengthIntSortedCU_bin(int* number_of_sol, int ofts_order,
-                             int type, int destination);
-
-/**
  *  \brief Store in a data file the connections between EML2 and SEML1,2.
  *         Used in int_proj_CMU_EM_on_CM_SEM.
  **/
@@ -237,8 +230,6 @@ void vector_getUnique(vector<double>& v0U);
  **/
 void vector_getIndices(vector<size_t>& indRes, vector<double>& t0_CMU_EM, double t0);
 
-
-
 /**
  *  \brief Read in a data file the connections between EML2 and SEML1,2.
  *         Find the data that are the closest to the desired t0 at EML2 departures.
@@ -250,28 +241,10 @@ int readClosestIntProjCU_bin(string filename, double t0_des,
                               vector<double>& s5_CMU_EM_0, vector<double>& pmin_dist_SEM_0,
                               vector<double>& s1_CM_SEM_0, vector<double>& s2_CM_SEM_0,
                               vector<double>& s3_CM_SEM_0, vector<double>& s4_CM_SEM_0,
+                              vector<double>& crossings_NCSEM_0,
                               vector<size_t>& sortId);
 
-//========================================================================================
-//
-//          I/O (sorted solutions, deprecated)
-//
-//========================================================================================
-/**
- *  \brief Store in a data file the best connections between EML2 and SEML1,2.
- *         Used in int_proj_CMU_EM_on_CM_SEM.
- **/
-void writeIntProjSortCU_bin(string filename,
-                            double**** init_state_CMU_NCEM,      //initial state in NCEM coordinates
-                            double**** init_state_CMU_RCM,       //initial state in RCM coordinates
-                            double**** final_state_CMU_SEM,      //final state in SEM coordinates
-                            double**** projected_state_CMU_SEM,  //projected state in SEM coordinates
-                            double**** projected_state_CMU_RCM,  //projected state in RCM coordinates
-                            double** *min_proj_dist_tens_SEM,     //minimum distance of projection in SEM coordinates
-                            vector<size_t>& sortId, vector<int>& ktMin,
-                            vector<int>& ks1Min, vector<int>& ks3Min,
-                            vector<double>& t0_min_EM, vector<double>& tf_min_EM,
-                            vector<double>& distMin, int number_of_sol);
+
 
 //========================================================================================
 //

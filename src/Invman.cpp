@@ -1117,7 +1117,7 @@ void Invman::evaldotRCMEMtoNCSEM(double const st0[], double const t, gsl_vector 
     gsl_vector_complex *dINEM_B_EM  = gsl_vector_complex_alloc(6);
 
     eval_IN_B_SYS(t, INEM_B_EM, dINEM_B_EM, INEM_R_VEM, dINEM_R_VEM,
-                     EM_R_INEM, dEM_R_INEM, ofts_order, ofs_order);
+                     EM_R_INEM, dEM_R_INEM, ofs_order);
 
     //------------------------------------------------------------------------------------
     // Then, we evaluate zINEM and dzINEM/dt
@@ -1204,7 +1204,7 @@ void Invman::evaldotRCMEMtoNCSEM(double const st0[], double const t, gsl_vector 
 
     invman_SEM.eval_IN_B_SYS(tsem, INSEM_B_SEM, dINSEM_B_SEM, INSEM_R_VSEM,
                                   dINSEM_R_VSEM, SEM_R_INSEM, dSEM_R_INSEM,
-                                  ofts_order, ofs_order);
+                                  ofs_order);
 
 
     //------------------------------------------------------------------------------------
@@ -1297,7 +1297,6 @@ void Invman::eval_IN_B_SYS(double const t,
                            gsl_matrix_complex* dIN_R_VSYS,
                            gsl_matrix_complex* SYS_R_IN,
                            gsl_matrix_complex* dSYS_R_IN,
-                           const int ofts_order,
                            const int ofs_order) const
 {
     gsl_matrix_complex* VSYS_R_IN  = gsl_matrix_complex_alloc(6,6);

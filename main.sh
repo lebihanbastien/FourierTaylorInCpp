@@ -116,6 +116,7 @@ echo "ISPAR                  =" $ISPAR
 echo "NUM_THREADS            =" $NUM_THREADS
 echo ''
 
+
 #=====================================================
 #  ---- Projection parameters ----
 #=====================================================
@@ -213,6 +214,9 @@ if [ -z ${REFST_TYPE+x} ]; then
 
 	# Limits for the time of flight during transfers - not used if -1
 	REFST_TOF_LIM=(-1 -1)
+	
+	# Values for crossings
+	REFST_CROSSINGS=-1
 
 	# Number of steps in the continuation procedure
 	REFST_CONT_STEP_MAX=+450;        # with fixed times
@@ -278,6 +282,16 @@ else
 	#-----------------------------------------------------
 	echo 'Current set of refinement parameters:'
 	echo ''
+	
+	#-----------------------------------------------------
+	# Crossings
+	#-----------------------------------------------------
+	if [ -z ${REFST_CROSSINGS+x} ]; then
+		echo 'WARNING: the variable REFST_CROSSINGS is not set.'
+		echo '-1 is used by default.'
+		REFST_CROSSINGS=-1
+	fi
+
 
 	#-----------------------------------------------------
 	# Parameters that change often
@@ -286,15 +300,15 @@ else
 	case $REFST_TYPE in
 		$REF_SINGLE)            echo 'REFST_TYPE             = REF_SINGLE'
 		;;
-		$REF_CONT) 	        echo 'REFST_TYPE             = REF_CONT'
+		$REF_CONT) 	            echo 'REFST_TYPE             = REF_CONT'
 		;;
 		$REF_CONT_D)            echo 'REFST_TYPE             = REF_CONT_D'
 		;;
 		$REF_CONT_D_HARD_CASE)  echo 'REFST_TYPE             = REF_CONT_D_HARD_CASE'
 		;;
-		$REF_COMP)  		echo 'REFST_TYPE             = REF_COMP'
+		$REF_COMP)  		    echo 'REFST_TYPE             = REF_COMP'
 		;;
-		*)     			echo "REFST_TYPE             = "$REFST_TYPE". Unknown type."
+		*)     			        echo "REFST_TYPE             = "$REFST_TYPE". Unknown type."
 	esac
 
 	#REFST_DIM
@@ -314,6 +328,8 @@ else
 	echo "REFST_ISLIMUD          =" $REFST_ISLIMUD
 	echo ''
 	echo "REFST_TOF_LIM          = ["${REFST_TOF_LIM[*]}"]"
+	echo ''
+	echo "REFST_CROSSINGS        =" $REFST_CROSSINGS
 	echo ''
 	echo "REFST_CONT_STEP_MAX    =" $REFST_CONT_STEP_MAX
 	echo "REFST_CONT_STEP_MAX_VT =" $REFST_CONT_STEP_MAX_VT
@@ -439,7 +455,7 @@ if [ "$ans" == "y" ]; then
 			COEFFS=(${COEFFS[*]}  $REFST_TYPE $REFST_DIM $REFST_T0_DES)
 		    COEFFS=(${COEFFS[*]}  $REFST_ISDIRUD $REFST_DIR)
 		    COEFFS=(${COEFFS[*]}  ${REFST_SI_CMU_EM_LIM[*]} $REFST_ISLIMUD)
-			COEFFS=(${COEFFS[*]}  ${REFST_TOF_LIM[*]})
+			COEFFS=(${COEFFS[*]}  ${REFST_TOF_LIM[*]} $REFST_CROSSINGS)
 		  	COEFFS=(${COEFFS[*]}  $REFST_CONT_STEP_MAX $REFST_CONT_STEP_MAX_VT)
 			COEFFS=(${COEFFS[*]}  $REFST_FIXED_TIME_DS0 $REFST_VAR_TIME_DS0)
 			COEFFS=(${COEFFS[*]}  $REFST_FIXED_TIME_NU0 $REFST_VAR_TIME_NU0)

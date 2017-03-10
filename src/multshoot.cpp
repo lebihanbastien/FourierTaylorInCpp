@@ -463,11 +463,6 @@ int multiple_shooting_direct(double **ymd, double *tmd,
     }
 
     //------------------------------------------------------------------------------------
-    //Get the default coordinates system from the coord_type
-    //------------------------------------------------------------------------------------
-    int fwrk    = default_framework_dcs(dcs);
-
-    //------------------------------------------------------------------------------------
     // Get the correct integration routine
     //------------------------------------------------------------------------------------
     //by default, to avoid gcc warning

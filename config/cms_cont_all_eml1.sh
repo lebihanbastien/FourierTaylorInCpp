@@ -78,6 +78,9 @@ REFST_ISLIMUD=0
 # Limits for the time of flight during transfers - not used if -1
 REFST_TOF_LIM=(-1 -1)
 
+# Values for crossings
+REFST_CROSSINGS=-1
+
 # Number of steps in the continuation procedure
 REFST_CONT_STEP_MAX=+450;        # with fixed times
 REFST_CONT_STEP_MAX_VT=+150;     # with variable times

@@ -341,6 +341,9 @@ int main(int argc, char** argv)
         refSt.tof_MIN       = -1;
         refSt.tof_MAX       = -1;
 
+        // Values for crossings
+        refSt.crossings     = -1;
+
         // Number of steps in the continuation procedure
         refSt.cont_step_max    = +450;            // with fixed times
         refSt.cont_step_max_vt = +150;            // with variable times
@@ -499,6 +502,9 @@ int main(int argc, char** argv)
             //Limits for the time of flight during transfers - not used if negative
             refSt.tof_MIN       = atof(argv[index++])*SEML.us_em.T;
             refSt.tof_MAX       = atof(argv[index++])*SEML.us_em.T;
+
+            // Values for crossings
+            refSt.crossings     = atof(argv[index++]);
 
             // Number of steps in the continuation procedure
             refSt.cont_step_max    = atoi(argv[index++]);  // with fixed times
@@ -729,6 +735,7 @@ int main(int argc, char** argv)
         vector<double> s2_CM_SEM;
         vector<double> s3_CM_SEM;
         vector<double> s4_CM_SEM;
+        vector<double> crossings;
 
 
         //Read data file
@@ -736,7 +743,7 @@ int main(int argc, char** argv)
                           s1_CMU_EM, s2_CMU_EM, s3_CMU_EM,
                           s4_CMU_EM, s5_CMU_EM,
                           pmin_dist_SEM, s1_CM_SEM, s2_CM_SEM,
-                          s3_CM_SEM, s4_CM_SEM, sortId);
+                          s3_CM_SEM, s4_CM_SEM, crossings, sortId);
 
         //Display
         coutmp();

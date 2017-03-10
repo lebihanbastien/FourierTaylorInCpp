@@ -151,8 +151,7 @@ int int_proj_CMU_EM_on_CM_SEM_3D(ProjSt &projSt);
  *                         practical convergence of CM_SEM_NC.
  *
  * The output data are saved in a binary file of the form
- * "plot/QBCP/EM/L2/projcu_order_16.bin", and
- * "plot/QBCP/EM/L2/sortprojcu_order_16.bin" for the projSt.NSMIN best solutions.
+ * "plot/QBCP/EM/L2/projcu_order_16.bin"
  **/
 int int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt);
 

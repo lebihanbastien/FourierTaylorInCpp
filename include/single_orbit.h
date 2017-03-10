@@ -22,8 +22,8 @@
 #define TYPE_CU            1
 #define TYPE_CS            2
 #define TYPE_MAN           3
-#define TYPE_MAN_SORT_DR   4
-#define TYPE_MAN_SORT_DH   5
+//#define TYPE_MAN_SORT_DR   4
+//#define TYPE_MAN_SORT_DH   5
 #define TYPE_MAN_PROJ      6
 #define TYPE_MAN_SORT      7
 #define TYPE_MAN_SORT_IN   8

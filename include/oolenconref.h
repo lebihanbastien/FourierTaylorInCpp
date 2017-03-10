@@ -79,6 +79,9 @@ struct RefSt
     double tof_MIN;
     double tof_MAX;
 
+    // Values for crossings
+    double crossings;
+
     // Maximum number of steps in the continuation procedure
     int cont_step_max;    //with fixed time
     int cont_step_max_vt; //with variable time

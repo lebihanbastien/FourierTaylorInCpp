@@ -40,10 +40,6 @@ string filenameCUM(int ofts_order, int type, int destination)
         return SEML.cs_em.F_PLOT+"intcu_order_"+numTostring(ofts_order)+".bin";
     case TYPE_MAN_PROJ:
         return SEML.cs_em.F_PLOT+"projcu_order_"+numTostring(ofts_order)+"_dest_L"+numTostring(destination)+".bin";
-    case TYPE_MAN_SORT:
-        return SEML.cs_em.F_PLOT+"sortprojcu_order_"+numTostring(ofts_order)+"_dest_L"+numTostring(destination)+".bin";
-    case TYPE_MAN_SORT_IN:
-        return SEML.cs_em.F_PLOT+"sortprojintcu_order_"+numTostring(ofts_order)+"_dest_L"+numTostring(destination)+".bin";
     case TYPE_CONT_ATF:
         return SEML.cs_em.F_PLOT+"cont_atf_order_"+numTostring(ofts_order)+"_dest_L"+numTostring(destination)+".bin";
     case TYPE_CU_3D:
@@ -78,10 +74,6 @@ string filenameCUM(int ofts_order, int type, int destination, double t0)
 
     case TYPE_MAN_PROJ:
         return SEML.cs_em.F_PLOT+"projcu_order_"+order_dest_t0_bin;
-    case TYPE_MAN_SORT:
-        return SEML.cs_em.F_PLOT+"sortprojcu_order_"+order_dest_t0_bin;
-    case TYPE_MAN_SORT_IN:
-        return SEML.cs_em.F_PLOT+"sortprojintcu_order_"+order_dest_t0_bin;
     case TYPE_CONT_ATF_TRAJ:
         return SEML.cs_em.F_PLOT+"cont_atf_traj_order_"+order_dest_t0_bin;
     case TYPE_CONT_JPL_TRAJ:
@@ -734,38 +726,6 @@ int readCU_bin_3D(int offset, double** yNCE, double** sNCE, int* si_grid_size,
 // Int CU
 //----------------------------------------------------------------------------------------
 /**
- *  \brief Get the length of the data file containing the best connections between EML2 and SEML1,2.
- *         Used in int_sorted_sol_CMU_EM_to_CM_SEM/ref_CMU_EM_to_CM_SEM_MSD
- **/
-int getLengthIntSortedCU_bin(int* number_of_sol, int ofts_order,
-                             int type, int destination)
-{
-    //------------------------------------------------------------------------------------
-    //Filename
-    //------------------------------------------------------------------------------------
-    string filename = filenameCUM(ofts_order, type, destination);
-
-    //------------------------------------------------------------------------------------
-    //Open datafile
-    //------------------------------------------------------------------------------------
-    fstream filestream;
-    filestream.open (filename.c_str(), ios::binary | ios::in);
-    if (filestream.is_open())
-    {
-        int resi;
-        //---------------------
-        //Number of data
-        //---------------------
-        filestream.read((char*) &resi, sizeof(int));
-        *number_of_sol = resi;
-    }
-    else return FTC_FAILURE;
-
-    return FTC_SUCCESS;
-}
-
-
-/**
  *  \brief Store in a data file the connections between EML2 and SEML1,2.
  *         Used in int_proj_CMU_EM_on_CM_SEM.
  **/
@@ -1141,9 +1101,6 @@ int numberOfColumns(string filename, int ncol[], int nncol)
         //Possible second value of first column
         filestream.read((char*) &c2, sizeof(double));
 
-        cout << "c1 = " << c1 << endl;
-        cout << "c2 = " << c2 << endl;
-
         filestream.close();
 
         if(c1 == c2) return ncol[n];
@@ -1165,6 +1122,7 @@ int readClosestIntProjCU_bin(string filename, double t0_des,
                               vector<double>& s5_CMU_EM_0, vector<double>& pmin_dist_SEM_0,
                               vector<double>& s1_CM_SEM_0, vector<double>& s2_CM_SEM_0,
                               vector<double>& s3_CM_SEM_0, vector<double>& s4_CM_SEM_0,
+                              vector<double>& crossings_NCSEM_0,
                               vector<size_t>& sortId)
 {
     //====================================================================================
@@ -1466,6 +1424,8 @@ int readClosestIntProjCU_bin(string filename, double t0_des,
         s2_CM_SEM_0.push_back(s2_CM_SEM[indRes[ind]]);
         s3_CM_SEM_0.push_back(s3_CM_SEM[indRes[ind]]);
         s4_CM_SEM_0.push_back(s4_CM_SEM[indRes[ind]]);
+        //Crossings
+        crossings_NCSEM_0.push_back(crossings_NCSEM[indRes[ind]]);
     }
 
     //====================================================================================
@@ -1490,115 +1450,6 @@ int readClosestIntProjCU_bin(string filename, double t0_des,
      return FTC_SUCCESS;
 }
 
-
-//========================================================================================
-//
-//          I/O (sorted solutions, deprecated)
-//
-//========================================================================================
-/**
- *  \brief Store in a data file the best connections between EML2 and SEML1,2.
- *         Used in int_proj_CMU_EM_on_CM_SEM.
- **/
-void writeIntProjSortCU_bin(string filename,
-                            double**** init_state_CMU_NCEM,      //initial state in NCEM coordinates
-                            double**** init_state_CMU_RCM,       //initial state in RCM coordinates
-                            double**** final_state_CMU_SEM,      //final state in SEM coordinates
-                            double**** projected_state_CMU_SEM,  //projected state in SEM coordinates
-                            double**** projected_state_CMU_RCM,  //projected state in RCM coordinates
-                            double** *min_proj_dist_tens_SEM,     //minimum distance of projection in SEM coordinates
-                            vector<size_t>& sortId, vector<int>& ktMin,
-                            vector<int>& ks1Min, vector<int>& ks3Min,
-                            vector<double>& t0_min_EM, vector<double>& tf_min_EM,
-                            vector<double>& distMin, int number_of_sol)
-{
-    int ksortpos, ks1pos, ks3pos, ktpos;
-    //----------------------------------------------------------
-    //Open datafile
-    //----------------------------------------------------------
-    fstream filestream(filename.c_str(), ios::binary | ios::out);
-    if (filestream.is_open())
-    {
-        double res;
-        int resi;
-
-        //---------------------
-        //Number of stored solutions
-        //---------------------
-        resi = number_of_sol;
-        filestream.write((char*) &resi, sizeof(int));
-
-        //---------------------
-        //Loop
-        //---------------------
-        for(int kpos = 0; kpos <= number_of_sol; kpos++)
-        {
-            //Get sorted indices
-            ksortpos = sortId[kpos];
-            ks1pos   = ks1Min[ksortpos];
-            ks3pos   = ks3Min[ksortpos];
-            ktpos    = ktMin[ksortpos];
-
-            //1. label
-            res = kpos;
-            filestream.write((char*) &res, sizeof(double));
-
-            //2. t0 in EM coordinates
-            res = t0_min_EM[ksortpos];
-            filestream.write((char*) &res, sizeof(double));
-
-            // 3-8. init_state_CMU_NCEM state in NCEM coordinates again
-            for (int i = 0; i < 6; i++)
-            {
-                res = init_state_CMU_NCEM[i][ktpos][ks1pos][ks3pos];
-                filestream.write((char*) &res, sizeof(double));
-            }
-
-            //9. s1 (EM)
-            res = init_state_CMU_RCM[0][ktpos][ks1pos][ks3pos];
-            filestream.write((char*) &res, sizeof(double));
-
-            //10. s3 (EM)
-            res = init_state_CMU_RCM[2][ktpos][ks1pos][ks3pos];
-            filestream.write((char*) &res, sizeof(double));
-
-            //11. tf in EM coordinates
-            res = tf_min_EM[ksortpos];
-            filestream.write((char*) &res, sizeof(double));
-
-            //12-17. yf in SEM coordinates
-            for(int i = 0; i <6; i++)
-            {
-                res = final_state_CMU_SEM[i][ktpos][ks1pos][ks3pos];
-                filestream.write((char*) &res, sizeof(double));
-            }
-
-            //18-23. yp in SEM coordinates
-            for(int i = 0; i <6; i++)
-            {
-                res = projected_state_CMU_SEM[i][ktpos][ks1pos][ks3pos];
-                filestream.write((char*) &res, sizeof(double));
-            }
-
-            //24. s1 (SEM)
-            res = projected_state_CMU_RCM[0][ktpos][ks1pos][ks3pos];
-            filestream.write((char*) &res, sizeof(double));
-
-            //25. s3 (SEM)
-            res = projected_state_CMU_RCM[2][ktpos][ks1pos][ks3pos];
-            filestream.write((char*) &res, sizeof(double));
-
-            //26. min_proj_dist_SEM (1)
-            res = min_proj_dist_tens_SEM[ktpos][ks1pos][ks3pos];
-            filestream.write((char*) &res, sizeof(double));
-
-            //27. min_proj_dist_SEM (2)
-            res = distMin[ksortpos];
-            filestream.write((char*) &res, sizeof(double));
-        }
-        filestream.close();
-    }
-}
 
 
 //========================================================================================

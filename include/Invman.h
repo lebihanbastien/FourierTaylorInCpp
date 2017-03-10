@@ -119,7 +119,6 @@ class Invman
                            gsl_matrix_complex *dIN_R_SYS,
                            gsl_matrix_complex *SYS_R_IN,
                            gsl_matrix_complex *dSYS_R_IN,
-                           const int ofts_order,
                            const int ofs_order) const;
 
         //--------------------------------------------------------------------------------

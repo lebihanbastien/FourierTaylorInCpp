@@ -38,31 +38,7 @@ void qbcp_coc(double t, const double y0[], double yout[], int inputType, int out
     if(inputType != outputType)
     {
         //--------------------------------------------------------------------------------
-        // 2.1 Define the default framework wrt the inputType
-        //--------------------------------------------------------------------------------
-        int fwrk = 0;
-        switch(inputType)
-        {
-        case VNCEM:
-        case NCEM:
-        case PEM:
-        case VEM:
-        case INEM:
-            fwrk = F_EM;
-            break;
-        case VNCSEM:
-        case NCSEM:
-        case PSEM:
-        case VSEM:
-        case INSEM:
-        case ECISEM:
-            fwrk = F_SEM;
-            break;
-        }
-
-
-        //--------------------------------------------------------------------------------
-        // 2.2 Updating output
+        // 2.1 Updating output
         //--------------------------------------------------------------------------------
         qbcp_coc_fwrk(t, y0, yout, inputType, outputType);
     }
@@ -104,7 +80,6 @@ void qbcp_coc(double t, const double y0[], double yout[], double *tout, int inpu
         // 2.1 Define the default framework wrt the inputType
         //    Define the factor to apply to the time vector
         //--------------------------------------------------------------------------------
-        int fwrk = 0;
         double tfactor = 1.0;
         switch(inputType)
         {
@@ -113,8 +88,6 @@ void qbcp_coc(double t, const double y0[], double yout[], double *tout, int inpu
         case PEM:
         case VEM:
         case INEM:
-            //EM framework
-            fwrk = F_EM;
             //Time factor
             switch(outputType)
             {
@@ -144,8 +117,6 @@ void qbcp_coc(double t, const double y0[], double yout[], double *tout, int inpu
         case VSEM:
         case INSEM:
         case ECISEM:
-            //SEM framework
-            fwrk = F_SEM;
             //Time factor
             switch(outputType)
             {
@@ -216,7 +187,6 @@ void qbcp_coc_vec(double** y0, double* t0, double** yout, double* tout, int N, i
         // 2.1 Define the default framework wrt the inputType
         //    Define the factor to apply to the time vector
         //--------------------------------------------------------------------------------
-        int fwrk = 0;
         double tfactor = 1.0;
         switch(inputType)
         {
@@ -225,8 +195,6 @@ void qbcp_coc_vec(double** y0, double* t0, double** yout, double* tout, int N, i
         case PEM:
         case VEM:
         case INEM:
-            //EM framework
-            fwrk = F_EM;
             //Time factor
             switch(outputType)
             {
@@ -256,8 +224,6 @@ void qbcp_coc_vec(double** y0, double* t0, double** yout, double* tout, int N, i
         case VSEM:
         case INSEM:
         case ECISEM:
-            //SEM framework
-            fwrk = F_SEM;
             //Time factor
             switch(outputType)
             {
@@ -340,7 +306,6 @@ void qbcp_coc_vec(double** y0, double* t0, double** yout, int N, int inputType, 
         // 2.1 Define the default framework wrt the inputType
         //    Define the factor to apply to the time vector
         //--------------------------------------------------------------------------------
-        int fwrk = 0;
         switch(inputType)
         {
         case VNCEM:
@@ -348,8 +313,6 @@ void qbcp_coc_vec(double** y0, double* t0, double** yout, int N, int inputType, 
         case PEM:
         case VEM:
         case INEM:
-            //EM framework
-            fwrk = F_EM;
             break;
 
         case VNCSEM:
@@ -358,8 +321,6 @@ void qbcp_coc_vec(double** y0, double* t0, double** yout, int N, int inputType, 
         case VSEM:
         case INSEM:
         case ECISEM:
-            //SEM framework
-            fwrk = F_SEM;
             break;
         }
 
@@ -1706,6 +1667,7 @@ double qbcp_H_complete(double t0, const double y0[], int inputType, int outputTy
         case PEM:
             return qbcp_H(tv, yv, &SEML_EM); //qbcp_H_EM does not exist, but we can use qbcp_H with SEML_EM...
         case PSEM:
+        default:
             return qbcp_H_SEM(tv, yv, &SEML);
     }
 }
