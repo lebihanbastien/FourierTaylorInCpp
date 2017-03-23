@@ -94,7 +94,7 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         // Type of computation
         //--------------------------------------------------------------------------------
-        COMP_TYPE   = COMP_CM_EML2_TO_CM_SEML;
+        COMP_TYPE   = COMP_CM_EML2_TO_CMS_SEML;
 
         //--------------------------------------------------------------------------------
         // Model and libration points
@@ -324,7 +324,7 @@ int main(int argc, char** argv)
         //with REF_CONT_D (ex: EML2-SEMLi via SEML1...)
         refSt.type          = REF_CONT_D;                      // Type of refinement
         refSt.dim           = REF_PLANAR;                      // Type of dimensions planar or 3d?
-        refSt.t0xT_des      = 0.9;                            // Initial time (xT)
+        refSt.t0xT_des      = 0.96;                            // Initial time (xT)
         refSt.t0_des        = refSt.t0xT_des*SEML.us_em.T;     // Initial time
 
         // Direction of the continuation procedure

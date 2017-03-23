@@ -1705,15 +1705,14 @@ int readClosestIntProjCU_bin(string filename, double t0_des,
                 filestream.read((char*) &res, sizeof(double));
 
                 //57. init_time_EM_seed - NOT SAVED FOR NOW
-                filestream.write((char*) &res, sizeof(double));
+                filestream.read((char*) &res, sizeof(double));
 
                 //58-61. initial seed in RCM coordinates - NOT SAVED FOR NOW
-                for (int k = 0; k < 4; k++) filestream.write((char*) &res, sizeof(double));
+                for (int k = 0; k < 4; k++) filestream.read((char*) &res, sizeof(double));
 
                 break;
             }
             }
-
         }
         while(!filestream.eof());
 
