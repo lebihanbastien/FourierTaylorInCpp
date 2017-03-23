@@ -82,11 +82,14 @@ class Orbit
         int traj_int_var_grid(double tf, double **yNCE, double *tNCE, int N, int isResetOn);
         int gslc_proj_step(double yv[], double *t, double t0, double t1, double *projdist, int *nreset, int isResetOn);
         int gslc_proj_evolve(double yv[], double *t, double t0, double t1, double *projdist, int *nreset, int isResetOn);
+        int proj_traj_grid(double **sRCM, double **yNCE, double *tNCE, int N);
 
         //--------------------------------------------------------------------------------
         //Projection on (un)stable manifold
         //--------------------------------------------------------------------------------
         void NCprojCCMtoCM(double *yv, double tv, double sti[5]);
+
+        void update_s0(double st0[], double sr, int vdim);
 
 };
 
@@ -94,5 +97,6 @@ class Orbit
 //          Orbit on a grid
 //========================================================================================
 int oo_gridOrbit(double st0[], double t0, double tf, double dt);
-
+int gridOrbit_si(double st0[], double t0, double tf, double dt, int isFlagOn);
+int gridOrbit_strob(double st0[], double t0, int N, int isFlagOn);
 #endif // ORBIT_H_INCLUDED

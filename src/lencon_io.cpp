@@ -88,6 +88,39 @@ string filenameCUM(int ofts_order, int type, int destination, double t0)
     }
 }
 
+/**
+ *  \brief Computes a data filename as a string, depending on the ofts_order, sizeOrbit, energy, and type of the data.
+ **/
+string filenameCUM_dH(int ofts_order, int type, int destination, double dH)
+{
+    string order_t0_bin      = numTostring(ofts_order)+"_dH_"+numTostring(dH)+".bin";
+    string order_dest_t0_bin = numTostring(ofts_order)+"_dest_L"+numTostring(destination)+"_dH_"+numTostring(dH)+".bin";
+    string order_dest_t0_txt = numTostring(ofts_order)+"_dest_L"+numTostring(destination)+"_dH_"+numTostring(dH)+".txt";
+    switch(type)
+    {
+    case TYPE_CU:
+        return SEML.cs_em.F_PLOT+"cu_order_"+order_t0_bin;
+    case TYPE_CU_3D:
+        return SEML.cs_em.F_PLOT+"cu_3d_order_"+order_t0_bin;
+    case TYPE_MAN:
+        return SEML.cs_em.F_PLOT+"intcu_order_"+order_t0_bin;
+
+    case TYPE_MAN_PROJ:
+        return SEML.cs_em.F_PLOT+"projcu_order_"+order_dest_t0_bin;
+    case TYPE_CONT_ATF_TRAJ:
+        return SEML.cs_em.F_PLOT+"cont_atf_traj_order_"+order_dest_t0_bin;
+    case TYPE_CONT_JPL_TRAJ:
+        return SEML.cs_em.F_PLOT+"cont_jpl_order_"+order_dest_t0_bin;
+
+    case TYPE_CONT_ATF:
+        return SEML.cs_em.F_PLOT+"cont_atf_order_"+order_dest_t0_txt;
+
+    default:
+        cout << "filenameOrbit: unknown type." << endl;
+        return "";
+    }
+}
+
 
 //========================================================================================
 //
@@ -214,6 +247,193 @@ int getLengthCOMP_txt()
 //          I/O (CU/CS/CM)
 //
 //========================================================================================
+int writeCU_bin_dH(double*** yNCE, double*** sNCE, double** dH, double* tGrid,
+                   int s1_grid_size, int t_grid_size, int ofts_order,
+                   int type, int destination, double dHd)
+{
+    //------------------------------------------------------------------------------------
+    //Filename
+    //------------------------------------------------------------------------------------
+    string filename = filenameCUM_dH(ofts_order, type, destination, dHd);
+
+    //------------------------------------------------------------------------------------
+    //Open datafile
+    //------------------------------------------------------------------------------------
+    fstream filestream;
+    filestream.open (filename.c_str(), ios::binary | ios::out);
+    if (filestream.is_open())
+    {
+        double res;
+        int resi;
+
+        //--------------------------------------------------------------------------------
+        //Number of data on the time grid
+        //--------------------------------------------------------------------------------
+        resi = t_grid_size;
+        filestream.write((char*) &resi, sizeof(int));
+
+        //--------------------------------------------------------------------------------
+        //Number of data on the manifold grid
+        //--------------------------------------------------------------------------------
+        resi = s1_grid_size;
+        filestream.write((char*) &resi, sizeof(int));
+
+
+        //--------------------------------------------------------------------------------
+        //Loop
+        //--------------------------------------------------------------------------------
+        for(int nt = 0; nt <= t_grid_size; nt++)
+        {
+            //Store the current time
+            res = tGrid[nt];
+            filestream.write((char*) &res, sizeof(double));
+
+            //Store the data at current time
+            for(int n1 = 0; n1 <= s1_grid_size; n1++)
+            {
+                    //NC state
+                    for (int k = 0; k < 6; k++)
+                    {
+                        res = yNCE[k][nt][n1];
+                        filestream.write((char*) &res, sizeof(double));
+                    }
+
+                    //RCM state
+                    for (int k = 0; k < 5; k++)
+                    {
+                        res = sNCE[k][nt][n1];
+                        filestream.write((char*) &res, sizeof(double));
+                    }
+
+                    //Is dH valid
+                    res = dH[nt][n1];
+                    filestream.write((char*) &res, sizeof(double));
+            }
+        }
+        filestream.close();
+    }
+    else return FTC_FAILURE;
+
+    return FTC_SUCCESS;
+}
+
+int getLenghtCU_bin_dH(int* s1_grid_size,
+                    int* t_grid_size, int ofts_order,
+                    int type, int destination, double dHd)
+{
+    //------------------------------------------------------------------------------------
+    //Filename
+    //------------------------------------------------------------------------------------
+    string filename = filenameCUM(ofts_order, type, destination, dHd);
+
+    //------------------------------------------------------------------------------------
+    //Open datafile
+    //------------------------------------------------------------------------------------
+    fstream filestream;
+    filestream.open (filename.c_str(), ios::binary | ios::in);
+    if (filestream.is_open())
+    {
+        int resi;
+        //---------------------
+        //Number of data on the time grid
+        //---------------------
+        filestream.read((char*) &resi, sizeof(int));
+        *t_grid_size = resi;
+
+        //---------------------
+        //Number of data on the manifold grid
+        //---------------------
+        filestream.read((char*) &resi, sizeof(int));
+        *s1_grid_size = resi;
+
+        filestream.close();
+
+    }
+    else return FTC_FAILURE;
+
+    return FTC_SUCCESS;
+}
+
+int readCU_bin_dH(double*** yNCE, double*** sNCE, double** dH, double* tGrid,
+                  int s1_grid_size, int t_grid_size,
+                  int ofts_order, int type, int destination, double dHd)
+{
+    //------------------------------------------------------------------------------------
+    //Filename
+    //------------------------------------------------------------------------------------
+    string filename = filenameCUM(ofts_order, type, destination, dHd);
+
+    //------------------------------------------------------------------------------------
+    //Open datafile
+    //------------------------------------------------------------------------------------
+    fstream filestream;
+    filestream.open (filename.c_str(), ios::binary | ios::in);
+    if (filestream.is_open())
+    {
+        int resi;
+        int tSize0, gSize0_s1;
+
+        //--------------------------------------------------------------------------------
+        //Number of data on the time grid
+        //--------------------------------------------------------------------------------
+        filestream.read((char*) &resi, sizeof(int));
+        tSize0 = resi;
+
+        //--------------------------------------------------------------------------------
+        //Number of data on the manifold grid
+        //--------------------------------------------------------------------------------
+        filestream.read((char*) &resi, sizeof(int));
+        gSize0_s1 = resi;
+
+
+        if(tSize0 < t_grid_size || gSize0_s1 < s1_grid_size)
+        {
+            cout << "readManifold_bin: wrong inputs" << endl;
+            cout << "t_grid_size    = " << t_grid_size    << ", but tSize0 = " << tSize0 << endl;
+            cout << "s1_grid_size = " << s1_grid_size << ", but gSize0_s1 = " << gSize0_s1 << endl;
+            return FTC_FAILURE;
+        }
+
+        //--------------------------------------------------------------------------------
+        //Loop
+        //--------------------------------------------------------------------------------
+        double res;
+        for(int nt = 0; nt <= t_grid_size; nt++)
+        {
+            //Read the current time
+            filestream.read((char*) &res, sizeof(double));
+            tGrid[nt]= res;
+
+            //Read the data at current time
+            for(int n1 = 0; n1 <= s1_grid_size; n1++)
+            {
+                    //NC state
+                    for (int k = 0; k < 6; k++)
+                    {
+                        filestream.read((char*) &res, sizeof(double));
+                        yNCE[k][nt][n1] = res;
+                    }
+
+                    //RCM state
+                    for (int k = 0; k < 5; k++)
+                    {
+                        filestream.read((char*) &res, sizeof(double));
+                        sNCE[k][nt][n1] = res;
+                    }
+
+                    //Is dH valid
+                    filestream.read((char*) &res, sizeof(double));
+                    dH[nt][n1] = res;
+                }
+        }
+        filestream.close();
+    }
+    else return FTC_FAILURE;
+
+    return FTC_SUCCESS;
+}
+
+
 //----------------------------------------------------------------------------------------
 // CU
 //----------------------------------------------------------------------------------------
@@ -221,7 +441,7 @@ int getLengthCOMP_txt()
  *  \brief Store in a data file the Initial Conditions of a planar Center-Unstable manifold. Used in compute_grid_CMU_EM.
  *         The data are of type t0*s1*s3 and of size (tGrid +1)*(gSize+1)*(gSize+1)
  **/
-int writeCU_bin(double**** yNCE, double**** sNCE, double* tGrid,
+int writeCU_bin(double**** yNCE, double**** sNCE, double*** dH, double* tGrid,
                 int s1_grid_size, int s3_grid_size, int t_grid_size,
                 int ofts_order, int type, int destination)
 {
@@ -240,27 +460,27 @@ int writeCU_bin(double**** yNCE, double**** sNCE, double* tGrid,
         double res;
         int resi;
 
-        //---------------------
+        //--------------------------------------------------------------------------------
         //Number of data on the time grid
-        //---------------------
+        //--------------------------------------------------------------------------------
         resi = t_grid_size;
         filestream.write((char*) &resi, sizeof(int));
 
-        //---------------------
+        //--------------------------------------------------------------------------------
         //Number of data on the manifold grid
-        //---------------------
+        //--------------------------------------------------------------------------------
         resi = s1_grid_size;
         filestream.write((char*) &resi, sizeof(int));
 
-        //---------------------
+        //--------------------------------------------------------------------------------
         //Number of data on the manifold grid
-        //---------------------
+        //--------------------------------------------------------------------------------
         resi = s3_grid_size;
         filestream.write((char*) &resi, sizeof(int));
 
-        //---------------------
+        //--------------------------------------------------------------------------------
         //Loop
-        //---------------------
+        //--------------------------------------------------------------------------------
         for(int nt = 0; nt <= t_grid_size; nt++)
         {
             //Store the current time
@@ -285,6 +505,11 @@ int writeCU_bin(double**** yNCE, double**** sNCE, double* tGrid,
                         res = sNCE[k][nt][n1][n2];
                         filestream.write((char*) &res, sizeof(double));
                     }
+
+                    //Is dH valid
+                    res = dH[nt][n1][n2];
+                    filestream.write((char*) &res, sizeof(double));
+
                 }
             }
         }
@@ -299,7 +524,7 @@ int writeCU_bin(double**** yNCE, double**** sNCE, double* tGrid,
  *  \brief Read in a data file the containing the Initial Conditions of a planar Center-Unstable manifold. Used in int_proj_CMU_EM_on_CM_SEM and intMan
  *         The data are of type t0*s1*s3 and of size (tGrid +1)*(gSize+1)*(gSize+1)
  **/
-int readCU_bin(double**** yNCE, double**** sNCE, double* tGrid,
+int readCU_bin(double**** yNCE, double**** sNCE, double*** dH, double* tGrid,
                int s1_grid_size, int s3_grid_size, int t_grid_size,
                int ofts_order, int type, int destination)
 {
@@ -374,6 +599,10 @@ int readCU_bin(double**** yNCE, double**** sNCE, double* tGrid,
                         filestream.read((char*) &res, sizeof(double));
                         sNCE[k][nt][n1][n2] = res;
                     }
+
+                    //Is dH valid
+                    filestream.read((char*) &res, sizeof(double));
+                    dH[nt][n1][n2] = res;
                 }
             }
         }
@@ -727,25 +956,10 @@ int readCU_bin_3D(int offset, double** yNCE, double** sNCE, int* si_grid_size,
 //----------------------------------------------------------------------------------------
 /**
  *  \brief Store in a data file the connections between EML2 and SEML1,2.
- *         Used in int_proj_CMU_EM_on_CM_SEM.
+ *         Used in e.g. int_proj_CMU_EM_on_CM_SEM.
  **/
 void writeIntProjCU_bin(string filename,
-                        double* init_time_grid_EM,            //time grid in NCEM units
-                        double**** init_state_CMU_NCEM,       //initial state in NCEM coordinates
-                        double**** init_state_CMU_SEM,        //initial state in SEM coordinates
-                        double**** init_state_CMU_RCM,        //initial state in RCM coordinates
-                        double**** final_state_CMU_SEM,       //final state in SEM coordinates
-                        double**** projected_state_CMU_SEM,   //projected state in SEM coordinates
-                        double**** projected_state_CMU_RCM,   //projected state in RCM coordinates
-                        double min_proj_dist_SEM,             //minimum distance of projection in SEM units
-                        double dv_at_projection_SEM,          //associated dv
-                        double* t_man_SEM,                    //time grid on manifold leg in SEM units
-                        double crossings_NCSEM,               //number of crossings of the x = -1 line (clock/counterclockwise)
-                        int collision_NCEM,                   //collision flag, from NCEM flow
-                        int kmin,
-                        int ks1,
-                        int ks3,
-                        int kt)
+                           ProjResSt& projResSt)
 {
     //------------------------------------------------------------------------------------
     //Open datafile
@@ -771,83 +985,89 @@ void writeIntProjCU_bin(string filename,
             yv_semli_NCSEM[i] = 0.0;
         }
 
-
         //--------------------------------------------------------------------------------
         // Store data column by column
         //--------------------------------------------------------------------------------
-        // 1. time grid in NCEM units
-        res   = init_time_grid_EM[kt];
-        tv_EM = init_time_grid_EM[kt];
+        // 1. label
+        res  = projResSt.label;
         filestream.write((char*) &res, sizeof(double));
 
-        // 2-7. initial state in NCEM coordinates
+        // 2. time grid in NCEM units
+        res  = projResSt.init_time_EM;
+        filestream.write((char*) &res, sizeof(double));
+
+        // 3-8. initial state in NCEM coordinates
         for (int k = 0; k < 6; k++)
         {
-            res        = init_state_CMU_NCEM[k][kt][ks1][ks3];
-            yv_NCEM[k] = init_state_CMU_NCEM[k][kt][ks1][ks3];
+            res = projResSt.init_state_CMU_NCEM[k];
             filestream.write((char*) &res, sizeof(double));
         }
 
-        // 8-13. initial state in SEM coordinates
+        // 9-14. initial state in SEM coordinates
         for (int k = 0; k < 6; k++)
         {
-            res = init_state_CMU_SEM[k][kt][ks1][ks3];
+            res = projResSt.init_state_CMU_SEM_o[k];
             filestream.write((char*) &res, sizeof(double));
         }
 
-        // 14-18. initial state in RCM coordinates
+        // 15-19. initial state in RCM coordinates
         for (int k = 0; k < 5; k++)
         {
-            res = init_state_CMU_RCM[k][kt][ks1][ks3];
+            res = projResSt.init_state_CMU_RCM[k];
             filestream.write((char*) &res, sizeof(double));
         }
 
-        // 19. minimum distance of projection
-        res = min_proj_dist_SEM;
+        // 20. minimum distance of projection
+        res = projResSt.min_proj_dist_SEM_o;
         filestream.write((char*) &res, sizeof(double));
 
-        // 20. associated dv
-        res = dv_at_projection_SEM;
+        // 21. associated dv
+        res = projResSt.dv_at_projection_SEM_o;
         filestream.write((char*) &res, sizeof(double));
 
-        // 21. t_man_SEM
-        res    = t_man_SEM[kmin];
-        tv_SEM = t_man_SEM[kmin];
+        // 22. t_man_SEM
+        res    = projResSt.final_time_SEM_o;
         filestream.write((char*) &res, sizeof(double));
 
-        // 22-27. final_state_CMU_SEM state in SE coordinates
+        // 23-28. final_state_CMU_SEM state in SE coordinates
         for (int k = 0; k < 6; k++)
         {
-            res       = final_state_CMU_SEM[k][kt][ks1][ks3];
-            yv_SEM[k] = final_state_CMU_SEM[k][kt][ks1][ks3];
+            res = projResSt.final_state_CMU_SEM_o[k];
             filestream.write((char*) &res, sizeof(double));
         }
 
-        // 28-33. projected_state_CMU_SEM state in SE coordinates
+        // 29-34. projected_state_CMU_SEM state in SE coordinates
         for (int k = 0; k < 6; k++)
         {
-            res = projected_state_CMU_SEM[k][kt][ks1][ks3];
+            res = projResSt.projected_state_CMU_SEM_o[k];
             filestream.write((char*) &res, sizeof(double));
         }
 
-        // 34-37. projected_state_CMU_RCM state in SE coordinates
+        // 35-38. projected_state_CMU_RCM state in SE coordinates
         for (int k = 0; k < 4; k++)
         {
-            res = projected_state_CMU_RCM[k][kt][ks1][ks3];
+            res = projResSt.projected_state_CMU_RCM_o[k];
             filestream.write((char*) &res, sizeof(double));
         }
 
-        //38. Number of crossings of the x = -1 line (clock/counterclockwise)
-        res = crossings_NCSEM;
+        //39. Number of crossings of the x = -1 line (clock/counterclockwise)
+        res = projResSt.crossings_NCSEM_o;
         filestream.write((char*) &res, sizeof(double));
 
-        //39. Collision flag, from NCEM flow
-        res = collision_NCEM;
+        //40. Collision flag, from NCEM flow
+        res = projResSt.collision_NCEM_o;
         filestream.write((char*) &res, sizeof(double));
 
         //--------------------------------------------------------------------------------
         // Computing the energies before storing
         //--------------------------------------------------------------------------------
+        // States and time
+        tv_EM = projResSt.init_time_EM;
+        state_memcpy(yv_NCEM, projResSt.init_state_CMU_NCEM);
+
+        tv_SEM = projResSt.final_time_SEM_o;
+        state_memcpy(yv_SEM, projResSt.final_state_CMU_SEM_o);
+
         // H0 at IC
         H0_NCEM  = qbcp_H_complete(tv_EM, yv_NCEM, NCEM, NCEM);
         H0_NCSEM = qbcp_H_complete(tv_EM, yv_NCEM, NCEM, NCSEM);
@@ -876,7 +1096,7 @@ void writeIntProjCU_bin(string filename,
         //--------------------------------------------------------------------------------
         // Then store
         //--------------------------------------------------------------------------------
-        //40-43: H0 at IC
+        //41-44: H0 at IC
         res = H0_NCEM;
         filestream.write((char*) &res, sizeof(double));
         res = H0_NCSEM;
@@ -886,7 +1106,7 @@ void writeIntProjCU_bin(string filename,
         res = H0_SEM;
         filestream.write((char*) &res, sizeof(double));
 
-        //44-47: H0 at emli
+        //45-48: H0 at emli
         res = H0_emli_NCEM;
         filestream.write((char*) &res, sizeof(double));
         res = H0_emli_NCSEM;
@@ -896,7 +1116,7 @@ void writeIntProjCU_bin(string filename,
         res = H0_emli_SEM;
         filestream.write((char*) &res, sizeof(double));
 
-        //48-51: Hf
+        //49-52: Hf
         res = Hf_NCEM;
         filestream.write((char*) &res, sizeof(double));
         res = Hf_NCSEM;
@@ -906,7 +1126,7 @@ void writeIntProjCU_bin(string filename,
         res = Hf_SEM;
         filestream.write((char*) &res, sizeof(double));
 
-        //52-55: Hf at semli
+        //53-56: Hf at semli
         res = Hf_semli_NCEM;
         filestream.write((char*) &res, sizeof(double));
         res = Hf_semli_NCSEM;
@@ -920,106 +1140,207 @@ void writeIntProjCU_bin(string filename,
     }
 }
 
-//----------------------------------------------------------------------------------------
-// Int CU 3D
-//----------------------------------------------------------------------------------------
 /**
  *  \brief Store in a data file the connections between EML2 and SEML1,2.
- *         Used in int_proj_CMU_EM_on_CM_SEM_3D.
+ *         Used in int_proj_ORBIT_EM_on_CM_SEM.
  **/
-void writeIntProjCU_bin_3D(string filename,
-                           double* init_time_grid_EM,          //time grid in NCEM units
-                           double** init_state_CMU_NCEM,       //initial state in NCEM coordinates
-                           double** init_state_CMU_SEM,        //initial state in SEM coordinates
-                           double** init_state_CMU_RCM,        //initial state in RCM coordinates
-                           double** final_state_CMU_SEM,       //final state in SEM coordinates
-                           double** projected_state_CMU_SEM,   //projected state in SEM coordinates
-                           double** projected_state_CMU_RCM,   //projected state in RCM coordinates
-                           double min_proj_dist_SEM,           //minimum distance of projection in SEM units
-                           double dv_at_projection_SEM,        //associated dv
-                           double* t_man_SEM,                  //time grid on manifold leg in SEM units
-                           double crossings_NCSEM,             //number of crossings of the x = -1 line (clock/counterclockwise)
-                           int collision_NCEM,                 //collision flag, from NCEM flow
-                           int kmin,
-                           int ks3,
-                           int kt)
+void writeIntProjCUSeed_bin(string filename,
+                           ProjResSt& projResSt)
 {
-    //----------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Open datafile
-    //----------------------------------------------------------
+    //------------------------------------------------------------------------------------
     fstream filestream(filename.c_str(), ios::binary | ios::out | ios::app);
     if (filestream.is_open())
     {
         double res;
-        // 1. time grid in NCEM units
-        res = init_time_grid_EM[kt];
+
+        double H0_NCEM, H0_NCSEM, H0_EM, H0_SEM;
+        double H0_emli_NCEM, H0_emli_NCSEM, H0_emli_EM, H0_emli_SEM;
+        double Hf_NCEM, Hf_NCSEM, Hf_EM, Hf_SEM;
+        double Hf_semli_NCEM, Hf_semli_NCSEM, Hf_semli_EM, Hf_semli_SEM;
+
+        double yv_NCEM[6], yv_SEM[6];
+        double yv_emli_NCEM[6], yv_semli_NCSEM[6];
+        double tv_EM, tv_SEM;
+
+        //Origins at both ends
+        for(int i = 0; i <6; i++)
+        {
+            yv_emli_NCEM[i]   = 0.0;
+            yv_semli_NCSEM[i] = 0.0;
+        }
+
+        //--------------------------------------------------------------------------------
+        // Store data column by column
+        //--------------------------------------------------------------------------------
+        // 1. label
+        res  = projResSt.label;
         filestream.write((char*) &res, sizeof(double));
 
-        // 2-7. initial state in NCEM coordinates
+        // 2. time grid in NCEM units
+        res  = projResSt.init_time_EM;
+        filestream.write((char*) &res, sizeof(double));
+
+        // 3-8. initial state in NCEM coordinates
         for (int k = 0; k < 6; k++)
         {
-            res = init_state_CMU_NCEM[k][ks3];
+            res = projResSt.init_state_CMU_NCEM[k];
             filestream.write((char*) &res, sizeof(double));
         }
 
-        // 8-13. initial state in SEM coordinates
+        // 9-14. initial state in SEM coordinates
         for (int k = 0; k < 6; k++)
         {
-            res = init_state_CMU_SEM[k][ks3];
+            res = projResSt.init_state_CMU_SEM_o[k];
             filestream.write((char*) &res, sizeof(double));
         }
 
-        // 14-18. initial state in RCM coordinates
+        // 15-19. initial state in RCM coordinates
         for (int k = 0; k < 5; k++)
         {
-            res = init_state_CMU_RCM[k][ks3];
+            res = projResSt.init_state_CMU_RCM[k];
             filestream.write((char*) &res, sizeof(double));
         }
 
-        // 19. minimum distance of projection
-        res = min_proj_dist_SEM;
+        // 20. minimum distance of projection
+        res = projResSt.min_proj_dist_SEM_o;
         filestream.write((char*) &res, sizeof(double));
 
-        // 20. associated dv
-        res = dv_at_projection_SEM;
+        // 21. associated dv
+        res = projResSt.dv_at_projection_SEM_o;
         filestream.write((char*) &res, sizeof(double));
 
-        // 21. tvMinTensor
-        res = t_man_SEM[kmin];
+        // 22. t_man_SEM
+        res    = projResSt.final_time_SEM_o;
         filestream.write((char*) &res, sizeof(double));
 
-        // 22-27. final_state_CMU_SEM state in SE coordinates
+        // 23-28. final_state_CMU_SEM state in SE coordinates
         for (int k = 0; k < 6; k++)
         {
-            res = final_state_CMU_SEM[k][ks3];
+            res = projResSt.final_state_CMU_SEM_o[k];
             filestream.write((char*) &res, sizeof(double));
         }
 
-        // 28-33. projected_state_CMU_SEM state in SE coordinates
+        // 29-34. projected_state_CMU_SEM state in SE coordinates
         for (int k = 0; k < 6; k++)
         {
-            res = projected_state_CMU_SEM[k][ks3];
+            res = projResSt.projected_state_CMU_SEM_o[k];
             filestream.write((char*) &res, sizeof(double));
         }
 
-        // 34-37. projected_state_CMU_RCM state in SE coordinates
+        // 35-38. projected_state_CMU_RCM state in SE coordinates
         for (int k = 0; k < 4; k++)
         {
-            res = projected_state_CMU_RCM[k][ks3];
+            res = projResSt.projected_state_CMU_RCM_o[k];
             filestream.write((char*) &res, sizeof(double));
         }
 
-        //38. Number of crossings of the x = -1 line (clock/counterclockwise)
-        res = crossings_NCSEM;
+        //39. Number of crossings of the x = -1 line (clock/counterclockwise)
+        res = projResSt.crossings_NCSEM_o;
         filestream.write((char*) &res, sizeof(double));
 
-        //39. Collision flag, from NCEM flow
-        res = collision_NCEM;
+        //40. Collision flag, from NCEM flow
+        res = projResSt.collision_NCEM_o;
         filestream.write((char*) &res, sizeof(double));
+
+        //--------------------------------------------------------------------------------
+        // Computing the energies before storing
+        //--------------------------------------------------------------------------------
+        // States and time
+        tv_EM = projResSt.init_time_EM;
+        state_memcpy(yv_NCEM, projResSt.init_state_CMU_NCEM);
+
+        tv_SEM = projResSt.final_time_SEM_o;
+        state_memcpy(yv_SEM, projResSt.final_state_CMU_SEM_o);
+
+        // H0 at IC
+        H0_NCEM  = qbcp_H_complete(tv_EM, yv_NCEM, NCEM, NCEM);
+        H0_NCSEM = qbcp_H_complete(tv_EM, yv_NCEM, NCEM, NCSEM);
+        H0_EM    = qbcp_H_complete(tv_EM, yv_NCEM, NCEM, PEM);
+        H0_SEM   = qbcp_H_complete(tv_EM, yv_NCEM, NCEM, PSEM);
+
+        // H0 at emli
+        H0_emli_NCEM  = qbcp_H_complete(tv_EM, yv_emli_NCEM, NCEM, NCEM);
+        H0_emli_NCSEM = qbcp_H_complete(tv_EM, yv_emli_NCEM, NCEM, NCSEM);
+        H0_emli_EM    = qbcp_H_complete(tv_EM, yv_emli_NCEM, NCEM, PEM);
+        H0_emli_SEM   = qbcp_H_complete(tv_EM, yv_emli_NCEM, NCEM, PSEM);
+
+        // Hf - careful, the state is given in PSEM
+        Hf_NCEM  = qbcp_H_complete(tv_SEM, yv_SEM, PSEM, NCEM);
+        Hf_NCSEM = qbcp_H_complete(tv_SEM, yv_SEM, PSEM, NCSEM);
+        Hf_EM    = qbcp_H_complete(tv_SEM, yv_SEM, PSEM, PEM);
+        Hf_SEM   = qbcp_H_complete(tv_SEM, yv_SEM, PSEM, PSEM);
+
+        // Hf at semli - careful, the state is given in NCSEM
+        Hf_semli_NCEM  = qbcp_H_complete(tv_SEM, yv_semli_NCSEM, NCSEM, NCEM);
+        Hf_semli_NCSEM = qbcp_H_complete(tv_SEM, yv_semli_NCSEM, NCSEM, NCSEM);
+        Hf_semli_EM    = qbcp_H_complete(tv_SEM, yv_semli_NCSEM, NCSEM, PEM);
+        Hf_semli_SEM   = qbcp_H_complete(tv_SEM, yv_semli_NCSEM, NCSEM, PSEM);
+
+
+        //--------------------------------------------------------------------------------
+        // Then store
+        //--------------------------------------------------------------------------------
+        //41-44: H0 at IC
+        res = H0_NCEM;
+        filestream.write((char*) &res, sizeof(double));
+        res = H0_NCSEM;
+        filestream.write((char*) &res, sizeof(double));
+        res = H0_EM;
+        filestream.write((char*) &res, sizeof(double));
+        res = H0_SEM;
+        filestream.write((char*) &res, sizeof(double));
+
+        //45-48: H0 at emli
+        res = H0_emli_NCEM;
+        filestream.write((char*) &res, sizeof(double));
+        res = H0_emli_NCSEM;
+        filestream.write((char*) &res, sizeof(double));
+        res = H0_emli_EM;
+        filestream.write((char*) &res, sizeof(double));
+        res = H0_emli_SEM;
+        filestream.write((char*) &res, sizeof(double));
+
+        //49-52: Hf
+        res = Hf_NCEM;
+        filestream.write((char*) &res, sizeof(double));
+        res = Hf_NCSEM;
+        filestream.write((char*) &res, sizeof(double));
+        res = Hf_EM;
+        filestream.write((char*) &res, sizeof(double));
+        res = Hf_SEM;
+        filestream.write((char*) &res, sizeof(double));
+
+        //53-56: Hf at semli
+        res = Hf_semli_NCEM;
+        filestream.write((char*) &res, sizeof(double));
+        res = Hf_semli_NCSEM;
+        filestream.write((char*) &res, sizeof(double));
+        res = Hf_semli_EM;
+        filestream.write((char*) &res, sizeof(double));
+        res = Hf_semli_SEM;
+        filestream.write((char*) &res, sizeof(double));
+
+
+        //--------------------------------------------------------------------------------
+        // Seeds!
+        //--------------------------------------------------------------------------------
+        //57. seed_time_EM
+        res  = projResSt.seed_time_EM;
+        filestream.write((char*) &res, sizeof(double));
+
+        //58-61. initial seed in RCM coordinates
+        for (int k = 0; k < 4; k++)
+        {
+            res = projResSt.seed_state_CMU_RCM[k];
+            filestream.write((char*) &res, sizeof(double));
+        }
 
         filestream.close();
     }
 }
+
 
 //========================================================================================
 //
@@ -1073,6 +1394,38 @@ void vector_getIndices(vector<size_t>& indRes, vector<double>& t0_CMU_EM, double
     }
 }
 
+//functor for vector_getIndices_range
+struct is_within_range
+{
+public:
+    is_within_range(const double &t0) : t0_desired(t0){}    //constructor
+    bool operator()(const double &t0)                 //operator
+    {
+        return fabs(t0 - t0_desired) < 1e-10;
+    }
+
+private:
+    double t0_desired;
+};
+
+/**
+ *   \brief Save in indRes the indices of the occurences of t0 in t0_CMU_EM, within a certain range
+ **/
+void vector_getIndices_range(vector<size_t>& indRes, vector<double>& t0_CMU_EM, double t0)
+{
+    //Create an iterator that will contain the position of each component of t0_CMU_EM that matches t0 within 1e-10
+    //Here is the first one
+    std::vector<double>::iterator itf = std::find_if(t0_CMU_EM.begin(), t0_CMU_EM.end(), is_within_range(t0));
+
+    // Loop on all t0_CMU_EM, update of indRes
+    while (itf != t0_CMU_EM.end())
+    {
+        indRes.push_back(std::distance(t0_CMU_EM.begin(), itf));
+        std::advance(itf, 1);
+        itf = std::find_if(itf, t0_CMU_EM.end(),  is_within_range(t0));
+    }
+}
+
 /**
  *   \brief Determine the number of columns in the data file "filename",
  *          given some possible solutions in ncol[], of size nncol.
@@ -1123,14 +1476,16 @@ int readClosestIntProjCU_bin(string filename, double t0_des,
                               vector<double>& s1_CM_SEM_0, vector<double>& s2_CM_SEM_0,
                               vector<double>& s3_CM_SEM_0, vector<double>& s4_CM_SEM_0,
                               vector<double>& crossings_NCSEM_0,
-                              vector<size_t>& sortId)
+                              vector<size_t>& sortId, int typeOfTimeSelection)
 {
+    string fname = "readClosestIntProjCU_bin";
+
     //====================================================================================
     //Check the existence of the filename
     //====================================================================================
     if(!fileExists(filename))
     {
-        cout << "readClosestIntProjCU_bin. " << filename << ": " << strerror(errno) << endl;
+        cout << fname << ". " << filename << ": " << strerror(errno) << endl;
         return FTC_ENOENT;
     }
 
@@ -1156,11 +1511,11 @@ int readClosestIntProjCU_bin(string filename, double t0_des,
     //====================================================================================
     //Get the number of columns
     //====================================================================================
-    int ncol[3] = {37, 39, 55};
-    int ncol0   = numberOfColumns(filename, ncol, 3);
+    int ncol[5] = {61, 56, 55, 39, 37};
+    int ncol0   = numberOfColumns(filename, ncol, 5);
 
-    cout << "Number of columns in " << filename << " is: " << ncol0 << endl;
-    pressEnter(true);
+    //cout << "Number of columns in " << filename << " is: " << ncol0 << endl;
+    //pressEnter(true);
 
     //====================================================================================
     //Open and read datafile (the existence) has already been checked)
@@ -1176,6 +1531,9 @@ int readClosestIntProjCU_bin(string filename, double t0_des,
         //--------------------------------------------------------------------------------
         do
         {
+            //0. Label if ncol >= 56
+            if(ncol0 >= 56) filestream.read((char*) &res, sizeof(double));
+
             // 1. time grid in NCEM units
             filestream.read((char*) &res, sizeof(double));
             t0_CMU_EM.push_back(res);
@@ -1275,8 +1633,8 @@ int readClosestIntProjCU_bin(string filename, double t0_des,
 
                 break;
             }
-
             case 55:
+            case 56:
             {
                 //38. Number of crossings of the x = -1 line (clock/counterclockwise)
                 filestream.read((char*) &res, sizeof(double));
@@ -1309,6 +1667,48 @@ int readClosestIntProjCU_bin(string filename, double t0_des,
                 filestream.read((char*) &res, sizeof(double));
                 filestream.read((char*) &res, sizeof(double));
                 filestream.read((char*) &res, sizeof(double));
+
+                break;
+            }
+            case 61:
+            {
+                //38. Number of crossings of the x = -1 line (clock/counterclockwise)
+                filestream.read((char*) &res, sizeof(double));
+                crossings_NCSEM.push_back(res);
+
+                //39. Collision flag, from NCEM flow
+                filestream.read((char*) &res, sizeof(double));
+                collision_NCEM.push_back(res);
+
+                //40-43: H0 at IC - NOT SAVED FOR NOW
+                filestream.read((char*) &res, sizeof(double));
+                filestream.read((char*) &res, sizeof(double));
+                filestream.read((char*) &res, sizeof(double));
+                filestream.read((char*) &res, sizeof(double));
+
+                //44-47: H0 at emli - NOT SAVED FOR NOW
+                filestream.read((char*) &res, sizeof(double));
+                filestream.read((char*) &res, sizeof(double));
+                filestream.read((char*) &res, sizeof(double));
+                filestream.read((char*) &res, sizeof(double));
+
+                //48-51: Hf - NOT SAVED FOR NOW
+                filestream.read((char*) &res, sizeof(double));
+                filestream.read((char*) &res, sizeof(double));
+                filestream.read((char*) &res, sizeof(double));
+                filestream.read((char*) &res, sizeof(double));
+
+                //52-55: Hf at semli - NOT SAVED FOR NOW
+                filestream.read((char*) &res, sizeof(double));
+                filestream.read((char*) &res, sizeof(double));
+                filestream.read((char*) &res, sizeof(double));
+                filestream.read((char*) &res, sizeof(double));
+
+                //57. init_time_EM_seed - NOT SAVED FOR NOW
+                filestream.write((char*) &res, sizeof(double));
+
+                //58-61. initial seed in RCM coordinates - NOT SAVED FOR NOW
+                for (int k = 0; k < 4; k++) filestream.write((char*) &res, sizeof(double));
 
                 break;
             }
@@ -1346,62 +1746,162 @@ int readClosestIntProjCU_bin(string filename, double t0_des,
     crossings_NCSEM.pop_back();
     collision_NCEM.pop_back();
 
+    //====================================================================================
+    //Type of selection
+    //====================================================================================
+    coutmp();
+    cout << fname << ". ";
 
-    //====================================================================================
-    //Get the unique elements in t0_CMU_EM
-    //====================================================================================
-    //Copy t0_CMU_EM into t0_CMU_EM_UNIQUE
-    vector<double> t0_CMU_EM_UNIQUE(t0_CMU_EM);
-    //Get unique elements
-    vector_getUnique(t0_CMU_EM_UNIQUE);
-
-    //====================================================================================
-    // Print all the indices that match t0_CMU_EM_UNIQUE[xxx]
-    //====================================================================================
-    cout << "--------------------------------------" << endl;
-    cout << "There is " << t0_CMU_EM_UNIQUE.size() << " different times in data, in the following range:" << endl;
-    cout << "[" << t0_CMU_EM_UNIQUE[0]/SEML.us_em.T << ", " << t0_CMU_EM_UNIQUE[t0_CMU_EM_UNIQUE.size()-1]/SEML.us_em.T << "]x SEML.us_em.T" << endl;
-
-    //====================================================================================
-    // Find the nearest t0 value, or let the user choose if t0_des < 0
-    //====================================================================================
-    int ti = 0;
-
-    if(t0_des >= 0)
-    {
-        double dmin = fabs(t0_CMU_EM_UNIQUE[0] - t0_des);
-
-        for(int i = 1; i < (int) t0_CMU_EM_UNIQUE.size(); i++)
-        {
-            if(fabs(t0_CMU_EM_UNIQUE[i] - t0_des) < dmin)
-            {
-                dmin = fabs(t0_CMU_EM_UNIQUE[i] - t0_des);
-                ti = i;
-            }
-        }
-        cout << "The index of the time closer to the desired one is " << ti;
-        cout << ", which corresponds to:" << endl;
-    }
+    if(typeOfTimeSelection == TIME_SELECTION_ABSOLUTE)
+        cout << " the initial time is searched in [0, Inf[ " << endl;
     else
-    {
-        do
-        {
-            cout << "Please enter a number between " << 0 << " and " << t0_CMU_EM_UNIQUE.size()-1;
-            cout << " to select a specific starting time" << endl;
-            scanf("%d", &ti);
-        }
-        while(ti < 0 || ti > (int) t0_CMU_EM_UNIQUE.size()-1);
-        cout << "You have selected " << ti << ", which corresponds to:" << endl;
-    }
+        cout << " the initial time is searched in [0, T[ " << endl;
 
-    cout << "t0_EM = " << t0_CMU_EM_UNIQUE[ti]/SEML.us_em.T;
-    cout << " x SEML.us_em.T" <<  endl;
-
-    //------------------------------------------------------------------------------------
-    // Select the values that matches the desired time
-    //------------------------------------------------------------------------------------
+    int ti = 0;
     std::vector<size_t> indRes;
-    vector_getIndices(indRes, t0_CMU_EM, t0_CMU_EM_UNIQUE[ti]);
+    switch(typeOfTimeSelection)
+    {
+        case TIME_SELECTION_ABSOLUTE:
+        {
+            //----------------------------------------------------------------------------
+            //Get the unique elements in t0_CMU_EM
+            //----------------------------------------------------------------------------
+            //Copy t0_CMU_EM into t0_CMU_EM_UNIQUE
+            vector<double> t0_CMU_EM_UNIQUE(t0_CMU_EM);
+            //Get unique elements
+            vector_getUnique(t0_CMU_EM_UNIQUE);
+
+            //----------------------------------------------------------------------------
+            // Print the range in t0_CMU_EM_UNIQUE
+            //----------------------------------------------------------------------------
+            sortId = sort_indexes(t0_CMU_EM_UNIQUE);
+            cout << "--------------------------------------" << endl;
+            cout << "There is " << t0_CMU_EM_UNIQUE.size() << " different times in data, in the following range:" << endl;
+            cout << "[" << t0_CMU_EM_UNIQUE[sortId[0]]/SEML.us_em.T << ", ";
+            cout << t0_CMU_EM_UNIQUE[sortId[t0_CMU_EM_UNIQUE.size()-1]]/SEML.us_em.T;
+            cout << "] x T." << endl;
+
+            //----------------------------------------------------------------------------
+            // Find the nearest t0 value, or let the user choose if t0_des < 0
+            //----------------------------------------------------------------------------
+            cout << "Desired time is  = " << t0_des/SEML.us_em.T;
+            cout << " x T." <<  endl;
+            if(t0_des >= 0)
+            {
+                double dmin = fabs(t0_CMU_EM_UNIQUE[0] - t0_des);
+                for(int i = 1; i < (int) t0_CMU_EM_UNIQUE.size(); i++)
+                {
+                    if(fabs(t0_CMU_EM_UNIQUE[i] - t0_des) < dmin)
+                    {
+                        dmin = fabs(t0_CMU_EM_UNIQUE[i] - t0_des);
+                        ti = i;
+                    }
+                }
+                cout << "The index of the time closer to the desired one is " << ti;
+                cout << ", which corresponds to:" << endl;
+            }
+            else
+            {
+                do
+                {
+                    cout << "Please enter a number between " << 0 << " and " << t0_CMU_EM_UNIQUE.size()-1;
+                    cout << " to select a specific starting time" << endl;
+                    scanf("%d", &ti);
+                }
+                while(ti < 0 || ti > (int) t0_CMU_EM_UNIQUE.size()-1);
+                cout << "You have selected " << ti << ", which corresponds to:" << endl;
+            }
+
+            cout << "t0 = " << t0_CMU_EM_UNIQUE[ti]/SEML.us_em.T;
+            cout << " x T." <<  endl;
+
+            //----------------------------------------------------------------------------
+            // Select the values that matches the desired time
+            //----------------------------------------------------------------------------
+            vector_getIndices_range(indRes, t0_CMU_EM, t0_CMU_EM_UNIQUE[ti]);
+
+        break;
+        }
+
+        case TIME_SELECTION_RATIO:
+        default:
+        {
+            //----------------------------------------------------------------------------
+            //We get all the unique times, as %T, between [0 and T]
+            //----------------------------------------------------------------------------
+            vector<double> r0_CMU_EM(t0_CMU_EM);
+
+            //Get the modulo[T], up to RATIO_DIGITS digits
+            double factor = 1.0*pow(10, RATIO_DIGITS);
+            for(int k = 0; k < (int) r0_CMU_EM.size(); k++)
+            {
+                r0_CMU_EM[k] = round(factor*fmod(r0_CMU_EM[k]/SEML.us_em.T, 1.0))/factor;
+            }
+
+            //Get unique elements
+            vector<double> r0_CMU_EM_UNIQUE(r0_CMU_EM);
+            vector_getUnique(r0_CMU_EM_UNIQUE);
+
+            //----------------------------------------------------------------------------
+            // Print the range in r0_CMU_EM_UNIQUE
+            //----------------------------------------------------------------------------
+            sortId = sort_indexes(r0_CMU_EM_UNIQUE);
+            cout << "--------------------------------------" << endl;
+            cout << "There is " << r0_CMU_EM_UNIQUE.size() << " different times in data, in the following range:" << endl;
+            cout << "[" << r0_CMU_EM_UNIQUE[sortId[0]] << ", ";
+            cout << r0_CMU_EM_UNIQUE[sortId[r0_CMU_EM_UNIQUE.size()-1]];
+            cout << "] x T." << endl;
+
+            //----------------------------------------------------------------------------
+            // Find the nearest t0 value, or let the user choose if t0_des < 0
+            //----------------------------------------------------------------------------
+            double r0_des = round(factor*fmod(t0_des/SEML.us_em.T, 1.0))/factor;
+
+            cout << "Desired time is  = " << r0_des;
+            cout << " x T." <<  endl;
+
+            if(t0_des >= 0)
+            {
+                double dmin = fabs(r0_CMU_EM_UNIQUE[0] - r0_des);
+
+                for(int i = 1; i < (int) r0_CMU_EM_UNIQUE.size(); i++)
+                {
+                    if(fabs(r0_CMU_EM_UNIQUE[i] - r0_des) < dmin)
+                    {
+                        dmin = fabs(r0_CMU_EM_UNIQUE[i] - r0_des);
+                        ti = i;
+                    }
+                }
+                cout << "The index of the time closer to the desired one is " << ti;
+                cout << ", which corresponds to:" << endl;
+            }
+            else
+            {
+                do
+                {
+                    cout << "Please enter a number between " << 0 << " and " << r0_CMU_EM_UNIQUE.size()-1;
+                    cout << " to select a specific starting time" << endl;
+                    scanf("%d", &ti);
+                }
+                while(ti < 0 || ti > (int) r0_CMU_EM_UNIQUE.size()-1);
+                cout << "You have selected " << ti << ", which corresponds to:" << endl;
+            }
+
+            cout << "t0 = " << r0_CMU_EM_UNIQUE[ti];
+            cout << " x T." <<  endl;
+
+            //----------------------------------------------------------------------------
+            // Select the values that matches the desired time
+            //----------------------------------------------------------------------------
+            vector_getIndices_range(indRes, r0_CMU_EM, r0_CMU_EM_UNIQUE[ti]);
+            break;
+        }
+
+
+    }
+    cout << "--------------------------------------" << endl;
+    coutlp();
+
 
     //====================================================================================
     // Copy the selected results in the inputs
@@ -1465,7 +1965,7 @@ void displayCompletion(string funcname, double percent)
     if(floor(percent*0.1) > COMPLETION)
     {
         cout << resetiosflags(ios::floatfield) << resetiosflags(ios::showpos);
-        cout << cout <<  setw(5) << setprecision(5);
+        cout << cout <<  setw(2) << setprecision(2);
         cout << "\r" << funcname << ": " << percent << "% completed: ";
         cout << string((int)floor(0.1*percent), '|') << endl;
         cout.flush();

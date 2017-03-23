@@ -208,6 +208,11 @@ int vfn_state(const double y[], double f[], double alpha[],
               double ms, double me, double mm,
               double gamma);
 
+/**
+ *  \brief Jacobian of the Hamiltonian in NC coordinates, obtained from the vector field.
+ **/
+int qbcp_Hn_jac(double t, const double y[], gsl_vector *dH, OdeParams* odP);
+
 //----------------------------------------------------------------------------------------
 // NC coordinates, (X, V)
 //----------------------------------------------------------------------------------------
@@ -398,6 +403,11 @@ double qbcp_Hn_SEM(double t, const double y[], QBCP_L* qbp);
  *  \brief Hamiltonian of the QBCP with EM units and Normalized-Centered coordinates. Note that alpha[14] (alpha15) is zero for the QBCP
  **/
 double qbcp_Hn_EM(double t, const double y[], QBCP_L* qbp);
+
+/**
+ *  \brief Hamiltonian time derivative of the QBCP with SEM units and Normalized-Centered coordinates. Note that alpha[14] (alpha15) is zero for the QBCP
+ **/
+double qbcp_Hn_SEM_dot(double t, const double y[], QBCP_L* qbp);
 
 //========================================================================================
 //

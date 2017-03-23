@@ -3303,6 +3303,44 @@ int qbcp_vfn_backup(double t, const double y[], double f[], void* params_void)
     return FTC_SUCCESS;
 }
 
+/**
+ *  \brief Jacobian of the Hamiltonian in NC coordinates, obtained from the vector field.
+ **/
+int qbcp_Hn_jac(double t, const double y[], gsl_vector *dH, OdeParams* odP)
+{
+    //------------------------------------------------------------------------------------
+    // Temporary variables
+    //------------------------------------------------------------------------------------
+    double f[6];
+
+    //------------------------------------------------------------------------------------
+    // Vector field
+    //------------------------------------------------------------------------------------
+    int status = qbcp_vfn(t, y, f, odP);
+
+    if(status != GSL_SUCCESS)
+    {
+        cout << "qbcp_Hn_jac: unable to compute the vector field." << endl;
+        return GSL_FAILURE;
+    }
+
+    //------------------------------------------------------------------------------------
+    // Update of dH, knowing that
+    //
+    //
+    //   f = | 0  +I | x dH
+    //       | -I  0 |
+    //------------------------------------------------------------------------------------
+    for(int i = 0; i < 3; i++)
+    {
+        gsl_vector_set(dH, i,   - f[i+3]);
+        gsl_vector_set(dH, i+3, + f[i]);
+    }
+
+    return GSL_SUCCESS;
+}
+
+
 //----------------------------------------------------------------------------------------
 // NC coordinates, (X, V)
 //----------------------------------------------------------------------------------------
@@ -5293,6 +5331,75 @@ double qbcp_Hn_EM(double t, const double y[], QBCP_L* qbp)
     return H;
 }
 
+/**
+ *  \brief Hamiltonian time derivative of the QBCP with SEM units and Normalized-Centered coordinates. Note that alpha[14] (alpha15) is zero for the QBCP
+ **/
+double qbcp_Hn_SEM_dot(double t, const double y[], QBCP_L* qbp)
+{
+    //------------------------------------------------------------------------------------
+    //Retrieving the parameters
+    //------------------------------------------------------------------------------------
+    int noc      = qbp->numberOfCoefs;
+    double ms    = qbp->us_sem.ms;
+    double me    = qbp->us_sem.me;
+    double mm    = qbp->us_sem.mm;
+    double n     = qbp->us_sem.n;
+    double gamma = qbp->cs_sem.gamma;
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the alphas @ t
+    //------------------------------------------------------------------------------------
+    double alpha[6];
+    evaluateCoef(alpha, t, n, qbp->nf, qbp->cs_sem.coeffs, 6);
+
+    double alphad[noc];
+    evaluateCoefDerivatives(alphad, t, n, qbp->nf, qbp->cs_sem.coeffs, noc);
+
+    //------------------------------------------------------------------------------------
+    //Evaluate the primaries positions @ t
+    //------------------------------------------------------------------------------------
+    double ps[3];
+    evaluateCoef(ps, t, n, qbp->nf, qbp->cs_sem.ps, 3);
+    double pe[3];
+    evaluateCoef(pe, t, n, qbp->nf, qbp->cs_sem.pe, 3);
+    double pm[3];
+    evaluateCoef(pm, t, n, qbp->nf, qbp->cs_sem.pm, 3);
+
+    double psd[3];
+    evaluateCoefDerivatives(psd, t, n, qbp->nf, qbp->cs_sem.ps, 3);
+    double ped[3];
+    evaluateCoefDerivatives(ped, t, n, qbp->nf, qbp->cs_sem.pe, 3);
+    double pmd[3];
+    evaluateCoefDerivatives(pmd, t, n, qbp->nf, qbp->cs_sem.pm, 3);
+
+    //------------------------------------------------------------------------------------
+    // Distances to 2nd power
+    //------------------------------------------------------------------------------------
+    double qpe2 = (y[0]-pe[0])*(y[0]-pe[0]) + (y[1]-pe[1])*(y[1]-pe[1]) + (y[2]-pe[2])*(y[2]-pe[2]);
+    double qps2 = (y[0]-ps[0])*(y[0]-ps[0]) + (y[1]-ps[1])*(y[1]-ps[1]) + (y[2]-ps[2])*(y[2]-ps[2]);
+    double qpm2 = (y[0]-pm[0])*(y[0]-pm[0]) + (y[1]-pm[1])*(y[1]-pm[1]) + (y[2]-pm[2])*(y[2]-pm[2]);
+
+    //------------------------------------------------------------------------------------
+    // Dot product
+    //------------------------------------------------------------------------------------
+    double qpe2dot = (y[0]-pe[0])*ped[0] + (y[1]-pe[1])*ped[1] + (y[2]-pe[2])*ped[2];
+    double qps2dot = (y[0]-ps[0])*psd[0] + (y[1]-ps[1])*psd[1] + (y[2]-ps[2])*psd[2];
+    double qpm2dot = (y[0]-pm[0])*pmd[0] + (y[1]-pm[1])*pmd[1] + (y[2]-pm[2])*pmd[2];
+
+    //------------------------------------------------------------------------------------
+    // Hamiltonian time derivative
+    //------------------------------------------------------------------------------------
+    double Hd = 0.5*alphad[0]*(y[3]*y[3] + y[4]*y[4] + y[5]*y[5])
+             + alphad[1]*(y[3]*y[0] + y[4]*y[1] + y[5]*y[2])
+             + alphad[2]*(y[3]*y[1] - y[4]*y[0])
+             - y[0]*alphad[12]
+             - y[1]*alphad[13]
+             - 0.5*alphad[14]*(y[0]*y[0] + y[1]*y[1] + y[2]*y[2])
+             - alphad[5]/pow(gamma,3.0)*( me/pow(qpe2, 1.0/2) + mm/pow(qpm2, 1.0/2) + ms/pow(qps2, 1.0/2) )
+             -  alpha[5]/pow(gamma,3.0)*( me/pow(qpe2, 3.0/2)*qpe2dot + mm/pow(qpm2, 3.0/2)*qpm2dot + ms/pow(qps2, 3.0/2)*qps2dot );
+
+    return Hd;
+}
 
 
 //========================================================================================

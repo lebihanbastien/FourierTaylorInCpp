@@ -18,6 +18,7 @@
 #include <gsl/gsl_spline.h>
 
 
+#define TYPE_STROB         -1
 #define TYPE_ORBIT         0
 #define TYPE_CU            1
 #define TYPE_CS            2

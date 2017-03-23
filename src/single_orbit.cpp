@@ -77,7 +77,7 @@ int ode78(double **yv, double *tv, OdeEvent *odeEvent,
     //Stepper
     const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
     //Parameters
-    OdeParams odeParams(&SEML, dcs, odeEvent->detection);
+    OdeParams odeParams(&SEML, dcs, odeEvent->detection, odeEvent->warnings);
     //Init ode structure
     init_ode_structure(&odestruct, T, T_root, nvar, vf, &odeParams);
 
@@ -411,10 +411,10 @@ int ode78_qbcp_event(double **ye, double *te, int *ode78coll,
     //For the initial and final time, a switch is necessary
     switch(dcs)
     {
-        //-------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         // If I_PSEM/I_VSEM, the system is focused on the SEM system via
         // SEML
-        //-------------------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
     case I_PSEM:
     case I_NCSEM:
     case I_VNCSEM:
@@ -438,10 +438,10 @@ int ode78_qbcp_event(double **ye, double *te, int *ode78coll,
         }
         break;
 
-        //-------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         // If I_PEM/I_VEM, the system is focused on the EM system via
         // SEML
-        //-------------------------------------------------------------
+        //--------------------------------------------------------------------------------
     case I_PEM:
     case I_NCEM:
     case I_VNCEM:
@@ -532,9 +532,9 @@ int ode78_qbcp_event(double **ye, double *te, int *ode78coll,
     qbcp_coc_vec(yvIN, tvIN, ye, te, nGrid, varType, outputType);
 
 
-    //-----------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // Add the STM if necessary
-    //-----------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     if(nvar == 42)
     {
         for(int p = 0; p <= nGrid; p++) for(int i = 6; i < 42; i++) ye[i][p] = yvIN[i][p];
@@ -1572,7 +1572,7 @@ int ode78_grid(OdeStruct *odestruct, double t0, double tf, double *y0, double **
     //------------------------------------------------------------------------------------
     if(status)
     {
-        cout << "Warning in ode78_grid: the stepper went wrong. No output is produced.";
+        if(odP->event.warnings) cout << "Warning in ode78_grid: the stepper went wrong. No output is produced.";
         return FTC_FAILURE;
     }
 
@@ -2444,17 +2444,6 @@ int writeOrbit(double *tNCE, double **yNCE, int ofts_order, int sizeOrbit, int N
     return FTC_SUCCESS;
 }
 
-/**
- * \brief Store the orbit (tNCE, yNCE, sNCE) in the  data file filenameOrbit(ofts_order, sizeOrbit, type)
- **/
-int writeOrbit(double *tNCE, double **yNCE, double **sNCE, int ofts_order, int sizeOrbit, int N, int type)
-{
-    string filename = filenameOrbit(ofts_order, sizeOrbit, type);
-    gnuplot_fplot_txps(tNCE, yNCE[0], yNCE[1], yNCE[2], yNCE[3], yNCE[4], yNCE[5],
-                       sNCE[0], sNCE[1], sNCE[2], sNCE[3], sNCE[4],
-                       N, filename.c_str());
-    return FTC_SUCCESS;
-}
 
 /**
  * \brief Get the length of the data file filenameOrbit(ofts_order, sizeOrbit, type).

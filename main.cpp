@@ -32,8 +32,8 @@ using namespace std;
 // Constants
 //========================================================================================
 // TYPE OF COMPUTATIONS
-#define COMP_CM_EML2_TO_CM_SEML        0    //EML2 Center Manifold to SEMLi Center Manifold
-#define COMP_CM_EML2_TO_CMS_SEML       1    //EML2 Center Manifold to SEMLi Center-Stable Manifold
+#define COMP_CM_EML2_TO_CM_SEML        0    //EMLi Center Manifold to SEMLi Center Manifold
+#define COMP_CM_EML2_TO_CMS_SEML       1    //EMLi Center Manifold to SEMLi Center-Stable Manifold
 #define COMP_SINGLE_ORBIT              2    //just some example of solutions
 #define COMP_CM_EML2_TO_CMS_SEML_READ  3    //Read
 #define COMP_VF_TEST                   4    //Test of the QBCP vector field. Should probably be put in OOFTDA
@@ -43,7 +43,7 @@ using namespace std;
 #define COMP_VOFTS_TO_VOFTS            8    //Store CS/CU into one-dimensionnal series to gain memory
 #define COMP_test_INVMAN               9    //Test of the new invariant manifold implementation
 #define COMP_REF_JPL                   10   //Refine to JPL ephemerides
-
+#define COMP_CM_EML2_TO_CM_SEML_H      11   //Planar EMLi Center Manifold to SEMLi Center Manifold, at a given energy
 
 /************* NOTES *********************************************************************
  Notes from Reunion with Josep (15/12/2015)
@@ -188,6 +188,7 @@ int main(int argc, char** argv)
     case COMP_CM_EML2_TO_CM_SEML:
     case COMP_CM_EML2_TO_CM_SEML_3D:
     case COMP_CM_EML2_TO_CM_SEML_REFINE:
+    case COMP_CM_EML2_TO_CM_SEML_H:
         model     = MODEL_TYPE;
         fwrk      = F_EM;
         isNorm    = 1;
@@ -264,32 +265,42 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         //Time grid: min, max and number of points on the grid
         //--------------------------------------------------------------------------------
-        projSt.TMIN  = 0.995*SEML.us_em.T;
-        projSt.TMAX  = 1.00*SEML.us_em.T;
+        projSt.TMIN  = 0.0*SEML.us_em.T;
+        projSt.TMAX  = 0.5*SEML.us_em.T;
 
-        projSt.TSIZE    = 0;
+        projSt.TSIZE    = 100;
         projSt.TLIM[0]  = projSt.TMIN;
         projSt.TLIM[1]  = projSt.TMAX;
 
         //--------------------------------------------------------------------------------
         // Configuration (s1, s2, s3, s4) grid
         //--------------------------------------------------------------------------------
-        projSt.GLIM_SI[0][0] = -30;
-        projSt.GLIM_SI[0][1] = +30;
+        projSt.GLIM_SI[0][0] = 10;//7.32741;
+        projSt.GLIM_SI[0][1] = +35;
 
         projSt.GLIM_SI[1][0] = +0;
         projSt.GLIM_SI[1][1] = +10;
 
-        projSt.GLIM_SI[2][0] = -30;
-        projSt.GLIM_SI[2][1] = +30;
+        projSt.GLIM_SI[2][0] = -10;//-10.0765;
+        projSt.GLIM_SI[2][1] = +35;
 
         projSt.GLIM_SI[3][0] = +0;
         projSt.GLIM_SI[3][1] = +10;
 
         projSt.GSIZE_SI[0]   = 50;
-        projSt.GSIZE_SI[1]   = 5;
+        projSt.GSIZE_SI[1]   = 0;
         projSt.GSIZE_SI[2]   = 50;
-        projSt.GSIZE_SI[3]   = 5;
+        projSt.GSIZE_SI[3]   = 0;
+
+        //--------------------------------------------------------------------------------
+        // Primary family
+        //--------------------------------------------------------------------------------
+        projSt.PRIMARY = 0;
+
+        //--------------------------------------------------------------------------------
+        // Energy
+        //--------------------------------------------------------------------------------
+        projSt.dHd = 0.005;
 
         //--------------------------------------------------------------------------------
         //Stable parameters (are not supposed to change)
@@ -311,24 +322,24 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         //rk: set REF_CONT_D_HARD_CASE for difficult cases
         //with REF_CONT_D (ex: EML2-SEMLi via SEML1...)
-        refSt.type          = REF_CONT_D;                   // Type of refinement
-        refSt.dim           = REF_PLANAR;                    // Type of dimensions planar or 3d?
-        refSt.t0xT_des      = 0.995;                        // Initial time (xT)
-        refSt.t0_des        = refSt.t0xT_des*SEML.us_em.T;  // Initial time
+        refSt.type          = REF_CONT_D;                      // Type of refinement
+        refSt.dim           = REF_PLANAR;                      // Type of dimensions planar or 3d?
+        refSt.t0xT_des      = 0.9;                            // Initial time (xT)
+        refSt.t0_des        = refSt.t0xT_des*SEML.us_em.T;     // Initial time
 
         // Direction of the continuation procedure
         refSt.isDirUD       = 0;                  // is it user defined?
         refSt.Dir           = +1;                 // if not, +1 or -1
 
         // Domain of search for the first guess
-        refSt.s1_CMU_EM_MIN = -35;
-        refSt.s1_CMU_EM_MAX = +35;
+        refSt.s1_CMU_EM_MIN = -40;
+        refSt.s1_CMU_EM_MAX = +40;
 
         refSt.s2_CMU_EM_MIN = +0;
         refSt.s2_CMU_EM_MAX = +0;
 
-        refSt.s3_CMU_EM_MIN = -35;
-        refSt.s3_CMU_EM_MAX = +35;
+        refSt.s3_CMU_EM_MIN = -40;
+        refSt.s3_CMU_EM_MAX = +40;
 
         refSt.s4_CMU_EM_MIN = +4;
         refSt.s4_CMU_EM_MAX = +4;
@@ -342,14 +353,14 @@ int main(int argc, char** argv)
         refSt.tof_MAX       = -1;
 
         // Values for crossings
-        refSt.crossings     = -1;
+        refSt.crossings     = 2;
 
         // Number of steps in the continuation procedure
         refSt.cont_step_max    = +450;            // with fixed times
-        refSt.cont_step_max_vt = +150;            // with variable times
+        refSt.cont_step_max_vt = +2;              // with variable times
 
         // Initial step in the continuation procedure
-        refSt.ds0    = 8e-2;                      //with fixed time
+        refSt.ds0    = 1e-3;                      //with fixed time
         refSt.ds0_vt = (LI_EM ==1)?  3e-2:1e-2;   //with variable time
 
         // Desired number of iterations in Newton's method in the continuation procedure
@@ -379,12 +390,12 @@ int main(int argc, char** argv)
         refSt.coord_type    = NCSEM;                    // coordinates system in the refinement procedure
 
         // Maximum/Minimum step in the continuation procedure
-        refSt.dsmin         = 1e-6;                     //with fixed time
-        refSt.dsmin_vt      = 1e-6;                     //with variable time
-        refSt.dsmax         = 10;                       //with fixed time
-        refSt.dsmax_vt      = 10;                       //with variable time
+        refSt.dsmin         = 1e-4;                     //with fixed time
+        refSt.dsmin_vt      = 1e-4;                     //with variable time
+        refSt.dsmax         = 1e-1;                       //with fixed time
+        refSt.dsmax_vt      = 1e-1;                       //with variable time
 
-        refSt.xps           = (LI_SEM == 1)? +0.6:-0.6; // position of the poincaré section in NCSEM coordinates
+        refSt.xps           = (LI_SEM == 1)? +0.7:-0.7; // position of the poincaré section in NCSEM coordinates
         refSt.isJPL         = 1;                        // is the JPL refinement performed when possible?
         refSt.djplcoord     = NJ2000;                   // coordinate system used during the JPL refinement (if -1, it is user defined) Best results obtained with NJ2000
         refSt.sidim         = 0;                        // 0 or 2 - component of s0 that stays constant when t0 is free
@@ -402,6 +413,13 @@ int main(int argc, char** argv)
         refSt.isSaved_EM    = 0;      //0: don't save, 1: save using projection method
         refSt.isSaved_SEM   = 0;      //0: don't save, 1: save using projection method,
                                       //2: save using integration in reduced coordinates
+
+        //Energy
+        refSt.dH     = 0.0;
+        refSt.pkpos  = 0;
+
+        //Type of time selection
+        refSt.typeOfTimeSelection = TIME_SELECTION_RATIO;
     }
     else  //arguments were passed
     {
@@ -416,6 +434,7 @@ int main(int argc, char** argv)
             //============================================================================
         case COMP_CM_EML2_TO_CM_SEML_3D:
         case COMP_CM_EML2_TO_CM_SEML:
+        case COMP_CM_EML2_TO_CM_SEML_H:
         {
             //----------------------------------------------------------------------------
             //Time grid: min, max and number of points on the grid
@@ -449,6 +468,11 @@ int main(int argc, char** argv)
             projSt.GSIZE_SI[3]   = atoi(argv[index++]);
 
             //----------------------------------------------------------------------------
+            // Primary family
+            //----------------------------------------------------------------------------
+            projSt.PRIMARY = atoi(argv[index++]);
+
+            //----------------------------------------------------------------------------
             //Stable parameters (are not supposed to change)
             //----------------------------------------------------------------------------
             projSt.MSIZE = atoi(argv[index++]);
@@ -457,6 +481,8 @@ int main(int argc, char** argv)
             projSt.SNMAX = atof(argv[index++]);
             projSt.NOD   = atoi(argv[index++]);
             projSt.ISPAR = ISPAR;
+
+
 
             break;
         }
@@ -566,6 +592,9 @@ int main(int argc, char** argv)
             refSt.isSaved_SEM   = atoi(argv[index++]);  //0: don't save, 1: save using projection method,
                                                         //2: save using integration in reduced coordinates
 
+            //Type of time selection
+            refSt.typeOfTimeSelection = atoi(argv[index++]);
+
             break;
         }
 
@@ -621,6 +650,11 @@ int main(int argc, char** argv)
         //================================================================================
     case COMP_CM_EML2_TO_CM_SEML:
     {
+        double dt = 0.005;
+        int_proj_ORBIT_EM_on_CM_SEM(projSt, 1, dt);
+        break;
+
+
         //--------------------------------------------------------------------------------
         // Compute initial conditions in CMU EML2 on a given grid
         //--------------------------------------------------------------------------------
@@ -633,6 +667,27 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         tic();
         int_proj_CMU_EM_on_CM_SEM(projSt);
+        cout << "End of in int_proj_CMU_EM_on_CM_SEM in " << toc() << endl;
+
+        break;
+    }
+        //================================================================================
+        // Projection CMU EML2 to CM SEMLi, at afixed energy
+        //================================================================================
+    case COMP_CM_EML2_TO_CM_SEML_H:
+    {
+        //--------------------------------------------------------------------------------
+        // Compute initial conditions in CMU EML2 on a given grid
+        //--------------------------------------------------------------------------------
+        tic();
+        compute_grid_CMU_EM_dH(PROJ_EPSILON, projSt);
+        cout << "End of in compute_grid_CMU_EM in " << toc() << endl;
+
+        //--------------------------------------------------------------------------------
+        // Integrate those initial conditions and project them on the CM SEMLi
+        //--------------------------------------------------------------------------------
+        tic();
+        int_proj_CMU_EM_on_CM_SEM_dH(projSt);
         cout << "End of in int_proj_CMU_EM_on_CM_SEM in " << toc() << endl;
 
         break;
@@ -743,7 +798,7 @@ int main(int argc, char** argv)
                           s1_CMU_EM, s2_CMU_EM, s3_CMU_EM,
                           s4_CMU_EM, s5_CMU_EM,
                           pmin_dist_SEM, s1_CM_SEM, s2_CM_SEM,
-                          s3_CM_SEM, s4_CM_SEM, crossings, sortId);
+                          s3_CM_SEM, s4_CM_SEM, crossings, sortId, TIME_SELECTION_ABSOLUTE);
 
         //Display
         coutmp();
@@ -796,10 +851,10 @@ int main(int argc, char** argv)
                     if(reduced_nv == 5) st0[4] = 0.0;
                     break;
                 case 2:
-                    st0[0] =  5.901025202644599e+00;//-20 ;
-                    st0[1] = -6.316522019280152e-03;
-                    st0[2] = -3.240398486261306e+01;//-36;
-                    st0[3] = -1.681003648125090e-03;
+                    st0[0] = 7.327409882046186;//-20 ;
+                    st0[1] = 0.0;//-6.316522019280152e-03;
+                    st0[2] = -10.0764777378366;//-36;
+                    st0[3] = 0.0;//-1.681003648125090e-03;
                     if(reduced_nv == 5) st0[4] = 0.0;
 
                     break;
@@ -828,12 +883,16 @@ int main(int argc, char** argv)
         }
         }
 
-        //----------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         // Computation
-        //----------------------------------------------------------------------------
-        //oo_gridOrbit(st0, +6.016997770510415e+00, -2.793897158902917e+01, 1e-2);
-        oo_gridOrbit(st0, 0.0, 5*SEML.us->T, 1e-3*SEML.us->T);
-        //gridOrbit(st0, +6.016997770510415e+00, -2.793897158902917e+01, 1e-2, CM_NC, CM_TFC, Mcoc, MIcoc, Vcoc);
+        //--------------------------------------------------------------------------------
+        int isFlagOn = 1;
+        double t0 = 0.96*SEML.us->T;
+        double  N = 180;
+
+        //gridOrbit_si(st0, t0, t0 + N*SEML.us->T, 1e-2*SEML.us->T, isFlagOn);
+        gridOrbit_strob(st0, t0, N, isFlagOn);
+
 
         break;
     }

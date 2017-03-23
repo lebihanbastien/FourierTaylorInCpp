@@ -26,7 +26,7 @@
  * The output data are saved in a binary file of the form:
  *                   "plot/QBCP/EM/L2/cu_3d_order_16.bin"
  **/
-int compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt &projSt)
+int compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt& projSt)
 {
     //====================================================================================
     // Retrieve the parameters in the projection structure
@@ -148,9 +148,10 @@ int compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt &projSt)
                         double* yvu = dvector(0,5);
                         double* sti = dvector(0,4);
 
-                        //----------------------
+
+                        //----------------------------------------------------------------
                         // Initialization on the center-unstable manifold
-                        //----------------------
+                        //----------------------------------------------------------------
                         //Init sti
                         sti[0] = grid_si_CMU_RCM[0][ks1];
                         sti[1] = grid_si_CMU_RCM[1][ks2];
@@ -158,10 +159,15 @@ int compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt &projSt)
                         sti[3] = grid_si_CMU_RCM[3][ks4];
                         sti[4] = dist_to_cm;
 
+
+                        //----------------------------------------------------------------
                         //Equivalent state
+                        //----------------------------------------------------------------
                         invman.evalRCMtoNC(sti, grid_t_EM[kt], yvu, OFTS_ORDER, OFS_ORDER);
 
+                        //----------------------------------------------------------------
                         //Save
+                        //----------------------------------------------------------------
                         #pragma omp critical
                         {
 
@@ -173,6 +179,7 @@ int compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt &projSt)
 
                         free_dvector(yvu, 0, 5);
                         free_dvector(sti, 0, 4);
+
                     }
 
                     //--------------------------------------------------------------------
@@ -217,7 +224,7 @@ int compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt &projSt)
  * The output data are saved in a binary file of the form:
  *               "plot/QBCP/EM/L2/cu_order_16.bin"
  **/
-int compute_grid_CMU_EM(double dist_to_cm, ProjSt &projSt)
+int compute_grid_CMU_EM(double dist_to_cm, ProjSt& projSt)
 {
     //====================================================================================
     // Retrieve the parameters in the projection structure
@@ -244,6 +251,13 @@ int compute_grid_CMU_EM(double dist_to_cm, ProjSt &projSt)
     cout << " The data will be stored in " << filename << endl;
     cout << setiosflags(ios::scientific) << setprecision(15);
     cout << "===================================================================" << endl;
+
+    if(projSt.dHd > 0)
+    {
+        cout << "Moreover, a fixed energy has been selectect:                       " << endl;
+        cout << "Hd - H0 = " << projSt.dHd                                            << endl;
+        cout << "===================================================================" << endl;
+    }
 
     //====================================================================================
     // Initialization
@@ -279,11 +293,26 @@ int compute_grid_CMU_EM(double dist_to_cm, ProjSt &projSt)
     //------------------------------------------------------------------------------------
     double**** init_state_CMU_NCEM = d4tensor(0, 5, 0, projSt.TSIZE, 0, projSt.GSIZE_SI[0], 0, projSt.GSIZE_SI[2]);
     double**** init_state_CMU_RCM  = d4tensor(0, 4, 0, projSt.TSIZE, 0, projSt.GSIZE_SI[0], 0, projSt.GSIZE_SI[2]);
+    double** *  init_dH_valid       = d3tensor(0, projSt.TSIZE, 0, projSt.GSIZE_SI[0], 0, projSt.GSIZE_SI[2]);
 
     //====================================================================================
-    // Get the invariant manifold at EML2
+    // Get the invariant center-unstable manifold at EML2
     //====================================================================================
     Invman invman(OFTS_ORDER, OFS_ORDER, SEML.cs_em);
+
+    //====================================================================================
+    // Get the invariant center manifold at EML2
+    //====================================================================================
+    CSYS cs_em_center;
+    init_CSYS(&cs_em_center, &SEML, &SEM, F_EM, SEML.li_EM, SEML.numberOfCoefs, false, PMS_GRAPH, MAN_CENTER);
+    Invman invman_center(OFTS_ORDER, OFS_ORDER, cs_em_center);
+
+    //====================================================================================
+    // Energy at the origin, at t = 0.0
+    //====================================================================================
+    double* st0 = dvector(0,4);
+    for(int i = 0; i < 5; i++) st0[i] = 0.0;
+
 
     //====================================================================================
     // Loop on all elements.
@@ -303,9 +332,9 @@ int compute_grid_CMU_EM(double dist_to_cm, ProjSt &projSt)
                 double* yvu = dvector(0,5);
                 double* sti = dvector(0,4);
 
-                //----------------------
+                //------------------------------------------------------------------------
                 // Initialization on the center-unstable manifold
-                //----------------------
+                //------------------------------------------------------------------------
                 //Init sti
                 sti[0] = grid_s1_CMU_RCM[ks1];
                 sti[1] = 0.0;
@@ -313,10 +342,57 @@ int compute_grid_CMU_EM(double dist_to_cm, ProjSt &projSt)
                 sti[3] = 0.0;
                 sti[4] = dist_to_cm;
 
+                //------------------------------------------------------------------------
+                // Energy: we impose H = Hd
+                //------------------------------------------------------------------------
+                if(projSt.dHd > 0)
+                {
+                    //Energy at the origin (at t = 0.0 for now)
+                    double H0 = invman_center.H_SYS(st0, 0.0);
+
+                    //Desired energy
+                    double Hd = H0 + projSt.dHd;
+
+                    //Refinement to get H = Hd
+                    RefineH refineH(&invman_center, 2, sti, grid_t_EM[kt], Hd);
+                    int status = init_s0_energy(&refineH, sti, grid_t_EM[kt]);
+
+                    if(status == GSL_SUCCESS)
+                    {
+                        //IC are valid
+                        init_dH_valid[kt][ks1][ks3] = 1;
+
+                        //Display
+                        //cout << "Convergence on dHd:" << invman_center.H_SYS(sti, grid_t_EM[kt]) - H0 << endl;
+                        //cout << "sti = " << endl;
+                        //vector_printf_prec(sti, 5);
+
+                    }
+                    else
+                    {
+                        //IC are  non valid
+                        init_dH_valid[kt][ks1][ks3] = 0;
+
+                        //Display
+                        //cout << "No convergence on dHd." << endl;
+                        //cout << "sti = " << endl;
+                        //vector_printf_prec(sti, 5);
+                    }
+                }
+                else
+                {
+                    //IC are always valid
+                    init_dH_valid[kt][ks1][ks3] = 1;
+                }
+
+                //------------------------------------------------------------------------
                 //Equivalent state
+                //------------------------------------------------------------------------
                 invman.evalRCMtoNC(sti, grid_t_EM[kt], yvu, OFTS_ORDER, OFS_ORDER);
 
+                //------------------------------------------------------------------------
                 //Save
+                //------------------------------------------------------------------------
                 #pragma omp critical
                 {
 
@@ -335,7 +411,7 @@ int compute_grid_CMU_EM(double dist_to_cm, ProjSt &projSt)
     //------------------------------------------------------------------------------------
     //Store values
     //------------------------------------------------------------------------------------
-    writeCU_bin(init_state_CMU_NCEM, init_state_CMU_RCM, grid_t_EM,
+    writeCU_bin(init_state_CMU_NCEM, init_state_CMU_RCM, init_dH_valid, grid_t_EM,
                 projSt.GSIZE_SI[0], projSt.GSIZE_SI[2], projSt.TSIZE, OFTS_ORDER,
                 TYPE_CU, SEML.li_SEM);
 
@@ -344,16 +420,447 @@ int compute_grid_CMU_EM(double dist_to_cm, ProjSt &projSt)
     //------------------------------------------------------------------------------------
     free_d4tensor(init_state_CMU_NCEM, 0, 5, 0, projSt.TSIZE, 0, projSt.GSIZE_SI[0], 0, projSt.GSIZE_SI[2]);
     free_d4tensor(init_state_CMU_RCM,  0, 4, 0, projSt.TSIZE, 0, projSt.GSIZE_SI[0], 0, projSt.GSIZE_SI[2]);
+    free_d3tensor(init_dH_valid,  0, projSt.TSIZE, 0, projSt.GSIZE_SI[0], 0, projSt.GSIZE_SI[2]);
+    free_dvector(st0, 0, 4);
 
     return FTC_SUCCESS;
 }
 
+/**
+ *  \brief @TODO
+ **/
+int compute_grid_CMU_EM_dH(double dist_to_cm, ProjSt& projSt)
+{
+    //====================================================================================
+    // Retrieve the parameters in the projection structure
+    //====================================================================================
+    bool isPar = projSt.ISPAR;
+
+    //====================================================================================
+    // Splash screen
+    //====================================================================================
+    string filename = filenameCUM_dH(OFTS_ORDER, TYPE_CU, SEML.li_SEM, projSt.dHd);
+    cout << resetiosflags(ios::scientific) << setprecision(15);
+
+    cout << "===================================================================" << endl;
+    cout << "       Computation of center-unstable planar IC at EML2            " << endl;
+    cout << "===================================================================" << endl;
+    cout << " The computation domain is the following:                          " << endl;
+    cout << " - OFTS_ORDER = " << OFTS_ORDER << endl;
+    cout << "  - " << projSt.GSIZE_SI[0]+1  << " value(s) of s1 in [" << projSt.GLIM_SI[0][0];
+    cout << ", " << projSt.GLIM_SI[0][1] << "]" << endl;
+    cout << "  - " << projSt.TSIZE+1  << " value(s) of t in [" << projSt.TLIM[0]/SEML.us_em.T;
+    cout << ", " << projSt.TLIM[1]/SEML.us_em.T << "] x T" << endl;
+    cout << " The data will be stored in " << filename << endl;
+    cout << setiosflags(ios::scientific) << setprecision(15);
+    cout << "===================================================================" << endl;
+
+    if(projSt.dHd > 0)
+    {
+        cout << "Moreover, a fixed energy has been selectect:                       " << endl;
+        cout << "Hd - H0 = " << projSt.dHd                                            << endl;
+        cout << "===================================================================" << endl;
+    }
+
+    //====================================================================================
+    // Initialization
+    //====================================================================================
+    //------------------------------------------------------------------------------------
+    //Building the working grids
+    //------------------------------------------------------------------------------------
+    double* grid_s1_CMU_RCM = dvector(0,  projSt.GSIZE_SI[0]);
+    init_grid(grid_s1_CMU_RCM, projSt.GLIM_SI[0][0], projSt.GLIM_SI[0][1], projSt.GSIZE_SI[0]);
+
+    //------------------------------------------------------------------------------------
+    //Building the time grid
+    //------------------------------------------------------------------------------------
+    double* grid_t_EM = dvector(0,  projSt.TSIZE);
+    init_grid(grid_t_EM, projSt.TLIM[0], projSt.TLIM[1], projSt.TSIZE);
+
+    cout << " - The detailed values of t are:                                   " << endl;
+    for(int i = 0; i < projSt.TSIZE; i++) cout << grid_t_EM[i]/SEML.us_em.T << ", ";
+    cout << grid_t_EM[projSt.TSIZE]/SEML.us_em.T  << endl;
+    cout << "===================================================================" << endl;
+    pressEnter(true);
+
+    //------------------------------------------------------------------------------------
+    //Number of elements
+    //------------------------------------------------------------------------------------
+    int noe = (1+projSt.GSIZE_SI[0])*(1+projSt.TSIZE);
+    int iter = 1;
+
+    //------------------------------------------------------------------------------------
+    // Data structures
+    //------------------------------------------------------------------------------------
+    double** * init_state_CMU_NCEM = d3tensor(0, 5, 0, projSt.TSIZE, 0, projSt.GSIZE_SI[0]);
+    double** * init_state_CMU_RCM  = d3tensor(0, 4, 0, projSt.TSIZE, 0, projSt.GSIZE_SI[0]);
+    double**   init_dH_valid      = dmatrix(0, projSt.TSIZE, 0, projSt.GSIZE_SI[0]);
+
+    //====================================================================================
+    // Get the invariant center-unstable manifold at EML2
+    //====================================================================================
+    Invman invman(OFTS_ORDER, OFS_ORDER, SEML.cs_em);
+
+    //====================================================================================
+    // Get the invariant center manifold at EML2
+    //====================================================================================
+    CSYS cs_em_center;
+    init_CSYS(&cs_em_center, &SEML, &SEM, F_EM, SEML.li_EM, SEML.numberOfCoefs, false, PMS_GRAPH, MAN_CENTER);
+    Invman invman_center(OFTS_ORDER, OFS_ORDER, cs_em_center);
+
+    //====================================================================================
+    // Energy at the origin, at t = 0.0
+    //====================================================================================
+    double* st0 = dvector(0,4);
+    for(int i = 0; i < 5; i++) st0[i] = 0.0;
+
+
+    //====================================================================================
+    // Loop on all elements.
+    //
+    // Note that openMP is only used on the inner loop, since
+    // it is useless to use on nested loops.
+    //====================================================================================
+    COMPLETION = 0;
+    for(int kt = 0; kt <= projSt.TSIZE; kt++)
+    {
+        #pragma omp parallel for if(isPar)  shared(iter)
+        for(int ks1 = 0; ks1 <= projSt.GSIZE_SI[0]; ks1++)
+        {
+            //----------------------------------------------------------------------------
+            // Inner variables
+            //----------------------------------------------------------------------------
+            Ofsc ofs(OFS_ORDER);
+            double* yvu = dvector(0,5);
+            double* sti = dvector(0,4);
+
+            //----------------------------------------------------------------------------
+            // Initialization on the center-unstable manifold
+            //----------------------------------------------------------------------------
+            //Init sti
+            sti[0] = grid_s1_CMU_RCM[ks1];
+            sti[1] = 0.0;
+            sti[2] = 0.0;
+            sti[3] = 0.0;
+            sti[4] = dist_to_cm;
+
+            //----------------------------------------------------------------------------
+            // Energy: we impose H = Hd
+            //----------------------------------------------------------------------------
+            if(projSt.dHd > 0)
+            {
+                //Energy at the origin (at t = 0.0 for now)
+                double H0 = invman_center.H_SYS(st0, grid_t_EM[kt]);
+
+                //Desired energy
+                double Hd = H0 + projSt.dHd;
+
+                //Refinement to get H = Hd
+                RefineH refineH(&invman_center, 3, sti, grid_t_EM[kt], Hd);
+                int status = init_s0_energy(&refineH, sti, grid_t_EM[kt]);
+
+                if(status == GSL_SUCCESS)
+                {
+                    //IC are valid
+                    init_dH_valid[kt][ks1] = 1;
+
+                    //Display
+                    //cout << "Convergence on dHd:" << invman_center.H_SYS(sti, grid_t_EM[kt]) - H0 << endl;
+                    //cout << "sti = " << endl;
+                    //vector_printf_prec(sti, 5);
+
+                }
+                else
+                {
+                    //IC are  non valid
+                    init_dH_valid[kt][ks1] = 0;
+
+                    //Display
+                    //cout << "No convergence on dHd." << endl;
+                    //cout << "sti = " << endl;
+                    //vector_printf_prec(sti, 5);
+                }
+            }
+            else
+            {
+                //IC are always valid
+                init_dH_valid[kt][ks1] = 1;
+            }
+
+            //----------------------------------------------------------------------------
+            //Equivalent state
+            //----------------------------------------------------------------------------
+            invman.evalRCMtoNC(sti, grid_t_EM[kt], yvu, OFTS_ORDER, OFS_ORDER);
+
+            //----------------------------------------------------------------------------
+            //Save
+            //----------------------------------------------------------------------------
+            #pragma omp critical
+            {
+
+                for(int i = 0; i < 6; i++) init_state_CMU_NCEM[i][kt][ks1] = yvu[i];
+                for(int i = 0; i < 5; i++) init_state_CMU_RCM[i][kt][ks1] = sti[i];
+                //Display
+                displayCompletion("compute_grid_CMU_EM", (double) iter++/noe*100);
+            }
+
+            free_dvector(yvu, 0, 5);
+            free_dvector(sti, 0, 4);
+        }
+    }
+
+    //------------------------------------------------------------------------------------
+    //Store values
+    //------------------------------------------------------------------------------------
+    writeCU_bin_dH(init_state_CMU_NCEM, init_state_CMU_RCM, init_dH_valid, grid_t_EM,
+                   projSt.GSIZE_SI[0], projSt.TSIZE,
+                   OFTS_ORDER, TYPE_CU, SEML.li_SEM, projSt.dHd);
+
+    //------------------------------------------------------------------------------------
+    //Free
+    //------------------------------------------------------------------------------------
+    free_d3tensor(init_state_CMU_NCEM, 0, 5, 0, projSt.TSIZE, 0, projSt.GSIZE_SI[0]);
+    free_d3tensor(init_state_CMU_RCM,  0, 4, 0, projSt.TSIZE, 0, projSt.GSIZE_SI[0]);
+    free_dmatrix(init_dH_valid,  0, projSt.TSIZE, 0, projSt.GSIZE_SI[0]);
+    free_dvector(st0, 0, 4);
+
+    return FTC_SUCCESS;
+}
 
 //========================================================================================
 //
 //         Projection on the CM/CMS/CMU of SEMLi
 //
 //========================================================================================
+
+/**
+ *  \brief Projection subroutine, used in all the subsequent routines in this section.
+ *         All outputs in projResSt are updated
+ *         (see the declaration of this structure for details).
+ **/
+int proj_subroutine(ProjResSt& projResSt, Invman& invman_SEM, ProjSt& projSt)
+{
+    //====================================================================================
+    // 1. Local variables
+    //====================================================================================
+    //------------------------------------------------------------------------------------
+    // State and time vectors
+    //------------------------------------------------------------------------------------
+    double** y_man_NCSEM = dmatrix(0, 5, 0, projSt.MSIZE);
+    double* t_man_SEM    = dvector(0, projSt.MSIZE);
+
+    //------------------------------------------------------------------------------------
+    // projection by default is arbitrary big
+    //------------------------------------------------------------------------------------
+    double ePdef = 1e5;
+
+    //------------------------------------------------------------------------------------
+    // Misc
+    //------------------------------------------------------------------------------------
+    double yvproj_NCSEM[6], sproj[4], yv_SEM[6], yvproj_SEM[6], yv_VSEM[6], yvproj_VSEM[6];
+    double proj_dist_SEM, min_proj_dist_SEM = ePdef;
+    double dv_at_projection_SEM = 0.0, y_man_norm_NCSEM = 0.0;
+    double crossings_NCSEM = 0.0;
+    int collision_NCEM = 0;
+    int kmin = 0;
+    Ofsc ofs(OFS_ORDER);
+
+
+
+    //====================================================================================
+    // 2. Integration of the manifold leg
+    //====================================================================================
+    //Initial conditions
+    double yv[6], tv;
+    tv  = projResSt.init_time_EM;
+    for(int i = 0; i < 6; i++) yv[i] = projResSt.init_state_CMU_NCEM[i];
+
+    //Integration on projSt.MSIZE+1 fixed grid
+    OdeEvent odeEvent(false, false);
+    int status = ode78(y_man_NCSEM, t_man_SEM, &odeEvent, tv, tv+projSt.TM, yv, 6, projSt.MSIZE, I_NCEM, NCEM, NCSEM);
+
+    //====================================================================================
+    // 3. Projection on the center manifold of SEMLi.
+    // No use of SEML_EM or SEML after this point!
+    // We need first to check that the integration went well
+    //====================================================================================
+    //------------------------------------------------------------------------------------
+    //Temp variables
+    //------------------------------------------------------------------------------------
+
+
+    //------------------------------------------------------------------------------------
+    // We need first to check that the integration went well
+    //------------------------------------------------------------------------------------
+    if(status)
+    {
+        // If status != 0, something went wrong during the integration
+        // in ode78 and we use the maximum value ePdef (the solution
+        // is basically discarded)
+        proj_dist_SEM = ePdef;
+    }
+    else
+    {
+
+        //--------------------------------------------------------------------------------
+        //Loop on trajectory
+        //--------------------------------------------------------------------------------
+        for(int kman = 0; kman <= projSt.MSIZE; kman++)
+        {
+            //Current state
+            for(int i = 0; i < 6; i++) yv[i] = y_man_NCSEM[i][kman];
+            tv = t_man_SEM[kman];
+
+            //Current distance from SEMLi in NCSEM units
+            y_man_norm_NCSEM = 0.0;
+            for(int i = 0; i < 2; i++) y_man_norm_NCSEM += yv[i]*yv[i];
+            y_man_norm_NCSEM = sqrt(y_man_norm_NCSEM);
+
+            //----------------------------------------------------------------------------
+            //Check n°1: the current state is close enough to SEMLi
+            //----------------------------------------------------------------------------
+            if(y_man_norm_NCSEM < projSt.YNMAX)
+            {
+                // Projection on the center manifold
+                invman_SEM.NCprojCCMtoCM(yv, tv, sproj);
+
+                //------------------------------------------------------------------------
+                //Check n°2: the projection is close enough to SEMLi
+                //------------------------------------------------------------------------
+                if(sqrt(sproj[0]*sproj[0]+sproj[2]*sproj[2])< projSt.SNMAX)
+                {
+                    //yvproj_NCSEM = W(sproj, tv)
+                    invman_SEM.evalRCMtoNC(sproj, tv, yvproj_NCSEM, OFTS_ORDER, OFS_ORDER);
+
+                    //Back to SEM coordinates
+                    NCSEMmtoSEMm(tv, yv, yv_SEM, &SEML_SEM);
+                    NCSEMmtoSEMm(tv, yvproj_NCSEM, yvproj_SEM, &SEML_SEM);
+
+                    //Back to SEM coordinates with velocity
+                    SEMmtoSEMv(tv, yv_SEM, yv_VSEM, &SEML_SEM);
+                    SEMmtoSEMv(tv, yvproj_SEM, yvproj_VSEM, &SEML_SEM);
+
+                    //Distance of projection in SEM coordinates
+                    proj_dist_SEM = 0.0;
+                    for(int i = 0; i < projSt.NOD; i++) proj_dist_SEM += (yvproj_SEM[i] - yv_SEM[i])*(yvproj_SEM[i] - yv_SEM[i]);
+                    proj_dist_SEM = sqrt(proj_dist_SEM);
+                }
+                else proj_dist_SEM = ePdef;
+            }
+            else proj_dist_SEM = ePdef;
+
+            //----------------------------------------------------------------------------
+            //Update distance min if necessary
+            //----------------------------------------------------------------------------
+            if(proj_dist_SEM < min_proj_dist_SEM)
+            {
+                //Distance of projection
+                min_proj_dist_SEM = proj_dist_SEM;
+
+                //Indix (argmin)
+                kmin = kman;
+
+                // Misc states
+                for(int i = 0; i < 6; i++) projResSt.final_state_CMU_SEM_o[i]     = yv_VSEM[i];
+                for(int i = 0; i < 6; i++) projResSt.projected_state_CMU_SEM_o[i] = yvproj_VSEM[i];
+                for(int i = 0; i < 4; i++) projResSt.projected_state_CMU_RCM_o[i] = sproj[i];
+
+                //Associated DV
+                dv_at_projection_SEM = 0.0;
+                for(int i = 3; i < 6; i++) dv_at_projection_SEM += (yvproj_VSEM[i] - yv_VSEM[i])*(yvproj_VSEM[i] - yv_VSEM[i]);
+                dv_at_projection_SEM = sqrt(dv_at_projection_SEM);
+            }
+
+        }
+
+        //--------------------------------------------------------------------------------
+        // We check if we have the primary family, if necessary
+        // To do so, we check that we have made two clockwise/counterclockwise
+        //  crossings of x = -1.
+        //
+        // To do a clockwise turn:
+        //  1. x1 > 0 -> x2 < 0 && y1 > 0
+        //  2. x1 < 0 -> x2 > 0 && y1 < 0
+        //
+        // To do a counterclockwise turn:
+        //  1. x1 > 0 -> x2 < 0 && y1 < 0
+        //  2. x1 < 0 -> x2 > 0 && y1 > 0
+        //--------------------------------------------------------------------------------
+        if(min_proj_dist_SEM < ePdef)
+        {
+            // Init temporary objects
+            OdeEvent odeEvent_purge(true, false);
+            double** y_purge = dmatrix(0, 5, 0, 2);
+            double* t_purge  = dvector(0, 2);
+
+            // Initial condition in NCEM coordinates
+            tv  = projResSt.init_time_EM;
+            for(int i = 0; i < 6; i++) yv[i] = projResSt.init_state_CMU_NCEM[i];
+
+            // Compute the event using ode78 on [tv, t_man_EM[kmin]]
+            ode78(y_purge, t_purge, &odeEvent_purge, tv, t_man_SEM[kmin]/SEML.us_em.ns, yv, 6, 2, I_NCSEM, NCEM, NCSEM);
+
+            // Save value in crossings_NCSEM
+            crossings_NCSEM = odeEvent_purge.crossings;
+
+
+            // Free temporary objects
+            free_dmatrix(y_purge, 0, 5, 0, 2);
+            free_dvector(t_purge, 0, 2);
+        }
+
+        //--------------------------------------------------------------------------------
+        //We check for collisions
+        //--------------------------------------------------------------------------------
+        if(odeEvent.coll)
+        {
+            collision_NCEM = odeEvent.coll;
+        }
+
+        //--------------------------------------------------------------------------------
+        //If we save ONLY the primary family
+        //--------------------------------------------------------------------------------
+        if(projSt.PRIMARY)
+        {
+            if(collision_NCEM != 0 || crossings_NCSEM != 2.0) min_proj_dist_SEM = ePdef;
+        }
+    }
+
+
+    //====================================================================================
+    // 3.3. Save outputs
+    //====================================================================================
+    //Initial position in SEM coordinates
+    for(int i = 0; i < 6; i++) yv[i] = y_man_NCSEM[i][0];
+    NCSEMmtoSEMm(t_man_SEM[0], yv, yv_SEM, &SEML_SEM);
+    for(int i = 0; i < 6; i++) projResSt.init_state_CMU_SEM_o[i] = yv_SEM[i];
+
+    //Minimum projection distance
+    projResSt.min_proj_dist_SEM_o    = min_proj_dist_SEM;
+
+    //DV at projection
+    projResSt.dv_at_projection_SEM_o = dv_at_projection_SEM;
+
+    //Crossings
+    projResSt.crossings_NCSEM_o      = crossings_NCSEM;
+
+    //Collisions
+    projResSt.collision_NCEM_o       = collision_NCEM;
+
+    //Final time
+    projResSt.final_time_SEM_o       = t_man_SEM[kmin];
+
+
+    //====================================================================================
+    //Free
+    //====================================================================================
+    free_dmatrix(y_man_NCSEM, 0, 5, 0, projSt.MSIZE);
+    free_dvector(t_man_SEM, 0, projSt.MSIZE);
+
+
+    return GSL_SUCCESS;
+}
+
 /**
  *  \brief Integrates the central-unstable legs from a discrete set of unstable directions
  *         obtained using the routine compute_grid_CMU_EM. Then, each point on the
@@ -392,7 +899,7 @@ int compute_grid_CMU_EM(double dist_to_cm, ProjSt &projSt)
  * The output data are saved in a binary file of the form:
  *          "plot/QBCP/EM/L2/projcu_3d_order_16.bin".
  **/
-int int_proj_CMU_EM_on_CM_SEM_3D(ProjSt &projSt)
+int int_proj_CMU_EM_on_CM_SEM_3D(ProjSt& projSt)
 {
     //====================================================================================
     // Retrieve the parameters in the projection structure
@@ -448,29 +955,18 @@ int int_proj_CMU_EM_on_CM_SEM_3D(ProjSt &projSt)
     Invman invman_SEM(OFTS_ORDER, OFS_ORDER, *SEML_SEM.cs);
 
 
-    //------------------------------------------------------------------------------------
-    //To store
-    //------------------------------------------------------------------------------------
-    double** final_state_CMU_SEM      = dmatrix(0, 5, 0, si_grid_size[2]);
-    double** projected_state_CMU_SEM  = dmatrix(0, 5, 0, si_grid_size[2]);
-    double** projected_state_CMU_RCM  = dmatrix(0, 3, 0, si_grid_size[2]);
-    double** init_state_CMU_SEM       = dmatrix(0, 5, 0, si_grid_size[2]);
-    double** init_state_CMU_NCEM_0    = dmatrix(0, 5, 0, si_grid_size[2]);
-    double* min_proj_dist_tens_SEM    = dvector(0, si_grid_size[2]);
-
-
     //====================================================================================
     // 2.3. Misc initialization. Require better presentation?
     //====================================================================================
-    //----------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Notable points in SEM system
-    //----------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double** semP = dmatrix(0, 6, 0, 2);
     semPoints(0.0, semP);
 
-    //----------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // projection by default is arbitrary big
-    //----------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double ePdef = 1e5;
 
     //====================================================================================
@@ -531,163 +1027,37 @@ int int_proj_CMU_EM_on_CM_SEM_3D(ProjSt &projSt)
                     for(int ks3 = 0; ks3 <= si_grid_size[2]; ks3++)
                     {
 
-                        //================================================================
-                        // 3.1. Integration of the manifold leg
-                        //================================================================
                         //----------------------------------------------------------------
-                        //Initialize the initial conditions (both NC and RCM coordinates)
+                        //Inputs
                         //----------------------------------------------------------------
-                        double yv[6], tv;
-                        tv  = init_time_grid_EM[kt];
-                        for(int i = 0; i < 6; i++) yv[i] = init_state_CMU_NCEM[i][ks3];
+                        ProjResSt projResSt;
 
                         //----------------------------------------------------------------
-                        //Local variables to store the manifold leg
+                        //Initial conditions
                         //----------------------------------------------------------------
-                        double** y_man_NCSEM = dmatrix(0, 5, 0, projSt.MSIZE);
-                        double* t_man_SEM    = dvector(0, projSt.MSIZE);
-
-
-                        //----------------------------------------------------------------
-                        //Integration on projSt.MSIZE+1 fixed grid
-                        // PB: when Release + I_NCSEM!!
-                        //----------------------------------------------------------------
-                        int ode78coll;
-                        int status = ode78(y_man_NCSEM, t_man_SEM, &ode78coll,
-                                           tv, tv+projSt.TM, yv, 6,
-                                           projSt.MSIZE, I_NCEM, NCEM, NCSEM);
-
-                        //================================================================
-                        // 3.2. Projection on the center manifold of SEMLi.
-                        //      No use of SEML_EM or SEML after this point!
-                        //      We need first to check that the integration went well
-                        //================================================================
-                        //----------------------------------------------------------
-                        //Temp variables
-                        //----------------------------------------------------------
-                        Ofsc ofs(OFS_ORDER);
-                        double yvproj_NCSEM[6], sproj[4], yv_SEM[6], yvproj_SEM[6], yvEM[6], yv_VSEM[6], yvproj_VSEM[6];
-                        double proj_dist_SEM, min_proj_dist_SEM = ePdef, dv_at_projection_SEM = 0.0, y_man_norm_NCSEM = 0.0, crossings_NCSEM = 0.0;
-                        int collision_NCEM = 0;
-                        int kmin = 0;
+                        // Init the time in EM coordinates
+                        projResSt.init_time_EM  = init_time_grid_EM[kt];
+                        // Init the state in NCEM coordinates
+                        for(int i = 0; i < 6; i++) projResSt.init_state_CMU_NCEM[i] = init_state_CMU_NCEM[i][ks3];
+                        // Init the state in RCM coordinates
+                        for(int i = 0; i < 5; i++) projResSt.init_state_CMU_RCM[i] = init_state_CMU_RCM[i][ks3];
+                        //Label
+                        projResSt.label = 0;
 
                         //----------------------------------------------------------------
-                        // We need first to check that the integration went well
-                        //---------------------------------------------------------------
-                        if(status)
+                        //Projection on center manifold at SEML2
+                        //----------------------------------------------------------------
+                        proj_subroutine(projResSt, invman_SEM, projSt);
+
+                        //----------------------------------------------------------------
+                        // Save outputs
+                        //----------------------------------------------------------------
+                        if(projResSt.min_proj_dist_SEM_o < ePdef)
                         {
-                            // If status != 0, something went wrong during the integration
-                            // in ode78 and we use the maximum value ePdef (the solution
-                            // is basically discarded
-                            proj_dist_SEM = ePdef;
-                        }
-                        else
-                        {
-                            //------------------------------------------------------------
-                            //Loop on trajectory
-                            //------------------------------------------------------------
-                            for(int kman = 0; kman <= projSt.MSIZE; kman++)
-                            {
-                                //Current state
-                                for(int i = 0; i < 6; i++) yv[i] = y_man_NCSEM[i][kman];
-                                tv = t_man_SEM[kman];
-
-                                //Current distance from SEMLi in NCSEM units
-                                y_man_norm_NCSEM = 0.0;
-                                for(int i = 0; i < 2; i++) y_man_norm_NCSEM += yv[i]*yv[i];
-                                y_man_norm_NCSEM = sqrt(y_man_norm_NCSEM);
-
-                                //--------------------------------------------------------
-                                //Check 1: the current state is close enough to SEMLi
-                                //--------------------------------------------------------
-                                if(y_man_norm_NCSEM < projSt.YNMAX)
-                                {
-                                    // Projection on the center manifold
-                                    invman_SEM.NCprojCCMtoCM(yv, tv, sproj);
-
-                                    //----------------------------------------------------
-                                    //Check 2: the projection is close enough to SEMLi
-                                    //----------------------------------------------------
-                                    if(sqrt(sproj[0]*sproj[0]+sproj[2]*sproj[2])< projSt.SNMAX)
-                                    {
-                                        //yvproj_NCSEM = W(sproj, tv)
-                                        invman_SEM.evalRCMtoNC(sproj, tv, yvproj_NCSEM, OFTS_ORDER, OFS_ORDER);
-
-                                        //Back to SEM coordinates
-                                        NCSEMmtoSEMm(tv, yv, yv_SEM, &SEML_SEM);
-                                        NCSEMmtoSEMm(tv, yvproj_NCSEM, yvproj_SEM, &SEML_SEM);
-
-                                        //Back to SEM coordinates with velocity
-                                        SEMmtoSEMv(tv, yv_SEM, yv_VSEM, &SEML_SEM);
-                                        SEMmtoSEMv(tv, yvproj_SEM, yvproj_VSEM, &SEML_SEM);
-
-                                        //Distance of projection in SEM coordinates
-                                        proj_dist_SEM = 0.0;
-                                        for(int i = 0; i < projSt.NOD; i++) proj_dist_SEM += (yvproj_SEM[i] - yv_SEM[i])*(yvproj_SEM[i] - yv_SEM[i]);
-                                        proj_dist_SEM = sqrt(proj_dist_SEM);
-                                    }
-                                    else proj_dist_SEM = ePdef;
-                                }
-                                else proj_dist_SEM = ePdef;
-
-                                //Update distance min if necessary
-                                if(proj_dist_SEM < min_proj_dist_SEM)
-                                {
-                                    min_proj_dist_SEM = proj_dist_SEM;
-                                    kmin = kman;
-                                    for(int i = 0; i < 6; i++) final_state_CMU_SEM[i][ks3]     = yv_VSEM[i];
-                                    for(int i = 0; i < 6; i++) projected_state_CMU_SEM[i][ks3] = yvproj_VSEM[i];
-                                    for(int i = 0; i < 4; i++) projected_state_CMU_RCM[i][ks3] = sproj[i];
-
-                                    //Associated DV
-                                    dv_at_projection_SEM = 0.0;
-                                    for(int i = 3; i < 6; i++) dv_at_projection_SEM += (yvproj_VSEM[i] - yv_VSEM[i])*(yvproj_VSEM[i] - yv_VSEM[i]);
-                                    dv_at_projection_SEM = sqrt(dv_at_projection_SEM);
-                                }
-                            }
-
-                            //------------------------------------------------------------
-                            //We check for collisions
-                            //------------------------------------------------------------
-                            if(ode78coll)
-                            {
-                                collision_NCEM = ode78coll;
-                            }
-
-
-                        }
-
-
-                        //================================================================
-                        // 3.3. Save outputs
-                        //================================================================
-                        if(min_proj_dist_SEM < ePdef)
-                        {
+                            //Save
                             #pragma omp critical
                             {
-                                //Initial position in SEM coordinates
-                                for(int i = 0; i < 6; i++) yv[i] = y_man_NCSEM[i][0];
-                                NCSEMmtoSEMm(t_man_SEM[0], yv, yv_SEM, &SEML_SEM);
-                                for(int i = 0; i < 6; i++) init_state_CMU_SEM[i][ks3] = yv_SEM[i];
-
-                                //Same in NCEM coordinates
-                                NCSEMmtoNCEMm(t_man_SEM[0], yv, yvEM, &SEML_SEM);
-                                for(int i = 0; i < 6; i++) init_state_CMU_NCEM_0[i][ks3] = yvEM[i];
-
-                                //Minimum projection distance
-                                min_proj_dist_tens_SEM[ks3] = min_proj_dist_SEM;
-
-                                //--------------------------------------------------------
-                                //Open datafile
-                                //--------------------------------------------------------
-                                writeIntProjCU_bin_3D(filename, init_time_grid_EM,
-                                                      init_state_CMU_NCEM, init_state_CMU_SEM,
-                                                      init_state_CMU_RCM, final_state_CMU_SEM,
-                                                      projected_state_CMU_SEM, projected_state_CMU_RCM,
-                                                      min_proj_dist_SEM, dv_at_projection_SEM,
-                                                      t_man_SEM,
-                                                      crossings_NCSEM, collision_NCEM,
-                                                      kmin, ks3, kt);
+                                writeIntProjCU_bin(filename, projResSt);
                             }
                         }
 
@@ -703,9 +1073,9 @@ int int_proj_CMU_EM_on_CM_SEM_3D(ProjSt &projSt)
                         //Free
                         //----------------------------------------------------------------
                         //free_dmatrix(y_man_NCEM, 0, 5, 0, projSt.MSIZE);
-                        free_dmatrix(y_man_NCSEM, 0, 5, 0, projSt.MSIZE);
+                        //free_dmatrix(y_man_NCSEM, 0, 5, 0, projSt.MSIZE);
                         //free_dvector(t_man_EM, 0, projSt.MSIZE);
-                        free_dvector(t_man_SEM, 0, projSt.MSIZE);
+                        //free_dvector(t_man_SEM, 0, projSt.MSIZE);
 
 
                     }
@@ -751,7 +1121,7 @@ int int_proj_CMU_EM_on_CM_SEM_3D(ProjSt &projSt)
  * The output data are saved in a binary file of the form
  * "plot/QBCP/EM/L2/projcu_order_16.bin"
  **/
-int int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt)
+int int_proj_CMU_EM_on_CM_SEM(ProjSt& projSt)
 {
     //====================================================================================
     // Retrieve the parameters in the projection structure
@@ -761,9 +1131,9 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt)
     //====================================================================================
     // 1. Get initial condition in the center-unstable manifold from a data file
     //====================================================================================
-    //----------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Read data size
-    //----------------------------------------------------------
+    //------------------------------------------------------------------------------------
     int t_grid_size, s1_grid_size, s3_grid_size;
     int status = getLenghtCU_bin(&s1_grid_size, &s3_grid_size, &t_grid_size, OFTS_ORDER, TYPE_CU, SEML.li_SEM);
 
@@ -773,18 +1143,19 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt)
         return FTC_FAILURE;
     }
 
-    //----------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //To store all data
-    //----------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double**** init_state_CMU_NCEM = d4tensor(0, 5, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
     double**** init_state_CMU_RCM  = d4tensor(0, 4, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
+    double** *  init_dH_valid       = d3tensor(0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
     double* init_time_grid_EM      = dvector(0, t_grid_size);
 
-    //----------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Read data from file
-    //----------------------------------------------------------
-    status = readCU_bin(init_state_CMU_NCEM, init_state_CMU_RCM, init_time_grid_EM,
-                            s1_grid_size, s3_grid_size, t_grid_size, OFTS_ORDER, TYPE_CU, SEML.li_SEM);
+    //------------------------------------------------------------------------------------
+    status = readCU_bin(init_state_CMU_NCEM, init_state_CMU_RCM, init_dH_valid, init_time_grid_EM,
+                        s1_grid_size, s3_grid_size, t_grid_size, OFTS_ORDER, TYPE_CU, SEML.li_SEM);
 
     if(status != FTC_SUCCESS)
     {
@@ -808,17 +1179,6 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt)
     cout << setiosflags(ios::scientific) << setprecision(15);
     cout << "===================================================================" << endl;
 
-    //====================================================================================
-    // 2.1. Initialize tools for the sorting phase
-    //====================================================================================
-    int Nsort = (s1_grid_size+1)*(s3_grid_size+1)*(t_grid_size+1);
-    vector<int>    indexMin(Nsort);
-    vector<int>    ks1Min(Nsort);
-    vector<int>    ks3Min(Nsort);
-    vector<int>    ktMin(Nsort);
-    vector<double> t0_min_EM(Nsort);
-    vector<double> tf_min_EM(Nsort);
-    vector<double> distMin(Nsort);
 
     //====================================================================================
     // 2.2. Initialize tools for the projection phase. Namely the center manifold @SEML
@@ -831,17 +1191,6 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt)
         return FTC_FAILURE;
     }
     Invman invman_SEM(OFTS_ORDER, OFS_ORDER, *SEML_SEM.cs);
-
-
-    //------------------------------------------------------------------------------------
-    //To store
-    //------------------------------------------------------------------------------------
-    double**** final_state_CMU_SEM      = d4tensor(0, 5, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
-    double**** projected_state_CMU_SEM  = d4tensor(0, 5, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
-    double**** projected_state_CMU_RCM  = d4tensor(0, 3, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
-    double**** init_state_CMU_SEM       = d4tensor(0, 5, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
-    double**** init_state_CMU_NCEM_0    = d4tensor(0, 5, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
-    double** *min_proj_dist_tens_SEM    = d3tensor(0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
 
 
     //====================================================================================
@@ -883,251 +1232,42 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt)
             for(int ks3 = 0; ks3 <= s3_grid_size; ks3++)
             {
                 //========================================================================
-                // 3.1. Integration of the manifold leg
+                // We check that the energy condition is valid
                 //========================================================================
-                //------------------------------------------------------------------------
-                //Initialize the initial conditions (both NC and RCM coordinates)
-                //------------------------------------------------------------------------
-                double yv[6], tv;
-                tv  = init_time_grid_EM[kt];
-                for(int i = 0; i < 6; i++) yv[i] = init_state_CMU_NCEM[i][kt][ks1][ks3];
-
-                //------------------------------------------------------------------------
-                //Local variables to store the manifold leg
-                //------------------------------------------------------------------------
-                double** y_man_NCSEM = dmatrix(0, 5, 0, projSt.MSIZE);
-                double* t_man_SEM    = dvector(0, projSt.MSIZE);
-
-
-                //------------------------------------------------------------------------
-                //Integration on projSt.MSIZE+1 fixed grid
-                // PB: when Release + I_NCSEM!! not used for now
-                //------------------------------------------------------------------------
-                OdeEvent odeEvent;
-                int status = ode78(y_man_NCSEM, t_man_SEM, &odeEvent, tv, tv+projSt.TM, yv, 6, projSt.MSIZE, I_NCEM, NCEM, NCSEM);
-
-                //========================================================================
-                // 3.2. Projection on the center manifold of SEMLi. No use of SEML_EM or SEML after this point!
-                // We need first to check that the integration went well
-                //========================================================================
-                //------------------------------------------------------------------------
-                //Temp variables
-                //------------------------------------------------------------------------
-                Ofsc ofs(OFS_ORDER);
-                double yvproj_NCSEM[6], sproj[4], yv_SEM[6], yvproj_SEM[6], yvEM[6], yv_VSEM[6], yvproj_VSEM[6];
-                double proj_dist_SEM, min_proj_dist_SEM = ePdef, dv_at_projection_SEM = 0.0, y_man_norm_NCSEM = 0.0, crossings_NCSEM = 0.0;
-                int collision_NCEM = 0;
-                int ksort = (s1_grid_size+1)*(s3_grid_size+1)*kt + (s3_grid_size+1)*ks1 + ks3;
-                int kmin = 0;
-
-                //------------------------------------------------------------------------
-                // We need first to check that the integration went well
-                //------------------------------------------------------------------------
-                if(status)
+                if(init_dH_valid[kt][ks1][ks3])
                 {
-                    // If status != 0, something went wrong during the integration
-                    // in ode78 and we use the maximum value ePdef (the solution
-                    // is basically discarded)
-                    proj_dist_SEM = ePdef;
-                }
-                else
-                {
+                    //--------------------------------------------------------------------
+                    //Inputs
+                    //--------------------------------------------------------------------
+                    ProjResSt projResSt;
 
                     //--------------------------------------------------------------------
-                    //Loop on trajectory
+                    //Initial conditions
                     //--------------------------------------------------------------------
-                    for(int kman = 0; kman <= projSt.MSIZE; kman++)
+                    // Init the time in EM coordinates
+                    projResSt.init_time_EM  = init_time_grid_EM[kt];
+                    // Init the state in NCEM coordinates
+                    for(int i = 0; i < 6; i++) projResSt.init_state_CMU_NCEM[i] = init_state_CMU_NCEM[i][kt][ks1][ks3];
+                    // Init the state in RCM coordinates
+                    for(int i = 0; i < 5; i++) projResSt.init_state_CMU_RCM[i] = init_state_CMU_RCM[i][kt][ks1][ks3];
+                    //Label
+                    projResSt.label = 0;
+
+                    //--------------------------------------------------------------------
+                    //Projection on center manifold at SEML2
+                    //--------------------------------------------------------------------
+                    proj_subroutine(projResSt, invman_SEM, projSt);
+
+                    //--------------------------------------------------------------------
+                    // Save outputs
+                    //--------------------------------------------------------------------
+                    if(projResSt.min_proj_dist_SEM_o < ePdef)
                     {
-                        //Current state
-                        for(int i = 0; i < 6; i++) yv[i] = y_man_NCSEM[i][kman];
-                        tv = t_man_SEM[kman];
-
-                        //Current distance from SEMLi in NCSEM units
-                        y_man_norm_NCSEM = 0.0;
-                        for(int i = 0; i < 2; i++) y_man_norm_NCSEM += yv[i]*yv[i];
-                        y_man_norm_NCSEM = sqrt(y_man_norm_NCSEM);
-
-                        //----------------------------------------------------------------
-                        //Check n°1: the current state is close enough to SEMLi
-                        //----------------------------------------------------------------
-                        if(y_man_norm_NCSEM < projSt.YNMAX)
+                        //Save
+                        #pragma omp critical
                         {
-                            // Projection on the center manifold
-                            invman_SEM.NCprojCCMtoCM(yv, tv, sproj);
-
-                            //------------------------------------------------------------
-                            //Check n°2: the projection is close enough to SEMLi
-                            //------------------------------------------------------------
-                            if(sqrt(sproj[0]*sproj[0]+sproj[2]*sproj[2])< projSt.SNMAX)
-                            {
-                                //yvproj_NCSEM = W(sproj, tv)
-                                invman_SEM.evalRCMtoNC(sproj, tv, yvproj_NCSEM, OFTS_ORDER, OFS_ORDER);
-
-                                //Back to SEM coordinates
-                                NCSEMmtoSEMm(tv, yv, yv_SEM, &SEML_SEM);
-                                NCSEMmtoSEMm(tv, yvproj_NCSEM, yvproj_SEM, &SEML_SEM);
-
-                                //Back to SEM coordinates with velocity
-                                SEMmtoSEMv(tv, yv_SEM, yv_VSEM, &SEML_SEM);
-                                SEMmtoSEMv(tv, yvproj_SEM, yvproj_VSEM, &SEML_SEM);
-
-                                //Distance of projection in SEM coordinates
-                                proj_dist_SEM = 0.0;
-                                for(int i = 0; i < projSt.NOD; i++) proj_dist_SEM += (yvproj_SEM[i] - yv_SEM[i])*(yvproj_SEM[i] - yv_SEM[i]);
-                                proj_dist_SEM = sqrt(proj_dist_SEM);
-                            }
-                            else proj_dist_SEM = ePdef;
+                            writeIntProjCU_bin(filename, projResSt);
                         }
-                        else proj_dist_SEM = ePdef;
-
-                        //Update distance min if necessary
-                        if(proj_dist_SEM < min_proj_dist_SEM)
-                        {
-                            min_proj_dist_SEM = proj_dist_SEM;
-                            kmin = kman;
-                            for(int i = 0; i < 6; i++) final_state_CMU_SEM[i][kt][ks1][ks3]     = yv_VSEM[i];
-                            for(int i = 0; i < 6; i++) projected_state_CMU_SEM[i][kt][ks1][ks3] = yvproj_VSEM[i];
-                            for(int i = 0; i < 4; i++) projected_state_CMU_RCM[i][kt][ks1][ks3] = sproj[i];
-
-                            //Associated DV
-                            dv_at_projection_SEM = 0.0;
-                            for(int i = 3; i < 6; i++) dv_at_projection_SEM += (yvproj_VSEM[i] - yv_VSEM[i])*(yvproj_VSEM[i] - yv_VSEM[i]);
-                            dv_at_projection_SEM = sqrt(dv_at_projection_SEM);
-                        }
-
-                    }
-
-                    //--------------------------------------------------------------------
-                    // We check if we have the primary family, if necessary
-                    // To do so, we check that we have made two clockwise/counterclockwise
-                    //  crossings of x = -1.
-                    //
-                    // To do a clockwise turn:
-                    //  1. x1 > 0 -> x2 < 0 && y1 > 0
-                    //  2. x1 < 0 -> x2 > 0 && y1 < 0
-                    //
-                    // To do a counterclockwise turn:
-                    //  1. x1 > 0 -> x2 < 0 && y1 < 0
-                    //  2. x1 < 0 -> x2 > 0 && y1 > 0
-                    //--------------------------------------------------------------------
-                    if(min_proj_dist_SEM < ePdef)
-                    {
-                        // Init temporary objects
-                        OdeEvent odeEvent_purge(true);
-                        double** y_purge = dmatrix(0, 5, 0, 2);
-                        double* t_purge  = dvector(0, 2);
-
-                        // Initial condition in NCEM coordinates
-                        tv  = init_time_grid_EM[kt];
-                        for(int i = 0; i < 6; i++) yv[i] = init_state_CMU_NCEM[i][kt][ks1][ks3];
-
-                        // Compute the event using ode78 on [tv, t_man_EM[kmin]]
-                        ode78(y_purge, t_purge, &odeEvent_purge, tv, t_man_SEM[kmin]/SEML.us_em.ns, yv, 6, 2, I_NCSEM, NCEM, NCSEM);
-
-                        // Save value in crossings_NCSEM
-                        crossings_NCSEM = odeEvent_purge.crossings;
-
-                        // Free temporary objects
-                        free_dmatrix(y_purge, 0, 5, 0, 2);
-                        free_dvector(t_purge, 0, 2);
-
-                        //----------------------------------------------------------------
-                        // Second check for crossings - older version
-                        //----------------------------------------------------------------
-                        /*
-                        double crossings = 0.0;
-                        double x1, x2, y1;
-                        for(int kman = kmin; kman >= 1; kman--)
-                        {
-                            //------------------------------------------------------------
-                            // Values of x wrt to x = -1.0, position of BEM
-                            //------------------------------------------------------------
-                            x1 = y_man_NCSEM[0][kman-1] + 1.0;
-                            x2 = y_man_NCSEM[0][kman]   + 1.0;
-
-                            //------------------------------------------------------------
-                            // Crossing detected
-                            //------------------------------------------------------------
-                            if(x1*x2 < 0)
-                            {
-                                //Value of y at x1
-                                y1 = y_man_NCSEM[1][kman-1];
-
-                                if(x1 > 0 && x2 < 0)
-                                {
-                                    if(y1 > 0) crossings += 1.0;    //clockwise
-                                    else       crossings += 0.1;    //counterclockwise
-
-                                }
-                                else
-                                {
-                                    if(y1 < 0) crossings += 1.0;    //clockwise
-                                    else       crossings += 0.1;    //counterclockwise
-                                }
-
-                            }
-                        }
-
-                        if(odeEvent_purge.crossings != crossings)
-                        {
-                            cout << "odeEvent_purge.crossings = " << odeEvent_purge.crossings << endl;
-                            cout << "crossings = " << crossings << endl;
-                        }
-                        */
-                    }
-
-                    //--------------------------------------------------------------------
-                    //We check for collisions
-                    //--------------------------------------------------------------------
-                    if(odeEvent.coll)
-                    {
-                        collision_NCEM = odeEvent.coll;
-                    }
-                }
-
-
-                //========================================================================
-                // 3.3. Save outputs
-                //========================================================================
-                if(min_proj_dist_SEM < ePdef)
-                {
-                    #pragma omp critical
-                    {
-                        //Initial position in SEM coordinates
-                        for(int i = 0; i < 6; i++) yv[i] = y_man_NCSEM[i][0];
-                        NCSEMmtoSEMm(t_man_SEM[0], yv, yv_SEM, &SEML_SEM);
-                        for(int i = 0; i < 6; i++) init_state_CMU_SEM[i][kt][ks1][ks3] = yv_SEM[i];
-
-                        //Same in NCEM coordinates
-                        NCSEMmtoNCEMm(t_man_SEM[0], yv, yvEM, &SEML_SEM);
-                        for(int i = 0; i < 6; i++) init_state_CMU_NCEM_0[i][kt][ks1][ks3] = yvEM[i];
-
-                        //Initial & final time in EM coordinates
-                        t0_min_EM[ksort]= t_man_SEM[0]/SEML.us_em.ns;       //in EM coordinates
-                        tf_min_EM[ksort]= t_man_SEM[kmin]/SEML.us_em.ns;    //in EM coordinates
-
-
-                        //Minimum projection distance
-                        min_proj_dist_tens_SEM[kt][ks1][ks3] = min_proj_dist_SEM;
-
-                        //For sorting
-                        indexMin[ksort] = (int) kmin;
-                        ks1Min[ksort]   = (int) ks1;
-                        ks3Min[ksort]   = (int) ks3;
-                        ktMin[ksort]    = (int) kt;
-                        distMin[ksort]  =  min_proj_dist_SEM;
-
-                        //----------------------------------------------------------------
-                        //Open datafile
-                        //----------------------------------------------------------------
-                        writeIntProjCU_bin(filename, init_time_grid_EM,
-                                           init_state_CMU_NCEM, init_state_CMU_SEM,
-                                           init_state_CMU_RCM, final_state_CMU_SEM,
-                                           projected_state_CMU_SEM,
-                                           projected_state_CMU_RCM,
-                                           min_proj_dist_SEM, dv_at_projection_SEM,
-                                           t_man_SEM, crossings_NCSEM, collision_NCEM,
-                                           kmin, ks1, ks3, kt);
                     }
                 }
 
@@ -1138,33 +1278,16 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt)
                 {
                     displayCompletion("int_proj_CMU_EM_on_CM_SEM", 100.0*index++/((1+s1_grid_size)*(1+s3_grid_size)*(1+t_grid_size)));
                 }
-
-                //------------------------------------------------------------------------
-                //Free
-                //------------------------------------------------------------------------
-                free_dmatrix(y_man_NCSEM, 0, 5, 0, projSt.MSIZE);
-                free_dvector(t_man_SEM, 0, projSt.MSIZE);
             }
         }
     }
-
-
-    //------------------------------------------------------------------------------------
-    //Free
-    //------------------------------------------------------------------------------------
-    free_d4tensor(final_state_CMU_SEM, 0, 5, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
-    free_d4tensor(projected_state_CMU_SEM, 0, 5, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
-    free_d4tensor(projected_state_CMU_RCM, 0, 3, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
-    free_d4tensor(init_state_CMU_SEM, 0, 5, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
-    free_d4tensor(init_state_CMU_NCEM_0, 0, 5, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
-    free_d3tensor(min_proj_dist_tens_SEM, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
-
 
     //------------------------------------------------------------------------------------
     //Free
     //------------------------------------------------------------------------------------
     free_d4tensor(init_state_CMU_NCEM, 0, 5, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
     free_d4tensor(init_state_CMU_RCM, 0, 4, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
+    free_d3tensor(init_dH_valid,  0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
     free_dvector(init_time_grid_EM, 0, t_grid_size);
 
 
@@ -1172,6 +1295,803 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt)
 }
 
 
+/**
+ *  \brief @TODO
+ **/
+int int_proj_CMU_EM_on_CM_SEM_dH(ProjSt& projSt)
+{
+    //====================================================================================
+    // Retrieve the parameters in the projection structure
+    //====================================================================================
+    bool isPar = projSt.ISPAR;
+
+    //====================================================================================
+    // 1. Get initial condition in the center-unstable manifold from a data file
+    //====================================================================================
+    //------------------------------------------------------------------------------------
+    //Read data size
+    //------------------------------------------------------------------------------------
+    int t_grid_size, s1_grid_size;
+    int status = getLenghtCU_bin_dH(&s1_grid_size, &t_grid_size, OFTS_ORDER, TYPE_CU, SEML.li_SEM, projSt.dHd);
+
+    if(status != FTC_SUCCESS)
+    {
+        cout << "int_proj_CMU_EM_on_CM_SEM. Impossible to get length of the data file." << endl;
+        return FTC_FAILURE;
+    }
+
+    //------------------------------------------------------------------------------------
+    //To store all data
+    //------------------------------------------------------------------------------------
+    double** * init_state_CMU_NCEM = d3tensor(0, 5, 0, t_grid_size, 0, s1_grid_size);
+    double** * init_state_CMU_RCM  = d3tensor(0, 4, 0, t_grid_size, 0, s1_grid_size);
+    double**   init_dH_valid       = dmatrix(0, t_grid_size, 0, s1_grid_size);
+    double* init_time_grid_EM      = dvector(0, t_grid_size);
+
+    //------------------------------------------------------------------------------------
+    //Read data from file
+    //------------------------------------------------------------------------------------
+    status = readCU_bin_dH(init_state_CMU_NCEM, init_state_CMU_RCM, init_dH_valid, init_time_grid_EM,
+                           s1_grid_size, t_grid_size, OFTS_ORDER, TYPE_CU, SEML.li_SEM, projSt.dHd);
+
+    if(status != FTC_SUCCESS)
+    {
+        cout << "int_proj_CMU_EM_on_CM_SEM. Impossible to read data file." << endl;
+        return FTC_FAILURE;
+    }
+
+    //====================================================================================
+    // Splash screen
+    //====================================================================================
+    string filename = filenameCUM_dH(OFTS_ORDER, TYPE_MAN_PROJ, SEML.li_SEM, projSt.dHd);
+    cout << "===================================================================" << endl;
+    cout << "              Computation of the connections between:              " << endl;
+    cout << "===================================================================" << endl;
+    cout << " The computation domain is the following:                          " << endl;
+    cout << " - OFTS_ORDER = " << OFTS_ORDER << endl;
+    cout << "  - " << s1_grid_size+1  << " value(s) of s1" << endl;
+    cout << "  - " << t_grid_size+1   << " value(s) of t"  << endl;
+    cout << " The data will be stored in " << filename << endl;
+    cout << setiosflags(ios::scientific) << setprecision(15);
+    cout << "===================================================================" << endl;
+
+    //====================================================================================
+    // 2.2. Initialize tools for the projection phase. Namely the center manifold @SEML
+    //====================================================================================
+    //First, check that the type of manifold provided is good:
+    if(SEML_SEM.cs->manType != MAN_CENTER)
+    {
+        cout << "int_proj_CMU_EM_on_CM_SEM. The invariant manifold at SEMLi ";
+        cout << "must be of center type. return." << endl;
+        return FTC_FAILURE;
+    }
+    Invman invman_SEM(OFTS_ORDER, OFS_ORDER, *SEML_SEM.cs);
+
+
+    //====================================================================================
+    // 2.3. Misc initialization. Require better presentation?
+    //====================================================================================
+
+    //------------------------------------------------------------------------------------
+    //Notable points in SEM system
+    //------------------------------------------------------------------------------------
+    double** semP = dmatrix(0, 6, 0, 2);
+    semPoints(0.0, semP);
+
+    //------------------------------------------------------------------------------------
+    // projection by default is arbitrary big
+    //------------------------------------------------------------------------------------
+    double ePdef = 1e5;
+
+    //====================================================================================
+    // 2.4. Reset the data file (projection)
+    //====================================================================================
+    //Filename
+    filename = filenameCUM(OFTS_ORDER, TYPE_MAN_PROJ, SEML.li_SEM);
+    //Open whitout append datafile and therefore erase its content.
+    fstream filestream;
+    filestream.open (filename.c_str(), ios::binary | ios::out);
+    filestream.close();
+
+    //====================================================================================
+    // 3. Loop: only the inner loop is parallelized, since
+    //    open_mp doest not allow nested // loops by default
+    //====================================================================================
+    COMPLETION = 0;
+    int index  = 0;
+    for(int kt = 0; kt <= t_grid_size; kt++)
+    {
+        #pragma omp parallel for if(isPar) shared(index)
+        for(int ks1 = 0; ks1 <= s1_grid_size; ks1++)
+        {
+            //============================================================================
+            // We check that the energy condition is valid
+            //============================================================================
+            if(init_dH_valid[kt][ks1])
+            {
+                //------------------------------------------------------------------------
+                //Inputs
+                //------------------------------------------------------------------------
+                ProjResSt projResSt;
+
+                //------------------------------------------------------------------------
+                //Initial conditions
+                //------------------------------------------------------------------------
+                // Init the time in EM coordinates
+                projResSt.init_time_EM  = init_time_grid_EM[kt];
+                // Init the state in NCEM coordinates
+                for(int i = 0; i < 6; i++) projResSt.init_state_CMU_NCEM[i] = init_state_CMU_NCEM[i][kt][ks1];
+                // Init the state in RCM coordinates
+                for(int i = 0; i < 5; i++) projResSt.init_state_CMU_RCM[i] = init_state_CMU_RCM[i][kt][ks1];
+                //Label
+                projResSt.label = 0;
+
+                //------------------------------------------------------------------------
+                //Projection on center manifold at SEML2
+                //------------------------------------------------------------------------
+                proj_subroutine(projResSt, invman_SEM, projSt);
+
+                //------------------------------------------------------------------------
+                // Save outputs
+                //------------------------------------------------------------------------
+                if(projResSt.min_proj_dist_SEM_o < ePdef)
+                {
+                    //Save
+                    #pragma omp critical
+                    {
+                        writeIntProjCU_bin(filename, projResSt);
+                    }
+                }
+            }
+
+            //----------------------------------------------------------------------------
+            //Display completion
+            //----------------------------------------------------------------------------
+            #pragma omp critical
+            {
+                displayCompletion("int_proj_CMU_EM_on_CM_SEM", 100.0*index++/((1+s1_grid_size)*(1+t_grid_size)));
+            }
+        }
+    }
+
+    //------------------------------------------------------------------------------------
+    //Free
+    //------------------------------------------------------------------------------------
+    free_d3tensor(init_state_CMU_NCEM, 0, 5, 0, t_grid_size, 0, s1_grid_size);
+    free_d3tensor(init_state_CMU_RCM, 0, 4, 0, t_grid_size, 0, s1_grid_size);
+    free_dmatrix(init_dH_valid,  0, t_grid_size, 0, s1_grid_size);
+    free_dvector(init_time_grid_EM, 0, t_grid_size);
+
+
+    return FTC_SUCCESS;
+}
+
+
+/**
+ *  \brief @TODO
+ **/
+int cmu_grid_strob(double *tNCE, double **yNCE, double **sRCM, double st0[], double t0, int N, int isPar)
+{
+    //====================================================================================
+    // Initialization
+    //====================================================================================
+    //------------------------------------------------------------------------------------
+    // Invariant manifold
+    //------------------------------------------------------------------------------------
+    Invman invman(OFTS_ORDER, OFS_ORDER, *SEML.cs);
+    int ncs = invman.getNCS();
+    int dcs = default_coordinate_system(ncs);
+
+    //------------------------------------------------------------------------------------
+    // ODE
+    //------------------------------------------------------------------------------------
+    //Hard precision
+    Config::configManager().C_PREC_HARD();
+
+    //Driver
+    OdeStruct odestruct;
+    //Root-finding
+    const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
+    //Stepper
+    const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
+    //Parameters
+    OdeParams odeParams(&SEML, dcs);
+    //Init ode structure
+    init_ode_structure(&odestruct, T, T_root, 6, qbcp_vfn, &odeParams);
+
+    //------------------------------------------------------------------------------------
+    //Orbit
+    //------------------------------------------------------------------------------------
+    double tf = t0 + N*SEML.us->T;
+    Orbit orbit(&invman, &SEML, &odestruct, OFTS_ORDER, OFS_ORDER, t0, tf);
+
+    //Orbit IC
+    orbit.update_ic(st0, t0);
+
+    //====================================================================================
+    //Integration
+    //====================================================================================
+    int status = orbit.traj_int_grid(tf, yNCE, tNCE, N, true);
+
+    //====================================================================================
+    //Projection
+    //====================================================================================
+    orbit.proj_traj_grid(sRCM, yNCE, tNCE, N);
+
+    //====================================================================================
+    // Building the initial conditions on the unstable manifold of the orbit
+    //====================================================================================
+    int iter = 1;
+    COMPLETION = 0;
+    #pragma omp parallel for if(isPar)  shared(iter)
+    for(int k = 0; k <= N; k++)
+    {
+        Ofsc ofs(OFS_ORDER);
+        double* yvu = dvector(0,5);
+        double* sti = dvector(0,4);
+
+
+        //--------------------------------------------------------------------------------
+        // Initialization on the center-unstable manifold
+        //--------------------------------------------------------------------------------
+        //Init sti
+        sti[0] = sRCM[0][k];
+        sti[1] = sRCM[1][k];
+        sti[2] = sRCM[2][k];
+        sti[3] = sRCM[3][k];
+        sti[4] = PROJ_EPSILON;
+
+
+        //--------------------------------------------------------------------------------
+        //Equivalent state
+        //--------------------------------------------------------------------------------
+        invman.evalRCMtoNC(sti, tNCE[k], yvu, OFTS_ORDER, OFS_ORDER);
+
+        //--------------------------------------------------------------------------------
+        //Save
+        //--------------------------------------------------------------------------------
+        #pragma omp critical
+        {
+
+            for(int i = 0; i < 6; i++) yNCE[i][k] = yvu[i];
+            for(int i = 0; i < 5; i++) sRCM[i][k] = sti[i];
+            //Display
+            displayCompletion("compute_grid_CMU_EM", (double) iter++/(N+1)*100);
+        }
+
+        free_dvector(yvu, 0, 5);
+        free_dvector(sti, 0, 4);
+
+    }
+
+    //====================================================================================
+    //Back to original precision
+    //====================================================================================
+    Config::configManager().C_PREC_BACK();
+
+
+    return status;
+}
+
+/**
+ *  \brief @TODO
+ **/
+int cmu_grid_orbit(double *tNCE, double **yNCE, double **sRCM, double st0[], double t0, int N, int NPeriods,  int isPar)
+{
+    //====================================================================================
+    // Initialization
+    //====================================================================================
+    //------------------------------------------------------------------------------------
+    // Invariant manifold
+    //------------------------------------------------------------------------------------
+    Invman invman(OFTS_ORDER, OFS_ORDER, *SEML.cs);
+    int ncs = invman.getNCS();
+    int dcs = default_coordinate_system(ncs);
+
+    //------------------------------------------------------------------------------------
+    // ODE
+    //------------------------------------------------------------------------------------
+    //Hard precision
+    Config::configManager().C_PREC_HARD();
+
+    //Driver
+    OdeStruct odestruct;
+    //Root-finding
+    const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
+    //Stepper
+    const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
+    //Parameters
+    OdeParams odeParams(&SEML, dcs);
+    //Init ode structure
+    init_ode_structure(&odestruct, T, T_root, 6, qbcp_vfn, &odeParams);
+
+    //------------------------------------------------------------------------------------
+    //Orbit
+    //------------------------------------------------------------------------------------
+    double tf = t0 + NPeriods*SEML.us->T;
+    Orbit orbit(&invman, &SEML, &odestruct, OFTS_ORDER, OFS_ORDER, t0, tf);
+
+    //Orbit IC
+    orbit.update_ic(st0, t0);
+
+    //====================================================================================
+    //Integration
+    //====================================================================================
+    int status = orbit.traj_int_grid(tf, yNCE, tNCE, N, true);
+
+    //====================================================================================
+    //Projection
+    //====================================================================================
+    orbit.proj_traj_grid(sRCM, yNCE, tNCE, N);
+
+    //====================================================================================
+    // Building the initial conditions on the unstable manifold of the orbit
+    //====================================================================================
+    int iter = 1;
+    COMPLETION = 0;
+    #pragma omp parallel for if(isPar)  shared(iter)
+    for(int k = 0; k <= N; k++)
+    {
+        Ofsc ofs(OFS_ORDER);
+        double* yvu = dvector(0,5);
+        double* sti = dvector(0,4);
+
+
+        //--------------------------------------------------------------------------------
+        // Initialization on the center-unstable manifold
+        //--------------------------------------------------------------------------------
+        //Init sti
+        sti[0] = sRCM[0][k];
+        sti[1] = sRCM[1][k];
+        sti[2] = sRCM[2][k];
+        sti[3] = sRCM[3][k];
+        sti[4] = PROJ_EPSILON;
+
+
+        //--------------------------------------------------------------------------------
+        //Equivalent state
+        //--------------------------------------------------------------------------------
+        invman.evalRCMtoNC(sti, tNCE[k], yvu, OFTS_ORDER, OFS_ORDER);
+
+        //--------------------------------------------------------------------------------
+        //Save
+        //--------------------------------------------------------------------------------
+        #pragma omp critical
+        {
+
+            for(int i = 0; i < 6; i++) yNCE[i][k] = yvu[i];
+            for(int i = 0; i < 5; i++) sRCM[i][k] = sti[i];
+            //Display
+            displayCompletion("compute_grid_CMU_EM", (double) iter++/(N+1)*100);
+        }
+
+        free_dvector(yvu, 0, 5);
+        free_dvector(sti, 0, 4);
+
+    }
+
+    //====================================================================================
+    //Back to original precision
+    //====================================================================================
+    Config::configManager().C_PREC_BACK();
+
+
+    return status;
+}
+
+
+int cmu_orbit_estimate_period(const double st0[], double t0, double *T, int *N, int Nperiods, double dt, Orbit &orbit)
+{
+    //====================================================================================
+    //Orbit IC
+    //====================================================================================
+    int ncs = orbit.getInvman()->getNCS();
+    int dcs = default_coordinate_system(ncs);
+
+    orbit.update_ic(st0, t0);
+
+    //====================================================================================
+    // Estimate the period of the orbit via event function
+    //====================================================================================
+    //Hard precision
+    Config::configManager().C_PREC_HARD();
+    //------------------------------------------------------------------------------------
+    //Event structure
+    //------------------------------------------------------------------------------------
+    double angle0 = atan(orbit.getZ0()[1]/orbit.getZ0()[0]);
+    double center[3] = {0,0,0}; //center is the origin
+    struct value_params val_par;
+    val_par.max_events = 3;
+    val_par.direction  = 0;
+    val_par.dim        = 0;
+    val_par.value      = angle0;
+    val_par.center     = center;
+    val_par.type       = 'A';
+
+    double** ye_NCSEM = dmatrix(0, 5, 0, val_par.max_events);
+    double* te_NCSEM  = dvector(0, val_par.max_events);
+
+    //------------------------------------------------------------------------------------
+    // Event detection
+    //------------------------------------------------------------------------------------
+    int ode78coll;
+    double yv[6];
+    for(int i = 0; i < 6; i++) yv[i] = orbit.getZ0()[i];
+    ode78_qbcp_event(ye_NCSEM, te_NCSEM, &ode78coll, t0, t0+10, yv, 6, dcs, ncs, ncs, &val_par);
+
+    //------------------------------------------------------------------------------------
+    //Then, we can redefine tf and N
+    //------------------------------------------------------------------------------------
+    //Find the closest point to the initial one
+    int kargmin = 1;
+    double dmin = fabs(orbit.getZ0()[0] - ye_NCSEM[0][1]), dm = 0.0;
+    for(int k = min(val_par.max_events, 2); k <  val_par.max_events; k++)
+    {
+        dm = fabs(orbit.getZ0()[0] - ye_NCSEM[0][k]);
+        if(dm < dmin)
+        {
+            dmin = dm;
+            kargmin = k;
+        }
+    }
+
+    // Estimated period, as a ratio
+    double r0 = (te_NCSEM[kargmin] - t0)/SEML.us_em.T;
+    cout << "Estimated period is : " << r0 << " xT " << endl;
+
+    // Approximation as a multiple of dt
+    double rEst = ( dt*floor(r0/dt) + dt );
+    cout << "We use the following approximation : " << rEst << endl;
+
+    //Multiple by the desired number of periods
+    cout << "Moreover, the user has called for " << Nperiods << "periods." << endl;
+
+    // Period, and number of points to match a frequency of "dt" on a period
+    *T = Nperiods*rEst * SEML.us_em.T;
+    *N = floor(Nperiods*rEst/dt);
+
+    //====================================================================================
+    //Back to original precision
+    //====================================================================================
+    Config::configManager().C_PREC_BACK();
+
+    return GSL_SUCCESS;
+}
+
+/**
+ *  \brief @TODO
+ **/
+int cmu_grid_orbit_on_one_period(double *tNCE, double **yNCE, double **sRCM, const double st0[], double t0, double T, int N, int isPar, Orbit &orbit)
+{
+    //====================================================================================
+    //Orbit IC
+    //====================================================================================
+    orbit.update_ic(st0, t0);
+
+    //====================================================================================
+    //Integration with Hard precision
+    //====================================================================================
+    //Config::configManager().C_PREC_HARD();
+    int status = orbit.traj_int_grid(t0+T, yNCE, tNCE, N, true);
+
+    //====================================================================================
+    //Plotting
+    //====================================================================================
+    //        gnuplot_ctrl  *h1;
+    //        h1 = gnuplot_init();
+    //        gnuplot_set_xlabel(h1, (char*)"x [-]");
+    //        gnuplot_set_ylabel(h1, (char*)"y [-]");
+    //        gnuplot_plot_xy(h1, yNCE[0], yNCE[1], N+1, (char*)"NC coordinates", "points", "7", "1", 4);
+    //        pressEnter(true);
+
+    //====================================================================================
+    //Projection
+    //====================================================================================
+    orbit.proj_traj_grid(sRCM, yNCE, tNCE, N);
+
+    //====================================================================================
+    // Building the initial conditions on the unstable manifold of the orbit
+    //====================================================================================
+    //int iter = 1;
+    //COMPLETION = 0;
+
+    #pragma omp parallel for if(isPar) // shared(iter)
+    for(int k = 0; k <= N; k++)
+    {
+        Ofsc ofs(OFS_ORDER);
+        double* yvu = dvector(0,5);
+        double* sti = dvector(0,4);
+
+
+        //--------------------------------------------------------------------------------
+        // Initialization on the center-unstable manifold
+        //--------------------------------------------------------------------------------
+        //Init sti
+        sti[0] = sRCM[0][k];
+        sti[1] = sRCM[1][k];
+        sti[2] = sRCM[2][k];
+        sti[3] = sRCM[3][k];
+        sti[4] = PROJ_EPSILON;
+
+
+        //--------------------------------------------------------------------------------
+        //Equivalent state
+        //--------------------------------------------------------------------------------
+        orbit.getInvman()->evalRCMtoNC(sti, tNCE[k], yvu, OFTS_ORDER, OFS_ORDER);
+
+        //--------------------------------------------------------------------------------
+        //Save
+        //--------------------------------------------------------------------------------
+        #pragma omp critical
+        {
+
+            for(int i = 0; i < 6; i++) yNCE[i][k] = yvu[i];
+            for(int i = 0; i < 5; i++) sRCM[i][k] = sti[i];
+            //Display
+            //displayCompletion("compute_grid_CMU_EM", (double) iter++/(N+1)*100);
+        }
+
+        free_dvector(yvu, 0, 5);
+        free_dvector(sti, 0, 4);
+
+    }
+
+    //====================================================================================
+    //Back to original precision
+    //====================================================================================
+    Config::configManager().C_PREC_BACK();
+
+
+    return status;
+}
+
+/**
+ *  \brief @TODO
+ **/
+int int_proj_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods, double dt)
+{
+    //====================================================================================
+    // Retrieve the parameters in the projection structure
+    //====================================================================================
+    bool isPar = projSt.ISPAR;
+
+    //====================================================================================
+    // Initialization
+    //====================================================================================
+    //------------------------------------------------------------------------------------
+    // Invariant manifold
+    //------------------------------------------------------------------------------------
+    Invman invman(OFTS_ORDER, OFS_ORDER, *SEML.cs);
+    int ncs = invman.getNCS();
+    int dcs = default_coordinate_system(ncs);
+
+    //------------------------------------------------------------------------------------
+    // ODE
+    //------------------------------------------------------------------------------------
+    //Driver
+    OdeStruct odestruct;
+    //Root-finding
+    const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
+    //Stepper
+    const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
+    //Parameters
+    OdeParams odeParams(&SEML, dcs);
+    //Init ode structure
+    init_ode_structure(&odestruct, T, T_root, 6, qbcp_vfn, &odeParams);
+
+    //------------------------------------------------------------------------------------
+    //Orbit
+    //------------------------------------------------------------------------------------
+    Orbit orbit(&invman, &SEML, &odestruct, OFTS_ORDER, OFS_ORDER, projSt.TLIM[0], projSt.TLIM[0]+10);
+
+
+    //====================================================================================
+    // Building the initial conditions of the orbit
+    //====================================================================================
+    double t0;
+    double *st0 = dvector(0,4);
+
+    // Initial conditions @ t0
+    t0 =  projSt.TLIM[0];
+    for(int i = 0; i < 4; i++) st0[i] = projSt.GLIM_SI[i][0];
+    st0[4] = 0.0;
+
+    //====================================================================================
+    // Splash screen
+    //====================================================================================
+    string filename = filenameCUM(OFTS_ORDER, TYPE_MAN_PROJ, SEML.li_SEM);
+    cout << resetiosflags(ios::scientific) << setprecision(4);
+    cout << "===================================================================" << endl;
+    cout << "              Computation of the connections of a single orbit:    " << endl;
+    cout << "===================================================================" << endl;
+    cout << " The computation domain is the following:                          " << endl;
+    cout << " - OFTS_ORDER = " << OFTS_ORDER                                      << endl;
+    cout << " - " << projSt.TSIZE  << " values"                                   << endl;
+    cout << " in ["  << projSt.TLIM[0]/SEML.us_em.T                                      ;
+    cout << ", " << projSt.TLIM[1]/SEML.us_em.T  << "]"                           << endl;
+    cout << " Starting at s0 = "                                                                 ;
+    cout << "(" << st0[0]<< ", "<< st0[1]<< ", "<< st0[2] << ", "<< st0[3] << ")" << endl;
+    cout << " The data will be stored in " << filename                            << endl;
+    cout << "===================================================================" << endl;
+    cout << setiosflags(ios::scientific) << setprecision(15);
+
+    //------------------------------------------------------------------------------------
+    //Building the time grid
+    //------------------------------------------------------------------------------------
+    double* grid_t_EM = dvector(0,  projSt.TSIZE);
+    init_grid(grid_t_EM, projSt.TLIM[0], projSt.TLIM[1], projSt.TSIZE);
+
+    cout << " - The detailed values of t are:                                   " << endl;
+    for(int i = 0; i < projSt.TSIZE; i++) cout << grid_t_EM[i]/SEML.us->T << ", ";
+    cout << grid_t_EM[projSt.TSIZE]/SEML.us->T  << endl;
+    cout << "===================================================================" << endl;
+    pressEnter(true);
+
+
+    //====================================================================================
+    // Initialize tools for the projection phase. Namely the center manifold @SEML
+    //====================================================================================
+    //First, check that the type of manifold provided is good:
+    if(SEML_SEM.cs->manType != MAN_CENTER)
+    {
+        cout << "int_proj_CMU_EM_on_CM_SEM. The invariant manifold at SEMLi ";
+        cout << "must be of center type. return." << endl;
+        return FTC_FAILURE;
+    }
+    Invman invman_SEM(OFTS_ORDER, OFS_ORDER, *SEML_SEM.cs);
+
+
+    //====================================================================================
+    // Misc initialization. Require better presentation?
+    //====================================================================================
+
+    //------------------------------------------------------------------------------------
+    //Notable points in SEM system
+    //------------------------------------------------------------------------------------
+    double** semP = dmatrix(0, 6, 0, 2);
+    semPoints(0.0, semP);
+
+    //------------------------------------------------------------------------------------
+    // projection by default is arbitrary big
+    //------------------------------------------------------------------------------------
+    //double ePdef = 1e5;
+
+    //====================================================================================
+    // Reset the data file (projection)
+    //====================================================================================
+    //Filename
+    filename = filenameCUM(OFTS_ORDER, TYPE_MAN_PROJ, SEML.li_SEM);
+    //Open whitout append datafile and therefore erase its content.
+    fstream filestream;
+    filestream.open (filename.c_str(), ios::binary | ios::out);
+    filestream.close();
+
+    //------------------------------------------------------------------------------------
+    // Estimate the period and the number of points on the time grid to match a
+    // frequency of dt over this period
+    //------------------------------------------------------------------------------------
+    double Tp = 0.0;
+    int N = 0.0;
+    cmu_orbit_estimate_period(st0, t0, &Tp, &N, Nperiods, dt, orbit);
+
+    //Save the initial position
+    double z0[6];
+    state_memcpy(z0, orbit.getZ0());
+
+    //------------------------------------------------------------------------------------
+    // Storing initial conditions along the orbit
+    //------------------------------------------------------------------------------------
+    //To store data
+    double **yNCE = dmatrix(0, 5, 0, N);
+    double **sRCM = dmatrix(0, 4, 0, N);
+    double *tNCE  = dvector(0, N);
+
+    //------------------------------------------------------------------------------------
+    //Number of elements
+    //------------------------------------------------------------------------------------
+    int noe = (1+N)*(1+projSt.TSIZE);
+
+
+    //====================================================================================
+    // Loop: only the inner loop is parallelized, since
+    //    open_mp doest not allow nested // loops by default
+    //====================================================================================
+    int index  = 0;
+    int label  = 0;
+    COMPLETION = 0;
+    double stp[5];
+
+    // Time loop
+    for(int kt = 0; kt <= projSt.TSIZE; kt++)
+    {
+        //--------------------------------------------------------------------------------
+        //Strob map & unstable directions
+        //--------------------------------------------------------------------------------
+        t0 = grid_t_EM[kt];
+
+        //Projection
+        orbit.NCprojCCMtoCM(z0, t0, stp);
+
+        cout << "stp = " << endl;
+        vector_printf_prec(stp, 4);
+
+        //cmu_grid_orbit_on_one_period(tNCE, yNCE, sRCM, st0, t0, Tp, N, isPar, orbit);
+        cmu_grid_orbit_on_one_period(tNCE, yNCE, sRCM, stp, t0, Tp, N, isPar, orbit);
+
+        //--------------------------------------------------------------------------------
+        //Once the unstable directions are obtained, we propagate & project
+        //--------------------------------------------------------------------------------
+
+        #pragma omp parallel for if(isPar) shared(index)
+        for(int ks = 0; ks <= N; ks++)
+        {
+            //----------------------------------------------------------------------------
+            //Inputs
+            //----------------------------------------------------------------------------
+            ProjResSt projResSt;
+
+            //----------------------------------------------------------------------------
+            //Seeds
+            //----------------------------------------------------------------------------
+            //Init time (global)
+            projResSt.seed_time_EM = t0;
+            //RCM state (seed)
+            for(int i = 0; i < 4; i++) projResSt.seed_state_CMU_RCM[i] = st0[i];
+
+            //----------------------------------------------------------------------------
+            //Initial conditions
+            //----------------------------------------------------------------------------
+            // Init the time in EM coordinates
+            projResSt.init_time_EM  = tNCE[ks];
+            // Init the state in NCEM coordinates
+            for(int i = 0; i < 6; i++) projResSt.init_state_CMU_NCEM[i] = yNCE[i][ks];
+            // Init the state in RCM coordinates
+            for(int i = 0; i < 5; i++) projResSt.init_state_CMU_RCM[i] = sRCM[i][ks];
+            //Label
+            projResSt.label = label;
+
+
+            //----------------------------------------------------------------------------
+            //Projection on center manifold at SEML2
+            //----------------------------------------------------------------------------
+            proj_subroutine(projResSt, invman_SEM, projSt);
+
+            //----------------------------------------------------------------------------
+            // Save outputs
+            //----------------------------------------------------------------------------
+            //if(projResSt.min_proj_dist_SEM_o < ePdef)
+            //{
+            //Save
+            #pragma omp critical
+            {
+                //projResSt.init_time_EM  = tNCE[0];
+                writeIntProjCUSeed_bin(filename, projResSt);
+            }
+            //}
+
+
+            //----------------------------------------------------------------------------
+            //Display completion
+            //----------------------------------------------------------------------------
+            #pragma omp critical
+            {
+                displayCompletion("int_proj_CMU_EM_on_CM_SEM", 100.0*index++/noe);
+            }
+        }
+
+        label++;
+    }
+
+    //------------------------------------------------------------------------------------
+    //Free
+    //------------------------------------------------------------------------------------
+    free_dmatrix(yNCE, 0, 5, 0, N);
+    free_dmatrix(sRCM, 0, 4, 0, N);
+    free_dvector(tNCE, 0, N);
+
+
+    return FTC_SUCCESS;
+}
 
 //========================================================================================
 //
@@ -1260,7 +2180,7 @@ int refemlisemli(RefSt& refSt)
     //====================================================================================
     coutmp();
     cout << "===================================================================" << endl;
-    cout << " refemlisemli. A solution has been selected,                      " << endl;
+    cout << " refemlisemli. A solution has been selected,                       " << endl;
     cout << " with the following characteristics:                               " << endl;
     cout << " 1. Estimated error at patch point (km):                           " << endl;
     cout << " ep = " << pmin_dist_SEM_out* SEML.cs_sem.cr3bp.L  << " km, ";
@@ -1580,8 +2500,8 @@ int refemlisemli(RefSt& refSt)
  *         from NCSEM.
  **/
 int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* t_traj,
-                   int dcs, int coord_type, int* man_grid_size_t,
-                   RefSt& refSt, gnuplot_ctrl* h2)
+                    int dcs, int coord_type, int* man_grid_size_t,
+                    RefSt& refSt, gnuplot_ctrl* h2)
 {
     //====================================================================================
     // 0. Check on  coord_type (for now)
@@ -1712,7 +2632,7 @@ int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* 
             gnuplot_cmd(h4, "set grid");
 
             h5 = gnuplot_init();
-            gnuplot_cmd(h5,  "set title \"s5_SEM vs steps\" ");
+            gnuplot_cmd(h5,  "set title \"t0_SEM vs steps\" ");
             gnuplot_cmd(h5, "set grid");
 
             if(refSt.type == REF_3D)
@@ -1772,7 +2692,10 @@ int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* 
     // Find the intersection with a certain Poincaré Section (PS)
     //====================================================================================
     double ye[6], te = 0.0;
-    xpkemlisemli(ye, &te, t_traj_n, y_traj_n, man_index, refSt);
+    int newpos;
+    //xpkemlisemli(ye, &te, t_traj_n, y_traj_n, man_index, refSt);
+
+    xpkemlisemli(ye, &te, t_traj_n, y_traj_n, &newpos, man_index, refSt);
 
     //====================================================================================
     // Save first entry if the continuation process is on
@@ -1791,9 +2714,9 @@ int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* 
 
         // Entire trajectory
         writeCONT_bin(refSt, filename_traj, dcs, coord_type,
-                       y_traj_n, t_traj_n, man_index, mPlot,
-                       orbit_EM, orbit_SEM, kn++, true,
-                       refSt.isSaved_EM, refSt.isSaved_SEM);
+                      y_traj_n, t_traj_n, man_index, mPlot,
+                      orbit_EM, orbit_SEM, kn++, true,
+                      refSt.isSaved_EM, refSt.isSaved_SEM);
     }
 
     //====================================================================================
@@ -1832,6 +2755,7 @@ int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* 
             break;
         }
 
+        refSt.dsc  = ds0;
         double ds  = ds0;
         double dkn = 0.0;
 
@@ -1927,9 +2851,9 @@ int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* 
 
                 // Entire trajectory
                 writeCONT_bin(refSt, filename_traj, dcs, coord_type,
-                               y_traj_n, t_traj_n, man_index, mPlot,
-                               orbit_EM, orbit_SEM, kn, false,
-                               refSt.isSaved_EM, refSt.isSaved_SEM);
+                              y_traj_n, t_traj_n, man_index, mPlot,
+                              orbit_EM, orbit_SEM, kn, false,
+                              refSt.isSaved_EM, refSt.isSaved_SEM);
             }
 
 
@@ -1937,7 +2861,7 @@ int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* 
             // Display
             //============================================================================
             dkn = (double) kn;
-            //double t0 = orbit_EM.getT0()/SEML.us_sem.T;//t_traj_n[0]/SEML.us_sem.T;
+            double t0 = t_traj_n[0]/SEML.us_sem.T;//t_traj_n[0]/SEML.us_sem.T;
             if(refSt.isCont() && status == GSL_SUCCESS && kn % plotfreq == 0)
             {
                 switch(refSt.time)
@@ -1953,7 +2877,7 @@ int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* 
                 {
                     gnuplot_plotc_xy(h3, &orbit_EM.getSi()[0],  &orbit_EM.getSi()[2], 1, (char*)"", "points", "1", "2", 0);
                     gnuplot_plotc_xy(h4, &orbit_SEM.getSi()[0],  &orbit_SEM.getSi()[2], 1, (char*)"", "points", "1", "2", 0);
-                    gnuplot_plotc_xy(h5, &dkn, &orbit_SEM.getSi()[4], 1, (char*)"", "points", "1", "2", 0);
+                    gnuplot_plotc_xy(h5, &dkn, &t0, 1, (char*)"", "points", "1", "2", 0);
 
                     if(refSt.type == REF_3D)
                     {
@@ -2069,6 +2993,9 @@ int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* 
             cout << "Updating the stepper:                                     "  << endl;
             cout << "ds_old = " << ds                                             << endl;
 
+            //Prior to updating ds, we ensure that, at least, niter = 1
+            niter = max(1, niter);
+
             switch(refSt.time)
             {
             case REF_VAR_TIME:
@@ -2077,11 +3004,16 @@ int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* 
                 break;
             case REF_FIXED_TIME:
                 ds = min(dsmax, max(dsmin, ds*niterd/niter));
+                pressEnter(true);
                 break;
             }
 
+            refSt.dsc  = ds;
+            cout << "niter  = " << niter << endl;
             cout << "ds_new = " << ds                                             << endl;
             cout << "----------------------------------------------------------"  << endl;
+
+
         }
 
         //================================================================================
@@ -2341,7 +3273,13 @@ int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* 
     pressEnter(refSt.isFlagOn);
 
     //====================================================================================
-    // 10. Free
+    // 10. Reset pk section
+    //====================================================================================
+    refSt.pkpos = 0;
+
+
+    //====================================================================================
+    // 11. Free
     //====================================================================================
     if(refSt.isCont())
     {
@@ -2405,7 +3343,7 @@ int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* 
  *         int_proj_CMU_EM_on_CM_SEM.
  **/
 int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM[2],
-                  double* t0_SEM, double* pmin_dist_SEM_out)
+                    double* t0_SEM, double* pmin_dist_SEM_out)
 {
     //====================================================================================
     // 0. Splash screen
@@ -2475,7 +3413,8 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
                 if(refSt.crossings > 0)
                 {
                     filename += "0T_T.bin";
-                }else
+                }
+                else
                 {
                     if(t0_des_mod >= 0 && t0_des_mod < 0.25)
                     {
@@ -2525,7 +3464,7 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
         readClosestIntProjCU_bin(filename, refSt.t0_des, t0_EM, tf_EM,
                                  s1_CMU_EM, s2_CMU_EM, s3_CMU_EM, s4_CMU_EM, s5_CMU_EM,
                                  pmin_dist_SEM, s1_CM_SEM, s2_CM_SEM, s3_CM_SEM, s4_CM_SEM,
-                                 crossings, sortId);
+                                 crossings, sortId, refSt.typeOfTimeSelection);
     }
     else
     {
@@ -2547,7 +3486,7 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
         readClosestIntProjCU_bin(filename, refSt.t0_des, t0_EM, tf_EM,
                                  s1_CMU_EM, s2_CMU_EM, s3_CMU_EM, s4_CMU_EM, s5_CMU_EM,
                                  pmin_dist_SEM, s1_CM_SEM, s2_CM_SEM, s3_CM_SEM, s4_CM_SEM,
-                                 crossings, sortId);
+                                 crossings, sortId, refSt.typeOfTimeSelection);
     }
 
 
@@ -2632,7 +3571,7 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
         //--------------------------------------------------------------------------------
         if(refSt.crossings > 0)
         {
-                cst = cst & (crossings[kpor] == refSt.crossings);
+            cst = cst & (crossings[kpor] == refSt.crossings);
         }
 
         if(cst)
@@ -2720,9 +3659,9 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
  *         The grid size is returned.
  **/
 int icmanemlisemli(double** y_traj, double* t_traj,
-                    Orbit& orbit_EM, Orbit& orbit_SEM,
-                    int dcs, int coord_type, int man_grid_size,
-                    RefSt& refSt)
+                   Orbit& orbit_EM, Orbit& orbit_SEM,
+                   int dcs, int coord_type, int man_grid_size,
+                   RefSt& refSt)
 {
     //====================================================================================
     // 1.  Initialization
@@ -2836,11 +3775,11 @@ int icmanemlisemli(double** y_traj, double* t_traj,
  *         is computed. The grid size is returned.
  **/
 int iccompemlisemli(double** y_traj, double* t_traj,
-                 double** y_traj_comp, double* t_traj_comp,
-                 Orbit& orbit_EM, Orbit& orbit_SEM,
-                 int dcs, int coord_type, int grid_points_des[3],
-                 int grid_points_eff[3], int max_grid,
-                 RefSt& refSt, gnuplot_ctrl* h2, gnuplot_ctrl* h3)
+                    double** y_traj_comp, double* t_traj_comp,
+                    Orbit& orbit_EM, Orbit& orbit_SEM,
+                    int dcs, int coord_type, int grid_points_des[3],
+                    int grid_points_eff[3], int max_grid,
+                    RefSt& refSt, gnuplot_ctrl* h2, gnuplot_ctrl* h3)
 {
     //====================================================================================
     // 1. Initialize local variables
@@ -3137,7 +4076,7 @@ int iccompemlisemli(double** y_traj, double* t_traj,
  *         y_traj_n/t_traj_n with a certain Pk section x = cst defined by refSt.
  **/
 int xpkemlisemli(double ye[6], double* te, double* t_traj_n, double** y_traj_n,
-                  int man_index, RefSt& refSt)
+                 int man_index, RefSt& refSt)
 {
     double yv[42];
     //Get the default coordinates system from the coord_type
@@ -3168,9 +4107,9 @@ int xpkemlisemli(double ye[6], double* te, double* t_traj_n, double** y_traj_n,
         cout << y_traj_n[0][k1] << " < " << refSt.xps << " < " << y_traj_n[0][k2] << endl;
 
 
-        //====================================================================================
+        //================================================================================
         //2. Integrate until x = xps
-        //====================================================================================
+        //================================================================================
         double center[3];
         struct value_params val_par;
         val_par.max_events = 1;
@@ -3183,26 +4122,26 @@ int xpkemlisemli(double ye[6], double* te, double* t_traj_n, double** y_traj_n,
         double** ye_NCSEM = dmatrix(0, 5, 0, 1);
         double* te_NCSEM  = dvector(0, 1);
 
-        //====================================================================================
+        //================================================================================
         //3. After this step: ye_NCSEM[*][0] & te_NCSEM[0] contains the intersection
         //   Note: the (possible) collisions with the primaries are not taken into account here:
         //   We suppose that for this particular application (intersection with a Pk section
         //   far away from any primary), such collision are very unlikely!
-        //====================================================================================
+        //================================================================================
         int ode78coll;
         for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k1];
         ode78_qbcp_event(ye_NCSEM, te_NCSEM, &ode78coll, t_traj_n[k1], t_traj_n[k2], yv, 6, dcs,
                          NCSEM, NCSEM, &val_par);
 
-        //====================================================================================
+        //================================================================================
         //4. Store
-        //====================================================================================
+        //================================================================================
         *te = te_NCSEM[0];
         for(int i = 0; i < 6; i++) ye[i] = ye_NCSEM[i][0];
 
-        //====================================================================================
+        //================================================================================
         //5. Free
-        //====================================================================================
+        //================================================================================
         free_dmatrix(ye_NCSEM, 0, 5, 0, 1);
         free_dvector(te_NCSEM, 0, 1);
 
@@ -3216,6 +4155,99 @@ int xpkemlisemli(double ye[6], double* te, double* t_traj_n, double** y_traj_n,
     }
 }
 
+/**
+ *  \brief Find the intersection of a EML2-SEMLi connection contained in
+ *         y_traj_n/t_traj_n with a certain Pk section x = cst defined by refSt.
+ *         Once the intersection is found, it is incorporated in the sequence of patch points,
+ *         in place of a given point, at position newpos
+ **/
+int xpkemlisemli(double ye[6], double* te, double* t_traj_n, double** y_traj_n,
+                int *newpos, int man_index, RefSt& refSt)
+{
+    double yv[42];
+    //Get the default coordinates system from the coord_type
+    int dcs  = default_coordinate_system(NCSEM);
+
+    //====================================================================================
+    //1. Find, from the end, the couple of patch points before and after the PS
+    //====================================================================================
+    int k2 = man_index;
+    int k1 = man_index-1;
+    bool test = false;
+    do
+    {
+        k1--;
+        k2--;
+        test = (y_traj_n[0][k2] > refSt.xps && y_traj_n[0][k1] < refSt.xps) ||
+               (y_traj_n[0][k2] < refSt.xps && y_traj_n[0][k1] > refSt.xps);
+    }
+    while(!test && k1 >= 0);
+
+
+    //====================================================================================
+    //2. If a solution has been found:
+    //====================================================================================
+    if(test && k1 >= 0)
+    {
+        cout << "xpkemlisemli. Range accross the PS found:" << endl;
+        cout << y_traj_n[0][k1] << " < " << refSt.xps << " < " << y_traj_n[0][k2] << endl;
+
+
+        //================================================================================
+        //2. Integrate until x = xps
+        //================================================================================
+        double center[3];
+        struct value_params val_par;
+        val_par.max_events = 1;
+        val_par.direction  = 0;
+        val_par.dim        = 0;
+        val_par.value      = refSt.xps;
+        val_par.center     = center;
+        val_par.type       = 'X';
+
+        double** ye_NCSEM = dmatrix(0, 5, 0, 1);
+        double* te_NCSEM  = dvector(0, 1);
+
+        //================================================================================
+        //3. After this step: ye_NCSEM[*][0] & te_NCSEM[0] contains the intersection
+        //   Note: the (possible) collisions with the primaries are not taken into account here:
+        //   We suppose that for this particular application (intersection with a Pk section
+        //   far away from any primary), such collision are very unlikely!
+        //================================================================================
+        int ode78coll;
+        for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k1];
+        ode78_qbcp_event(ye_NCSEM, te_NCSEM, &ode78coll, t_traj_n[k1], t_traj_n[k2], yv, 6, dcs,
+                         NCSEM, NCSEM, &val_par);
+
+        //================================================================================
+        //4. Store
+        //================================================================================
+        *te = te_NCSEM[0];
+        for(int i = 0; i < 6; i++) ye[i] = ye_NCSEM[i][0];
+
+        //================================================================================
+        //5. Switch in the sequence of patch points
+        //================================================================================
+        *newpos = k2;
+        refSt.pkpos = k2;
+        for(int i = 0; i < 6; i++) y_traj_n[i][*newpos] = ye[i];
+        t_traj_n[*newpos] = *te;
+
+        //================================================================================
+        //6. Free
+        //================================================================================
+        free_dmatrix(ye_NCSEM, 0, 5, 0, 1);
+        free_dvector(te_NCSEM, 0, 1);
+
+        return FTC_SUCCESS;
+    }
+    else
+    {
+        *te = -1;
+        for(int i = 0; i < 6; i++) ye[i] = 0.0;
+        return FTC_FAILURE;
+    }
+}
 
 /**
  *  \brief Get the complementary coordinates associated to the coordinates coord_type.
@@ -3497,11 +4529,11 @@ int comprefemlisemli3d(int grid_freq_days[3], int coord_type,
     // 4. Build the trajectory
     //====================================================================================
     int final_index = iccompemlisemli(y_traj, t_traj, y_traj_comp, t_traj_comp,
-                                   orbit_EM, orbit_SEM, dcs, coord_type,
-                                   grid_points_des,
-                                   grid_points_eff,
-                                   max_grid,
-                                   refSt, h2, h3);
+                                      orbit_EM, orbit_SEM, dcs, coord_type,
+                                      grid_points_des,
+                                      grid_points_eff,
+                                      max_grid,
+                                      refSt, h2, h3);
 
 
     //====================================================================================
@@ -3870,8 +4902,8 @@ int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst)
     //------------------------------------------------------------------------------------
     int mRef = 5;
     final_index = jplfg3d_interpolation(y_traj_n, t_traj_n, &y_traj_jpl, &t_traj_jpl, final_index,
-                                          coord_type, comp_type, coord_int, mRef,
-                                          et0, tsys0, tsys0_comp);
+                                        coord_type, comp_type, coord_int, mRef,
+                                        et0, tsys0, tsys0_comp);
     cout << "final_index = " << final_index << endl;
 
     //------------------------------------------------------------------------------------
@@ -4451,10 +5483,10 @@ int comptojplref3d(int coord_type, RefSt& refSt)
  *        coordinates system is minimal.
  **/
 int jplfg3d_switch(double** y_traj_n, double* t_traj_n,
-                     double** y_traj_jpl, double* t_traj_jpl,
-                     int final_index, int coord_type,
-                     int comp_type, int coord_int,
-                     double et0, double tsys0, double tsys0_comp)
+                   double** y_traj_jpl, double* t_traj_jpl,
+                   int final_index, int coord_type,
+                   int comp_type, int coord_int,
+                   double et0, double tsys0, double tsys0_comp)
 {
     double** y_traj_jpl_n = dmatrix(0, 41, 0, final_index);
     double* t_traj_jpl_n  = dvector(0, final_index);
@@ -4568,11 +5600,11 @@ int jplfg3d_switch(double** y_traj_n, double* t_traj_n,
  * \brief Same as jplfg3d_switch, with a refinement of the position of the minimum.
  **/
 int jplfg3d_super_switch(double** y_traj_n, double* t_traj_n,
-                           double** y_traj_jpl, double* t_traj_jpl,
-                           int final_index, int coord_type,
-                           int comp_type, int coord_int,
-                           int mRef,
-                           double et0, double tsys0, double tsys0_comp)
+                         double** y_traj_jpl, double* t_traj_jpl,
+                         int final_index, int coord_type,
+                         int comp_type, int coord_int,
+                         int mRef,
+                         double et0, double tsys0, double tsys0_comp)
 {
     //====================================================================================
     //Initialize
@@ -4853,11 +5885,11 @@ int jplfg3d_super_switch(double** y_traj_n, double* t_traj_n,
  *        point.
  **/
 int jplfg3d_interpolation(double** y_traj_n, double* t_traj_n,
-                            double** * y_traj_jpl, double** t_traj_jpl,
-                            int final_index, int coord_type,
-                            int comp_type, int coord_int,
-                            int mRef,
-                            double et0, double tsys0, double tsys0_comp)
+                          double** * y_traj_jpl, double** t_traj_jpl,
+                          int final_index, int coord_type,
+                          int comp_type, int coord_int,
+                          int mRef,
+                          double et0, double tsys0, double tsys0_comp)
 {
     //====================================================================================
     //Initialize
@@ -5651,9 +6683,9 @@ int compref3d_test_seml_synjpl(int man_grid_size_t,
  *  \brief Computes only an EML2 orbit and test a JPL refinement.
  **/
 int compref3d_test_eml_synjpl(int man_grid_size_t,
-                                  int coord_type,
-                                  Orbit& orbit_EM,
-                                  RefSt refSt)
+                              int coord_type,
+                              Orbit& orbit_EM,
+                              RefSt refSt)
 {
     //====================================================================================
     // 1. Initialize local variables
@@ -7409,9 +8441,9 @@ int readCONT_txt(double*  t0_CMU_EM, double*   tf_CMU_EM,
  *  \brief Save a given solution as a complete trajectory
  **/
 int writeCONT_bin(RefSt& refSt, string filename_traj, int dcs, int coord_type,
-                   double** y_traj_n, double* t_traj_n, int man_index, int mPlot,
-                   Orbit &orbit_EM, Orbit &orbit_SEM, int label,
-                   bool isFirst, int comp_orb_eml, int comp_orb_seml)
+                  double** y_traj_n, double* t_traj_n, int man_index, int mPlot,
+                  Orbit& orbit_EM, Orbit& orbit_SEM, int label,
+                  bool isFirst, int comp_orb_eml, int comp_orb_seml)
 {
     string fname = "writeCONT_bin";
 

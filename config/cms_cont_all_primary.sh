@@ -142,3 +142,6 @@ REFST_TSPAN_SEM=10 		 # given as %T, where T is the SEM period, in SEM units
 # Storing the orbits at each step?
 REFST_ISSAVED_EM=0               # 0: don't save, 1: save using projection method
 REFST_ISSAVED_SEM=0              # 0: don't save, 1: save using projection method, 2: save using integration in reduced coordinates
+
+# Type of time selection
+REFST_TYPE_OF_T_SEL=TIME_SELECTION_RATIO

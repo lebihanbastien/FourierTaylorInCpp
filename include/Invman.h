@@ -27,7 +27,7 @@ class Invman
         int reduced_nv;             //number of reduced variables
         int fwrk;                   //framework (EM or SEM?)
         int ncs;                    //Normalized Coordinate System (NCEM or NCSEM?)
-
+        int scs;                    //Non-normalized Coordinate System (PEM or PSEM?)
 
         //--------------------------------------------------------------------------------
         // Change of coordinates TFC <-> NC
@@ -97,6 +97,8 @@ class Invman
         int getRnv() const;
         int getFwrk() const;
         int getNCS() const;
+        int getSCS() const;
+        int getOFTSORDER() const;
 
         //--------------------------------------------------------------------------------
         //Evaluate
@@ -125,6 +127,18 @@ class Invman
         //          Projection on (un)stable manifold
         //--------------------------------------------------------------------------------
         void NCprojCCMtoCM(double *yv, double tv, double sti[5]);
+
+        //--------------------------------------------------------------------------------
+        //          Energy
+        //--------------------------------------------------------------------------------
+        /**
+         *   \brief Computes the hamiltonian at the position st0, in outputType coordinates and units.
+         **/
+        double H_SYS(double st0[], double t0);
+        /**
+         *   \brief Computes the hamiltonian at the position st0, in outputType coordinates and units, at order ofts_order_0
+         **/
+        double H_SYS(double st0[], double t0, int ofts_order_0);
 
         //--------------------------------------------------------------------------------
         //Static
@@ -164,5 +178,45 @@ void rotmat_CC_R_RCM_CENTER_HYP(gsl_matrix_complex *CCM_R_RCM_CH);
  *         coordinates in the complete phase space manifold (6 dimensions).
  **/
 void rotmat_CC_R_RCM_CENTER_6(gsl_matrix_complex *CCM_R_RCM_CH);
+
+
+/**
+ *  \struct RefineH
+ *  \brief Structure for the refinement of the energy
+ **/
+typedef struct RefineH RefineH;
+struct RefineH
+{
+    Invman *invman;
+    int     vdim;
+    double  *st0;
+    double    t0;
+    double    Hv;
+    int       order;
+    gsl_root_fsolver *s_root;
+    double eps_root;
+
+    /**
+     *  \brief Constructor for RefineH
+     **/
+     RefineH(Invman *invman_, int vdim_, double *st0_, double t0_, double Hv_)
+     {
+         invman   = invman_;
+         vdim     = vdim_;
+         st0      = st0_;
+         t0       = t0_;
+         Hv       = Hv_;
+         s_root   = gsl_root_fsolver_alloc (gsl_root_fsolver_brent);
+         eps_root = Config::configManager().G_PREC_ROOT();
+         order    = invman->getOFTSORDER();
+     }
+};
+
+
+/**
+ *   \brief Initialize an orbit wrt a Poincare map so that H(orbit.s0) = H(Pmap)
+ **/
+int init_s0_energy(RefineH* refineH, double st0[], double t0);
+
 
 #endif // INVMAN_H

@@ -75,30 +75,30 @@ Orbit::~Orbit()
  **/
 void Orbit::update_ic(const double si[], double t0c)
 {
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     // 1. Update si
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     for(int p = 0; p < reduced_nv; p++) this->six[p] = si[p];
 
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     // 2. Update s0
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     RCMtoCCM(si, s0x, reduced_nv);
 
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     // 2. Update s0d
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     RCMtoCCM8(si, s0dx, reduced_nv);
 
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     // 4. Update z0
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     //z0 = W(si, t0)
     invman->evalRCMtoNC(si, t0c, z0x, order, ofs_order);
 
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     // 5. Update t0
-    //------------------------------------------
+    //------------------------------------------------------------------------------------
     t0x = t0c;
 }
 
@@ -701,6 +701,34 @@ int Orbit::traj_int_var_grid(double tfc, double **yNCE, double *tNCE, int N, int
     return nt-1;
 }
 
+/**
+ *  \brief Projection of the state sequence (yNCE, tNCE) on the center manifold.
+ *         Outputs in sRCM.
+ **/
+int Orbit::proj_traj_grid(double **sRCM, double **yNCE, double *tNCE, int N)
+{
+    //------------------------------------------------------------------------------------
+    //Temp variables
+    //------------------------------------------------------------------------------------
+    double yv[6], sproj[5];
+
+    //------------------------------------------------------------------------------------
+    //Projection loop
+    //------------------------------------------------------------------------------------
+    for(int k = 0; k <= N; k++)
+    {
+        //Copy in yv
+        for(int i = 0; i < 6; i++) yv[i] = yNCE[i][k];
+
+        //Projection on the center manifold
+        NCprojCCMtoCM(yv, tNCE[k], sproj);
+
+        //Copy
+        for(int i = 0; i < 5; i++) sRCM[i][k] = sproj[i];
+    }
+
+    return GSL_SUCCESS;
+}
 //========================================================================================
 //          Projection on (un)stable manifold
 //========================================================================================
@@ -740,6 +768,80 @@ void Orbit::NCprojCCMtoCM(double *yv, double tv, double sti[5])
     CCMtoRCM(scp, sti, 4);
 }
 
+//========================================================================================
+//          Orbit I/O
+//========================================================================================
+string filenameOrbit(int ofts_order, double *st0, double t0, int type)
+{
+    string filename = SEML.cs->F_PLOT+"orbit_order_"+numTostring(ofts_order);
+    filename += "_s1_"+numTostring(st0[0]);
+    filename += "_s2_"+numTostring(st0[1]);
+    filename += "_s3_"+numTostring(st0[2]);
+    filename += "_s4_"+numTostring(st0[3]);
+    filename += "_t0_"+numTostring(t0);
+
+    switch(type)
+    {
+        case(TYPE_STROB):
+        {
+            filename += "_strob.txt";
+            break;
+        }
+
+        case(TYPE_ORBIT):
+        default:
+        {
+            filename += ".txt";
+            break;
+        }
+    }
+
+    return filename;
+}
+
+
+/**
+ * \brief Store the orbit (tNCE, yNCE, sNCE) in the  data file filenameOrbit(ofts_order, sizeOrbit, type)
+ **/
+int writeOrbit(double *tNCE, double *tNCET, double **yNCE, double **sNCE,
+               double *HNCE, double *H0NCE,
+               double *st0, int ofts_order, int N, int type)
+{
+    //====================================================================================
+    // Initialize the I/O objects
+    //====================================================================================
+    string filename = filenameOrbit(ofts_order, st0, tNCET[0], type);
+    fstream filestream;
+    filestream.open (filename.c_str(), ios::out);
+    filestream << setprecision(15) <<  setiosflags(ios::scientific) << std::showpos;
+
+    //====================================================================================
+    // First row is column names
+    //====================================================================================
+    filestream << "t_NCEM t_NCEM_T ";
+    filestream << "x_CM_NCEM y_CM_NCEM z_CM_NCEM ";
+    filestream << "px_CM_NCEM py_CM_NCEM pz_CM_NCEM ";
+    filestream << "s1 s2 s3 s4 s5 ";
+    filestream << "H_EM H0_EM ";
+    filestream << endl;
+
+    //====================================================================================
+    // Store the data in the format "t x y z px py pz" on each line
+    //====================================================================================
+    for(int k = 0; k <= N; k++)
+    {
+        filestream << tNCE[k] << "  ";
+        filestream << tNCET[k]<< "  ";
+        for(int i = 0; i < 6; i++) filestream << yNCE[i][k] << "  ";
+        for(int i = 0; i < 5; i++) filestream << sNCE[i][k] << "  ";
+        filestream << HNCE[k] << "  ";
+        filestream << H0NCE[k]<< "  ";
+        filestream << endl;
+    }
+    filestream.close();
+
+    return FTC_SUCCESS;
+}
 
 //========================================================================================
 //          Orbit on a grid
@@ -974,3 +1076,283 @@ int oo_gridOrbit(double st0[], double t0, double tf, double dt)
 
     return FTC_SUCCESS;
 }
+
+
+/**
+ *  \brief Computes an orbit on a given time grid [t0 t1], with initial conditions st0.
+ *         Moreover, a projection procedure is applied is order to have the reduced state s(t)
+ *         along the trajectory
+ **/
+int gridOrbit_si(double st0[], double t0, double tf, double dt, int isFlagOn)
+{
+    //====================================================================================
+    // Initialization
+    //====================================================================================
+    //------------------------------------------------------------------------------------
+    // Invariant manifold
+    //------------------------------------------------------------------------------------
+    Invman invman(OFTS_ORDER, OFS_ORDER, *SEML.cs);
+    int ncs = invman.getNCS();
+    int scs = invman.getSCS();
+    int dcs = default_coordinate_system(ncs);
+
+    //------------------------------------------------------------------------------------
+    // ODE
+    //------------------------------------------------------------------------------------
+    //Hard precision
+    Config::configManager().C_PREC_HARD();
+
+    //Driver
+    OdeStruct odestruct;
+    //Root-finding
+    const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
+    //Stepper
+    const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
+    //Parameters
+    OdeParams odeParams(&SEML, dcs);
+    //Init ode structure
+    init_ode_structure(&odestruct, T, T_root, 6, qbcp_vfn, &odeParams);
+
+    //------------------------------------------------------------------------------------
+    //Orbit
+    //------------------------------------------------------------------------------------
+    Orbit orbit(&invman, &SEML, &odestruct, OFTS_ORDER, OFS_ORDER, t0, tf);
+
+    //Orbit IC
+    orbit.update_ic(st0, t0);
+
+    //------------------------------------------------------------------------------------
+    //Plotting parameters
+    //------------------------------------------------------------------------------------
+    double N = floor(fabs(tf - t0)/dt);
+    double **yNCE = dmatrix(0, 5, 0, N);
+    double **sRCM = dmatrix(0, 4, 0, N);
+    double *tNCE  = dvector(0, N);
+    double *tNCET = dvector(0, N);
+
+    double *HNC  = dvector(0, N);
+    double *HNC0 = dvector(0, N);
+
+    //====================================================================================
+    //Integration
+    //====================================================================================
+    int status = orbit.traj_int_grid(tf, yNCE, tNCE, N, true);
+
+    //====================================================================================
+    //Hamiltonians:
+    //====================================================================================
+    double y[6];
+
+    //Loop on all positions
+    for(int k= 0; k <= N; k++)
+    {
+        for(int i = 0; i <6; i++) y[i] = yNCE[i][k];
+        HNC[k] = qbcp_H_complete(tNCE[k], y, ncs, scs);
+
+        for(int i = 0; i <6; i++) y[i] = 0.0;
+        HNC0[k] = qbcp_H_complete(tNCE[k], y, ncs, scs);
+
+        //Corresponding normalized times
+        tNCET[k] = tNCE[k]/SEML.us->T;
+    }
+
+    //====================================================================================
+    //Projection
+    //====================================================================================
+    orbit.proj_traj_grid(sRCM, yNCE, tNCE, N);
+
+
+    //====================================================================================
+    //Save in file
+    //====================================================================================
+    writeOrbit(tNCE, tNCET, yNCE, sRCM, HNC, HNC0, st0, OFTS_ORDER, N, TYPE_ORBIT);
+
+    //====================================================================================
+    //Delta Hamiltonian
+    //====================================================================================
+    for(int k= 0; k <= N; k++) HNC[k] -= HNC0[k];
+
+    //====================================================================================
+    //Plotting
+    //====================================================================================
+    gnuplot_ctrl  *h1;
+    h1 = gnuplot_init();
+    gnuplot_setstyle(h1,   (char*)"lines");
+    gnuplot_set_xlabel(h1, (char*)"x [-]");
+    gnuplot_set_ylabel(h1, (char*)"y [-]");
+    gnuplot_plot_xyz(h1, yNCE[0], yNCE[1], yNCE[2], N+1, (char*)"NC coordinates", "lines", "1", "1", 1);
+
+    gnuplot_ctrl  *h2;
+    h2 = gnuplot_init();
+    gnuplot_setstyle(h2,   (char*)"lines");
+    gnuplot_set_xlabel(h2, (char*)"t [x T]");
+    gnuplot_set_ylabel(h2, (char*)"H [-]");
+    gnuplot_plot_xy(h2, tNCET, HNC, N+1, (char*)"H(t) - H(0, t)", "lines", "1", "1", 1);
+
+    gnuplot_ctrl  *h3;
+    h3 = gnuplot_init();
+    gnuplot_setstyle(h3,   (char*)"lines");
+    gnuplot_set_xlabel(h3, (char*)"s1");
+    gnuplot_set_ylabel(h3, (char*)"s3");
+    gnuplot_plot_xy(h3, sRCM[0], sRCM[2], N+1, (char*)"s1(t), s3(t)", "lines", "1", "1", 1);
+
+    //User check
+    pressEnter(isFlagOn);
+    gnuplot_close(h1);
+    gnuplot_close(h2);
+    gnuplot_close(h3);
+
+
+    //====================================================================================
+    //Free
+    //====================================================================================
+    free_dmatrix(yNCE, 0, 5, 0, N);
+    free_dmatrix(sRCM, 0, 4, 0, N);
+    free_dvector(tNCE, 0, N);
+    free_dvector(tNCET, 0, N);
+    free_dvector(HNC, 0, N);
+    free_dvector(HNC0, 0, N);
+    return status;
+
+    return FTC_SUCCESS;
+}
+
+
+/**
+ *  \brief Computes an orbit on a given time grid [t0 t1], with initial conditions st0.
+ *         Moreover, a projection procedure is applied is order to have the reduced state s(t)
+ *         along the trajectory. Finally, only the points that satisfy t = t0 + k T, k integer, are kept.
+ *         The result is a stroboscopic map.
+ **/
+int gridOrbit_strob(double st0[], double t0, int N, int isFlagOn)
+{
+    //====================================================================================
+    // Initialization
+    //====================================================================================
+    //------------------------------------------------------------------------------------
+    // Invariant manifold
+    //------------------------------------------------------------------------------------
+    Invman invman(OFTS_ORDER, OFS_ORDER, *SEML.cs);
+    int ncs = invman.getNCS();
+    int scs = invman.getSCS();
+    int dcs = default_coordinate_system(ncs);
+
+    //------------------------------------------------------------------------------------
+    // ODE
+    //------------------------------------------------------------------------------------
+    //Hard precision
+    Config::configManager().C_PREC_HARD();
+
+    //Driver
+    OdeStruct odestruct;
+    //Root-finding
+    const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
+    //Stepper
+    const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
+    //Parameters
+    OdeParams odeParams(&SEML, dcs);
+    //Init ode structure
+    init_ode_structure(&odestruct, T, T_root, 6, qbcp_vfn, &odeParams);
+
+    //------------------------------------------------------------------------------------
+    //Orbit
+    //------------------------------------------------------------------------------------
+    double tf = t0 + N*SEML.us->T;
+    Orbit orbit(&invman, &SEML, &odestruct, OFTS_ORDER, OFS_ORDER, t0, tf);
+
+    //Orbit IC
+    orbit.update_ic(st0, t0);
+
+    //------------------------------------------------------------------------------------
+    //Plotting parameters
+    //------------------------------------------------------------------------------------
+    double **yNCE = dmatrix(0, 5, 0, N);
+    double **sRCM = dmatrix(0, 4, 0, N);
+    double *tNCE  = dvector(0, N);
+    double *tNCET = dvector(0, N);
+
+    double *HNC  = dvector(0, N);
+    double *HNC0 = dvector(0, N);
+
+    //====================================================================================
+    //Integration
+    //====================================================================================
+    int status = orbit.traj_int_grid(tf, yNCE, tNCE, N, true);
+
+    //====================================================================================
+    //Hamiltonians:
+    //====================================================================================
+    double y[6];
+
+    //Loop on all positions
+    for(int k= 0; k <= N; k++)
+    {
+        for(int i = 0; i <6; i++) y[i] = yNCE[i][k];
+        HNC[k] = qbcp_H_complete(tNCE[k], y, ncs, scs);
+
+        for(int i = 0; i <6; i++) y[i] = 0.0;
+        HNC0[k] = qbcp_H_complete(tNCE[k], y, ncs, scs);
+
+        //Corresponding normalized times
+        tNCET[k] = tNCE[k]/SEML.us->T;
+    }
+
+    //====================================================================================
+    //Projection
+    //====================================================================================
+    orbit.proj_traj_grid(sRCM, yNCE, tNCE, N);
+
+
+    //====================================================================================
+    //Save in file
+    //====================================================================================
+    writeOrbit(tNCE, tNCET, yNCE, sRCM, HNC, HNC0, st0, OFTS_ORDER, N, TYPE_STROB);
+
+    //====================================================================================
+    //Delta Hamiltonian
+    //====================================================================================
+    for(int k= 0; k <= N; k++) HNC[k] -= HNC0[k];
+
+    //====================================================================================
+    //Plotting
+    //====================================================================================
+    gnuplot_ctrl  *h1;
+    h1 = gnuplot_init();
+    gnuplot_set_xlabel(h1, (char*)"x [-]");
+    gnuplot_set_ylabel(h1, (char*)"y [-]");
+    gnuplot_plot_xyz(h1, yNCE[0], yNCE[1], yNCE[2], N+1, (char*)"NC coordinates", "points", "7", "1", 4);
+
+    gnuplot_ctrl  *h2;
+    h2 = gnuplot_init();
+    gnuplot_set_xlabel(h2, (char*)"t [x T]");
+    gnuplot_set_ylabel(h2, (char*)"H [-]");
+    gnuplot_plot_xy(h2, tNCET, HNC, N+1, (char*)"H(t) - H(0, t)", "points", "7", "1", 4);
+
+    gnuplot_ctrl  *h3;
+    h3 = gnuplot_init();
+    gnuplot_set_xlabel(h3, (char*)"s1");
+    gnuplot_set_ylabel(h3, (char*)"s3");
+    gnuplot_plot_xy(h3, sRCM[0], sRCM[2], N+1, (char*)"s1(t), s3(t)", "points", "7", "1", 4);
+
+    //User check
+    pressEnter(isFlagOn);
+    gnuplot_close(h1);
+    gnuplot_close(h2);
+    gnuplot_close(h3);
+
+
+    //====================================================================================
+    //Free
+    //====================================================================================
+    free_dmatrix(yNCE, 0, 5, 0, N);
+    free_dmatrix(sRCM, 0, 4, 0, N);
+    free_dvector(tNCE, 0, N);
+    free_dvector(tNCET, 0, N);
+    free_dvector(HNC, 0, N);
+    free_dvector(HNC0, 0, N);
+    return status;
+
+    return FTC_SUCCESS;
+}
+
+

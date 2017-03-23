@@ -45,6 +45,9 @@ struct OdeStruct
 
     //Dimension
     int dim;
+
+    //Warnings
+    int warnings;
 };
 
 
@@ -78,6 +81,15 @@ void init_ode_structure(OdeStruct *ode_s,
                         size_t dim,
                         int (* func) (double t, const double y[], double dydt[], void *params),
                         void *odeParams);
+
+void init_ode_structure(OdeStruct *ode_s,
+                        const gsl_odeiv2_step_type *T,
+                        const gsl_root_fsolver_type *T_root,
+                        size_t dim,
+                        int (* func) (double t, const double y[], double dydt[], void *params),
+                        void *odeParams,
+                        int warnings);
+
 void reset_ode_structure(OdeStruct *ode_s);
 void free_ode_structure(OdeStruct *ode_s);
 

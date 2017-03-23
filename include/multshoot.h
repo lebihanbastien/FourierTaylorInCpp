@@ -16,7 +16,6 @@
  **/
 int ftc_inv_dfls(gsl_matrix* M, gsl_vector*Fv, gsl_vector* K3, int ncs);
 
-
 /**
  *  \brief Computes the correction vector associated to the minimum norm solution.
  *         Given:
@@ -25,9 +24,20 @@ int ftc_inv_dfls(gsl_matrix* M, gsl_vector*Fv, gsl_vector* K3, int ncs);
  *         This routine computes the correction vector associated to
  *         the minimum norm solution:
  *
- *              DQv = DF^T x (DF x DF^T) Fv.
+ *              DQv = DF^T x (DF x DF^T)^{-1} Fv.
  **/
 int ftc_corrvec_mn(gsl_vector* DQv, gsl_vector *Fv, gsl_matrix* DF, int nfv, int ncs);
+
+/**
+ *  \brief Computes the correction vector for a square system.
+ *         Given:
+ *              - an ncs x 1   error vector Fv
+ *              - an ncs x ncs Jacobian DF,
+ *         This routine computes the correction vector given by:
+ *
+ *              DQv = DF^{-1} x Fv.
+ **/
+int ftc_corrvec_square(gsl_vector* DQv, gsl_vector *Fv, gsl_matrix* DF, int ncs);
 
 
 //========================================================================================

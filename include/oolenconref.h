@@ -90,6 +90,11 @@ struct RefSt
     double ds0;           //with fixed time
     double ds0_vt;        //with variable time
 
+    double dsc;              //current step
+    double goodvector[1000]; //vector of free variables
+    double dH;               //energy value at the origin
+    int pkpos;
+
     // Desired number of iterations in Newton's method in the continuation procedure
     int nu0;              //with fixed time
     int nu0_vt;           //with variable time
@@ -140,6 +145,8 @@ struct RefSt
     int isSaved_EM;    //0: don't save, 1: save using projection method
     int isSaved_SEM;   //0: don't save, 1: save using projection method, 2: save using integration in reduced coordinates
 
+    //Type of time selection
+    int typeOfTimeSelection;
 
     //Check if the type is of continuation type
     bool isCont(){return (type == REF_CONT || type == REF_CONT_D || type == REF_CONT_D_HARD_CASE );}
@@ -225,6 +232,18 @@ int msvftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
               Orbit &orbit_EM, Orbit &orbit_SEM, gnuplot_ctrl *h1, RefSt &refSt, int *niter);
 
 
+int msftplan_pa(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
+                int nov, int mgs, int coord_type, double precision, int isFirst,
+                Orbit &orbit_EM, Orbit &orbit_SEM, gnuplot_ctrl *h1, RefSt &refSt, int *niter);
+
+int msvftplan_dH(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
+                 int nov, int mgs, int coord_type, double precision, int isFirst,
+                 Orbit &orbit_EM, Orbit &orbit_SEM, gnuplot_ctrl *h1, RefSt &refSt, int *niter);
+
+int msvftplan_dte(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
+                 int nov, int mgs, int coord_type, double precision, int isFirst,
+                 Orbit &orbit_EM, Orbit &orbit_SEM, gnuplot_ctrl *h1, RefSt &refSt, int *niter);
+
 ;//========================================================================================
 //
 //          DIFFCORR CUSTOM: CMU to CMS: JACOBIAN MATRICES
@@ -232,9 +251,10 @@ int msvftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
 //========================================================================================
 int jacvftplan(int k, gsl_matrix* DF, int dim, int mgs, gsl_matrix **Ji, gsl_matrix *Phi0, gsl_matrix *PhiN, gsl_vector *K4, gsl_matrix *Id);
 int jacftplan(int k, gsl_matrix* DF, int mgs, gsl_matrix** Ji, gsl_matrix* Phi0, gsl_matrix* PhiN, gsl_matrix *Id);
-
+int jacftplan_dt0(int k, gsl_matrix* DF, int dim, int mgs, gsl_matrix **Ji, gsl_matrix *Phi0, gsl_matrix *PhiN, gsl_vector *K4, gsl_matrix *Id);
 int nullvectorjac(double *nullvector, gsl_matrix* DF, int ncs, int nfv);
-
+int t0jac(gsl_vector *Kout, double* tmdn, double **ymdn, Orbit &orbit_EM, Orbit &orbit_SEM,
+          OdeParams &odeParams, vfptr vf, gsl_matrix* Phi0, gsl_vector *Ktemp);
 //========================================================================================
 //
 //          DIFFCORR CUSTOM: CMU to CMS: UPDATE FREE VARIABLES with NEW IMPLEMENTATION
@@ -278,6 +298,11 @@ int ufvarvltplan(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
                 int man_grid_size, int coord_type,  RefSt &refSt);
 
 int ufvarvftplan(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
+                double *nullvector,
+                Orbit &orbit_EM, Orbit &orbit_SEM,
+                int mgs, int coord_type,  RefSt &refSt);
+
+int ufvarvftplan_dH(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
                 double *nullvector,
                 Orbit &orbit_EM, Orbit &orbit_SEM,
                 int mgs, int coord_type,  RefSt &refSt);

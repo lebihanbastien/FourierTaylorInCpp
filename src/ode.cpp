@@ -108,9 +108,27 @@ void init_ode_structure(OdeStruct *ode_s,
                        dim,
                        Config::configManager().G_PREC_HSTART(),
                        func, NULL, odeParams);
+    ode_s->warnings=1;
 }
 
-
+void init_ode_structure(OdeStruct *ode_s,
+                        const gsl_odeiv2_step_type *T,
+                        const gsl_root_fsolver_type *T_root,
+                        size_t dim,
+                        int (* func) (double t, const double y[], double dydt[], void *params),
+                        void *odeParams,
+                        int warnings)
+{
+    init_ode_structure(ode_s, T, T_root,
+                       Config::configManager().G_PREC_ABS(),
+                       Config::configManager().G_PREC_REL(),
+                       Config::configManager().G_PREC_ROOT(),
+                       Config::configManager().G_PREC_DIFF(),
+                       dim,
+                       Config::configManager().G_PREC_HSTART(),
+                       func, NULL, odeParams);
+    ode_s->warnings=warnings;
+}
 
 void reset_ode_structure(OdeStruct *ode_s)
 {

@@ -32,9 +32,11 @@ if [ -z ${COMP_TYPE+x} ]; then
 else
 	echo 'Type of computation:'
 	case $COMP_TYPE in
+		$COMP_CM_EML2_TO_CM_SEML_H)      echo 'COMP_TYPE    = COMP_CM_EML2_TO_CM_SEML_H'
+		;;
 		$COMP_CM_EML2_TO_CM_SEML)        echo 'COMP_TYPE    = COMP_CM_EML2_TO_CM_SEML'
 		;;
-		$COMP_CM_EML2_TO_CMS_SEML) 	 echo 'COMP_TYPE    = COMP_CM_EML2_TO_CMS_SEML'
+		$COMP_CM_EML2_TO_CMS_SEML) 	     echo 'COMP_TYPE    = COMP_CM_EML2_TO_CMS_SEML'
 		;;
 		$COMP_SINGLE_ORBIT)              echo 'COMP_TYPE    = COMP_SINGLE_ORBIT'
 		;;
@@ -50,11 +52,11 @@ else
 		;;
 		$COMP_VOFTS_TO_VOFTS)            echo 'COMP_TYPE    = COMP_VOFTS_TO_VOFTS'
 		;;
-		$COMP_test_INVMAN) 		 echo 'COMP_TYPE    = COMP_test_INVMAN'
+		$COMP_test_INVMAN) 		         echo 'COMP_TYPE    = COMP_test_INVMAN'
 		;;
-		$COMP_REF_JPL) 			 echo 'COMP_TYPE    = COMP_REF_JPL'
+		$COMP_REF_JPL) 			         echo 'COMP_TYPE    = COMP_REF_JPL'
 		;;
-		*)     				 echo "COMP_TYPE    = "$COMP_TYPE". Unknown type."
+		*)     				             echo "COMP_TYPE    = "$COMP_TYPE". Unknown type."
 	esac
 	echo ''
 fi
@@ -149,6 +151,9 @@ if [ -z ${TMIN+x} ]; then
 	GLIM_S4=(+0  +10)
 	GSIZE_SI=(+50 +5 +50 +5)
 	
+	# Primary family
+	PRIMARY=0
+	
 	#-----------------------------------------------------
 	# Parameters that are stable
 	#-----------------------------------------------------
@@ -159,6 +164,16 @@ if [ -z ${TMIN+x} ]; then
 	SNMAX=0.6     # The maximum norm (in RCM normalized units) for a projection to occur on the CM_NC of SEMLi
 	NOD=6         # Number of dimensions on which we compute the norm of the projection error
 else
+
+	#-----------------------------------------------------
+	# Primary Family
+	#-----------------------------------------------------
+	if [ -z ${PRIMARY+x} ]; then
+		echo 'WARNING: the variable PRIMARY is not set.'
+		echo '-1 is used by default.'
+		PRIMARY=0
+	fi
+	
 	#-----------------------------------------------------
 	# Display current set of parameters
 	#-----------------------------------------------------
@@ -181,6 +196,7 @@ else
 	echo "SNMAX    =" $SNMAX
 	echo "NOD      =" $NOD
 	echo ''
+	echo "PRIMARY  =" $PRIMARY
 fi
 
 #=====================================================
@@ -276,6 +292,9 @@ if [ -z ${REFST_TYPE+x} ]; then
 	# Storing the orbits at each step?
 	REFST_ISSAVED_EM=0   # 0: don't save, 1: save using projection method
 	REFST_ISSAVED_SEM=0  # 0: don't save, 1: save using projection method, 2: save using integration in reduced coordinates
+	
+	# Type of time selection
+	REFST_TYPE_OF_T_SEL=TIME_SELECTION_RATIO
 else
 	#-----------------------------------------------------
 	# Display current set of parameters
@@ -291,7 +310,15 @@ else
 		echo '-1 is used by default.'
 		REFST_CROSSINGS=-1
 	fi
-
+	
+	#-----------------------------------------------------
+	# Type of time selection
+	#-----------------------------------------------------
+	if [ -z ${REFST_TYPE_OF_T_SEL+x} ]; then
+		echo 'WARNING: the variable REFST_TYPE_OF_T_SEL is not set.'
+		echo 'TIME_SELECTION_RATIO is used by default.'
+		REFST_TYPE_OF_T_SEL=TIME_SELECTION_RATIO
+	fi
 
 	#-----------------------------------------------------
 	# Parameters that change often
@@ -373,7 +400,7 @@ else
 		;;
 		$REF_GIVEN_GRID) echo 'REFST_GRID            = REF_GIVEN_GRID'
 		;;
-		*)     		 echo "REFST_GRID            = "$REFST_GRID". Unknown type."
+		*)     		     echo "REFST_GRID            = "$REFST_GRID". Unknown type."
 	esac
 
 	#REFST_TERMINATION
@@ -426,6 +453,19 @@ else
 	echo "REFST_ISSAVED_EM      =" $REFST_ISSAVED_EM
 	echo "REFST_ISSAVED_SEM     =" $REFST_ISSAVED_SEM
 	echo ''
+	
+	#-----------------------------------------------------
+	# Type of time selection
+	#-----------------------------------------------------
+	#REFST_TYPE_OF_T_SEL
+	case $REFST_TYPE_OF_T_SEL in
+		$TIME_SELECTION_ABSOLUTE) echo 'REFST_TYPE_OF_T_SEL   = TIME_SELECTION_ABSOLUTE'
+		;;
+		$TIME_SELECTION_RATIO)  echo 'REFST_TYPE_OF_T_SEL     = TIME_SELECTION_RATIO'
+		;;
+		*)     	      echo "REFST_TYPE_OF_T_SEL  = "$REFST_TYPE_OF_T_SEL". Unknown type."
+	esac
+	
 fi
 
 
@@ -446,10 +486,10 @@ if [ "$ans" == "y" ]; then
 
 	# Then, for each type, we add some parameters
 	case $COMP_TYPE in
-		$COMP_CM_EML2_TO_CM_SEML | $COMP_CM_EML2_TO_CM_SEML_3D)        
+		$COMP_CM_EML2_TO_CM_SEML | $COMP_CM_EML2_TO_CM_SEML_3D | COMP_CM_EML2_TO_CM_SEML_H)        
 			COEFFS=(${COEFFS[*]}  $TMIN $TMAX $TM $TSIZE)
 			COEFFS=(${COEFFS[*]}  ${GLIM_S1[*]} ${GLIM_S2[*]} ${GLIM_S3[*]} ${GLIM_S4[*]} ${GSIZE_SI[*]})
-			COEFFS=(${COEFFS[*]}  $MSIZE $NSMIN $YNMAX $SNMAX $NOD)
+			COEFFS=(${COEFFS[*]}  $PRIMARY $MSIZE $NSMIN $YNMAX $SNMAX $NOD)
 		;;
 		$COMP_CM_EML2_TO_CMS_SEML | $COMP_REF_JPL)
 			COEFFS=(${COEFFS[*]}  $REFST_TYPE $REFST_DIM $REFST_T0_DES)
@@ -468,6 +508,7 @@ if [ "$ans" == "y" ]; then
 			COEFFS=(${COEFFS[*]}  $REFST_SF_EML2 $REFST_SF_MAN $REFST_SF_SEML2)
 			COEFFS=(${COEFFS[*]}  $REFST_TSPAN_EM $REFST_TSPAN_SEM)
 			COEFFS=(${COEFFS[*]}  $REFST_ISSAVED_EM $REFST_ISSAVED_SEM)
+			COEFFS=(${COEFFS[*]}  $REFST_TYPE_OF_T_SEL)
 		;;
 		$COMP_SINGLE_ORBIT)              
 

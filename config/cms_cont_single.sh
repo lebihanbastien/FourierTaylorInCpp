@@ -79,7 +79,7 @@ REFST_ISLIMUD=0
 REFST_TOF_LIM=(-1 -1)
 
 # Values for crossings
-REFST_CROSSINGS=6
+REFST_CROSSINGS=-1
 
 # Number of steps in the continuation procedure
 REFST_CONT_STEP_MAX=+450;        # with fixed times
@@ -141,3 +141,5 @@ REFST_TSPAN_SEM=10 		 # given as %T, where T is the SEM period, in SEM units
 REFST_ISSAVED_EM=0               # 0: don't save, 1: save using projection method
 REFST_ISSAVED_SEM=0              # 0: don't save, 1: save using projection method, 2: save using integration in reduced coordinates
 
+# Type of time selection
+REFST_TYPE_OF_T_SEL=TIME_SELECTION_RATIO

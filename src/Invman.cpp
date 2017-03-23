@@ -32,6 +32,7 @@ Invman::Invman(int ofts_order_, int ofs_order_, CSYS& csys):
     reduced_nv(compRNV(csys)),
     fwrk(csys.fwrk),
     ncs(csys.fwrk==F_SEM?NCSEM:NCEM),
+    scs(csys.fwrk==F_SEM?PSEM:PEM),
     Mcoc(6, 6, ofs_order_),
     MIcoc(6, 6, ofs_order_),
     Vcoc(6, Ofsc(ofs_order_)),
@@ -1189,10 +1190,6 @@ void Invman::evaldotRCMEMtoNCSEM(double const st0[], double const t, gsl_vector 
 
 
     //------------------------------------------------------------------------------------
-    // @TODO: once we have it, we are not done! we need to follow the instructions in msvftplan
-    //------------------------------------------------------------------------------------
-
-    //------------------------------------------------------------------------------------
     // Then, we use the invariant manifold at SEML
     //------------------------------------------------------------------------------------
     gsl_matrix_complex* INSEM_R_VSEM  = gsl_matrix_complex_alloc(6,6);
@@ -1232,19 +1229,19 @@ void Invman::evaldotRCMEMtoNCSEM(double const st0[], double const t, gsl_vector 
     // SEM to NCSEM: sem_R_SEM * dzSEM +  dSEM_B_sem
     //------------------------------------------------------------------------------------
     //Step 1: scaling
-    dzNCSEMc[0] *= -invman_SEM.cs->gamma;
-    dzNCSEMc[1] *= -invman_SEM.cs->gamma;
-    dzNCSEMc[2] *= +invman_SEM.cs->gamma;
-    dzNCSEMc[3] *= -invman_SEM.cs->gamma;
-    dzNCSEMc[4] *= -invman_SEM.cs->gamma;
-    dzNCSEMc[5] *= +invman_SEM.cs->gamma;
+    dzNCSEMc[0] /= -invman_SEM.cs->gamma;
+    dzNCSEMc[1] /= -invman_SEM.cs->gamma;
+    dzNCSEMc[2] /= +invman_SEM.cs->gamma;
+    dzNCSEMc[3] /= -invman_SEM.cs->gamma;
+    dzNCSEMc[4] /= -invman_SEM.cs->gamma;
+    dzNCSEMc[5] /= +invman_SEM.cs->gamma;
 
     //Step 2: translation (zTFC[0] is used as a temporary object)
     // dzNCSEM is finally computed.
     for(int i = 0; i < 6; i++)
     {
         zTFC[0].dot(invman_SEM.nc_B_SYS[i], invman_SEM.cs->us.n);
-        dzNCSEMc[i] +=  zTFC[0].evaluate(n*t);
+        dzNCSEMc[i] +=  zTFC[0].evaluate(n*t);  //note: n*t is adimensionalized
         gsl_vector_set(dzNCSEM, i, creal(dzNCSEMc[i]));
     }
 
@@ -1664,6 +1661,243 @@ int Invman::getFwrk() const
 int Invman::getNCS() const
 {
     return ncs;
+}
+
+int Invman::getSCS() const
+{
+    return scs;
+}
+
+int Invman::getOFTSORDER() const
+{
+    return ofts_order;
+}
+
+
+//========================================================================================
+// Energy
+//========================================================================================
+/**
+ *   \brief Update the array st0 with values from orbit.s0 and the value sr. Used in orbit_init_pmap and deltham.
+ *
+ *          The following patterns are followed (examples):
+ *
+ *             - if orbit.dim = 2: s2 = s4 = sr
+ *                   st0[0] = sr;
+ *                   st0[1] = refineH->st0[1];
+ *                   st0[2] = sr;
+ *                   st0[3] = refineH->st0[3];
+ **/
+void update_s0_direction(RefineH* refineH, double st0[], double sr)
+{
+    switch(refineH->vdim)
+    {
+    case 3:
+    {
+        st0[0] = refineH->st0[0];
+        st0[1] = 0.0;
+        st0[2] = -sr;
+        st0[3] = 0.0;
+        break;
+    }
+
+    case 1:
+    {
+        st0[0] = sr;
+        st0[1] = refineH->st0[1];
+        st0[2] = sr;
+        st0[3] = refineH->st0[3];
+        break;
+    }
+    case 2:
+    case 4:
+    {
+        st0[0] = refineH->st0[0];
+        st0[1] = sr;
+        st0[2] = refineH->st0[2];
+        st0[3] = 0.0;//sr;
+        break;
+    }
+
+    default: //as case 2
+    {
+        st0[0] = refineH->st0[0];
+        st0[1] = sr;
+        st0[2] = refineH->st0[2];
+        st0[3] = sr;
+        break;
+    }
+    }
+
+    //st0[4] = refineH->st0[4];
+}
+
+/**
+ *   \brief Computes the hamiltonian at the position st0, in outputType coordinates and units.
+ **/
+double Invman::H_SYS(double st0[], double t0)
+{
+    //------------------------------------------------------------------------------------
+    // Inner variables (NC, TFC)
+    //------------------------------------------------------------------------------------
+    double zNC[6];
+
+    //------------------------------------------------------------------------------------
+    // Evaluate the manifold
+    //------------------------------------------------------------------------------------
+    evalRCMtoNC(st0, t0, zNC, ofts_order, ofs_order);
+
+    //------------------------------------------------------------------------------------
+    // Energy
+    //------------------------------------------------------------------------------------
+    return qbcp_H_complete(t0, zNC, ncs, scs);
+}
+
+/**
+ *   \brief Computes the hamiltonian at the position st0, in outputType coordinates and units, at order ofts_order_0
+ **/
+double Invman::H_SYS(double st0[], double t0, int ofts_order_0)
+{
+    //------------------------------------------------------------------------------------
+    // Inner variables (NC, TFC)
+    //------------------------------------------------------------------------------------
+    double zNC[6];
+
+    //------------------------------------------------------------------------------------
+    // Evaluate the manifold
+    //------------------------------------------------------------------------------------
+    evalRCMtoNC(st0, t0, zNC, ofts_order_0, ofs_order);
+
+    //------------------------------------------------------------------------------------
+    // Energy
+    //------------------------------------------------------------------------------------
+    return qbcp_H_complete(t0, zNC, ncs, scs);
+}
+
+/**
+ *   \brief  Computes the difference between an given Ham value and the state configuration defined in the routine update_s0 (see comments therein).
+ *   \param  sr a double to complete the current tested configuration
+ *   \param  params a pointer to the orbit with a given Ham value (why void? the idea is to a have a generic function, but might be useless at this point)
+ *   \return the difference between the two hamiltonians
+ **/
+double deltham(double sr, void* params)
+{
+    RefineH* refineH = (RefineH*) params;
+    double st0[5];
+    double Hv;
+
+    //Update st0
+    update_s0_direction(refineH, st0, sr);
+
+    //Return the hamiltonian value
+    Hv = refineH->invman->H_SYS(st0, refineH->t0, refineH->order);
+
+    return (Hv - refineH->Hv);
+}
+
+/**
+ *   \brief Initialize an orbit wrt a Poincare map so that H(orbit.s0) = H(Pmap)
+ **/
+int init_s0_energy(RefineH* refineH, double st0[], double t0)
+{
+
+    //====================================================================================
+    //Root bracketing
+    //====================================================================================
+
+    //------------------------------------------------------------------------------------
+    // Initialization
+    //------------------------------------------------------------------------------------
+    gsl_function F;                  //called function in the root finding routine
+    double s_low, s_high;            //variables for root bracketing
+    double Hup, Hdown, r, fy;        //Energy values and root
+    int status;
+    int itermax = 100;
+
+    //Initialization of F
+    F.function = &deltham; //Energy delta with respect to target
+    F.params   = refineH;  //refineH structure contains the parameters
+
+    double snorm =  sqrt(st0[0]*st0[0] + st0[1]*st0[1] + st0[2]*st0[2] + st0[3]*st0[3]);
+
+    //------------------------------------------------------------------------------------
+    // We diminish the order of refineH during the bracketing,
+    // because we do not need a precise value for the energy
+    //------------------------------------------------------------------------------------
+    int order0 = refineH->order;
+    refineH->order = 5;
+
+    //------------------------------------------------------------------------------------
+    //Bracketing the root
+    //------------------------------------------------------------------------------------
+    s_low  = 0.0;
+    s_high = 1e-6;  //arbitrary small value maybe multiplied by a given number?
+
+    //Increasing s_high until a root is found (Hup*Hdown < 0)
+    int iter = 0;
+    do
+    {
+        //Evaluating the bracket
+        Hup   = deltham (s_high , refineH);
+        Hdown = deltham (s_low,   refineH);
+        s_high *= 1.1;
+    }
+    while(Hup*Hdown > 0 && iter < itermax && s_high < 10*snorm);
+
+    //Swap the two variables if needed
+    if(s_low > s_high)
+    {
+        s_low  = s_low + s_high;
+        s_high = s_low - s_high;
+        s_low  = s_low - s_high;
+    }
+
+    // TURN OFF GSL ERROR ERROR HANDLER
+    // (GSL JUST PRINT ERROR MESSAGE AND KILL THE PROGRAM IF FLAG IS ON)
+    gsl_set_error_handler_off();
+
+
+    //------------------------------------------------------------------------------------
+    // We put back the original order of refineH
+    //------------------------------------------------------------------------------------
+    refineH->order = order0;
+
+    //====================================================================================
+    //Root finding
+    //====================================================================================
+    //If a root is found, refine root
+    if(Hup*Hdown < 0)
+    {
+        //Setting the solver
+        status = gsl_root_fsolver_set (refineH->s_root, &F, s_low, s_high);
+        //Loop
+        iter = 0;
+        do
+        {
+            status = gsl_root_fsolver_iterate (refineH->s_root);         //updating the solver
+            r      = gsl_root_fsolver_root (refineH->s_root);            //updating the root
+            fy     = deltham(r, refineH);                                //Checking convergence
+            status = gsl_root_test_residual (fy , refineH->eps_root);    //Checking convergence
+        }
+        while (status == GSL_CONTINUE && (++iter)< 50);
+
+        if(status == GSL_SUCCESS)
+        {
+            //Update st0
+            update_s0_direction(refineH, st0, r);
+            return GSL_SUCCESS;
+        }
+        else
+        {
+            //cout <<  "init_s0_energy: No refined root was found (1). The IC are unchanged" << endl;
+            return GSL_FAILURE;
+        }
+    }
+    else
+    {
+        //cout <<  "init_s0_energy: No root was found (2). The IC are unchanged" << endl;
+        return GSL_FAILURE;
+    }
 }
 
 

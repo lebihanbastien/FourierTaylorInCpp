@@ -160,4 +160,17 @@ double gslc_matrix_complex_L2(const gsl_matrix_complex *Mc);
  **/
 double gslc_matrix_complex_diff_L2(const gsl_matrix_complex *M1c, const gsl_matrix_complex *M2c);
 
+//----------------------------------------------------------------------------------------
+//   Operations on simple pointers (vectors of double)
+//----------------------------------------------------------------------------------------
+/**
+ *  \brief Copy src into dest, both of size n.
+ **/
+void vector_memcpy(double *dest, const double *src, int n);
+
+/**
+ *  \brief Copy src into dest, both of size 6.
+ **/
+void state_memcpy(double *dest, const double *src);
+
 #endif // GSLC_H_INCLUDED

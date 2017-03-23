@@ -39,7 +39,7 @@ export COMP_CM_EML2_TO_CM_SEML_3D=7 	 #EML2 Center Manifold to SEMLi Center Mani
 export COMP_VOFTS_TO_VOFTS=8     	 #Store CS/CU into one-dimensionnal series to gain memory
 export COMP_test_INVMAN=9    		 #Test of the new invariant manifold implementation
 export COMP_REF_JPL=10  		 #Refine to JPL ephemerides
-
+export COMP_CM_EML2_TO_CM_SEML_H=11   #Planar EMLi Center Manifold to SEMLi Center Manifold, at a given energy
 
 #-----------------------------------------------------
 # MODEL
@@ -120,3 +120,8 @@ export NJ2000=13
 export VSYNEM=14
 export VSYNSEM=15
 
+#-----------------------------------------------------
+# For selection of the times
+#-----------------------------------------------------
+export TIME_SELECTION_ABSOLUTE=1
+export TIME_SELECTION_RATIO=0

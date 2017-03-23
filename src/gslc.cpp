@@ -388,3 +388,23 @@ double gslc_matrix_complex_diff_L2(const gsl_matrix_complex *M1c, const gsl_matr
     gsl_matrix_complex_free(Mt);
     return res;
 }
+
+
+//----------------------------------------------------------------------------------------
+//   Operations on simple pointers (vectors of double)
+//----------------------------------------------------------------------------------------
+/**
+ *  \brief Copy src into dest, both of size n.
+ **/
+void vector_memcpy(double *dest, const double *src, int n)
+{
+    for(int i = 0; i < n; i++) dest[i] = src[i];
+}
+
+/**
+ *  \brief Copy src into dest, both of size 6.
+ **/
+void state_memcpy(double *dest, const double *src)
+{
+    vector_memcpy(dest, src, 6);
+}

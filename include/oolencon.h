@@ -14,9 +14,19 @@ typedef struct ProjSt ProjSt;
 struct ProjSt
 {
     double TM, TMIN, TMAX, TLIM[2], GLIM_SI[4][2];
-    int    TSIZE, GSIZE_SI[4], MSIZE, NSMIN, NOD, ISPAR;
-    double YNMAX, SNMAX;
+    int    TSIZE, GSIZE_SI[4], MSIZE, NSMIN, NOD, ISPAR, PRIMARY;
+    double YNMAX, SNMAX, dHd;
+
+    /**
+     *  \brief Constructor for ProjSt
+     **/
+     ProjSt()
+     {
+         dHd = -1.0;
+     }
 };
+
+
 
 #include "oolencon.h"
 
@@ -73,6 +83,10 @@ int compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt &projSt);
  **/
 int compute_grid_CMU_EM(double dist_to_cm, ProjSt &projSt);
 
+/**
+ *  \brief @TODO
+ **/
+int compute_grid_CMU_EM_dH(double dist_to_cm, ProjSt& projSt);
 
 //========================================================================================
 //
@@ -154,6 +168,12 @@ int int_proj_CMU_EM_on_CM_SEM_3D(ProjSt &projSt);
  * "plot/QBCP/EM/L2/projcu_order_16.bin"
  **/
 int int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt);
+
+
+int int_proj_CMU_EM_on_CM_SEM_dH(ProjSt &projSt);
+
+
+int int_proj_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int N, double dt);
 
 //========================================================================================
 //
@@ -245,6 +265,15 @@ int iccompemlisemli(double** y_traj, double* t_traj,
  **/
 int xpkemlisemli(double ye[6], double* te, double* t_traj_n, double** y_traj_n,
                   int man_index, RefSt& refSt);
+
+/**
+ *  \brief Find the intersection of a EML2-SEMLi connection contained in
+ *         y_traj_n/t_traj_n with a certain Pk section x = cst defined by refSt.
+ *         Once the intersection is found, it is incorporated in the sequence of patch points,
+ *         in place of a given point, at position newpos
+ **/
+int xpkemlisemli(double ye[6], double* te, double* t_traj_n, double** y_traj_n,
+                int *newpos, int man_index, RefSt& refSt);
 
 /**
  *  \brief Get the complementary coordinates associated to the coordinates coord_type.

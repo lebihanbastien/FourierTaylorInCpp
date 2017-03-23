@@ -13,8 +13,39 @@
 
 #include "single_orbit.h"
 
+//For selection of the times
+#define TIME_SELECTION_ABSOLUTE 1
+#define TIME_SELECTION_RATIO    0
+
+//Number of digits in the ratios
+#define RATIO_DIGITS 7
 
 using namespace std;
+
+/**
+ *  \struct ProjResSt
+ *  \brief  Define a given structure to store the results from a projection
+ **/
+typedef struct ProjResSt ProjResSt;
+struct ProjResSt
+{
+    //Inputs
+    double init_time_EM, init_state_CMU_NCEM[6], init_state_CMU_RCM[5];
+    int label;
+
+    //Seeds
+    double seed_time_EM;
+    double seed_state_CMU_RCM[4];
+
+    //Outputs
+    double init_state_CMU_SEM_o[6], final_state_CMU_SEM_o[6];
+    double projected_state_CMU_SEM_o[6], projected_state_CMU_RCM_o[4];
+    double min_proj_dist_SEM_o, dv_at_projection_SEM_o;
+    double final_time_SEM_o;
+    double crossings_NCSEM_o;
+    int collision_NCEM_o;
+
+};
 
 //========================================================================================
 // Function: fileExists
@@ -41,6 +72,11 @@ string filenameCUM(int ofts_order, int type, int destination);
  *  \brief Computes a data filename as a string, depending on the ofts_order, sizeOrbit, and type of the data.
  **/
 string filenameCUM(int ofts_order, int type, int destination, double t0);
+
+/**
+ *  \brief Computes a data filename as a string, depending on the ofts_order, sizeOrbit, energy, and type of the data.
+ **/
+string filenameCUM_dH(int ofts_order, int type, int destination, double dH);
 
 //========================================================================================
 //
@@ -74,6 +110,31 @@ int getLengthCOMP_txt();
 //          I/O (CU/CS/CM)
 //
 //========================================================================================
+/**
+ *  \brief Store in a data file the Initial Conditions of a planar Center-Unstable manifold. Used in compute_grid_CMU_EM.
+ *         The data are of type t0*s1and of size (tGrid +1)*(gSize+1)
+ **/
+int writeCU_bin_dH(double*** yNCE, double*** sNCE, double** dH, double* tGrid,
+                   int s1_grid_size, int t_grid_size, int ofts_order,
+                   int type, int destination, double dHd);
+
+/**
+ *  \brief Get the length of the data file the containing the Initial
+ *         Conditions of a planar Center-Unstable manifold. Used in int_proj_CMU_EM_on_CM_SEM and intMan
+ *         The data are of type t0*s1 and of size (tGrid +1)*(gSize+1)
+ **/
+int getLenghtCU_bin_dH(int* s1_grid_size, int* t_grid_size, int ofts_order,
+                    int type, int destination, double dHd);
+
+/**
+ *  \brief Read in a data file the containing the Initial
+ *         Conditions of a planar Center-Unstable manifold. Used in int_proj_CMU_EM_on_CM_SEM and intMan
+ *         The data are of type t0*s1 and of size (tGrid +1)*(gSize+1)
+ **/
+int readCU_bin_dH(double*** yNCE, double*** sNCE, double** dH, double* tGrid,
+                  int s1_grid_size, int t_grid_size,
+                  int ofts_order, int type, int destination, double dHd);
+
 //----------------------------------------------------------------------------------------
 // CU
 //----------------------------------------------------------------------------------------
@@ -81,23 +142,27 @@ int getLengthCOMP_txt();
  *  \brief Store in a data file the Initial Conditions of a planar Center-Unstable manifold. Used in compute_grid_CMU_EM.
  *         The data are of type t0*s1*s3 and of size (tGrid +1)*(gSize+1)*(gSize+1)
  **/
-int writeCU_bin(double**** yNCE, double**** sNCE, double* tGrid,
+int writeCU_bin(double**** yNCE, double**** sNCE, double*** dH, double* tGrid,
                 int s1_grid_size, int s3_grid_size, int t_grid_size,
                 int ofts_order, int type, int destination);
 /**
  *  \brief Read in a data file the containing the Initial Conditions of a planar Center-Unstable manifold. Used in int_proj_CMU_EM_on_CM_SEM and intMan
  *         The data are of type t0*s1*s3 and of size (tGrid +1)*(gSize+1)*(gSize+1)
  **/
-int readCU_bin(double**** yNCE, double**** sNCE, double* tGrid,
+int readCU_bin(double**** yNCE, double**** sNCE, double*** dH, double* tGrid,
                int s1_grid_size, int s3_grid_size, int t_grid_size,
                int ofts_order, int type, int destination);
+
 /**
- *  \brief Get the length of the data file the containing the Initial Conditions of a planar Center-Unstable manifold. Used in int_proj_CMU_EM_on_CM_SEM and intMan
+ *  \brief Get the length of the data file the containing the Initial
+ *         Conditions of a planar Center-Unstable manifold. Used in int_proj_CMU_EM_on_CM_SEM and intMan
  *         The data are of type t0*s1*s3 and of size (tGrid +1)*(gSize+1)*(gSize+1)
  **/
 int getLenghtCU_bin(int* s1_grid_size, int* s3_grid_size,
                     int* t_grid_size, int ofts_order,
                     int type, int destination);
+
+
 
 //----------------------------------------------------------------------------------------
 // CU 3D
@@ -145,56 +210,22 @@ int readTCU_bin_3D(int offset, double* tGrid, int nt,
 int readCU_bin_3D(int offset, double** yNCE, double** sNCE, int* si_grid_size,
                   int ofts_order, int type, int destination);
 
-
 //----------------------------------------------------------------------------------------
 // Int CU
 //----------------------------------------------------------------------------------------
 /**
  *  \brief Store in a data file the connections between EML2 and SEML1,2.
- *         Used in int_proj_CMU_EM_on_CM_SEM.
- **/
-void writeIntProjCU_bin(string filename,
-                        double* init_time_grid_EM,            //time grid in NCEM units
-                        double**** init_state_CMU_NCEM,       //initial state in NCEM coordinates
-                        double**** init_state_CMU_SEM,        //initial state in SEM coordinates
-                        double**** init_state_CMU_RCM,        //initial state in RCM coordinates
-                        double**** final_state_CMU_SEM,       //final state in SEM coordinates
-                        double**** projected_state_CMU_SEM,   //projected state in SEM coordinates
-                        double**** projected_state_CMU_RCM,   //projected state in RCM coordinates
-                        double min_proj_dist_SEM,             //minimum distance of projection in SEM units
-                        double dv_at_projection_SEM,          //associated dv
-                        double* t_man_SEM,                    //time grid on manifold leg in SEM units
-                        double crossings_NCSEM,               //number of crossings of the x = -1 line (clock/counterclockwise)
-                        int collision_NCEM,                   //collision flag, from NCEM flow
-                        int kmin,
-                        int ks1,
-                        int ks3,
-                        int kt);
-
-
-//----------------------------------------------------------------------------------------
-// Int CU 3D
-//----------------------------------------------------------------------------------------
-/**
- *  \brief Store in a data file the connections between EML2 and SEML1,2.
  *         Used in int_proj_CMU_EM_on_CM_SEM_3D.
  **/
-void writeIntProjCU_bin_3D(string filename,
-                           double* init_time_grid_EM,          //time grid in NCEM units
-                           double** init_state_CMU_NCEM,       //initial state in NCEM coordinates
-                           double** init_state_CMU_SEM,        //initial state in SEM coordinates
-                           double** init_state_CMU_RCM,        //initial state in RCM coordinates
-                           double** final_state_CMU_SEM,       //final state in SEM coordinates
-                           double** projected_state_CMU_SEM,   //projected state in SEM coordinates
-                           double** projected_state_CMU_RCM,   //projected state in RCM coordinates
-                           double min_proj_dist_SEM,           //minimum distance of projection in SEM units
-                           double dv_at_projection_SEM,        //associated dv
-                           double* t_man_SEM,                  //time grid on manifold leg in SEM units
-                           double crossings_NCSEM,               //number of crossings of the x = -1 line (clock/counterclockwise)
-                           int collision_NCEM,                   //collision flag, from NCEM flow
-                           int kmin,
-                           int ks3,
-                           int kt);
+void writeIntProjCU_bin(string filename,
+                           ProjResSt& projResSt);
+
+/**
+ *  \brief Store in a data file the connections between EML2 and SEML1,2.
+ *         Used in int_proj_ORBIT_EM_on_CM_SEM.
+ **/
+void writeIntProjCUSeed_bin(string filename,
+                           ProjResSt& projResSt);
 
 //========================================================================================
 //
@@ -231,6 +262,11 @@ void vector_getUnique(vector<double>& v0U);
 void vector_getIndices(vector<size_t>& indRes, vector<double>& t0_CMU_EM, double t0);
 
 /**
+ *   \brief Save in indRes the indices of the occurences of t0 in t0_CMU_EM, within a certain range
+ **/
+void vector_getIndices_range(vector<size_t>& indRes, vector<double>& t0_CMU_EM, double t0);
+
+/**
  *  \brief Read in a data file the connections between EML2 and SEML1,2.
  *         Find the data that are the closest to the desired t0 at EML2 departures.
  **/
@@ -242,7 +278,7 @@ int readClosestIntProjCU_bin(string filename, double t0_des,
                               vector<double>& s1_CM_SEM_0, vector<double>& s2_CM_SEM_0,
                               vector<double>& s3_CM_SEM_0, vector<double>& s4_CM_SEM_0,
                               vector<double>& crossings_NCSEM_0,
-                              vector<size_t>& sortId);
+                              vector<size_t>& sortId, int typeOfSelection);
 
 
 

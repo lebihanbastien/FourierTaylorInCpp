@@ -38,7 +38,7 @@ void Config::C_PREC_HARD()
     PREC_ABS = 1e-14;
     PREC_REL = 1e-14;
     cout << "Config manager: the integration precisions (absolute and relative)";
-    cout << "have been set to 1e-14" << endl;
+    cout << " have been set to 1e-14" << endl;
 }
 
 /**
@@ -55,7 +55,7 @@ void Config::C_PREC_SOFT()
     PREC_ABS = 1e-10;
     PREC_REL = 1e-10;
     cout << "Config manager: the integration precisions (absolute and relative)";
-    cout << "have been set to 1e-10" << endl;
+    cout << " have been set to 1e-10" << endl;
 }
 
 /**
@@ -67,7 +67,7 @@ void Config::C_PREC_BACK()
     PREC_ABS = PREC_ABS_BACKUP;
     PREC_REL = PREC_REL_BACKUP;
     cout << "Config manager: the integration precisions (absolute and relative)";
-    cout << "have been set to their backup values" << endl;
+    cout << " have been set to their backup values" << endl;
 }
 
 //----------------------------------------------------------------------------------------

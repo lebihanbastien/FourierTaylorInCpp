@@ -94,7 +94,7 @@ int ftc_inv_dfls(gsl_matrix* M, gsl_vector*Fv, gsl_vector* K3, int ncs)
  *         This routine computes the correction vector associated to
  *         the minimum norm solution:
  *
- *              DQv = DF^T x (DF x DF^T) Fv.
+ *              DQv = DF^T x (DF x DF^T)^{-1} Fv.
  **/
 int ftc_corrvec_mn(gsl_vector* DQv, gsl_vector *Fv, gsl_matrix* DF, int nfv, int ncs)
 {
@@ -120,7 +120,7 @@ int ftc_corrvec_mn(gsl_vector* DQv, gsl_vector *Fv, gsl_matrix* DF, int nfv, int
     }
 
     //====================================================================================
-    // Update correction vector DQv = DF^T x (DF x DF^T) Fv
+    // Update correction vector DQv = DF^T x (DF x DF^T)^{-1} Fv
     //====================================================================================
     //Inverse Fv = M*K3 via Cholesky decomposition of M
     status = ftc_inv_dfls(M, Fv, K3, ncs);
@@ -150,6 +150,56 @@ int ftc_corrvec_mn(gsl_vector* DQv, gsl_vector *Fv, gsl_matrix* DF, int nfv, int
     return FTC_SUCCESS;
 }
 
+/**
+ *  \brief Computes the correction vector for a square system.
+ *         Given:
+ *              - an ncs x 1   error vector Fv
+ *              - an ncs x ncs Jacobian DF,
+ *         This routine computes the correction vector given by:
+ *
+ *              DQv = DF^{-1} x Fv.
+ **/
+int ftc_corrvec_square(gsl_vector* DQv, gsl_vector *Fv, gsl_matrix* DF, int ncs)
+{
+    //Name of the routine
+    string fname = "ftc_corrvec_square";
+
+    //====================================================================================
+    // Initialize the local GSL objects
+    //====================================================================================
+    gsl_matrix *M   = gsl_matrix_calloc(ncs, ncs);
+    gsl_permutation* p = gsl_permutation_alloc (ncs);
+    int s;
+
+
+    //M = DF
+    gsl_matrix_memcpy(M, DF);
+
+    //====================================================================================
+    // Update correction vector DQv = DF^{-1} x Fv
+    //====================================================================================
+    //Inverse Fv = M*DQv via LU decomposition of M
+    int status = gsl_linalg_LU_decomp (M, p, &s);
+    if(!status) status = gsl_linalg_LU_solve(M, p, Fv, DQv);
+
+    //--------------------------------------------------------------------------------
+    //If the decomposition or solving went bad, status is different from GSL_SUCCESS.
+    //--------------------------------------------------------------------------------
+    if(status)
+    {
+        cerr << fname << ". The LU decomposition failed. ref_errno = " << gsl_strerror(status) << endl;
+        gsl_permutation_free (p);
+        gsl_matrix_free(M);
+        return FTC_FAILURE;
+    }
+
+    //====================================================================================
+    // Kill the local GSL objects and return FTC_SUCCESS
+    //====================================================================================
+    gsl_permutation_free (p);
+    gsl_matrix_free(M);
+    return FTC_SUCCESS;
+}
 
 //========================================================================================
 //

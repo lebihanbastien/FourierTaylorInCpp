@@ -25,7 +25,7 @@ MODEL=$M_QBCP
 #-----------------------------------------------------
 # DEFAULT LIBRATION POINT FOR EM & SEM SYSTEM
 #-----------------------------------------------------
-LI_EM=1
+LI_EM=2
 LI_SEM=2
 
 #-----------------------------------------------------
@@ -53,7 +53,7 @@ else
 fi
 
 # Parallel computation is on by default
-ISPAR=1		
+ISPAR=1
 
 #-----------------------------------------------------
 # NOHUP condition
@@ -68,16 +68,16 @@ ISNOHUP=0
 # Parameters that change often
 #-----------------------------------------------------
 # Time grid: min, max and number of points on the grid
-TMIN=0.00     # (given as %T, with T the SEM period)
-TMAX=0.25     # (given as %T, with T the SEM period)
+TMIN=0.995     # (given as %T, with T the SEM period)
+TMAX=1.0       # (given as %T, with T the SEM period)
 TSIZE=0	  
 
 # Configuration (s1, s2, s3, s4) grid
-GLIM_S1=(-3 +3)
-GLIM_S2=(+0 +1)
-GLIM_S3=(-3 +3)
-GLIM_S4=(+0 +1)
-GSIZE_SI=(+50 +5 +50 +5)
+GLIM_S1=(-35 +35)
+GLIM_S2=(0 2)
+GLIM_S3=(-35 +35)
+GLIM_S4=(0 2)
+GSIZE_SI=(+50 +2 +50 0)
 
 # Primary family
 PRIMARY=0
@@ -117,4 +117,3 @@ NOD=6         # Number of dimensions on which we compute the norm of the project
 #    int NSMIN = 20;      #number of sorted solutions
 #
 #====================================================================================
-

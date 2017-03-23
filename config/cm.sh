@@ -70,7 +70,7 @@ ISNOHUP=0
 # Time grid: min, max and number of points on the grid
 TMIN=0.995     # (given as %T, with T the SEM period)
 TMAX=1.0       # (given as %T, with T the SEM period)
-TSIZE=10	  
+TSIZE=0	  
 
 # Configuration (s1, s2, s3, s4) grid
 GLIM_S1=(-35 +35)
@@ -78,6 +78,9 @@ GLIM_S2=(-12 +12)
 GLIM_S3=(-35 +35)
 GLIM_S4=(-12 +12)
 GSIZE_SI=(+100 +6 +100 +6)
+
+# Primary family
+PRIMARY=1
 
 #-----------------------------------------------------
 # Parameters that are stable

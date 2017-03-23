@@ -343,6 +343,8 @@ struct OdeEvent
     double x1;
     //Detection is on/off
     int detection;
+    //Warnings
+    int warnings;
 
     /**
      *  \brief Constructor for OdeEvent
@@ -358,12 +360,13 @@ struct OdeEvent
      /**
      *  \brief Constructor for OdeEvent
      **/
-     OdeEvent(int detection_)
+     OdeEvent(int detection_, int warnings_)
      {
          coll  = FTC_SUCCESS;  //at initialisation, no collision so == FTC_SUCCESS
          crossings = 0.0;      //at initialisation, no crossing
          x1        = -1;
          detection = detection_;
+         warnings  = warnings_;
      }
 };
 
@@ -395,9 +398,9 @@ struct OdeParams
      /**
      *  \brief Constructor for OdeParams
      **/
-     OdeParams(QBCP_L *qbcp_l_, int dcs_, int detection_)
+     OdeParams(QBCP_L *qbcp_l_, int dcs_, int detection_, int warnings_)
      {
-         event     = OdeEvent(detection_);
+         event     = OdeEvent(detection_, warnings_);
          qbcp_l    = qbcp_l_;
          dcs       = dcs_;
      }
