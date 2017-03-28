@@ -3614,7 +3614,8 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
 
                 if(refSt.crossings > 0)
                 {
-                    filename += "0T_T.bin";
+                    filename += "0T_T_crossings.bin";
+                    //filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_dest_L2_t0_0065T.bin";
                 }
                 else
                 {
@@ -3640,7 +3641,7 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
             }
             else
             {
-                if(SEML.li_SEM == 2) filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_dest_L2.bin";
+                if(SEML.li_SEM == 2) filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_dest_L2_t0_0.bin";
                 else filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_dest_L1.bin";
             }
 

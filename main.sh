@@ -631,7 +631,7 @@ if [ "$ans" == "y" ]; then
 			bin/Release/FourierTaylorInCpp ${COEFFS[*]}
 	fi
 
-	
+	notify-send "Computation is done in FourierTaylorInCpp"
 	
 else  
 	echo "Stop. No computation."
