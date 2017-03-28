@@ -40,6 +40,7 @@ export COMP_VOFTS_TO_VOFTS=8     	 #Store CS/CU into one-dimensionnal series to 
 export COMP_test_INVMAN=9    		 #Test of the new invariant manifold implementation
 export COMP_REF_JPL=10  		 #Refine to JPL ephemerides
 export COMP_CM_EML2_TO_CM_SEML_H=11   #Planar EMLi Center Manifold to SEMLi Center Manifold, at a given energy
+export COMP_ORBIT_EML2_TO_CM_SEML=12   #EMLi Center Manifold to SEMLi Center Manifold, on a given orbit
 
 #-----------------------------------------------------
 # MODEL
@@ -74,6 +75,9 @@ export REF_MIXED=101
 
 # Only one connection refined
 export REF_SINGLE=2
+
+# Only some orbit connections refined
+export REF_ORBIT=21
 
 # Continuation procedures
 export REF_CONT=30		#simple continuation, defined with REF_FIXED_TIME/REF_VAR_TN/REF_VAR_TIME and REF_FIXED_GRID/REF_VAR_GRID/REF_GIVEN_GRID

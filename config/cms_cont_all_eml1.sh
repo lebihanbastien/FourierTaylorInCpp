@@ -75,6 +75,9 @@ REFST_SI_CMU_EM_LIM=(-3 3 0 0 -3 3 0 0)
 # Or, if we want the user to define such domain:
 REFST_ISLIMUD=0
 
+# Domain of search (min s1, max s1, min s3, max s3) for the seed of first guess
+REFST_SI_SEED_EM_LIM=(-40 +40 0 0 -40 +40 0 0)
+
 # Limits for the time of flight during transfers - not used if -1
 REFST_TOF_LIM=(-1 -1)
 

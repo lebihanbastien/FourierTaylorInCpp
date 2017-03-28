@@ -5631,23 +5631,23 @@ void qbtbp_test(double t1, QBCP_L& qbcp_l)
     // 0. Gnuplot
     //====================================================================================
     gnuplot_ctrl* h1;
-    h1 = gnuplot_init();
-    gnuplot_cmd(h1, "set title \"Variations of the error in the Primaries' state vector: EM vs IN\" ");
-    gnuplot_cmd(h1, "set grid");
-    gnuplot_set_xlabel(h1, (char*)"t [EM units]");
-    gnuplot_set_ylabel(h1, (char*)"Error [x Tsem]");
-    gnuplot_cmd(h1, "set logscale y");
-    gnuplot_cmd(h1, "set format y \"1e\%%L\"");
+    h1 = gnuplot_init(true);
+    gnuplot_cmd(true, h1, "set title \"Variations of the error in the Primaries' state vector: EM vs IN\" ");
+    gnuplot_cmd(true, h1, "set grid");
+    gnuplot_set_xlabel(true, h1, (char*)"t [EM units]");
+    gnuplot_set_ylabel(true, h1, (char*)"Error [x Tsem]");
+    gnuplot_cmd(true, h1, "set logscale y");
+    gnuplot_cmd(true, h1, "set format y \"1e\%%L\"");
 
 
     gnuplot_ctrl* h2;
-    h2 = gnuplot_init();
-    gnuplot_cmd(h2, "set title \"Variations of the error in the Primaries' state vector: SEM vs IN\" ");
-    gnuplot_cmd(h2, "set grid");
-    gnuplot_set_xlabel(h2, (char*)"t [EM units]");
-    gnuplot_set_ylabel(h2, (char*)"Error [x Tsem]");
-    gnuplot_cmd(h2, "set logscale y");
-    gnuplot_cmd(h2, "set format y \"1e\%%L\"");
+    h2 = gnuplot_init(true);
+    gnuplot_cmd(true, h2, "set title \"Variations of the error in the Primaries' state vector: SEM vs IN\" ");
+    gnuplot_cmd(true, h2, "set grid");
+    gnuplot_set_xlabel(true, h2, (char*)"t [EM units]");
+    gnuplot_set_ylabel(true, h2, (char*)"Error [x Tsem]");
+    gnuplot_cmd(true, h2, "set logscale y");
+    gnuplot_cmd(true, h2, "set format y \"1e\%%L\"");
 
 
     //====================================================================================
@@ -5847,9 +5847,9 @@ void qbtbp_test(double t1, QBCP_L& qbcp_l)
     //------------------------------------------------------------------------------------
     //Plot: EM vs IN
     //------------------------------------------------------------------------------------
-    gnuplot_plot_xy(h1, tvec, yEM_vs_IN_E, Nplot + 1, (char*)"Earth", "lines", "3", "2", 3);
-    gnuplot_plot_xy(h1, tvec, yEM_vs_IN_M, Nplot + 1, (char*)"Moon", "lines", "3", "2", 4);
-    gnuplot_plot_xy(h1, tvec, yEM_vs_IN_S, Nplot + 1, (char*)"Sun", "lines", "3", "2", 5);
+    gnuplot_plot_xy(true, h1, tvec, yEM_vs_IN_E, Nplot + 1, (char*)"Earth", "lines", "3", "2", 3);
+    gnuplot_plot_xy(true, h1, tvec, yEM_vs_IN_M, Nplot + 1, (char*)"Moon", "lines", "3", "2", 4);
+    gnuplot_plot_xy(true, h1, tvec, yEM_vs_IN_S, Nplot + 1, (char*)"Sun", "lines", "3", "2", 5);
 
     gnuplot_fplot_xy(tvec, yEM_vs_IN_E, Nplot + 1, (char*) (qbcp_l.cs->F_PLOT + "QBTBP_EM_vs_IN_E.txt").c_str());
     gnuplot_fplot_xy(tvec, yEM_vs_IN_M, Nplot + 1, (char*) (qbcp_l.cs->F_PLOT + "QBTBP_EM_vs_IN_M.txt").c_str());
@@ -5859,9 +5859,9 @@ void qbtbp_test(double t1, QBCP_L& qbcp_l)
     //------------------------------------------------------------------------------------
     //Plot: SEM vs IN
     //------------------------------------------------------------------------------------
-    gnuplot_plot_xy(h2, tvec, ySEM_vs_IN_E, Nplot + 1, (char*)"Earth", "lines", "3", "2", 3);
-    gnuplot_plot_xy(h2, tvec, ySEM_vs_IN_M, Nplot + 1, (char*)"Moon", "lines", "3", "2", 4);
-    gnuplot_plot_xy(h2, tvec, ySEM_vs_IN_S, Nplot + 1, (char*)"Sun", "lines", "3", "2", 5);
+    gnuplot_plot_xy(true, h2, tvec, ySEM_vs_IN_E, Nplot + 1, (char*)"Earth", "lines", "3", "2", 3);
+    gnuplot_plot_xy(true, h2, tvec, ySEM_vs_IN_M, Nplot + 1, (char*)"Moon", "lines", "3", "2", 4);
+    gnuplot_plot_xy(true, h2, tvec, ySEM_vs_IN_S, Nplot + 1, (char*)"Sun", "lines", "3", "2", 5);
 
     gnuplot_fplot_xy(tvec, ySEM_vs_IN_E, Nplot + 1, (char*) (qbcp_l.cs->F_PLOT + "QBTBP_SEM_vs_IN_E.txt").c_str());
     gnuplot_fplot_xy(tvec, ySEM_vs_IN_M, Nplot + 1, (char*) (qbcp_l.cs->F_PLOT + "QBTBP_SEM_vs_IN_M.txt").c_str());
@@ -5947,11 +5947,11 @@ void qbtbp_test(double t1, QBCP_L& qbcp_l)
                                         << yEM_to_IN[i] - yIN[i] << "    "  << ySEM_to_IN[i] - yIN[i] << endl;
 
     char ch;
-    gnuplot_cmd(h1, "set logscale y");
+    gnuplot_cmd(true, h1, "set logscale y");
     printf("Press ENTER to close the gnuplot window(s)\n");
     scanf("%c", &ch);
-    gnuplot_close(h1);
-    gnuplot_close(h2);
+    gnuplot_close(true, h1);
+    gnuplot_close(true, h2);
 }
 
 

@@ -7,6 +7,42 @@
 source $1
 
 #--------------------------------------------------------------
+# Function to update unset parameters
+#--------------------------------------------------------------
+function set_param
+{
+	# argAry2 contains the arguments after $1, 
+	# which may correspond to either an array or a scalar
+	declare -a argAry2=("${!2}")
+	local size=${#argAry2[@]}
+    
+	
+	# If the size of argAry2 is equal to 1, we the second argument is a scalar.
+	# if not, it is an array and we use a specific call
+	echo "#------------------------------------------#"
+	if [ "$size" == "1" ]; then
+	
+		#Evaluate
+		eval "$1=$2"
+		
+		# Warn the user
+		echo 'WARNING: the variable' $1 'is not set.'
+		echo $2 'is used by default.'
+	
+	
+	else
+	
+		#Evaluate
+		eval "$1=( ${argAry2[@]} )"  
+		
+		# Warn the user
+		echo 'WARNING: the variable' $1 'is not set.'
+		echo '(' ${argAry2[@]} ') is used by default.'
+	fi
+	echo "#------------------------------------------#"
+}
+
+#--------------------------------------------------------------
 # Title
 #--------------------------------------------------------------
 echo
@@ -56,14 +92,17 @@ else
 		;;
 		$COMP_REF_JPL) 			         echo 'COMP_TYPE    = COMP_REF_JPL'
 		;;
+		$COMP_ORBIT_EML2_TO_CM_SEML) 	 echo 'COMP_TYPE    = COMP_ORBIT_EML2_TO_CM_SEML'
+		;;
 		*)     				             echo "COMP_TYPE    = "$COMP_TYPE". Unknown type."
 	esac
-	echo ''
 fi
 
 #=====================================================
 #  ---- General parameters ----
 #=====================================================
+echo "#------------------------------------------#"
+echo ''
 echo "#------------------------------------------#"
 echo 'Current set of general parameters:'
 echo ''
@@ -74,10 +113,7 @@ echo ''
 #-----------------------------------------------------
 #Check that the variable $MODEL exist
 if [ -z ${MODEL+x} ]; then
-	#If not, default values to QBCP
-	echo 'WARNING: the variable MODEL is not set.'
-	echo 'QBCP is used by default.'
-	MODEL=$QBCP
+	set_param "MODEL" $M_QBCP
 else
 	if [ "$MODEL" == "$RTBP" ]; then
 		OFS_ORDER=0
@@ -134,7 +170,6 @@ if [ -z ${TMIN+x} ]; then
 	#-----------------------------------------------------
 	echo 'The projection parameters are not set.'
 	echo 'Default values are used.'
-	echo ''
 
 	#-----------------------------------------------------
 	# Parameters that change often
@@ -154,6 +189,12 @@ if [ -z ${TMIN+x} ]; then
 	# Primary family
 	PRIMARY=0
 	
+	# Fixed delta of energy (-1 if not used)
+	DHD=-1
+	
+	# Time frequency, in %T
+	DT=0.005
+	
 	#-----------------------------------------------------
 	# Parameters that are stable
 	#-----------------------------------------------------
@@ -169,9 +210,21 @@ else
 	# Primary Family
 	#-----------------------------------------------------
 	if [ -z ${PRIMARY+x} ]; then
-		echo 'WARNING: the variable PRIMARY is not set.'
-		echo '-1 is used by default.'
-		PRIMARY=0
+		set_param "PRIMARY" 0
+	fi
+	
+	#-----------------------------------------------------
+	# Fixed delta of energy (-1 if not used)
+	#-----------------------------------------------------
+	if [ -z ${DHD+x} ]; then
+		set_param "DHD" -1
+	fi
+	
+	#-----------------------------------------------------
+	# Fixed delta of energy (-1 if not used)
+	#-----------------------------------------------------
+	if [ -z ${DT+x} ]; then
+		set_param "DT" 0.005
 	fi
 	
 	#-----------------------------------------------------
@@ -197,6 +250,9 @@ else
 	echo "NOD      =" $NOD
 	echo ''
 	echo "PRIMARY  =" $PRIMARY
+	echo ''
+	echo "DHD      =" $DHD
+	echo "DT       =" $DT
 fi
 
 #=====================================================
@@ -205,7 +261,8 @@ fi
 # We check that REFST_TYPE, the first refinement parameter
 # is set or not. If not, we set default values for 
 # each refinement parameters
-
+echo "#------------------------------------------#"
+echo ''
 echo "#------------------------------------------#"
 if [ -z ${REFST_TYPE+x} ]; then
 	
@@ -214,7 +271,6 @@ if [ -z ${REFST_TYPE+x} ]; then
 	#-----------------------------------------------------
 	echo 'The refinement parameters are not set.'
 	echo 'Default values are used.'
-	echo ''
 
 	#-----------------------------------------------------
 	# Parameters that change often
@@ -227,12 +283,18 @@ if [ -z ${REFST_TYPE+x} ]; then
 	REFST_SI_CMU_EM_LIM=(-35 +35 0 0 -35 +35 0 0)
 	# Or, if we want the user to define such domain:
 	REFST_ISLIMUD=0
+	
+	# Domain of search (min s1, max s1, min s3, max s3) for the seed of first guess
+	REFST_SI_SEED_EM_LIM=(-40 +40 0 0 -40 +40 0 0)
 
 	# Limits for the time of flight during transfers - not used if -1
 	REFST_TOF_LIM=(-1 -1)
 	
 	# Values for crossings
 	REFST_CROSSINGS=-1
+	
+	# Maximum projection distance allowed during subselection
+    REFST_PMAX_DIST_SEM=5e-4
 
 	# Number of steps in the continuation procedure
 	REFST_CONT_STEP_MAX=+450;        # with fixed times
@@ -294,7 +356,7 @@ if [ -z ${REFST_TYPE+x} ]; then
 	REFST_ISSAVED_SEM=0  # 0: don't save, 1: save using projection method, 2: save using integration in reduced coordinates
 	
 	# Type of time selection
-	REFST_TYPE_OF_T_SEL=TIME_SELECTION_RATIO
+	REFST_TYPE_OF_T_SEL=$TIME_SELECTION_RATIO
 else
 	#-----------------------------------------------------
 	# Display current set of parameters
@@ -306,19 +368,31 @@ else
 	# Crossings
 	#-----------------------------------------------------
 	if [ -z ${REFST_CROSSINGS+x} ]; then
-		echo 'WARNING: the variable REFST_CROSSINGS is not set.'
-		echo '-1 is used by default.'
-		REFST_CROSSINGS=-1
+		set_param "REFST_CROSSINGS" -1
+	fi
+	
+	#-----------------------------------------------------
+	# Crossings
+	#-----------------------------------------------------
+	if [ -z ${REFST_PMAX_DIST_SEM+x} ]; then
+		set_param "REFST_PMAX_DIST_SEM" 5e-4
 	fi
 	
 	#-----------------------------------------------------
 	# Type of time selection
 	#-----------------------------------------------------
 	if [ -z ${REFST_TYPE_OF_T_SEL+x} ]; then
-		echo 'WARNING: the variable REFST_TYPE_OF_T_SEL is not set.'
-		echo 'TIME_SELECTION_RATIO is used by default.'
-		REFST_TYPE_OF_T_SEL=TIME_SELECTION_RATIO
+		set_param "REFST_TYPE_OF_T_SEL" $TIME_SELECTION_RATIO
 	fi
+	
+	#-----------------------------------------------------
+	# Domain of search (min s1, max s1, min s3, max s3) for the seed of first guess
+	#-----------------------------------------------------
+	if [ -z ${REFST_SI_SEED_EM_LIM+x} ]; then
+		TEMP=(-40 +40 0 0 -40 +40 0 0)
+		set_param "REFST_SI_SEED_EM_LIM" TEMP[@]
+	fi
+	
 
 	#-----------------------------------------------------
 	# Parameters that change often
@@ -326,6 +400,8 @@ else
 	#REFST_TYPE
 	case $REFST_TYPE in
 		$REF_SINGLE)            echo 'REFST_TYPE             = REF_SINGLE'
+		;;
+		$REF_ORBIT)             echo 'REF_ORBIT              = REF_ORBIT'
 		;;
 		$REF_CONT) 	            echo 'REFST_TYPE             = REF_CONT'
 		;;
@@ -353,10 +429,10 @@ else
 	echo ''
 	echo "REFST_SI_CMU_EM_LIM    = ["${REFST_SI_CMU_EM_LIM[*]}"]"
 	echo "REFST_ISLIMUD          =" $REFST_ISLIMUD
-	echo ''
+	echo "REFST_SI_SEED_EM_LIM   = ["${REFST_SI_SEED_EM_LIM[*]}"]"
 	echo "REFST_TOF_LIM          = ["${REFST_TOF_LIM[*]}"]"
-	echo ''
 	echo "REFST_CROSSINGS        =" $REFST_CROSSINGS
+	echo "REFST_PMAX_DIST_SEM    =" $REFST_PMAX_DIST_SEM
 	echo ''
 	echo "REFST_CONT_STEP_MAX    =" $REFST_CONT_STEP_MAX
 	echo "REFST_CONT_STEP_MAX_VT =" $REFST_CONT_STEP_MAX_VT
@@ -461,9 +537,9 @@ else
 	case $REFST_TYPE_OF_T_SEL in
 		$TIME_SELECTION_ABSOLUTE) echo 'REFST_TYPE_OF_T_SEL   = TIME_SELECTION_ABSOLUTE'
 		;;
-		$TIME_SELECTION_RATIO)  echo 'REFST_TYPE_OF_T_SEL     = TIME_SELECTION_RATIO'
+		$TIME_SELECTION_RATIO)  echo 'REFST_TYPE_OF_T_SEL   = TIME_SELECTION_RATIO'
 		;;
-		*)     	      echo "REFST_TYPE_OF_T_SEL  = "$REFST_TYPE_OF_T_SEL". Unknown type."
+		*) echo "REFST_TYPE_OF_T_SEL   = "$REFST_TYPE_OF_T_SEL". Unknown type."
 	esac
 	
 fi
@@ -472,6 +548,8 @@ fi
 #--------------------------------------------------------------
 # Go on with the implementation?
 #--------------------------------------------------------------
+echo "#------------------------------------------#"
+echo ''
 echo -e "Do you want to go on with the computation (y/n)? \c "
 read  ans
 # bash check the answer
@@ -486,16 +564,17 @@ if [ "$ans" == "y" ]; then
 
 	# Then, for each type, we add some parameters
 	case $COMP_TYPE in
-		$COMP_CM_EML2_TO_CM_SEML | $COMP_CM_EML2_TO_CM_SEML_3D | COMP_CM_EML2_TO_CM_SEML_H)        
+		$COMP_CM_EML2_TO_CM_SEML | $COMP_CM_EML2_TO_CM_SEML_3D | $COMP_CM_EML2_TO_CM_SEML_H | $COMP_ORBIT_EML2_TO_CM_SEML)        
 			COEFFS=(${COEFFS[*]}  $TMIN $TMAX $TM $TSIZE)
 			COEFFS=(${COEFFS[*]}  ${GLIM_S1[*]} ${GLIM_S2[*]} ${GLIM_S3[*]} ${GLIM_S4[*]} ${GSIZE_SI[*]})
-			COEFFS=(${COEFFS[*]}  $PRIMARY $MSIZE $NSMIN $YNMAX $SNMAX $NOD)
+			COEFFS=(${COEFFS[*]}  $PRIMARY $MSIZE $NSMIN $YNMAX $SNMAX $NOD $DHD $DT)
 		;;
 		$COMP_CM_EML2_TO_CMS_SEML | $COMP_REF_JPL)
 			COEFFS=(${COEFFS[*]}  $REFST_TYPE $REFST_DIM $REFST_T0_DES)
 		    COEFFS=(${COEFFS[*]}  $REFST_ISDIRUD $REFST_DIR)
 		    COEFFS=(${COEFFS[*]}  ${REFST_SI_CMU_EM_LIM[*]} $REFST_ISLIMUD)
-			COEFFS=(${COEFFS[*]}  ${REFST_TOF_LIM[*]} $REFST_CROSSINGS)
+		    COEFFS=(${COEFFS[*]}  ${REFST_SI_SEED_EM_LIM[*]})
+			COEFFS=(${COEFFS[*]}  ${REFST_TOF_LIM[*]} $REFST_CROSSINGS $REFST_PMAX_DIST_SEM)
 		  	COEFFS=(${COEFFS[*]}  $REFST_CONT_STEP_MAX $REFST_CONT_STEP_MAX_VT)
 			COEFFS=(${COEFFS[*]}  $REFST_FIXED_TIME_DS0 $REFST_VAR_TIME_DS0)
 			COEFFS=(${COEFFS[*]}  $REFST_FIXED_TIME_NU0 $REFST_VAR_TIME_NU0)

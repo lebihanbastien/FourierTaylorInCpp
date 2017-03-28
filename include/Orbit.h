@@ -70,6 +70,7 @@ class Orbit
         //Update
         //--------------------------------------------------------------------------------
         void update_ic(const double st0[], double t0);
+        void update_ifc(const double st0[], double t0, double tf);
         void update_ic(const double st0[]);
         void ccm8torcm(const double s0d[]);
         void evalRCMtoNC(double const t, double z1[]) const;
@@ -97,6 +98,6 @@ class Orbit
 //          Orbit on a grid
 //========================================================================================
 int oo_gridOrbit(double st0[], double t0, double tf, double dt);
-int gridOrbit_si(double st0[], double t0, double tf, double dt, int isFlagOn);
-int gridOrbit_strob(double st0[], double t0, int N, int isFlagOn);
+int gridOrbit_si(double st0[], double t0, double tf, double dt, int isFlagOn, int isPlot);
+int gridOrbit_strob(double st0[], double t0, int N, int isFlagOn, int isPlot);
 #endif // ORBIT_H_INCLUDED

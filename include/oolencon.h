@@ -2,7 +2,6 @@
 #define OOLENCON_H_INCLUDED
 
 #include "oolenconref.h"
-
 #include "oolencon.h"
 
 
@@ -16,14 +15,12 @@ struct ProjSt
     double TM, TMIN, TMAX, TLIM[2], GLIM_SI[4][2];
     int    TSIZE, GSIZE_SI[4], MSIZE, NSMIN, NOD, ISPAR, PRIMARY;
     double YNMAX, SNMAX, dHd;
+    double dt;
 
     /**
      *  \brief Constructor for ProjSt
      **/
-     ProjSt()
-     {
-         dHd = -1.0;
-     }
+     ProjSt():dHd(-1.0), dt(0.001){}
 };
 
 
@@ -173,7 +170,7 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt);
 int int_proj_CMU_EM_on_CM_SEM_dH(ProjSt &projSt);
 
 
-int int_proj_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int N, double dt);
+int int_proj_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int N);
 
 //========================================================================================
 //
@@ -194,6 +191,23 @@ int int_proj_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int N, double dt);
  *         are not used.
  **/
 int refemlisemli(RefSt& refSt);
+
+;/**
+ *  \brief Computes the best trajectories from int_proj_ORBIT_EM_on_CM_SEM.
+ *         A multiple_shooting_direct is applied on the MANIFOLD trajectory (manifold leg).
+ *         The initial conditions vary in the paramerization of the CMU of i.
+ *         The final conditions vary in the paramerization of the CMS of SEMLi.
+ *         The time at each point except the first one is allowed to vary.
+ *         A continuation procedure can be performed to get more than one refined solution.
+ *
+ *         Because of the possible use of msvt3d and msvtplan inside this routine,
+ *         the refSt.coord_type must be NCSEM. However, the user can put
+ *         other coordinate systems (VNCSEM, PSEM, PEM...), as long as these two routines
+ *         are not used.
+ *
+ *         so stands for single orbit.
+ **/
+int sorefemlisemli(RefSt& refSt);
 
 //========================================================================================
 //
@@ -227,6 +241,12 @@ int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* 
  **/
 int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM[2],
                   double* t0_SEM, double* pmin_dist_SEM_out);
+
+/**
+ *  \brief Selects good initial conditions for EML2-to-SEMLi connections, searching
+ *         through data files produced by int_proj_ORBIT_EM_on_CM_SEM
+ **/
+int soselectemlisemli(RefSt& refSt, ProjResClass& subSt);
 
 //----------------------------------------------------------------------------------------
 //         Brick B: generate a first guess (either a single unstable manifold leg or
@@ -390,13 +410,13 @@ int compref3d_test_eml2seml_synjpl(int coord_type);
 /**
  *  \brief Plotting the notable points in the SEM system, in coord_type coordinates
  **/
-int notablePoints_sem(gnuplot_ctrl* h2, int coord_type);
+int notablePoints_sem(gnuplot_ctrl* h2, int coord_type, int isPlot);
 
 /**
  *  \brief Plotting the notable points in the SEM & EM systems in coord_type coordinates,
  *         as well as complementary coordinates.
  **/
-int notablePoints(gnuplot_ctrl* h2, gnuplot_ctrl* h3, int coord_type);
+int notablePoints(gnuplot_ctrl* h2, gnuplot_ctrl* h3, int coord_type, int isPlot);
 
 /**
  *  \brief Plot a trajectory, segment by segment, in to complementary coordinate systems.
@@ -426,8 +446,14 @@ int savetrajsegbyseg(double** y_traj, double* t_traj,
 /**
  *   \brief Storing the results of the continuation procedure, in txt file.
  **/
-void writeCONT_txt(Orbit& orbit_EM, Orbit& orbit_SEM,
-                   double* te_NCSEM, double* ye_NCSEM,  int isFirst);
+void writeCONT_txt(string filename, Orbit& orbit_EM, Orbit& orbit_SEM,
+                   double te_NCSEM, double* ye_NCSEM, ProjResClass& projRes, int isFirst,  int k);
+
+/**
+ *   \brief Storing the results of the continuation procedure, in txt file.
+ **/
+void writeCONT_txt(int label, string filename, Orbit& orbit_EM, Orbit& orbit_SEM,
+                   double te_NCSEM, double* ye_NCSEM,  int isFirst);
 
 /**
  *  \brief Get the length the results of the continuation procedure, in txt file.
@@ -452,6 +478,15 @@ int writeCONT_bin(RefSt& refSt, string filename_traj, int dcs, int coord_type,
                    double** y_traj_n, double* t_traj_n, int man_index, int mPlot,
                    Orbit &orbit_EM, Orbit &orbit_SEM, int label,
                    bool isFirst, int comp_orb_eml, int comp_orb_seml);
+
+/**
+ *  \brief Save a given solution as a complete trajectory
+ **/
+int writeCONT_bin(RefSt& refSt, string filename_traj, double** y_traj_n, double* t_traj_n, int man_index,
+                  Orbit& orbit_EM, Orbit& orbit_SEM, bool isFirst, int comp_orb_eml, int comp_orb_seml,
+                  ProjResClass& projRes, int k);
+
+
 /**
  * \brief Reads a given \c Ofsc  object within a \c Oftsc, in txt format.
  **/

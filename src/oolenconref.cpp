@@ -271,7 +271,7 @@ int nfreevariables(RefSt refSt, int mgs)
  *        - The null vector associated to the solution is computed.
  **/
 int msft3d(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nullvector,
-           int nov, int mgs, int coord_type, double precision, int isFirst,
+           int nov, int mgs, int coord_type,  int isFirst,
            Orbit& orbit_EM, Orbit& orbit_SEM, gnuplot_ctrl* h1, RefSt& refSt, int *niter)
 {
     //====================================================================================
@@ -306,7 +306,7 @@ int msft3d(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nullv
     // Other initialization
     //------------------------------------------------------------------------------------
     //Cumulated norm of the error
-    double normC;
+    double normC = 0.0;
     //Current state along the trajectory
     double** ym  = dmatrix(0, 41, 0, mgs);
     //Current time along the trajectory
@@ -471,9 +471,9 @@ int msft3d(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nullv
         cout << fname << ". nerror = " << normC << endl;
 
         // Check that all points are under a given threshold
-        if(normC < precision)
+        if(normC < refSt.inner_prec)
         {
-            cout << fname << ". Desired precision was reached. break. nerror = " << normC << endl;
+            cout << fname << ". Desired precision was reached. " << endl; cout << "nerror = " << normC << endl;
             break;
         }
 
@@ -579,9 +579,9 @@ int msft3d(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nullv
     //------------------------------------------------------------------------------------
     //Last plot
     //------------------------------------------------------------------------------------
-    if(refSt.isPlotted) gnuplot_plot_xyz(h1,  ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
-    if(refSt.isPlotted) gnuplot_plot_xyz(h1, &ymdn[0][mgs], &ymdn[1][mgs],  &ymdn[2][mgs], 1, (char*)"", "points", "2", "2", 0);
-    if(refSt.isPlotted) gnuplot_plot_xyz(h1, &ymdn[0][0], &ymdn[1][0],  &ymdn[2][0], 1, (char*)"", "points", "2", "2", 0);
+    gnuplot_plot_xyz(refSt.isPlotted, h1,  ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
+    gnuplot_plot_xyz(refSt.isPlotted, h1, &ymdn[0][mgs], &ymdn[1][mgs],  &ymdn[2][mgs], 1, (char*)"", "points", "2", "2", 0);
+    gnuplot_plot_xyz(refSt.isPlotted, h1, &ymdn[0][0], &ymdn[1][0],  &ymdn[2][0], 1, (char*)"", "points", "2", "2", 0);
 
 
     //====================================================================================
@@ -647,6 +647,11 @@ int msft3d(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nullv
     //------------------------------------------------------------------------------------
     *niter = iter;
 
+    //------------------------------------------------------------------------------------
+    //Last error
+    //------------------------------------------------------------------------------------
+    refSt.last_error = normC;
+
     //====================================================================================
     // Free
     //====================================================================================
@@ -676,7 +681,7 @@ int msft3d(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nullv
  *        Difference with msft3d: only s1 and s3 are corrected at EML2
  **/
 int msftmixed(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nullvector,
-               int nov, int mgs, int coord_type, double precision, int isFirst,
+               int nov, int mgs, int coord_type,  int isFirst,
                Orbit& orbit_EM, Orbit& orbit_SEM, gnuplot_ctrl* h1, RefSt& refSt, int *niter)
 {
     //====================================================================================
@@ -711,7 +716,7 @@ int msftmixed(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nu
     // Other initialization
     //------------------------------------------------------------------------------------
     //Cumulated norm of the error
-    double normC;
+    double normC = 0.0;
     //Current state along the trajectory
     double** ym  = dmatrix(0, 41, 0, mgs);
     //Current time along the trajectory
@@ -878,9 +883,9 @@ int msftmixed(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nu
         cout << fname << ". nerror = " << normC << endl;
 
         // Check that all points are under a given threshold
-        if(normC < precision)
+        if(normC < refSt.inner_prec)
         {
-            cout << fname << ". Desired precision was reached. break. nerror = " << normC << endl;
+            cout << fname << ". Desired precision was reached. " << endl; cout << "nerror = " << normC << endl;
             break;
         }
 
@@ -987,9 +992,9 @@ int msftmixed(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nu
     //------------------------------------------------------------------------------------
     //Last plot
     //------------------------------------------------------------------------------------
-    if(refSt.isPlotted) gnuplot_plot_xyz(h1,  ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
-    if(refSt.isPlotted) gnuplot_plot_xyz(h1, &ymdn[0][mgs], &ymdn[1][mgs],  &ymdn[2][mgs], 1, (char*)"", "points", "2", "2", 0);
-    if(refSt.isPlotted) gnuplot_plot_xyz(h1, &ymdn[0][0], &ymdn[1][0],  &ymdn[2][0], 1, (char*)"", "points", "2", "2", 0);
+    gnuplot_plot_xyz(refSt.isPlotted, h1,  ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
+    gnuplot_plot_xyz(refSt.isPlotted, h1, &ymdn[0][mgs], &ymdn[1][mgs],  &ymdn[2][mgs], 1, (char*)"", "points", "2", "2", 0);
+    gnuplot_plot_xyz(refSt.isPlotted, h1, &ymdn[0][0], &ymdn[1][0],  &ymdn[2][0], 1, (char*)"", "points", "2", "2", 0);
 
 
     //====================================================================================
@@ -1067,6 +1072,11 @@ int msftmixed(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nu
     //------------------------------------------------------------------------------------
     *niter = iter;
 
+    //------------------------------------------------------------------------------------
+    //Last error
+    //------------------------------------------------------------------------------------
+    refSt.last_error = normC;
+
     //====================================================================================
     // Free
     //====================================================================================
@@ -1104,7 +1114,7 @@ int msftmixed(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nu
  **/
 int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
            int nov, int mgs, int coord_type,
-           double precision, int isFirst,
+            int isFirst,
            Orbit &orbit_EM, Orbit &orbit_SEM,
            gnuplot_ctrl *h1, RefSt &refSt, int *niter)
 {
@@ -1159,7 +1169,7 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
     // Other initialization
     //------------------------------------------------------------------------------------
     //Cumulated norm of the error
-    double normC;
+    double normC = 0.0;
     //Current state along the trajectory
     double **ym  = dmatrix(0, 41, 0, mgs);
     //Current time along the trajectory
@@ -1410,9 +1420,9 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
         cout << fname << ". nerror = " << normC << endl;
 
         // Check that all points are under a given threshold
-        if(normC < precision)
+        if(normC < refSt.inner_prec)
         {
-            cout << fname << ". Desired precision was reached. break. nerror = " << normC << endl;
+            cout << fname << ". Desired precision was reached. " << endl; cout << "nerror = " << normC << endl;
             break;
         }
 
@@ -1524,7 +1534,7 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
     //------------------------------------------------------------------------------------
     //Last plot
     //------------------------------------------------------------------------------------
-    if(refSt.isPlotted) gnuplot_plot_xyz(h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
+    gnuplot_plot_xyz(refSt.isPlotted, h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
 
 
     //====================================================================================
@@ -1608,6 +1618,11 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
     *niter = iter;
 
     //------------------------------------------------------------------------------------
+    //Last error
+    //------------------------------------------------------------------------------------
+    refSt.last_error = normC;
+
+    //------------------------------------------------------------------------------------
     // 4. Free
     //------------------------------------------------------------------------------------
     free_dmatrix(ym, 0, 41, 0, mgs);
@@ -1648,7 +1663,7 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
  **/
 int msvtmixed(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
                int nov, int mgs, int coord_type,
-               double precision, int isFirst,
+                int isFirst,
                Orbit &orbit_EM, Orbit &orbit_SEM,
                gnuplot_ctrl *h1, RefSt &refSt, int *niter)
 {
@@ -1704,7 +1719,7 @@ int msvtmixed(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
     // Other initialization
     //------------------------------------------------------------------------------------
     //Cumulated norm of the error
-    double normC;
+    double normC = 0.0;
     //Current state along the trajectory
     double **ym  = dmatrix(0, 41, 0, mgs);
     //Current time along the trajectory
@@ -1958,9 +1973,9 @@ int msvtmixed(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
         cout << fname << ". nerror = " << normC << endl;
 
         // Check that all points are under a given threshold
-        if(normC < precision)
+        if(normC < refSt.inner_prec)
         {
-            cout << fname << ". Desired precision was reached. break. nerror = " << normC << endl;
+            cout << fname << ". Desired precision was reached. " << endl; cout << "nerror = " << normC << endl;
             break;
         }
 
@@ -2073,7 +2088,7 @@ int msvtmixed(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
     //------------------------------------------------------------------------------------
     //Last plot
     //------------------------------------------------------------------------------------
-    if(refSt.isPlotted) gnuplot_plot_xyz(h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
+    gnuplot_plot_xyz(refSt.isPlotted, h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
 
 
     //====================================================================================
@@ -2158,6 +2173,11 @@ int msvtmixed(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
     *niter = iter;
 
     //------------------------------------------------------------------------------------
+    //Last error
+    //------------------------------------------------------------------------------------
+    refSt.last_error = normC;
+
+    //------------------------------------------------------------------------------------
     // 4. Free
     //------------------------------------------------------------------------------------
     free_dmatrix(ym, 0, 41, 0, mgs);
@@ -2193,7 +2213,7 @@ int msvtmixed(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
  **/
 int msftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
              int nov, int mgs,
-             int coord_type, double precision, int isFirst,
+             int coord_type,  int isFirst,
              Orbit &orbit_EM, Orbit &orbit_SEM,
              gnuplot_ctrl *h1, RefSt &refSt, int *niter)
 {
@@ -2227,7 +2247,7 @@ int msftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
     // Other initialization
     //------------------------------------------------------------------------------------
     //Cumulated norm of the error
-    double normC;
+    double normC = 0.0;
     //Current state along the trajectory
     double **ym  = dmatrix(0, 41, 0, mgs);
     //Current time along the trajectory
@@ -2368,9 +2388,9 @@ int msftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
         cout << fname << ". nerror = " << normC << endl;
 
         //Check that all points are under a given threshold
-        if(normC < precision)
+        if(normC < refSt.inner_prec)
         {
-            cout << fname << ". Desired precision was reached. break. nerror = " << normC << endl;
+            cout << fname << ". Desired precision was reached. " << endl; cout << "nerror = " << normC << endl;
             break;
         }
 
@@ -2479,12 +2499,9 @@ int msftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
     //------------------------------------------------------------------------------------
     //Last plot
     //------------------------------------------------------------------------------------
-    if(refSt.isPlotted)
-    {
-        gnuplot_plot_xyz(h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
-        gnuplot_plot_xyz(h1, &ymdn[0][mgs], &ymdn[1][mgs],  &ymdn[2][mgs], 1, (char*)"", "points", "2", "2", 0);
-        gnuplot_plot_xyz(h1, &ymdn[0][0], &ymdn[1][0],  &ymdn[2][0], 1, (char*)"", "points", "2", "2", 0);
-    }
+    gnuplot_plot_xyz(refSt.isPlotted, h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
+    gnuplot_plot_xyz(refSt.isPlotted, h1, &ymdn[0][mgs], &ymdn[1][mgs],  &ymdn[2][mgs], 1, (char*)"", "points", "2", "2", 0);
+    gnuplot_plot_xyz(refSt.isPlotted, h1, &ymdn[0][0], &ymdn[1][0],  &ymdn[2][0], 1, (char*)"", "points", "2", "2", 0);
 
     //====================================================================================
     // 3. Compute the null vector: QR decomposition of DP^T
@@ -2556,6 +2573,11 @@ int msftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
     //------------------------------------------------------------------------------------
     *niter = iter;
 
+    //------------------------------------------------------------------------------------
+    //Last error
+    //------------------------------------------------------------------------------------
+    refSt.last_error = normC;
+
     //====================================================================================
     // 4. FINALLY, we update orbit_EM.tf, even if it is not necessary
     //====================================================================================
@@ -2594,7 +2616,7 @@ int msftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
  *        One should adapt the part that computes dF[k]/dt[k] = - Ji[k]*f[Q[k], t[k]).
  **/
 int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
-             int nov, int mgs, int coord_type, double precision, int isFirst,
+             int nov, int mgs, int coord_type,  int isFirst,
              Orbit &orbit_EM, Orbit &orbit_SEM, gnuplot_ctrl *h1, RefSt &refSt, int *niter)
 {
     //Name of the routine
@@ -2647,7 +2669,7 @@ int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
     // Other initialization
     //------------------------------------------------------------------------------------
     //Cumulated norm of the error
-    double normC;
+    double normC = 0.0;
     //Current state along the trajectory
     double **ym  = dmatrix(0, 41, 0, mgs);
     //Current time along the trajectory
@@ -2947,9 +2969,9 @@ int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
         cout << fname << ". nerror = " << normC << endl;
 
         // Check that all points are under a given threshold
-        if(normC < precision)
+        if(normC < refSt.inner_prec)
         {
-            cout << fname << ". Desired precision was reached. break. nerror = " << normC << endl;
+            cout << fname << ". Desired precision was reached. " << endl; cout << "nerror = " << normC << endl;
             break;
         }
 
@@ -3064,12 +3086,9 @@ int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
     //------------------------------------------------------------------------------------
     //Last plot
     //------------------------------------------------------------------------------------
-    if(refSt.isPlotted)
-    {
-        gnuplot_plot_xyz(h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
-        gnuplot_plot_xyz(h1, &ymdn[0][mgs], &ymdn[1][mgs],  &ymdn[2][mgs], 1, (char*)"", "points", "2", "2", 0);
-        gnuplot_plot_xyz(h1, &ymdn[0][0], &ymdn[1][0],  &ymdn[2][0], 1, (char*)"", "points", "2", "2", 0);
-    }
+    gnuplot_plot_xyz(refSt.isPlotted, h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
+    gnuplot_plot_xyz(refSt.isPlotted, h1, &ymdn[0][mgs], &ymdn[1][mgs],  &ymdn[2][mgs], 1, (char*)"", "points", "2", "2", 0);
+    gnuplot_plot_xyz(refSt.isPlotted, h1, &ymdn[0][0], &ymdn[1][0],  &ymdn[2][0], 1, (char*)"", "points", "2", "2", 0);
 
     //====================================================================================
     // 3. Compute the null vector: QR decomposition of DP^T
@@ -3153,6 +3172,11 @@ int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
     //------------------------------------------------------------------------------------
     *niter = iter;
 
+    //------------------------------------------------------------------------------------
+    //Last error
+    //------------------------------------------------------------------------------------
+    refSt.last_error = normC;
+
     //====================================================================================
     // 4. Free
     //====================================================================================
@@ -3187,7 +3211,7 @@ int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
  *        One should adapt the part that computes dF[k]/dt[k] = - Ji[k]*f[Q[k], t[k]).
  **/
 int msvltplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
-              int nov, int mgs, int coord_type, double precision, int isFirst,
+              int nov, int mgs, int coord_type,  int isFirst,
               Orbit &orbit_EM, Orbit &orbit_SEM, gnuplot_ctrl *h1, RefSt &refSt, int *niter)
 {
     //Name of the routine
@@ -3240,7 +3264,7 @@ int msvltplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
     // Other initialization
     //------------------------------------------------------------------------------------
     //Cumulated norm of the error
-    double normC;
+    double normC = 0.0;
     //Current state along the trajectory
     double **ym  = dmatrix(0, 41, 0, mgs);
     //Current time along the trajectory
@@ -3496,9 +3520,9 @@ int msvltplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
         cout << fname << ". nerror = " << normC << endl;
 
         // Check that all points are under a given threshold
-        if(normC < precision)
+        if(normC < refSt.inner_prec)
         {
-            cout << fname << ". Desired precision was reached. break. nerror = " << normC << endl;
+            cout << fname << ". Desired precision was reached. " << endl; cout << "nerror = " << normC << endl;
             break;
         }
 
@@ -3609,12 +3633,10 @@ int msvltplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
     //------------------------------------------------------------------------------------
     //Last plot
     //------------------------------------------------------------------------------------
-    if(refSt.isPlotted)
-    {
-        gnuplot_plot_xyz(h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
-        gnuplot_plot_xyz(h1, &ymdn[0][mgs], &ymdn[1][mgs],  &ymdn[2][mgs], 1, (char*)"", "points", "2", "2", 0);
-        gnuplot_plot_xyz(h1, &ymdn[0][0], &ymdn[1][0],  &ymdn[2][0], 1, (char*)"", "points", "2", "2", 0);
-    }
+    gnuplot_plot_xyz(refSt.isPlotted, h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
+    gnuplot_plot_xyz(refSt.isPlotted, h1, &ymdn[0][mgs], &ymdn[1][mgs],  &ymdn[2][mgs], 1, (char*)"", "points", "2", "2", 0);
+    gnuplot_plot_xyz(refSt.isPlotted, h1, &ymdn[0][0], &ymdn[1][0],  &ymdn[2][0], 1, (char*)"", "points", "2", "2", 0);
+
 
     //====================================================================================
     // 3. Compute the null vector: QR decomposition of DP^T
@@ -3698,6 +3720,11 @@ int msvltplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
     //------------------------------------------------------------------------------------
     *niter = iter;
 
+    //------------------------------------------------------------------------------------
+    //Last error
+    //------------------------------------------------------------------------------------
+    refSt.last_error = normC;
+
     //====================================================================================
     // 4. Free
     //====================================================================================
@@ -3732,7 +3759,7 @@ int msvltplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
  *        One should adapt the part that computes dF[k]/dt[k] = - Ji[k]*f[Q[k], t[k]).
  **/
 int msvftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
-              int nov, int mgs, int coord_type, double precision, int isFirst,
+              int nov, int mgs, int coord_type,  int isFirst,
               Orbit &orbit_EM, Orbit &orbit_SEM, gnuplot_ctrl *h1, RefSt &refSt, int *niter)
 {
     //====================================================================================
@@ -3776,7 +3803,7 @@ int msvftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
     // Other initialization
     //------------------------------------------------------------------------------------
     //Cumulated norm of the error
-    double normC;
+    double normC = 0.0;
     //Current state along the trajectory
     double **ym  = dmatrix(0, 41, 0, mgs);
     //Current time along the trajectory
@@ -3933,9 +3960,9 @@ int msvftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
         cout << fname << ". nerror = " << normC << endl;
 
         //Check that all points are under a given threshold
-        if(normC < precision)
+        if(normC < refSt.inner_prec)
         {
-            cout << fname << ". Desired precision was reached. break. nerror = " << normC << endl;
+            cout << fname << ". Desired precision was reached. " << endl; cout << "nerror = " << normC << endl;
             break;
         }
 
@@ -4044,12 +4071,9 @@ int msvftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
     //------------------------------------------------------------------------------------
     //Last plot
     //------------------------------------------------------------------------------------
-    if(refSt.isPlotted)
-    {
-        gnuplot_plot_xyz(h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
-        gnuplot_plot_xyz(h1, &ymdn[0][mgs], &ymdn[1][mgs],  &ymdn[2][mgs], 1, (char*)"", "points", "2", "2", 0);
-        gnuplot_plot_xyz(h1, &ymdn[0][0], &ymdn[1][0],  &ymdn[2][0], 1, (char*)"", "points", "2", "2", 0);
-    }
+    gnuplot_plot_xyz(refSt.isPlotted, h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
+    gnuplot_plot_xyz(refSt.isPlotted, h1, &ymdn[0][mgs], &ymdn[1][mgs],  &ymdn[2][mgs], 1, (char*)"", "points", "2", "2", 0);
+    gnuplot_plot_xyz(refSt.isPlotted, h1, &ymdn[0][0], &ymdn[1][0],  &ymdn[2][0], 1, (char*)"", "points", "2", "2", 0);
 
     //====================================================================================
     // 3. Compute the null vector: QR decomposition of DP^T
@@ -4085,6 +4109,11 @@ int msvftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
     //------------------------------------------------------------------------------------
     *niter = iter;
 
+    //------------------------------------------------------------------------------------
+    //Last error
+    //------------------------------------------------------------------------------------
+    refSt.last_error = normC;
+
     //====================================================================================
     // 4. FINALLY, we update orbit_EM.tf, even if it is not necessary
     //====================================================================================
@@ -4117,7 +4146,7 @@ int msvftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
  *   Contrary to msftplan, the pseudo-arclentgh constraint is added to the vector of constraints when !isFirst.
  **/
 int msftplan_pa(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
-                int nov, int mgs, int coord_type, double precision, int isFirst,
+                int nov, int mgs, int coord_type,  int isFirst,
                 Orbit &orbit_EM, Orbit &orbit_SEM, gnuplot_ctrl *h1, RefSt &refSt, int *niter)
 {
     //====================================================================================
@@ -4150,7 +4179,7 @@ int msftplan_pa(double **ymd, double *tmd, double **ymdn, double *tmdn, double *
     // Other initialization
     //------------------------------------------------------------------------------------
     //Cumulated norm of the error
-    double normC;
+    double normC = 0.0;
     //Current state along the trajectory
     double **ym  = dmatrix(0, 41, 0, mgs);
     //Current time along the trajectory
@@ -4348,9 +4377,9 @@ int msftplan_pa(double **ymd, double *tmd, double **ymdn, double *tmdn, double *
         cout << fname << ". nerror = " << normC << endl;
 
         //Check that all points are under a given threshold
-        if(normC < precision)
+        if(normC < refSt.inner_prec)
         {
-            cout << fname << ". Desired precision was reached. break. nerror = " << normC << endl;
+            cout << fname << ". Desired precision was reached. " << endl; cout << "nerror = " << normC << endl;
             break;
         }
 
@@ -4466,12 +4495,9 @@ int msftplan_pa(double **ymd, double *tmd, double **ymdn, double *tmdn, double *
     //------------------------------------------------------------------------------------
     //Last plot
     //------------------------------------------------------------------------------------
-    if(refSt.isPlotted)
-    {
-        gnuplot_plot_xyz(h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
-        gnuplot_plot_xyz(h1, &ymdn[0][mgs], &ymdn[1][mgs],  &ymdn[2][mgs], 1, (char*)"", "points", "2", "2", 0);
-        gnuplot_plot_xyz(h1, &ymdn[0][0], &ymdn[1][0],  &ymdn[2][0], 1, (char*)"", "points", "2", "2", 0);
-    }
+    gnuplot_plot_xyz(refSt.isPlotted, h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
+    gnuplot_plot_xyz(refSt.isPlotted, h1, &ymdn[0][mgs], &ymdn[1][mgs],  &ymdn[2][mgs], 1, (char*)"", "points", "2", "2", 0);
+    gnuplot_plot_xyz(refSt.isPlotted, h1, &ymdn[0][0], &ymdn[1][0],  &ymdn[2][0], 1, (char*)"", "points", "2", "2", 0);
 
     //====================================================================================
     // 3. Compute the null vector: QR decomposition of DP^T
@@ -4546,6 +4572,11 @@ int msftplan_pa(double **ymd, double *tmd, double **ymdn, double *tmdn, double *
     //------------------------------------------------------------------------------------
     *niter = iter;
 
+    //------------------------------------------------------------------------------------
+    //Last error
+    //------------------------------------------------------------------------------------
+    refSt.last_error = normC;
+
     //====================================================================================
     // 4. FINALLY, we update orbit_EM.tf, even if it is not necessary
     //====================================================================================
@@ -4586,7 +4617,7 @@ int msftplan_pa(double **ymd, double *tmd, double **ymdn, double *tmdn, double *
  *        A constraint H(0) = cst is added.
  **/
 int msvftplan_dH(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
-                 int nov, int mgs, int coord_type, double precision, int isFirst,
+                 int nov, int mgs, int coord_type,  int isFirst,
                  Orbit &orbit_EM, Orbit &orbit_SEM, gnuplot_ctrl *h1, RefSt &refSt, int *niter)
 {
     //====================================================================================
@@ -4630,7 +4661,7 @@ int msvftplan_dH(double **ymd, double *tmd, double **ymdn, double *tmdn, double 
     // Other initialization
     //------------------------------------------------------------------------------------
     //Cumulated norm of the error
-    double normC;
+    double normC = 0.0;
     //Current state along the trajectory
     double **ym  = dmatrix(0, 41, 0, mgs);
     //Current time along the trajectory
@@ -4828,9 +4859,9 @@ int msvftplan_dH(double **ymd, double *tmd, double **ymdn, double *tmdn, double 
         cout << fname << ". nerror = " << normC << endl;
 
         //Check that all points are under a given threshold
-        if(normC < precision)
+        if(normC < refSt.inner_prec)
         {
-            cout << fname << ". Desired precision was reached. break. nerror = " << normC << endl;
+            cout << fname << ". Desired precision was reached. " << endl; cout << "nerror = " << normC << endl;
             break;
         }
 
@@ -4942,12 +4973,9 @@ int msvftplan_dH(double **ymd, double *tmd, double **ymdn, double *tmdn, double 
     //------------------------------------------------------------------------------------
     //Last plot
     //------------------------------------------------------------------------------------
-    if(refSt.isPlotted)
-    {
-        gnuplot_plot_xyz(h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
-        gnuplot_plot_xyz(h1, &ymdn[0][mgs], &ymdn[1][mgs],  &ymdn[2][mgs], 1, (char*)"", "points", "2", "2", 0);
-        gnuplot_plot_xyz(h1, &ymdn[0][0], &ymdn[1][0],  &ymdn[2][0], 1, (char*)"", "points", "2", "2", 0);
-    }
+    gnuplot_plot_xyz(refSt.isPlotted, h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
+    gnuplot_plot_xyz(refSt.isPlotted, h1, &ymdn[0][mgs], &ymdn[1][mgs],  &ymdn[2][mgs], 1, (char*)"", "points", "2", "2", 0);
+    gnuplot_plot_xyz(refSt.isPlotted, h1, &ymdn[0][0], &ymdn[1][0],  &ymdn[2][0], 1, (char*)"", "points", "2", "2", 0);
 
     //====================================================================================
     // Energy at the origin
@@ -4996,6 +5024,11 @@ int msvftplan_dH(double **ymd, double *tmd, double **ymdn, double *tmdn, double 
     //------------------------------------------------------------------------------------
     *niter = iter;
 
+    //------------------------------------------------------------------------------------
+    //Last error
+    //------------------------------------------------------------------------------------
+    refSt.last_error = normC;
+
     //====================================================================================
     // 4. FINALLY, we update orbit_EM.tf, even if it is not necessary
     //====================================================================================
@@ -5032,7 +5065,7 @@ int msvftplan_dH(double **ymd, double *tmd, double **ymdn, double *tmdn, double 
  *        A constraint x = xe at t = te is added
  **/
 int msvftplan_dte(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nullvector,
-                  int nov, int mgs, int coord_type, double precision, int isFirst,
+                  int nov, int mgs, int coord_type,  int isFirst,
                   Orbit& orbit_EM, Orbit& orbit_SEM, gnuplot_ctrl* h1, RefSt& refSt, int* niter)
 {
     //====================================================================================
@@ -5077,7 +5110,7 @@ int msvftplan_dte(double** ymd, double* tmd, double** ymdn, double* tmdn, double
     // Other initialization
     //------------------------------------------------------------------------------------
     //Cumulated norm of the error
-    double normC;
+    double normC = 0.0;
     //Current state along the trajectory
     double** ym  = dmatrix(0, 41, 0, mgs);
     //Current time along the trajectory
@@ -5266,9 +5299,9 @@ int msvftplan_dte(double** ymd, double* tmd, double** ymdn, double* tmdn, double
         cout << fname << ". nerror = " << normC << endl;
 
         //Check that all points are under a given threshold
-        if(normC < precision)
+        if(normC < refSt.inner_prec)
         {
-            cout << fname << ". Desired precision was reached. break. nerror = " << normC << endl;
+            cout << fname << ". Desired precision was reached. " << endl; cout << "nerror = " << normC << endl;
             break;
         }
 
@@ -5384,12 +5417,9 @@ int msvftplan_dte(double** ymd, double* tmd, double** ymdn, double* tmdn, double
     //------------------------------------------------------------------------------------
     //Last plot
     //------------------------------------------------------------------------------------
-    if(refSt.isPlotted)
-    {
-        gnuplot_plot_xyz(h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
-        gnuplot_plot_xyz(h1, &ymdn[0][mgs], &ymdn[1][mgs],  &ymdn[2][mgs], 1, (char*)"", "points", "2", "2", 0);
-        gnuplot_plot_xyz(h1, &ymdn[0][0], &ymdn[1][0],  &ymdn[2][0], 1, (char*)"", "points", "2", "2", 0);
-    }
+    gnuplot_plot_xyz(refSt.isPlotted, h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
+    gnuplot_plot_xyz(refSt.isPlotted, h1, &ymdn[0][mgs], &ymdn[1][mgs],  &ymdn[2][mgs], 1, (char*)"", "points", "2", "2", 0);
+    gnuplot_plot_xyz(refSt.isPlotted, h1, &ymdn[0][0], &ymdn[1][0],  &ymdn[2][0], 1, (char*)"", "points", "2", "2", 0);
 
     //====================================================================================
     // 3. Compute the null vector: QR decomposition of DP^T
@@ -5424,6 +5454,11 @@ int msvftplan_dte(double** ymd, double* tmd, double** ymdn, double* tmdn, double
     //Number of iterations
     //------------------------------------------------------------------------------------
     *niter = iter;
+
+    //------------------------------------------------------------------------------------
+    //Last error
+    //------------------------------------------------------------------------------------
+    refSt.last_error = normC;
 
     //====================================================================================
     // 4. FINALLY, we update orbit_EM.tf, even if it is not necessary

@@ -88,7 +88,8 @@ typedef struct gnuplot_ctrl
   The session must be closed using gnuplot_close().
  */
 /*--------------------------------------------------------------------------*/
-gnuplot_ctrl * gnuplot_init(void);
+void gnuplot_init_cond(gnuplot_ctrl * h1, int isPlot);
+gnuplot_ctrl * gnuplot_init(int isPlot);
 
 /*-------------------------------------------------------------------------*/
 /**
@@ -102,7 +103,7 @@ gnuplot_ctrl * gnuplot_init(void);
 
  */
 /*--------------------------------------------------------------------------*/
-void gnuplot_close(gnuplot_ctrl * handle);
+void gnuplot_close(int isPlot, gnuplot_ctrl * handle);
 
 /*-------------------------------------------------------------------------*/
 /**
@@ -128,7 +129,7 @@ void gnuplot_close(gnuplot_ctrl * handle);
   back from gnuplot.
  */
 /*--------------------------------------------------------------------------*/
-void gnuplot_cmd(gnuplot_ctrl *  handle, char const *  cmd, ...);
+void gnuplot_cmd(int isPlot, gnuplot_ctrl *  handle, char const *  cmd, ...);
 
 /*-------------------------------------------------------------------------*/
 /**
@@ -151,8 +152,8 @@ void gnuplot_cmd(gnuplot_ctrl *  handle, char const *  cmd, ...);
   - boxeserrorbars
  */
 /*--------------------------------------------------------------------------*/
-void gnuplot_setstyle(gnuplot_ctrl * h, char * plot_style);
-void gnuplot_setcolor(gnuplot_ctrl * h, int plot_style);
+void gnuplot_setstyle(int isPlot, gnuplot_ctrl * h, char * plot_style);
+void gnuplot_setcolor(int isPlot, gnuplot_ctrl * h, int plot_style);
 
 /*-------------------------------------------------------------------------*/
 /**
@@ -164,7 +165,7 @@ void gnuplot_setcolor(gnuplot_ctrl * h, int plot_style);
   Sets the x label for a gnuplot session.
  */
 /*--------------------------------------------------------------------------*/
-void gnuplot_set_xlabel(gnuplot_ctrl * h, char * label);
+void gnuplot_set_xlabel(int isPlot, gnuplot_ctrl * h, char * label);
 
 
 /*-------------------------------------------------------------------------*/
@@ -177,8 +178,8 @@ void gnuplot_set_xlabel(gnuplot_ctrl * h, char * label);
   Sets the y label for a gnuplot session.
  */
 /*--------------------------------------------------------------------------*/
-void gnuplot_set_ylabel(gnuplot_ctrl * h, char * label);
-void gnuplot_set_zlabel(gnuplot_ctrl * h, char * label);
+void gnuplot_set_ylabel(int isPlot, gnuplot_ctrl * h, char * label);
+void gnuplot_set_zlabel(int isPlot, gnuplot_ctrl * h, char * label);
 
 /*-------------------------------------------------------------------------*/
 /**
@@ -190,7 +191,7 @@ void gnuplot_set_zlabel(gnuplot_ctrl * h, char * label);
   ones.
  */
 /*--------------------------------------------------------------------------*/
-void gnuplot_resetplot(gnuplot_ctrl * h);
+void gnuplot_resetplot(int isPlot, gnuplot_ctrl * h);
 
 /*-------------------------------------------------------------------------*/
 /**
@@ -222,7 +223,7 @@ void gnuplot_resetplot(gnuplot_ctrl * h);
   @endcode
  */
 /*--------------------------------------------------------------------------*/
-void gnuplot_plot_x(gnuplot_ctrl * handle, double * d, int n, char * title);
+void gnuplot_plot_x(int isPlot, gnuplot_ctrl * handle, double * d, int n, char * title);
 
 /*-------------------------------------------------------------------------*/
 /**
@@ -256,6 +257,7 @@ void gnuplot_plot_x(gnuplot_ctrl * handle, double * d, int n, char * title);
  */
 /*--------------------------------------------------------------------------*/
 void gnuplot_plotc_xy(
+    int               isPlot,
     gnuplot_ctrl    * handle,
     const double    * x,
     const double    * y,
@@ -267,6 +269,7 @@ void gnuplot_plotc_xy(
     int               lc);
 
 void gnuplot_plot_xy(
+    int                 isPlot,
     gnuplot_ctrl    *   handle,
     double          *   x,
     double          *   y,
@@ -278,6 +281,7 @@ void gnuplot_plot_xy(
     int lc);
 
 void gnuplot_plot_xyz(
+    int               isPlot,
     gnuplot_ctrl    * handle,
     double          * x,
     double          * y,
@@ -290,6 +294,7 @@ void gnuplot_plot_xyz(
     int lc);
 
 void gnuplot_plot_X(
+    int               isPlot,
     gnuplot_ctrl    * handle,
     double          **X,
     int               n,

@@ -70,6 +70,23 @@ Orbit::~Orbit()
 // Update
 //========================================================================================
 /**
+ *  \brief Update the initial and final conditions: new initial time is t0c,
+ *         new initial RCM state is si. new final time is tfc.
+ **/
+void Orbit::update_ifc(const double si[], double t0c, double tfc)
+{
+    //------------------------------------------------------------------------------------
+    // 1. Update the ic
+    //------------------------------------------------------------------------------------
+    update_ic(si, t0c);
+
+    //------------------------------------------------------------------------------------
+    // 5. Update tf
+    //------------------------------------------------------------------------------------
+    tfx = tfc;
+}
+
+/**
  *  \brief Update the initial conditions: new initial time is t0c, new initial RCM state
  *         is si.
  **/
@@ -928,12 +945,12 @@ int oo_gridOrbit(double st0[], double t0, double tf, double dt)
 
     //Plotting
     gnuplot_ctrl  *h3;
-    h3 = gnuplot_init();
-    gnuplot_cmd(h3, "set logscale y");
-    gnuplot_setstyle(h3,   (char*)"lines");
-    gnuplot_set_xlabel(h3, (char*)"t [x T]");
-    gnuplot_set_ylabel(h3, (char*)"H [-]");
-    gnuplot_plot_xy(h3, tnSYS, dHSYS, N+1, (char*)"H(t) - H(0)", "lines", "1", "1", 1);
+    h3 = gnuplot_init(true);
+    gnuplot_cmd(true, h3, "set logscale y");
+    gnuplot_setstyle(true, h3,   (char*)"lines");
+    gnuplot_set_xlabel(true, h3, (char*)"t [x T]");
+    gnuplot_set_ylabel(true, h3, (char*)"H [-]");
+    gnuplot_plot_xy(true, h3, tnSYS, dHSYS, N+1, (char*)"H(t) - H(0)", "lines", "1", "1", 1);
 
 
     //====================================================================================
@@ -946,12 +963,11 @@ int oo_gridOrbit(double st0[], double t0, double tf, double dt)
     //Plotting
     //====================================================================================
     gnuplot_ctrl  *h1;
-    h1 = gnuplot_init();
-
-    gnuplot_setstyle(h1,   (char*)"lines");
-    gnuplot_set_xlabel(h1, (char*)"x [-]");
-    gnuplot_set_ylabel(h1, (char*)"y [-]");
-    gnuplot_plot_xyz(h1, yNCE[0], yNCE[1], yNCE[2], N+1, (char*)"NC coordinates", "lines", "1", "1", 1);
+    h1 = gnuplot_init(true);
+    gnuplot_setstyle(true, h1,   (char*)"lines");
+    gnuplot_set_xlabel(true, h1, (char*)"x [-]");
+    gnuplot_set_ylabel(true, h1, (char*)"y [-]");
+    gnuplot_plot_xyz(true, h1, yNCE[0], yNCE[1], yNCE[2], N+1, (char*)"NC coordinates", "lines", "1", "1", 1);
 
 
     //User check
@@ -962,7 +978,7 @@ int oo_gridOrbit(double st0[], double t0, double tf, double dt)
     //Correction procedure
     //====================================================================================
     gnuplot_ctrl  *h2;
-    h2 = gnuplot_init();
+    h2 = gnuplot_init(true);
 
     //------------------------------------------------------------------------------------
     // Coordinates for the correction
@@ -1024,7 +1040,7 @@ int oo_gridOrbit(double st0[], double t0, double tf, double dt)
     //Plotting
     //------------------------------------------------------------------------------------
     //Plot on h2
-    gnuplot_plot_X(h2, ymc_v, mPlot*N+1, "final trajectory", "lines", "1", "1", 2);
+    gnuplot_plot_X(true, h2, ymc_v, mPlot*N+1, "final trajectory", "lines", "1", "1", 2);
 
     //User check
     pressEnter(true);
@@ -1059,12 +1075,12 @@ int oo_gridOrbit(double st0[], double t0, double tf, double dt)
     //Plotting
     //------------------------------------------------------------------------------------
     //Plot on h2
-    gnuplot_plot_X(h2, ymc_v, mPlot*N+1, "final trajectory", "lines", "1", "1", 2);
+    gnuplot_plot_X(true, h2, ymc_v, mPlot*N+1, "final trajectory", "lines", "1", "1", 2);
 
     //User check
     pressEnter(true);
-    gnuplot_close(h1);
-    gnuplot_close(h2);
+    gnuplot_close(true, h1);
+    gnuplot_close(true, h2);
 
     //====================================================================================
     //Free
@@ -1083,7 +1099,7 @@ int oo_gridOrbit(double st0[], double t0, double tf, double dt)
  *         Moreover, a projection procedure is applied is order to have the reduced state s(t)
  *         along the trajectory
  **/
-int gridOrbit_si(double st0[], double t0, double tf, double dt, int isFlagOn)
+int gridOrbit_si(double st0[], double t0, double tf, double dt, int isFlagOn, int isPlot)
 {
     //====================================================================================
     // Initialization
@@ -1176,31 +1192,31 @@ int gridOrbit_si(double st0[], double t0, double tf, double dt, int isFlagOn)
     //Plotting
     //====================================================================================
     gnuplot_ctrl  *h1;
-    h1 = gnuplot_init();
-    gnuplot_setstyle(h1,   (char*)"lines");
-    gnuplot_set_xlabel(h1, (char*)"x [-]");
-    gnuplot_set_ylabel(h1, (char*)"y [-]");
-    gnuplot_plot_xyz(h1, yNCE[0], yNCE[1], yNCE[2], N+1, (char*)"NC coordinates", "lines", "1", "1", 1);
+    h1 = gnuplot_init(isPlot);
+    gnuplot_setstyle(isPlot, h1,   (char*)"lines");
+    gnuplot_set_xlabel(isPlot, h1, (char*)"x [-]");
+    gnuplot_set_ylabel(isPlot, h1, (char*)"y [-]");
+    gnuplot_plot_xyz(isPlot, h1, yNCE[0], yNCE[1], yNCE[2], N+1, (char*)"NC coordinates", "lines", "1", "1", 1);
 
     gnuplot_ctrl  *h2;
-    h2 = gnuplot_init();
-    gnuplot_setstyle(h2,   (char*)"lines");
-    gnuplot_set_xlabel(h2, (char*)"t [x T]");
-    gnuplot_set_ylabel(h2, (char*)"H [-]");
-    gnuplot_plot_xy(h2, tNCET, HNC, N+1, (char*)"H(t) - H(0, t)", "lines", "1", "1", 1);
+    h2 = gnuplot_init(isPlot);
+    gnuplot_setstyle(isPlot, h2,   (char*)"lines");
+    gnuplot_set_xlabel(isPlot, h2, (char*)"t [x T]");
+    gnuplot_set_ylabel(isPlot, h2, (char*)"H [-]");
+    gnuplot_plot_xy(isPlot, h2, tNCET, HNC, N+1, (char*)"H(t) - H(0, t)", "lines", "1", "1", 1);
 
     gnuplot_ctrl  *h3;
-    h3 = gnuplot_init();
-    gnuplot_setstyle(h3,   (char*)"lines");
-    gnuplot_set_xlabel(h3, (char*)"s1");
-    gnuplot_set_ylabel(h3, (char*)"s3");
-    gnuplot_plot_xy(h3, sRCM[0], sRCM[2], N+1, (char*)"s1(t), s3(t)", "lines", "1", "1", 1);
+    h3 = gnuplot_init(isPlot);
+    gnuplot_setstyle(isPlot, h3,   (char*)"lines");
+    gnuplot_set_xlabel(isPlot, h3, (char*)"s1");
+    gnuplot_set_ylabel(isPlot, h3, (char*)"s3");
+    gnuplot_plot_xy(isPlot, h3, sRCM[0], sRCM[2], N+1, (char*)"s1(t), s3(t)", "lines", "1", "1", 1);
 
     //User check
     pressEnter(isFlagOn);
-    gnuplot_close(h1);
-    gnuplot_close(h2);
-    gnuplot_close(h3);
+    gnuplot_close(isPlot, h1);
+    gnuplot_close(isPlot, h2);
+    gnuplot_close(isPlot, h3);
 
 
     //====================================================================================
@@ -1224,7 +1240,7 @@ int gridOrbit_si(double st0[], double t0, double tf, double dt, int isFlagOn)
  *         along the trajectory. Finally, only the points that satisfy t = t0 + k T, k integer, are kept.
  *         The result is a stroboscopic map.
  **/
-int gridOrbit_strob(double st0[], double t0, int N, int isFlagOn)
+int gridOrbit_strob(double st0[], double t0, int N, int isFlagOn, int isPlot)
 {
     //====================================================================================
     // Initialization
@@ -1317,28 +1333,28 @@ int gridOrbit_strob(double st0[], double t0, int N, int isFlagOn)
     //Plotting
     //====================================================================================
     gnuplot_ctrl  *h1;
-    h1 = gnuplot_init();
-    gnuplot_set_xlabel(h1, (char*)"x [-]");
-    gnuplot_set_ylabel(h1, (char*)"y [-]");
-    gnuplot_plot_xyz(h1, yNCE[0], yNCE[1], yNCE[2], N+1, (char*)"NC coordinates", "points", "7", "1", 4);
+    h1 = gnuplot_init(isPlot);
+    gnuplot_set_xlabel(isPlot, h1, (char*)"x [-]");
+    gnuplot_set_ylabel(isPlot, h1, (char*)"y [-]");
+    gnuplot_plot_xyz(isPlot, h1, yNCE[0], yNCE[1], yNCE[2], N+1, (char*)"NC coordinates", "points", "7", "1", 4);
 
     gnuplot_ctrl  *h2;
-    h2 = gnuplot_init();
-    gnuplot_set_xlabel(h2, (char*)"t [x T]");
-    gnuplot_set_ylabel(h2, (char*)"H [-]");
-    gnuplot_plot_xy(h2, tNCET, HNC, N+1, (char*)"H(t) - H(0, t)", "points", "7", "1", 4);
+    h2 = gnuplot_init(isPlot);
+    gnuplot_set_xlabel(isPlot, h2, (char*)"t [x T]");
+    gnuplot_set_ylabel(isPlot, h2, (char*)"H [-]");
+    gnuplot_plot_xy(isPlot, h2, tNCET, HNC, N+1, (char*)"H(t) - H(0, t)", "points", "7", "1", 4);
 
     gnuplot_ctrl  *h3;
-    h3 = gnuplot_init();
-    gnuplot_set_xlabel(h3, (char*)"s1");
-    gnuplot_set_ylabel(h3, (char*)"s3");
-    gnuplot_plot_xy(h3, sRCM[0], sRCM[2], N+1, (char*)"s1(t), s3(t)", "points", "7", "1", 4);
+    h3 = gnuplot_init(isPlot);
+    gnuplot_set_xlabel(isPlot, h3, (char*)"s1");
+    gnuplot_set_ylabel(isPlot, h3, (char*)"s3");
+    gnuplot_plot_xy(isPlot, h3, sRCM[0], sRCM[2], N+1, (char*)"s1(t), s3(t)", "points", "7", "1", 4);
 
     //User check
     pressEnter(isFlagOn);
-    gnuplot_close(h1);
-    gnuplot_close(h2);
-    gnuplot_close(h3);
+    gnuplot_close(isPlot, h1);
+    gnuplot_close(isPlot, h2);
+    gnuplot_close(isPlot, h3);
 
 
     //====================================================================================

@@ -44,6 +44,7 @@ using namespace std;
 #define COMP_test_INVMAN               9    //Test of the new invariant manifold implementation
 #define COMP_REF_JPL                   10   //Refine to JPL ephemerides
 #define COMP_CM_EML2_TO_CM_SEML_H      11   //Planar EMLi Center Manifold to SEMLi Center Manifold, at a given energy
+#define COMP_ORBIT_EML2_TO_CM_SEML     12   //EMLi Center Manifold to SEMLi Center Manifold, on a given orbit
 
 /************* NOTES *********************************************************************
  Notes from Reunion with Josep (15/12/2015)
@@ -189,6 +190,7 @@ int main(int argc, char** argv)
     case COMP_CM_EML2_TO_CM_SEML_3D:
     case COMP_CM_EML2_TO_CM_SEML_REFINE:
     case COMP_CM_EML2_TO_CM_SEML_H:
+    case COMP_ORBIT_EML2_TO_CM_SEML:
         model     = MODEL_TYPE;
         fwrk      = F_EM;
         isNorm    = 1;
@@ -266,28 +268,28 @@ int main(int argc, char** argv)
         //Time grid: min, max and number of points on the grid
         //--------------------------------------------------------------------------------
         projSt.TMIN  = 0.0*SEML.us_em.T;
-        projSt.TMAX  = 0.5*SEML.us_em.T;
+        projSt.TMAX  = 1.0*SEML.us_em.T;
 
-        projSt.TSIZE    = 100;
+        projSt.TSIZE    = 0;
         projSt.TLIM[0]  = projSt.TMIN;
         projSt.TLIM[1]  = projSt.TMAX;
 
         //--------------------------------------------------------------------------------
         // Configuration (s1, s2, s3, s4) grid
         //--------------------------------------------------------------------------------
-        projSt.GLIM_SI[0][0] = 10;//7.32741;
-        projSt.GLIM_SI[0][1] = +35;
+        projSt.GLIM_SI[0][0] = -30;
+        projSt.GLIM_SI[0][1] = +30;
 
         projSt.GLIM_SI[1][0] = +0;
         projSt.GLIM_SI[1][1] = +10;
 
-        projSt.GLIM_SI[2][0] = -10;//-10.0765;
+        projSt.GLIM_SI[2][0] = -35;
         projSt.GLIM_SI[2][1] = +35;
 
         projSt.GLIM_SI[3][0] = +0;
         projSt.GLIM_SI[3][1] = +10;
 
-        projSt.GSIZE_SI[0]   = 50;
+        projSt.GSIZE_SI[0]   = 2;
         projSt.GSIZE_SI[1]   = 0;
         projSt.GSIZE_SI[2]   = 50;
         projSt.GSIZE_SI[3]   = 0;
@@ -300,7 +302,12 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         // Energy
         //--------------------------------------------------------------------------------
-        projSt.dHd = 0.005;
+        projSt.dHd = -1.0;
+
+        //--------------------------------------------------------------------------------
+        // Time frequency, in %T
+        //--------------------------------------------------------------------------------
+        projSt.dt = 0.005;
 
         //--------------------------------------------------------------------------------
         //Stable parameters (are not supposed to change)
@@ -322,7 +329,7 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         //rk: set REF_CONT_D_HARD_CASE for difficult cases
         //with REF_CONT_D (ex: EML2-SEMLi via SEML1...)
-        refSt.type          = REF_CONT_D;                      // Type of refinement
+        refSt.type          = REF_ORBIT;                       // Type of refinement
         refSt.dim           = REF_PLANAR;                      // Type of dimensions planar or 3d?
         refSt.t0xT_des      = 0.96;                            // Initial time (xT)
         refSt.t0_des        = refSt.t0xT_des*SEML.us_em.T;     // Initial time
@@ -332,21 +339,33 @@ int main(int argc, char** argv)
         refSt.Dir           = +1;                 // if not, +1 or -1
 
         // Domain of search for the first guess
-        refSt.s1_CMU_EM_MIN = -40;
-        refSt.s1_CMU_EM_MAX = +40;
+        refSt.si_CMU_EM_MIN[0] = -40;
+        refSt.si_CMU_EM_MAX[0] = +40;
 
-        refSt.s2_CMU_EM_MIN = +0;
-        refSt.s2_CMU_EM_MAX = +0;
+        refSt.si_CMU_EM_MIN[1] = +0;
+        refSt.si_CMU_EM_MAX[1] = +0;
 
-        refSt.s3_CMU_EM_MIN = -40;
-        refSt.s3_CMU_EM_MAX = +40;
+        refSt.si_CMU_EM_MIN[2] = -40;
+        refSt.si_CMU_EM_MAX[2] = +40;
 
-        refSt.s4_CMU_EM_MIN = +4;
-        refSt.s4_CMU_EM_MAX = +4;
-
+        refSt.si_CMU_EM_MIN[3] = +4;
+        refSt.si_CMU_EM_MAX[3] = +4;
 
         // Or, if we want the user to define such domain:
         refSt.isLimUD       =  0;
+
+        // Domain of search for the seed of the first guess
+        refSt.si_SEED_EM_MIN[0] = -40;
+        refSt.si_SEED_EM_MAX[0] = +40;
+
+        refSt.si_SEED_EM_MIN[1] = +0;
+        refSt.si_SEED_EM_MAX[1] = +0;
+
+        refSt.si_SEED_EM_MIN[2] = -40;
+        refSt.si_SEED_EM_MAX[2] = +40;
+
+        refSt.si_SEED_EM_MIN[3] = 0;
+        refSt.si_SEED_EM_MAX[3] = 0;
 
         //Limits for the time of flight during transfers - not used if -1
         refSt.tof_MIN       = -1;
@@ -354,6 +373,9 @@ int main(int argc, char** argv)
 
         // Values for crossings
         refSt.crossings     = 2;
+
+        // Maximum projection distance allowed during subselection
+        refSt.pmax_dist_SEM = 5e-4;
 
         // Number of steps in the continuation procedure
         refSt.cont_step_max    = +450;            // with fixed times
@@ -368,8 +390,8 @@ int main(int argc, char** argv)
         refSt.nu0_vt = 3;       //with variable time
 
         //User parameters
-        refSt.isFlagOn      = 1;                  // do we have steps in the procedure - asking the user to press enter to go on?
-        refSt.isPlotted     = 1;                  // do we plot the results during the computation?
+        refSt.isFlagOn      = 0;                  // do we have steps in the procedure - asking the user to press enter to go on?
+        refSt.isPlotted     = 0;                  // do we plot the results during the computation?
         refSt.isSaved       = 1;                  // do we save the results in data files?
         refSt.isFromServer  = 0;                  // does the raw data comes from server files?
         refSt.isPar         = 0;                  //is parallel computation allowed?
@@ -412,7 +434,7 @@ int main(int argc, char** argv)
         // Storing the orbits at each step?
         refSt.isSaved_EM    = 0;      //0: don't save, 1: save using projection method
         refSt.isSaved_SEM   = 0;      //0: don't save, 1: save using projection method,
-                                      //2: save using integration in reduced coordinates
+        //2: save using integration in reduced coordinates
 
         //Energy
         refSt.dH     = 0.0;
@@ -435,6 +457,7 @@ int main(int argc, char** argv)
         case COMP_CM_EML2_TO_CM_SEML_3D:
         case COMP_CM_EML2_TO_CM_SEML:
         case COMP_CM_EML2_TO_CM_SEML_H:
+        case COMP_ORBIT_EML2_TO_CM_SEML:
         {
             //----------------------------------------------------------------------------
             //Time grid: min, max and number of points on the grid
@@ -482,7 +505,15 @@ int main(int argc, char** argv)
             projSt.NOD   = atoi(argv[index++]);
             projSt.ISPAR = ISPAR;
 
+            //----------------------------------------------------------------------------
+            // Energy
+            //----------------------------------------------------------------------------
+            projSt.dHd   = atof(argv[index++]);
 
+            //----------------------------------------------------------------------------
+            // Time frequency, in %T
+            //----------------------------------------------------------------------------
+            projSt.dt   = atof(argv[index++]);
 
             break;
         }
@@ -509,21 +540,33 @@ int main(int argc, char** argv)
             refSt.Dir           = atoi(argv[index++]);    // if not, +1 or -1
 
             // Domain of search for the first guess
-            refSt.s1_CMU_EM_MIN = atof(argv[index++]);
-            refSt.s1_CMU_EM_MAX = atof(argv[index++]);
+            refSt.si_CMU_EM_MIN[0] = atof(argv[index++]);
+            refSt.si_CMU_EM_MAX[0] = atof(argv[index++]);
 
-            refSt.s2_CMU_EM_MIN = atof(argv[index++]);
-            refSt.s2_CMU_EM_MAX = atof(argv[index++]);
+            refSt.si_CMU_EM_MIN[1] = atof(argv[index++]);
+            refSt.si_CMU_EM_MAX[1] = atof(argv[index++]);
 
-            refSt.s3_CMU_EM_MIN = atof(argv[index++]);
-            refSt.s3_CMU_EM_MAX = atof(argv[index++]);
+            refSt.si_CMU_EM_MIN[2] = atof(argv[index++]);
+            refSt.si_CMU_EM_MAX[2] = atof(argv[index++]);
 
-            refSt.s4_CMU_EM_MIN = atof(argv[index++]);
-            refSt.s4_CMU_EM_MAX = atof(argv[index++]);
-
+            refSt.si_CMU_EM_MIN[3] = atof(argv[index++]);
+            refSt.si_CMU_EM_MAX[3] = atof(argv[index++]);
 
             // Or, if we want the user to define such domain:
             refSt.isLimUD       = atoi(argv[index++]);
+
+            // Domain of search for the seed of the first guess
+            refSt.si_SEED_EM_MIN[0] = atof(argv[index++]);
+            refSt.si_SEED_EM_MAX[0] = atof(argv[index++]);
+
+            refSt.si_SEED_EM_MIN[1] = atof(argv[index++]);
+            refSt.si_SEED_EM_MAX[1] = atof(argv[index++]);
+
+            refSt.si_SEED_EM_MIN[2] = atof(argv[index++]);
+            refSt.si_SEED_EM_MAX[2] = atof(argv[index++]);
+
+            refSt.si_SEED_EM_MIN[3] = atof(argv[index++]);
+            refSt.si_SEED_EM_MAX[3] = atof(argv[index++]);
 
             //Limits for the time of flight during transfers - not used if negative
             refSt.tof_MIN       = atof(argv[index++])*SEML.us_em.T;
@@ -531,6 +574,9 @@ int main(int argc, char** argv)
 
             // Values for crossings
             refSt.crossings     = atof(argv[index++]);
+
+            // Maximum projection distance allowed during subselection
+            refSt.pmax_dist_SEM = atof(argv[index++]);
 
             // Number of steps in the continuation procedure
             refSt.cont_step_max    = atoi(argv[index++]);  // with fixed times
@@ -590,7 +636,7 @@ int main(int argc, char** argv)
             // Storing the orbits at each step?
             refSt.isSaved_EM    = atoi(argv[index++]);  //0: don't save, 1: save using projection method
             refSt.isSaved_SEM   = atoi(argv[index++]);  //0: don't save, 1: save using projection method,
-                                                        //2: save using integration in reduced coordinates
+            //2: save using integration in reduced coordinates
 
             //Type of time selection
             refSt.typeOfTimeSelection = atoi(argv[index++]);
@@ -645,16 +691,11 @@ int main(int argc, char** argv)
         break;
     }
 
-        //================================================================================
-        // Projection CMU EML2 to CM SEMLi
-        //================================================================================
+    //================================================================================
+    // Projection CMU EML2 to CM SEMLi
+    //================================================================================
     case COMP_CM_EML2_TO_CM_SEML:
     {
-        double dt = 0.005;
-        int_proj_ORBIT_EM_on_CM_SEM(projSt, 1, dt);
-        break;
-
-
         //--------------------------------------------------------------------------------
         // Compute initial conditions in CMU EML2 on a given grid
         //--------------------------------------------------------------------------------
@@ -671,9 +712,19 @@ int main(int argc, char** argv)
 
         break;
     }
-        //================================================================================
-        // Projection CMU EML2 to CM SEMLi, at afixed energy
-        //================================================================================
+
+    //================================================================================
+    // Projection CMU EML2 to CM SEMLi, on a given orbit
+    //================================================================================
+    case COMP_ORBIT_EML2_TO_CM_SEML:
+    {
+        int_proj_ORBIT_EM_on_CM_SEM(projSt, 1);
+        break;
+    }
+
+    //================================================================================
+    // Projection CMU EML2 to CM SEMLi, at a fixed energy
+    //================================================================================
     case COMP_CM_EML2_TO_CM_SEML_H:
     {
         //--------------------------------------------------------------------------------
@@ -692,15 +743,25 @@ int main(int argc, char** argv)
 
         break;
     }
-        //================================================================================
-        // Refinement CMU EML2 to CMS SEMLi
-        //================================================================================
+    //================================================================================
+    // Refinement CMU EML2 to CMS SEMLi
+    //================================================================================
     case COMP_CM_EML2_TO_CMS_SEML:
     {
         //--------------------------------------------------------------------------------
         // Complete routine: new version
         //--------------------------------------------------------------------------------
-        refemlisemli(refSt);
+        switch(refSt.type)
+        {
+        case REF_ORBIT:
+            sorefemlisemli(refSt);
+            break;
+
+        default:
+            refemlisemli(refSt);
+            break;
+        }
+
         break;
 
         //--------------------------------------------------------------------------------
@@ -710,9 +771,9 @@ int main(int argc, char** argv)
         break;
     }
 
-        //================================================================================
-        // Refinement of the whole trajectory to JPL ephemerides
-        //================================================================================
+    //================================================================================
+    // Refinement of the whole trajectory to JPL ephemerides
+    //================================================================================
     case COMP_REF_JPL:
     {
         reffromcontemlisemli(refSt);
@@ -723,9 +784,9 @@ int main(int argc, char** argv)
         break;
     }
 
-        //================================================================================
-        // Test on ephemerides
-        //================================================================================
+    //================================================================================
+    // Test on ephemerides
+    //================================================================================
     case COMP_EPHEMERIDES_TEST:
     {
         //----------------------
@@ -765,66 +826,37 @@ int main(int argc, char** argv)
 
         break;
     }
-        //================================================================================
-        // READ CMU EML2 to CMS SEMLi
-        //================================================================================
+    //================================================================================
+    // READ CMU EML2 to CMS SEMLi
+    //================================================================================
     case COMP_CM_EML2_TO_CMS_SEML_READ:
     {
         //Filename;
         string filename = filenameCUM(OFTS_ORDER, TYPE_MAN_PROJ, SEML.li_SEM);
 
-        //Indix
-        int ind = 0;
-        vector<size_t> sortId;
-
-        //Vector to store the values of t0v_EM;
-        vector<double> t0_CMU_EM;
-        vector<double> tf_man_EM;
-        vector<double> s1_CMU_EM;
-        vector<double> s2_CMU_EM;
-        vector<double> s3_CMU_EM;
-        vector<double> s4_CMU_EM;
-        vector<double> s5_CMU_EM;
-        vector<double> pmin_dist_SEM;
-        vector<double> s1_CM_SEM;
-        vector<double> s2_CM_SEM;
-        vector<double> s3_CM_SEM;
-        vector<double> s4_CM_SEM;
-        vector<double> crossings;
-
+        //Structure to store data;
+        ProjResClass sortSt;
 
         //Read data file
-        readClosestIntProjCU_bin(filename, -1, t0_CMU_EM, tf_man_EM,
-                          s1_CMU_EM, s2_CMU_EM, s3_CMU_EM,
-                          s4_CMU_EM, s5_CMU_EM,
-                          pmin_dist_SEM, s1_CM_SEM, s2_CM_SEM,
-                          s3_CM_SEM, s4_CM_SEM, crossings, sortId, TIME_SELECTION_ABSOLUTE);
+        sortSt.readProjRes_t0(filename, -1, TIME_SELECTION_ABSOLUTE);
+
 
         //Display
         coutmp();
-        ind = sortId[0];
         cout << "--------------------------------------" << endl;
         cout << "The first entry for this time is:" << endl;
-        cout << "t0_EM    = " << t0_CMU_EM[ind]  << endl;
-        cout << "tf_EM    = " << tf_man_EM[ind] << endl;
-        cout << "pmin_SEM = " << pmin_dist_SEM[ind] << endl;
-        cout << "s_CM_EM  = (" << s1_CMU_EM[ind] << ", " << s2_CMU_EM[ind] << ", " << s3_CMU_EM[ind] << ", " << s4_CMU_EM[ind] << ")" << endl;
-        cout << "s_CM_SEM = (" << s1_CM_SEM[ind] << ", " << s2_CM_SEM[ind] << ", " << s3_CM_SEM[ind] << ", " << s4_CM_SEM[ind] << ")" << endl;
+        sortSt.displayFirstEntry();
 
-        ind = sortId[t0_CMU_EM.size()-1];
         cout << "--------------------------------------" << endl;
         cout << "The last entry for this time is:" << endl;
-        cout << "t0_EM    = " << t0_CMU_EM[ind]  << endl;
-        cout << "tf_EM    = " << tf_man_EM[ind] << endl;
-        cout << "pmin_SEM = " << pmin_dist_SEM[ind] << endl;
-        cout << "s_CM_EM  = (" << s1_CMU_EM[ind] << ", " << s2_CMU_EM[ind] << ", " << s3_CMU_EM[ind] << ", " << s4_CMU_EM[ind] << ")" << endl;
-        cout << "s_CM_SEM = (" << s1_CM_SEM[ind] << ", " << s2_CM_SEM[ind] << ", " << s3_CM_SEM[ind] << ", " << s4_CM_SEM[ind] << ")" << endl;
+        sortSt.displayLastEntry();
+
         break;
     }
 
-        //================================================================================
-        // Just some examples of solutions
-        //================================================================================
+    //================================================================================
+    // Just some examples of solutions
+    //================================================================================
     case COMP_SINGLE_ORBIT:
     {
         //Reduced number of variables in the default invariant manifolds
@@ -887,28 +919,29 @@ int main(int argc, char** argv)
         // Computation
         //--------------------------------------------------------------------------------
         int isFlagOn = 1;
+        int isPlot   = 1;
         double t0 = 0.96*SEML.us->T;
-        double  N = 180;
+        double  N = 10;
 
         //gridOrbit_si(st0, t0, t0 + N*SEML.us->T, 1e-2*SEML.us->T, isFlagOn);
-        gridOrbit_strob(st0, t0, N, isFlagOn);
+        gridOrbit_strob(st0, t0, N, isFlagOn, isPlot);
 
 
         break;
     }
-        //================================================================================
-        // Test of the vector fields. Better in OOFTDA??
-        // @todo set this routine (qbtbp_test) in OOFTDA
-        //================================================================================
+    //================================================================================
+    // Test of the vector fields. Better in OOFTDA??
+    // @todo set this routine (qbtbp_test) in OOFTDA
+    //================================================================================
     case COMP_VF_TEST:
     {
         qbtbp_test(SEML.us->T, SEML);
         break;
     }
 
-        //================================================================================
-        // Test of the new invariant manifold representation
-        //================================================================================
+    //================================================================================
+    // Test of the new invariant manifold representation
+    //================================================================================
     case COMP_test_INVMAN:
     {
         test_evalCCMtoTFC();
@@ -918,10 +951,10 @@ int main(int argc, char** argv)
     }
     break;
 
-        //================================================================================
-        // Store CS/CU into one-dimensionnal series to gain memory.
-        // DEPRECATED: NOW DONE IN OOFTDA
-        //================================================================================
+    //================================================================================
+    // Store CS/CU into one-dimensionnal series to gain memory.
+    // DEPRECATED: NOW DONE IN OOFTDA
+    //================================================================================
     case COMP_VOFTS_TO_VOFTS:
     {
         cout << "-------------------------------------------------------" << endl;

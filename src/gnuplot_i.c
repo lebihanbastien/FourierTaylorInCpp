@@ -53,7 +53,7 @@
  *
  * @return char const * Pointer to file name string.
  */
-char const * gnuplot_tmpfile(gnuplot_ctrl * handle);
+char const* gnuplot_tmpfile(gnuplot_ctrl* handle);
 
 /**
  * Plot a temporary file.
@@ -64,7 +64,8 @@ char const * gnuplot_tmpfile(gnuplot_ctrl * handle);
  * @param tmp_filename
  * @param title
  */
-void gnuplot_plot_atmpfile(gnuplot_ctrl * handle,
+void gnuplot_plot_atmpfile(int isPlot,
+                           gnuplot_ctrl* handle,
                            char const* tmp_filename,
                            char const* title,
                            char const* ls,
@@ -72,7 +73,8 @@ void gnuplot_plot_atmpfile(gnuplot_ctrl * handle,
                            char const* lw,
                            int lc);
 
-void gnuplot_plot_atmpfile_3d(gnuplot_ctrl * handle,
+void gnuplot_plot_atmpfile_3d(int isPlot,
+                              gnuplot_ctrl* handle,
                               char const* tmp_filename,
                               char const* title,
                               char const* ls,
@@ -97,48 +99,52 @@ void gnuplot_plot_atmpfile_3d(gnuplot_ctrl * handle,
  */
 /*--------------------------------------------------------------------------*/
 
-gnuplot_ctrl * gnuplot_init(void)
+gnuplot_ctrl* gnuplot_init(int isPlot)
 {
-    gnuplot_ctrl *  handle ;
-    int i;
+    gnuplot_ctrl*   handle = 0;
 
-#ifndef WIN32
-    if (getenv("DISPLAY") == NULL)
+    if(isPlot)
     {
-        fprintf(stderr, "cannot find DISPLAY variable: is it set?\n") ;
+        int i;
+
+    #ifndef WIN32
+        if (getenv("DISPLAY") == NULL)
+        {
+            fprintf(stderr, "cannot find DISPLAY variable: is it set?\n") ;
+        }
+    #endif // #ifndef WIN32
+
+
+        /*
+         * Structure initialization:
+         */
+        handle = (gnuplot_ctrl*)malloc(sizeof(gnuplot_ctrl)) ;
+        handle->nplots = 0 ;
+        gnuplot_setstyle(1, handle, "points") ;
+        handle->ntmp = 0 ;
+        gnuplot_setcolor(1, handle, 0);
+
+
+        handle->gnucmd = popen("gnuplot", "w") ;
+        if (handle->gnucmd == NULL)
+        {
+            fprintf(stderr, "error starting gnuplot, is gnuplot or gnuplot.exe in your path?\n") ;
+            free(handle) ;
+            return NULL ;
+        }
+
+        for (i=0; i<GP_MAX_TMP_FILES; i++)
+        {
+            handle->tmp_filename_tbl[i] = NULL;
+        }
+
+        handle->xrange[0] = 0.0;
+        handle->xrange[1] = 0.0;
+        handle->yrange[0] = 0.0;
+        handle->yrange[1] = 0.0;
+        handle->zrange[0] = 0.0;
+        handle->zrange[1] = 0.0;
     }
-#endif // #ifndef WIN32
-
-
-    /*
-     * Structure initialization:
-     */
-    handle = (gnuplot_ctrl*)malloc(sizeof(gnuplot_ctrl)) ;
-    handle->nplots = 0 ;
-    gnuplot_setstyle(handle, "points") ;
-    handle->ntmp = 0 ;
-    gnuplot_setcolor(handle, 0);
-
-
-    handle->gnucmd = popen("gnuplot", "w") ;
-    if (handle->gnucmd == NULL)
-    {
-        fprintf(stderr, "error starting gnuplot, is gnuplot or gnuplot.exe in your path?\n") ;
-        free(handle) ;
-        return NULL ;
-    }
-
-    for (i=0; i<GP_MAX_TMP_FILES; i++)
-    {
-        handle->tmp_filename_tbl[i] = NULL;
-    }
-
-    handle->xrange[0] = 0.0;
-    handle->xrange[1] = 0.0;
-    handle->yrange[0] = 0.0;
-    handle->yrange[1] = 0.0;
-    handle->zrange[0] = 0.0;
-    handle->zrange[1] = 0.0;
 
     return handle;
 }
@@ -156,26 +162,29 @@ gnuplot_ctrl * gnuplot_init(void)
  */
 /*--------------------------------------------------------------------------*/
 
-void gnuplot_close(gnuplot_ctrl * handle)
+void gnuplot_close(int isPlot, gnuplot_ctrl* handle)
 {
-    int     i ;
+    if(isPlot)
+    {
+        int     i ;
 
-    if (pclose(handle->gnucmd) == -1)
-    {
-        fprintf(stderr, "problem closing communication to gnuplot\n") ;
-        return ;
-    }
-    if (handle->ntmp)
-    {
-        for (i=0 ; i<handle->ntmp ; i++)
+        if (pclose(handle->gnucmd) == -1)
         {
-            remove(handle->tmp_filename_tbl[i]) ;
-            free(handle->tmp_filename_tbl[i]);
-            handle->tmp_filename_tbl[i] = NULL;
-
+            fprintf(stderr, "problem closing communication to gnuplot\n") ;
+            return ;
         }
+        if (handle->ntmp)
+        {
+            for (i=0 ; i<handle->ntmp ; i++)
+            {
+                remove(handle->tmp_filename_tbl[i]) ;
+                free(handle->tmp_filename_tbl[i]);
+                handle->tmp_filename_tbl[i] = NULL;
+
+            }
+        }
+        free(handle) ;
     }
-    free(handle) ;
     return ;
 }
 
@@ -204,16 +213,19 @@ void gnuplot_close(gnuplot_ctrl * handle)
  */
 /*--------------------------------------------------------------------------*/
 
-void gnuplot_cmd(gnuplot_ctrl *  handle, char const *  cmd, ...)
+void gnuplot_cmd(int isPlot, gnuplot_ctrl*   handle, char const*   cmd, ...)
 {
-    va_list ap ;
+    if(isPlot)
+    {
+        va_list ap ;
 
-    va_start(ap, cmd);
-    vfprintf(handle->gnucmd, cmd, ap);
-    va_end(ap);
+        va_start(ap, cmd);
+        vfprintf(handle->gnucmd, cmd, ap);
+        va_end(ap);
 
-    fputs("\n", handle->gnucmd) ;
-    fflush(handle->gnucmd) ;
+        fputs("\n", handle->gnucmd) ;
+        fflush(handle->gnucmd) ;
+    }
     return ;
 }
 
@@ -240,24 +252,27 @@ void gnuplot_cmd(gnuplot_ctrl *  handle, char const *  cmd, ...)
  */
 /*--------------------------------------------------------------------------*/
 
-void gnuplot_setstyle(gnuplot_ctrl * h, char * plot_style)
+void gnuplot_setstyle(int isPlot, gnuplot_ctrl* h, char* plot_style)
 {
-    if (strcmp(plot_style, "lines") &&
-            strcmp(plot_style, "points") &&
-            strcmp(plot_style, "linespoints") &&
-            strcmp(plot_style, "impulses") &&
-            strcmp(plot_style, "dots") &&
-            strcmp(plot_style, "steps") &&
-            strcmp(plot_style, "errorbars") &&
-            strcmp(plot_style, "boxes") &&
-            strcmp(plot_style, "boxerrorbars"))
+    if(isPlot)
     {
-        fprintf(stderr, "warning: unknown requested style: using points\n") ;
-        strcpy(h->pstyle, "points") ;
-    }
-    else
-    {
-        strcpy(h->pstyle, plot_style) ;
+        if (strcmp(plot_style, "lines") &&
+                strcmp(plot_style, "points") &&
+                strcmp(plot_style, "linespoints") &&
+                strcmp(plot_style, "impulses") &&
+                strcmp(plot_style, "dots") &&
+                strcmp(plot_style, "steps") &&
+                strcmp(plot_style, "errorbars") &&
+                strcmp(plot_style, "boxes") &&
+                strcmp(plot_style, "boxerrorbars"))
+        {
+            fprintf(stderr, "warning: unknown requested style: using points\n") ;
+            strcpy(h->pstyle, "points") ;
+        }
+        else
+        {
+            strcpy(h->pstyle, plot_style) ;
+        }
     }
     return ;
 }
@@ -272,8 +287,10 @@ void gnuplot_setstyle(gnuplot_ctrl * h, char * plot_style)
  */
 /*--------------------------------------------------------------------------*/
 
-void gnuplot_setcolor(gnuplot_ctrl * h, int plot_style)
+void gnuplot_setcolor(int isPlot, gnuplot_ctrl* h, int plot_style)
 {
+    if(isPlot)
+    {
     switch(plot_style)
     {
     case 1:
@@ -307,6 +324,7 @@ void gnuplot_setcolor(gnuplot_ctrl * h, int plot_style)
         strcpy(h->pcolor, "default") ;
         break;
     }
+    }
     return ;
 }
 
@@ -322,9 +340,9 @@ void gnuplot_setcolor(gnuplot_ctrl * h, int plot_style)
  */
 /*--------------------------------------------------------------------------*/
 
-void gnuplot_set_xlabel(gnuplot_ctrl * h, char * label)
+void gnuplot_set_xlabel(int isPlot, gnuplot_ctrl* h, char* label)
 {
-    gnuplot_cmd(h, "set xlabel \"%s\"", label) ;
+    gnuplot_cmd(isPlot, h, "set xlabel \"%s\"", label) ;
 }
 
 
@@ -339,14 +357,14 @@ void gnuplot_set_xlabel(gnuplot_ctrl * h, char * label)
  */
 /*--------------------------------------------------------------------------*/
 
-void gnuplot_set_ylabel(gnuplot_ctrl * h, char * label)
+void gnuplot_set_ylabel(int isPlot, gnuplot_ctrl* h, char* label)
 {
-    gnuplot_cmd(h, "set ylabel \"%s\"", label) ;
+    gnuplot_cmd(isPlot, h, "set ylabel \"%s\"", label) ;
 }
 
-void gnuplot_set_zlabel(gnuplot_ctrl * h, char * label)
+void gnuplot_set_zlabel(int isPlot, gnuplot_ctrl* h, char* label)
 {
-    gnuplot_cmd(h, "set zlabel \"%s\"", label) ;
+    gnuplot_cmd(isPlot, h, "set zlabel \"%s\"", label) ;
 }
 
 /*-------------------------------------------------------------------------*/
@@ -360,8 +378,10 @@ void gnuplot_set_zlabel(gnuplot_ctrl * h, char * label)
  */
 /*--------------------------------------------------------------------------*/
 
-void gnuplot_resetplot(gnuplot_ctrl * h)
+void gnuplot_resetplot(int isPlot, gnuplot_ctrl* h)
 {
+    if(isPlot)
+    {
     int     i ;
     if (h->ntmp)
     {
@@ -375,6 +395,7 @@ void gnuplot_resetplot(gnuplot_ctrl * h)
     }
     h->ntmp = 0 ;
     h->nplots = 0 ;
+    }
     return ;
 }
 
@@ -409,16 +430,16 @@ void gnuplot_resetplot(gnuplot_ctrl * h)
  */
 /*--------------------------------------------------------------------------*/
 
-void gnuplot_plot_x(
-    gnuplot_ctrl    *   handle,
-    double          *   d,
-    int                 n,
-    char            *   title
-)
+void gnuplot_plot_x(int isPlot,
+                    gnuplot_ctrl*       handle,
+                    double*             d,
+                    int                 n,
+                    char*               title
+                   )
 {
     int     i ;
     FILE*   tmpfd ;
-    char const * tmpfname;
+    char const* tmpfname;
 
     if (handle==NULL || d==NULL || (n<1)) return ;
 
@@ -439,7 +460,7 @@ void gnuplot_plot_x(
     }
     fclose(tmpfd) ;
 
-    gnuplot_plot_atmpfile(handle,tmpfname,title, "lines", "1", "2", 1);
+    gnuplot_plot_atmpfile(isPlot, handle,tmpfname,title, "lines", "1", "2", 1);
     return ;
 }
 
@@ -478,19 +499,20 @@ void gnuplot_plot_x(
 /*--------------------------------------------------------------------------*/
 
 void gnuplot_plotc_xy(
-    gnuplot_ctrl    * handle,
-    const double    * x,
-    const double    * y,
+    int               isPlot,
+    gnuplot_ctrl*     handle,
+    const double*     x,
+    const double*     y,
     int               n,
-    char const      * title,
-    char const      * ls,
-    char const      * lt,
-    char const      * lw,
+    char const*       title,
+    char const*       ls,
+    char const*       lt,
+    char const*       lw,
     int               lc)
 {
     int     i ;
     FILE*   tmpfd ;
-    char const * tmpfname;
+    char const* tmpfname;
 
     if (handle==NULL || x==NULL || y==NULL || (n<1)) return ;
 
@@ -511,24 +533,25 @@ void gnuplot_plotc_xy(
     }
     fclose(tmpfd) ;
 
-    gnuplot_plot_atmpfile(handle,tmpfname,title, ls, lt, lw, lc);
+    gnuplot_plot_atmpfile(isPlot, handle,tmpfname,title, ls, lt, lw, lc);
     return ;
 }
 
 void gnuplot_plot_xy(
-    gnuplot_ctrl    *   handle,
-    double          *   x,
-    double          *   y,
+    int               isPlot,
+    gnuplot_ctrl*       handle,
+    double*             x,
+    double*             y,
     int                 n,
-    char const           *   title,
-    char const      * ls,
-    char const      * lt,
-    char const      * lw,
+    char const*              title,
+    char const*       ls,
+    char const*       lt,
+    char const*       lw,
     int lc)
 {
     int     i ;
     FILE*   tmpfd ;
-    char const * tmpfname;
+    char const* tmpfname;
 
     if (handle==NULL || x==NULL || y==NULL || (n<1)) return ;
 
@@ -549,26 +572,27 @@ void gnuplot_plot_xy(
     }
     fclose(tmpfd) ;
 
-    gnuplot_plot_atmpfile(handle,tmpfname,title, ls, lt, lw, lc);
+    gnuplot_plot_atmpfile(isPlot, handle,tmpfname,title, ls, lt, lw, lc);
     return ;
 }
 
 
 void gnuplot_plot_xyz(
-    gnuplot_ctrl    * handle,
-    double          * x,
-    double          * y,
-    double          * z,
+    int               isPlot,
+    gnuplot_ctrl*     handle,
+    double*           x,
+    double*           y,
+    double*           z,
     int               n,
-    char const      * title,
-    char const      * ls,
-    char const      * lt,
-    char const      * lw,
+    char const*       title,
+    char const*       ls,
+    char const*       lt,
+    char const*       lw,
     int lc)
 {
     int     i ;
     FILE*   tmpfd ;
-    char const * tmpfname;
+    char const* tmpfname;
 
     if (handle==NULL || x==NULL || y==NULL || z==NULL || (n<1)) return ;
 
@@ -607,24 +631,25 @@ void gnuplot_plot_xyz(
     //------------------------------------------------------------------------------------
     //Plot
     //------------------------------------------------------------------------------------
-    gnuplot_plot_atmpfile_3d(handle,tmpfname,title, ls, lt, lw, lc);
+    gnuplot_plot_atmpfile_3d(isPlot, handle,tmpfname,title, ls, lt, lw, lc);
 
     return ;
 }
 
 void gnuplot_plot_X(
-    gnuplot_ctrl    * handle,
-    double          **X,
+    int               isPlot,
+    gnuplot_ctrl*     handle,
+    double**          X,
     int               n,
-    char const      * title,
-    char const      * ls,
-    char const      * lt,
-    char const      * lw,
+    char const*       title,
+    char const*       ls,
+    char const*       lt,
+    char const*       lw,
     int lc)
 {
     int     i ;
     FILE*   tmpfd ;
-    char const * tmpfname;
+    char const* tmpfname;
 
     if (handle==NULL || X[0]==NULL || X[1]==NULL ||  X[2]==NULL  ||  (n<1)) return ;
 
@@ -663,7 +688,7 @@ void gnuplot_plot_X(
     //------------------------------------------------------------------------------------
     //Plot
     //------------------------------------------------------------------------------------
-    gnuplot_plot_atmpfile_3d(handle,tmpfname,title, ls, lt, lw, lc);
+    gnuplot_plot_atmpfile_3d(isPlot, handle,tmpfname,title, ls, lt, lw, lc);
 
     return ;
 }
@@ -671,10 +696,10 @@ void gnuplot_plot_X(
 
 
 void gnuplot_fplot_xy(
-    double          * x,
-    double          * y,
+    double*           x,
+    double*           y,
     int               n,
-    char const      * tmpfname)
+    char const*       tmpfname)
 {
     int     i ;
     FILE*   tmpfd ;
@@ -701,11 +726,11 @@ void gnuplot_fplot_xy(
 
 
 void gnuplot_fplot_xyz(
-    double          * x,
-    double          * y,
-    double          * z,
+    double*           x,
+    double*           y,
+    double*           z,
     int               n,
-    char const      * tmpfname)
+    char const*       tmpfname)
 {
     int     i ;
     FILE*   tmpfd ;
@@ -731,13 +756,13 @@ void gnuplot_fplot_xyz(
 }
 
 void gnuplot_fplot_txyz(
-    double          * t,
-    double          * x,
-    double          * y,
-    double          * z,
+    double*           t,
+    double*           x,
+    double*           y,
+    double*           z,
     int               n,
-    char const      * tmpfname,
-    char const      *mode)
+    char const*       tmpfname,
+    char const*      mode)
 {
     int     i ;
     FILE*   tmpfd ;
@@ -764,11 +789,11 @@ void gnuplot_fplot_txyz(
 
 
 void gnuplot_fplot_txyzv(
-    double          *  t,
-    double          ** Z,
+    double*            t,
+    double**           Z,
     int             n,
-    char const      * tmpfname,
-    char const      *mode)
+    char const*       tmpfname,
+    char const*      mode)
 {
     int     i ;
     FILE*   tmpfd ;
@@ -796,15 +821,15 @@ void gnuplot_fplot_txyzv(
 
 
 void gnuplot_fplot_txp(
-    double          * t,
-    double          * x,
-    double          * y,
-    double          * z,
-    double          * px,
-    double          * py,
-    double          * pz,
+    double*           t,
+    double*           x,
+    double*           y,
+    double*           z,
+    double*           px,
+    double*           py,
+    double*           pz,
     int               n,
-    char const      * tmpfname)
+    char const*       tmpfname)
 {
     int     i ;
     FILE*   tmpfd ;
@@ -830,20 +855,20 @@ void gnuplot_fplot_txp(
 }
 
 void gnuplot_fplot_txps(
-    double          * t,
-    double          * x,
-    double          * y,
-    double          * z,
-    double          * px,
-    double          * py,
-    double          * pz,
-    double          * s1,
-    double          * s2,
-    double          * s3,
-    double          * s4,
-    double          * s5,
+    double*           t,
+    double*           x,
+    double*           y,
+    double*           z,
+    double*           px,
+    double*           py,
+    double*           pz,
+    double*           s1,
+    double*           s2,
+    double*           s3,
+    double*           s4,
+    double*           s5,
     int               n,
-    char const      * tmpfname)
+    char const*       tmpfname)
 {
     int     i ;
     FILE*   tmpfd ;
@@ -892,69 +917,69 @@ void gnuplot_fplot_txps(
 /*--------------------------------------------------------------------------*/
 
 void gnuplot_plot_once(
-    char    *   title,
-    char    *   style,
-    char    *   label_x,
-    char    *   label_y,
-    double  *   x,
-    double  *   y,
+    char*       title,
+    char*       style,
+    char*       label_x,
+    char*       label_y,
+    double*     x,
+    double*     y,
     int         n
 )
 {
-    gnuplot_ctrl    *   handle ;
+    gnuplot_ctrl*       handle ;
 
     if (x==NULL || n<1) return ;
 
-    if ((handle = gnuplot_init()) == NULL) return ;
+    if ((handle = gnuplot_init(1)) == NULL) return ;
     if (style!=NULL)
     {
-        gnuplot_setstyle(handle, style);
+        gnuplot_setstyle(1, handle, style);
     }
     else
     {
-        gnuplot_setstyle(handle, "lines");
+        gnuplot_setstyle(1, handle, "lines");
     }
     if (label_x!=NULL)
     {
-        gnuplot_set_xlabel(handle, label_x);
+        gnuplot_set_xlabel(1, handle, label_x);
     }
     else
     {
-        gnuplot_set_xlabel(handle, "X");
+        gnuplot_set_xlabel(1, handle, "X");
     }
     if (label_y!=NULL)
     {
-        gnuplot_set_ylabel(handle, label_y);
+        gnuplot_set_ylabel(1, handle, label_y);
     }
     else
     {
-        gnuplot_set_ylabel(handle, "Y");
+        gnuplot_set_ylabel(1, handle, "Y");
     }
     if (y==NULL)
     {
-        gnuplot_plot_x(handle, x, n, title);
+        gnuplot_plot_x(1, handle, x, n, title);
     }
     else
     {
-        gnuplot_plot_xy(handle, x, y, n, title, "lines", "1", "2", 1);
+        gnuplot_plot_xy(1, handle, x, y, n, title, "lines", "1", "2", 1);
     }
     printf("press ENTER to continue\n");
     while (getchar()!='\n') {}
-    gnuplot_close(handle);
+    gnuplot_close(1, handle);
     return ;
 }
 
 void gnuplot_plot_slope(
-    gnuplot_ctrl    *   handle,
+    gnuplot_ctrl*       handle,
     double              a,
     double              b,
-    char            *   title
+    char*               title
 )
 {
-    char const *    cmd    = (handle->nplots > 0) ? "replot" : "plot";
+    char const*     cmd    = (handle->nplots > 0) ? "replot" : "plot";
     title                  = (title == NULL)      ? "(none)" : title;
 
-    gnuplot_cmd(handle, "%s %.18e * x + %.18e title \"%s\" with %s",
+    gnuplot_cmd(1, handle, "%s %.18e * x + %.18e title \"%s\" with %s",
                 cmd, a, b, title, handle->pstyle) ;
 
     handle->nplots++ ;
@@ -963,15 +988,15 @@ void gnuplot_plot_slope(
 
 
 void gnuplot_plot_equation(
-    gnuplot_ctrl    *   h,
-    char            *   equation,
-    char            *   title
+    gnuplot_ctrl*       h,
+    char*               equation,
+    char*               title
 )
 {
-    char const *    cmd    = (h->nplots > 0) ? "replot" : "plot";
+    char const*     cmd    = (h->nplots > 0) ? "replot" : "plot";
     title                  = (title == NULL)      ? "(none)" : title;
 
-    gnuplot_cmd(h, "%s %s title \"%s\" with %s",
+    gnuplot_cmd(1, h, "%s %s title \"%s\" with %s",
                 cmd, equation, title, h->pstyle) ;
     h->nplots++ ;
     return ;
@@ -979,10 +1004,10 @@ void gnuplot_plot_equation(
 
 
 int gnuplot_write_x_csv(
-    char const * fileName,
-    double const * d,
+    char const* fileName,
+    double const* d,
     int n,
-    char const * title)
+    char const* title)
 {
     int     i;
     FILE*   fileHandle;
@@ -1017,11 +1042,11 @@ int gnuplot_write_x_csv(
 }
 
 int gnuplot_write_xy_csv(
-    char const *        fileName,
-    double const    *   x,
-    double const    *   y,
+    char const*         fileName,
+    double const*       x,
+    double const*       y,
     int                 n,
-    char const      *   title)
+    char const*         title)
 {
     int     i ;
     FILE*   fileHandle;
@@ -1056,11 +1081,11 @@ int gnuplot_write_xy_csv(
 }
 
 int gnuplot_write_multi_csv(
-    char const *        fileName,
-    double const    **  xListPtr,
+    char const*         fileName,
+    double const**      xListPtr,
     int                 n,
     int                 numColumns,
-    char const      *   title)
+    char const*         title)
 {
     int     i;
     int     j;
@@ -1108,10 +1133,10 @@ int gnuplot_write_multi_csv(
     return 0;
 }
 
-char const * gnuplot_tmpfile(gnuplot_ctrl * handle)
+char const* gnuplot_tmpfile(gnuplot_ctrl* handle)
 {
-    static char const * tmp_filename_template = "gnuplot_tmpdatafile_XXXXXX";
-    char *              tmp_filename = NULL;
+    static char const* tmp_filename_template = "gnuplot_tmpdatafile_XXXXXX";
+    char*               tmp_filename = NULL;
     int                 tmp_filelen = strlen(tmp_filename_template);
 
 #ifndef WIN32
@@ -1123,9 +1148,9 @@ char const * gnuplot_tmpfile(gnuplot_ctrl * handle)
     /* Open one more temporary file? */
     if (handle->ntmp == GP_MAX_TMP_FILES - 1)
     {
-        fprintf(stderr,
-                "maximum # of temporary files reached (%d): cannot open more",
-                GP_MAX_TMP_FILES) ;
+        //        fprintf(stderr,
+        //                "maximum # of temporary files reached (%d): cannot open more",
+        //                GP_MAX_TMP_FILES) ;
         return NULL;
     }
 
@@ -1171,53 +1196,59 @@ void gnuplot_plot_atmpfile(gnuplot_ctrl * handle, char const* tmp_filename, char
 */
 
 
-void gnuplot_plot_atmpfile(gnuplot_ctrl * handle, char const* tmp_filename, char const* title, char const* ls, char const* lt, char const* lw, int lc)
+void gnuplot_plot_atmpfile(int isPlot, gnuplot_ctrl* handle, char const* tmp_filename,
+                           char const* title, char const* ls, char const* lt,
+                           char const* lw, int lc)
 {
-    char const *    cmd    = (handle->nplots > 0) ? "replot" : "plot";
-    title                  = (title == NULL)      ? "(none)" : title;
-
-    switch(lc)
+    if(isPlot)
     {
-    case 1:
-        strcpy(handle->pcolor, "dark-violet") ;
-        break;
-    case 2:
-        strcpy(handle->pcolor, "#009e73") ;
-        break;
-    case 3:
-        strcpy(handle->pcolor, "#56b4e9") ;
-        break;
-    case 4:
-        strcpy(handle->pcolor, "#e69f00") ;
-        break;
-    case 5:
-        strcpy(handle->pcolor, "#f0e442") ;
-        break;
-    case 6:
-        strcpy(handle->pcolor, "#0072b2") ;
-        break;
-    case 7:
-        strcpy(handle->pcolor, "#e51e10") ;
-        break;
-    case 8:
-        strcpy(handle->pcolor, "black") ;
-        break;
-    case 9:
-        strcpy(handle->pcolor, "gray50") ;
-        break;
-    default:
-        strcpy(handle->pcolor, "dark-violet") ;
-        break;
-    }
+        char const*     cmd    = (handle->nplots > 0) ? "replot" : "plot";
+        title                  = (title == NULL)      ? "(none)" : title;
 
-    gnuplot_cmd(handle, "%s \"%s\" title \"%s\" with %s lt \"%s\" lw %s lc rgb \"%s\"", cmd, tmp_filename,title, ls, lt, lw, handle->pcolor);
-    handle->nplots++ ;
+        switch(lc)
+        {
+        case 1:
+            strcpy(handle->pcolor, "dark-violet") ;
+            break;
+        case 2:
+            strcpy(handle->pcolor, "#009e73") ;
+            break;
+        case 3:
+            strcpy(handle->pcolor, "#56b4e9") ;
+            break;
+        case 4:
+            strcpy(handle->pcolor, "#e69f00") ;
+            break;
+        case 5:
+            strcpy(handle->pcolor, "#f0e442") ;
+            break;
+        case 6:
+            strcpy(handle->pcolor, "#0072b2") ;
+            break;
+        case 7:
+            strcpy(handle->pcolor, "#e51e10") ;
+            break;
+        case 8:
+            strcpy(handle->pcolor, "black") ;
+            break;
+        case 9:
+            strcpy(handle->pcolor, "gray50") ;
+            break;
+        default:
+            strcpy(handle->pcolor, "dark-violet") ;
+            break;
+        }
+
+        gnuplot_cmd(1, handle, "%s \"%s\" title \"%s\" with %s lt \"%s\" lw %s lc rgb \"%s\"", cmd, tmp_filename,title, ls, lt, lw, handle->pcolor);
+        handle->nplots++ ;
+    }
     return ;
 }
 
 
 
-void gnuplot_plot_atmpfile_3d(gnuplot_ctrl * handle,
+void gnuplot_plot_atmpfile_3d(int isPlot,
+                              gnuplot_ctrl* handle,
                               char const* tmp_filename,
                               char const* title,
                               char const* ls,
@@ -1225,68 +1256,68 @@ void gnuplot_plot_atmpfile_3d(gnuplot_ctrl * handle,
                               char const* lw,
                               int lc)
 {
-    char const *    cmd    = (handle->nplots > 0) ? "replot" : "splot";
-    title                  = (title == NULL)      ? "(none)" : title;
-
-    switch(lc)
+    if(isPlot)
     {
-    case 1:
-        strcpy(handle->pcolor, "dark-violet") ;
-        break;
-    case 2:
-        strcpy(handle->pcolor, "#009e73") ;
-        break;
-    case 3:
-        strcpy(handle->pcolor, "#56b4e9") ;
-        break;
-    case 4:
-        strcpy(handle->pcolor, "#e69f00") ;
-        break;
-    case 5:
-        strcpy(handle->pcolor, "#f0e442") ;
-        break;
-    case 6:
-        strcpy(handle->pcolor, "#0072b2") ;
-        break;
-    case 7:
-        strcpy(handle->pcolor, "#e51e10") ;
-        break;
-    case 8:
-        strcpy(handle->pcolor, "black") ;
-        break;
-    case 9:
-        strcpy(handle->pcolor, "gray50") ;
-        break;
-    default:
-        strcpy(handle->pcolor, "dark-violet") ;
-        break;
+        char const*     cmd    = (handle->nplots > 0) ? "replot" : "splot";
+        title                  = (title == NULL)      ? "(none)" : title;
+
+        switch(lc)
+        {
+        case 1:
+            strcpy(handle->pcolor, "dark-violet") ;
+            break;
+        case 2:
+            strcpy(handle->pcolor, "#009e73") ;
+            break;
+        case 3:
+            strcpy(handle->pcolor, "#56b4e9") ;
+            break;
+        case 4:
+            strcpy(handle->pcolor, "#e69f00") ;
+            break;
+        case 5:
+            strcpy(handle->pcolor, "#f0e442") ;
+            break;
+        case 6:
+            strcpy(handle->pcolor, "#0072b2") ;
+            break;
+        case 7:
+            strcpy(handle->pcolor, "#e51e10") ;
+            break;
+        case 8:
+            strcpy(handle->pcolor, "black") ;
+            break;
+        case 9:
+            strcpy(handle->pcolor, "gray50") ;
+            break;
+        default:
+            strcpy(handle->pcolor, "dark-violet") ;
+            break;
+        }
+
+        //Ranges
+        char xrange[100], yrange[100], zrange[100];
+
+        if(handle->xrange[0] !=0 || handle->xrange[1] != 0) sprintf(xrange, "set xrange [%5.5f:%5.5f]; set autoscale x", handle->xrange[0], handle->xrange[1]);
+        else sprintf(xrange, "set xrange [%5.5f:%5.5f];", -1.0, 1.0);
+        gnuplot_cmd(1, handle, xrange);
+
+        if(handle->yrange[0] !=0 || handle->yrange[1] != 0) sprintf(yrange, "set yrange [%5.5f:%5.5f]; set autoscale y", handle->yrange[0], handle->yrange[1]);
+        else sprintf(yrange, "set yrange [%5.5f:%5.5f];", -1.0, 1.0);
+        gnuplot_cmd(1, handle, yrange);
+
+        if(handle->zrange[0] !=0 || handle->zrange[1] != 0) sprintf(zrange, "set zrange [%5.5f:%5.5f]; set autoscale z", handle->zrange[0], handle->zrange[1]);
+        else sprintf(zrange, "set zrange [%5.5f:%5.5f];", -1.0, 1.0);
+        gnuplot_cmd(1, handle, zrange);
+
+        //View
+        gnuplot_cmd(1, handle, "set view 0,0");
+
+        //Main command
+        gnuplot_cmd(1, handle, "%s \"%s\" title \"%s\" with %s lt \"%s\" lw %s lc rgb \"%s\"", cmd, tmp_filename, title, ls, lt, lw, handle->pcolor);
+
+        handle->nplots++ ;
     }
-
-    //Ranges
-    char xrange[100], yrange[100], zrange[100];
-
-    if(handle->xrange[0] !=0 || handle->xrange[1] != 0) sprintf(xrange, "set xrange [%5.5f:%5.5f]; set autoscale x", handle->xrange[0], handle->xrange[1]);
-    else sprintf(xrange, "set xrange [%5.5f:%5.5f];", -1.0, 1.0);
-    gnuplot_cmd(handle, xrange);
-
-    if(handle->yrange[0] !=0 || handle->yrange[1] != 0) sprintf(yrange, "set yrange [%5.5f:%5.5f]; set autoscale y", handle->yrange[0], handle->yrange[1]);
-    else sprintf(yrange, "set yrange [%5.5f:%5.5f];", -1.0, 1.0);
-    gnuplot_cmd(handle, yrange);
-
-    if(handle->zrange[0] !=0 || handle->zrange[1] != 0) sprintf(zrange, "set zrange [%5.5f:%5.5f]; set autoscale z", handle->zrange[0], handle->zrange[1]);
-    else sprintf(zrange, "set zrange [%5.5f:%5.5f];", -1.0, 1.0);
-    gnuplot_cmd(handle, zrange);
-
-    //View
-    gnuplot_cmd(handle, "set view 0,0");
-
-    //Main command
-    gnuplot_cmd(handle, "%s \"%s\" title \"%s\" with %s lt \"%s\" lw %s lc rgb \"%s\"", cmd, tmp_filename, title, ls, lt, lw, handle->pcolor);
-
-
-
-
-    handle->nplots++ ;
     return ;
 }
 

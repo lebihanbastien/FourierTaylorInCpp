@@ -82,6 +82,9 @@ GSIZE_SI=(+50 +5 +50 +5)
 # Primary family
 PRIMARY=0
 
+# Fixed delta of energy (-1 if not used)
+DHD=-1
+
 #-----------------------------------------------------
 # Parameters that are stable
 #-----------------------------------------------------

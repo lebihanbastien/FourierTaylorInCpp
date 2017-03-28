@@ -2355,55 +2355,53 @@ void semNCPoints(double t, double **semP)
 /**
  *  \brief Sets notable points in EM system on the gnuplot window ctrl h1
  **/
-void emPlot(gnuplot_ctrl *h1, double **emP)
+void emPlot(gnuplot_ctrl *h1, double **emP, int isPlot)
 {
     //Misc
-    gnuplot_cmd(h1, "set grid");
-    gnuplot_set_xlabel(h1, (char*)"Xem [-]");
-    gnuplot_set_ylabel(h1, (char*)"Yem [-]");
-    gnuplot_set_zlabel(h1, (char*)"Zem [-]");
+    gnuplot_cmd(isPlot, h1, "set grid");
+    gnuplot_set_xlabel(isPlot, h1, (char*)"Xem [-]");
+    gnuplot_set_ylabel(isPlot, h1, (char*)"Yem [-]");
+    gnuplot_set_zlabel(isPlot, h1, (char*)"Zem [-]");
     //EML point
     switch(SEML.li_EM)
     {
     case 1:
-        gnuplot_plot_xyz(h1, emP[3], emP[3]+1,  emP[3]+2, 1, (char*)"EML1", "points", "1", "2", 8);
+        gnuplot_plot_xyz(isPlot, h1, emP[3], emP[3]+1,  emP[3]+2, 1, (char*)"EML1", "points", "1", "2", 8);
         break;
     case 2:
-        gnuplot_plot_xyz(h1, emP[4], emP[4]+1,  emP[4]+2, 1, (char*)"EML2", "points", "1", "2", 8);
+        gnuplot_plot_xyz(isPlot, h1, emP[4], emP[4]+1,  emP[4]+2, 1, (char*)"EML2", "points", "1", "2", 8);
         break;
     }
     //Primaries
-    gnuplot_plot_xyz(h1, emP[1], emP[1]+1,  emP[1]+2, 1, (char*)"Moon", "points", "7", "2", 9);
-
-
+    gnuplot_plot_xyz(isPlot, h1, emP[1], emP[1]+1,  emP[1]+2, 1, (char*)"Moon", "points", "7", "2", 9);
 }
 
 /**
  *  \brief Sets notable points in SEM system on the gnuplot window ctrl h2
  **/
-void semPlot(gnuplot_ctrl *h2, double **semP)
+void semPlot(gnuplot_ctrl *h2, double **semP, int isPlot)
 {
     //Misc
-    gnuplot_cmd(h2, "set grid");
-    gnuplot_set_xlabel(h2, (char*)"Xsem [-]");
-    gnuplot_set_ylabel(h2, (char*)"Ysem [-]");
-    gnuplot_set_zlabel(h2, (char*)"Zsem [-]");
+    gnuplot_cmd(isPlot, h2, "set grid");
+    gnuplot_set_xlabel(isPlot, h2, (char*)"Xsem [-]");
+    gnuplot_set_ylabel(isPlot, h2, (char*)"Ysem [-]");
+    gnuplot_set_zlabel(isPlot, h2, (char*)"Zsem [-]");
 
     // SEML points
     switch(SEML.li_SEM)
     {
     case 1:
-        gnuplot_plot_xyz(h2, semP[5], semP[5]+1,  semP[5]+2, 1, (char*)"SEML1", "points", "1", "2", 9);
+        gnuplot_plot_xyz(isPlot, h2, semP[5], semP[5]+1,  semP[5]+2, 1, (char*)"SEML1", "points", "1", "2", 9);
         break;
     case 2:
-        gnuplot_plot_xyz(h2, semP[6], semP[6]+1,  semP[6]+2, 1, (char*)"SEMLi", "points", "2", "2", 9);
+        gnuplot_plot_xyz(isPlot, h2, semP[6], semP[6]+1,  semP[6]+2, 1, (char*)"SEMLi", "points", "2", "2", 9);
         break;
     }
     //EML points
-    gnuplot_plot_xyz(h2, semP[3], semP[3]+1,  semP[3]+2, 1, (char*)"EML1", "points", "1", "2", 8);
-    gnuplot_plot_xyz(h2, semP[4], semP[4]+1,  semP[4]+2, 1, (char*)"EML2", "points", "2", "2", 8);
+    gnuplot_plot_xyz(isPlot, h2, semP[3], semP[3]+1,  semP[3]+2, 1, (char*)"EML1", "points", "1", "2", 8);
+    gnuplot_plot_xyz(isPlot, h2, semP[4], semP[4]+1,  semP[4]+2, 1, (char*)"EML2", "points", "2", "2", 8);
     //Primaries
-    gnuplot_plot_xyz(h2, semP[0], semP[0]+1,  semP[0]+2, 1, (char*)"Earth", "points", "7", "2", 6);
+    gnuplot_plot_xyz(isPlot, h2, semP[0], semP[0]+1,  semP[0]+2, 1, (char*)"Earth", "points", "7", "2", 6);
 }
 
 //========================================================================================
@@ -2844,21 +2842,21 @@ void qbcp_test(QBCP_L &qbcp_l)
     // 8. Plot
     //=======================================================================
     gnuplot_ctrl *h1;
-    h1 = gnuplot_init();
-    gnuplot_cmd(h1, "set title \"Variations of the error\" ");
-    gnuplot_cmd(h1, "set grid");
-    gnuplot_set_xlabel(h1, (char*)"t [x Tsem]");
-    gnuplot_set_ylabel(h1, (char*)"Error [EM units]");
-    gnuplot_cmd(h1, "set logscale y");
-    gnuplot_cmd(h1, "set format y \"1e\%%L\"");
+    h1 = gnuplot_init(true);
+    gnuplot_cmd(true, h1, "set title \"Variations of the error\" ");
+    gnuplot_cmd(true, h1, "set grid");
+    gnuplot_set_xlabel(true, h1, (char*)"t [x Tsem]");
+    gnuplot_set_ylabel(true, h1, (char*)"Error [EM units]");
+    gnuplot_cmd(true, h1, "set logscale y");
+    gnuplot_cmd(true, h1, "set format y \"1e\%%L\"");
 
     int color = 1;
-    gnuplot_plot_xy(h1, tmIN, dNCEM_IN, man_grid_size+1,   (char*)"NCEM",  "lines", "3", "2", color++);
-    gnuplot_plot_xy(h1, tmIN, dVNCEM_IN, man_grid_size+1,  (char*)"VNCEM", "lines", "3", "2", color++);
-    gnuplot_plot_xy(h1, tmIN, dEM_IN, man_grid_size+1,     (char*)"EM",    "lines", "3", "2", color++);
-    gnuplot_plot_xy(h1, tmIN, dNCSEM_IN, man_grid_size+1,  (char*)"NCSEM",  "lines", "dashed", "2", color++);
-    gnuplot_plot_xy(h1, tmIN, dVNCSEM_IN, man_grid_size+1, (char*)"VNCSEM", "lines", "dashed", "2", color++);
-    gnuplot_plot_xy(h1, tmIN, dSEM_IN, man_grid_size+1,    (char*)"SEM",    "lines", "dashed", "2", color++);
+    gnuplot_plot_xy(true, h1, tmIN, dNCEM_IN, man_grid_size+1,   (char*)"NCEM",  "lines", "3", "2", color++);
+    gnuplot_plot_xy(true, h1, tmIN, dVNCEM_IN, man_grid_size+1,  (char*)"VNCEM", "lines", "3", "2", color++);
+    gnuplot_plot_xy(true, h1, tmIN, dEM_IN, man_grid_size+1,     (char*)"EM",    "lines", "3", "2", color++);
+    gnuplot_plot_xy(true, h1, tmIN, dNCSEM_IN, man_grid_size+1,  (char*)"NCSEM",  "lines", "dashed", "2", color++);
+    gnuplot_plot_xy(true, h1, tmIN, dVNCSEM_IN, man_grid_size+1, (char*)"VNCSEM", "lines", "dashed", "2", color++);
+    gnuplot_plot_xy(true, h1, tmIN, dSEM_IN, man_grid_size+1,    (char*)"SEM",    "lines", "dashed", "2", color++);
 
     //=======================================================================
     // 9. fPlot
@@ -2871,10 +2869,10 @@ void qbcp_test(QBCP_L &qbcp_l)
     gnuplot_fplot_xy(tmIN, dVNCSEM_IN, man_grid_size+1, (char*) (qbcp_l.cs->F_PLOT+"QBCP_VNCSEM_vs_IN.txt").c_str());
 
     char ch;
-    gnuplot_cmd(h1, "set logscale y");
+    gnuplot_cmd(true, h1, "set logscale y");
     printf("Press ENTER to close the gnuplot window(s)\n");
     scanf("%c",&ch);
-    gnuplot_close(h1);
+    gnuplot_close(true, h1);
 
     //=======================================================================
     // 10. Free
@@ -2973,12 +2971,12 @@ int gridOrbit(double st0[], double t0, double tf, double dt, vector<Oftsc> &CM,
     //Plotting
     //------------------------------------------------------------------------------------
     gnuplot_ctrl  *h1;
-    h1 = gnuplot_init();
+    h1 = gnuplot_init(true);
 
-    gnuplot_setstyle(h1, (char*)"lines");
-    gnuplot_set_xlabel(h1, (char*)"x [-]");
-    gnuplot_set_ylabel(h1, (char*)"y [-]");
-    gnuplot_plot_xyz(h1, ySYS[0], ySYS[1], ySYS[2], N+1, (char*)"NC coordinates", "lines", "1", "1", 1);
+    gnuplot_setstyle(true, h1, (char*)"lines");
+    gnuplot_set_xlabel(true, h1, (char*)"x [-]");
+    gnuplot_set_ylabel(true, h1, (char*)"y [-]");
+    gnuplot_plot_xyz(true, h1, ySYS[0], ySYS[1], ySYS[2], N+1, (char*)"NC coordinates", "lines", "1", "1", 1);
 
 
     //------------------------------------------------------------------------------------
@@ -2992,7 +2990,7 @@ int gridOrbit(double st0[], double t0, double tf, double dt, vector<Oftsc> &CM,
     char ch;
     printf("Press ENTER to close the gnuplot window(s)\n");
     scanf("%c",&ch);
-    gnuplot_close(h1);
+    gnuplot_close(true, h1);
 
     //------------------------------------------------------------------------------------
     //Free

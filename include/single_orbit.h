@@ -327,12 +327,12 @@ void semNCPoints(double t, double **semP);
 /**
  *  \brief Sets notable points in EM system on the gnuplot window ctrl h1
  **/
-void emPlot(gnuplot_ctrl *h1, double **emP);
+void emPlot(gnuplot_ctrl *h1, double **emP, int isPlot);
 
 /**
  *  \brief Sets notable points in SEM system on the gnuplot window ctrl h2
  **/
-void semPlot(gnuplot_ctrl *h2, double **semP);
+void semPlot(gnuplot_ctrl *h2, double **semP, int isPlot);
 
 
 //========================================================================================

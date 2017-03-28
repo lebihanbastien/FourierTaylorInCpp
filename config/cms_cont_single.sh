@@ -75,6 +75,9 @@ REFST_SI_CMU_EM_LIM=(-35 35 0 0 -35 +35 0 0)
 # Or, if we want the user to define such domain:
 REFST_ISLIMUD=0
 
+# Domain of search (min s1, max s1, min s3, max s3) for the seed of first guess
+REFST_SI_SEED_EM_LIM=(-40 +40 0 0 -40 +40 0 0)
+
 # Limits for the time of flight during transfers - not used if -1
 REFST_TOF_LIM=(-1 -1)
 
@@ -142,4 +145,4 @@ REFST_ISSAVED_EM=0               # 0: don't save, 1: save using projection metho
 REFST_ISSAVED_SEM=0              # 0: don't save, 1: save using projection method, 2: save using integration in reduced coordinates
 
 # Type of time selection
-REFST_TYPE_OF_T_SEL=TIME_SELECTION_RATIO
+REFST_TYPE_OF_T_SEL=$TIME_SELECTION_RATIO

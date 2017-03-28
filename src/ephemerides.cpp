@@ -296,22 +296,22 @@ void qbcp2jpl_disp(double tSYS, double *et, int coord_type)
     //Gnuplot
     //====================================================================================
     gnuplot_ctrl *h1, *h2;
-    h1 = gnuplot_init();
-    h2 = gnuplot_init();
+    h1 = gnuplot_init(true);
+    h2 = gnuplot_init(true);
 
     //Best fit
-    gnuplot_cmd(h1, "set title \"Best fit (SEM coordinates)\"");
-    gnuplot_set_xlabel(h1, (char*) "Xsem");
-    gnuplot_set_ylabel(h1, (char*) "Ysem");
-    gnuplot_set_zlabel(h1, (char*) "Zsem");
-    gnuplot_plot_xyz(h1, &Pe[0], &Pe[1], &Pe[2], 1, (char*) "Earth", "point", "1", "2", 1);
-    gnuplot_plot_xyz(h1, &Pm[0], &Pm[1], &Pm[2], 1, (char*) "Moon", "point",  "1", "2", 2);
-    gnuplot_plot_xyz(h1, &Ps[0], &Ps[1], &Ps[2], 1, (char*) "Sun", "point",  "1", "2", 3);
+    gnuplot_cmd(true, h1, "set title \"Best fit (SEM coordinates)\"");
+    gnuplot_set_xlabel(true, h1, (char*) "Xsem");
+    gnuplot_set_ylabel(true, h1, (char*) "Ysem");
+    gnuplot_set_zlabel(true, h1, (char*) "Zsem");
+    gnuplot_plot_xyz(true, h1, &Pe[0], &Pe[1], &Pe[2], 1, (char*) "Earth", "point", "1", "2", 1);
+    gnuplot_plot_xyz(true, h1, &Pm[0], &Pm[1], &Pm[2], 1, (char*) "Moon", "point",  "1", "2", 2);
+    gnuplot_plot_xyz(true, h1, &Ps[0], &Ps[1], &Ps[2], 1, (char*) "Sun", "point",  "1", "2",  3);
 
     //Best fit
-    gnuplot_cmd(h2, "set title \"Fit error\"");
-    gnuplot_set_xlabel(h2, (char*) "t (s)");
-    gnuplot_set_ylabel(h2, (char*) "Fit error");
+    gnuplot_cmd(true, h2, "set title \"Fit error\"");
+    gnuplot_set_xlabel(true, h2, (char*) "t (s)");
+    gnuplot_set_ylabel(true, h2, (char*) "Fit error");
 
 
     //====================================================================================
@@ -433,14 +433,14 @@ void qbcp2jpl_disp(double tSYS, double *et, int coord_type)
     ecl2synpos(RS, rs, B, C, k);
 
     //Best fit
-    gnuplot_plot_xyz(h1, &re[0], &re[1], &re[2], 1, (char*) "Earth (JPL)", "point",  "2", "2", 1);
-    gnuplot_plot_xyz(h1, &rm[0], &rm[1], &rm[2], 1, (char*) "Moon (JPL)",  "point",  "2", "2", 2);
-    gnuplot_plot_xyz(h1, &rs[0], &rs[1], &rs[2], 1, (char*) "Sun (JPL)",   "point",  "2", "2", 3);
+    gnuplot_plot_xyz(true, h1, &re[0], &re[1], &re[2], 1, (char*) "Earth (JPL)", "point",  "2", "2", 1);
+    gnuplot_plot_xyz(true, h1, &rm[0], &rm[1], &rm[2], 1, (char*) "Moon (JPL)",  "point",  "2", "2", 2);
+    gnuplot_plot_xyz(true, h1, &rs[0], &rs[1], &rs[2], 1, (char*) "Sun (JPL)",   "point",  "2", "2", 3);
 
     //All the results
     string title = "Best fit = " + numTostring(minDist);
-    gnuplot_plot_xy(h2, fit_error_t, fit_error, n_sol, (char*) "",  "lines",  "2", "2", 2);
-    gnuplot_plot_xy(h2, &argMinDist, &minDist, 1, (char*) title.c_str(),  "point",  "2", "2", 2);
+    gnuplot_plot_xy(true, h2, fit_error_t, fit_error, n_sol, (char*) "",  "lines",  "2", "2", 2);
+    gnuplot_plot_xy(true, h2, &argMinDist, &minDist, 1, (char*) title.c_str(),  "point",  "2", "2", 2);
 
     cout << "--------------------------------------------------------" << endl;
     cout << "qbcp2jpl. Closest Positions of the primaries from JPL ephemerides" << endl;
@@ -2572,17 +2572,17 @@ void test_asteroid()
     // Plot
     //=========================================================================
     gnuplot_ctrl *h1;
-    h1 = gnuplot_init();
+    h1 = gnuplot_init(true);
 
-    gnuplot_cmd(h1, (char*) ("set title \"" + asteroid + " trajectory\"").c_str());
-    gnuplot_set_xlabel(h1, (char*) "X [km]");
-    gnuplot_set_ylabel(h1, (char*) "Y [km]");
-    gnuplot_set_zlabel(h1, (char*) "Z [km]");
+    gnuplot_cmd(true, h1, (char*) ("set title \"" + asteroid + " trajectory\"").c_str());
+    gnuplot_set_xlabel(true, h1, (char*) "X [km]");
+    gnuplot_set_ylabel(true, h1, (char*) "Y [km]");
+    gnuplot_set_zlabel(true, h1, (char*) "Z [km]");
 
-    gnuplot_plot_xyz(h1, y_from_int[0], y_from_int[1], y_from_int[2], Npoints+1, (char*) (asteroid + " (int)").c_str(), "lines", "2", "2", 1);
-    gnuplot_plot_xyz(h1, y_lutetia_spice[0], y_lutetia_spice[1], y_lutetia_spice[2], Npoints+1, (char*) (asteroid + " (JPL)").c_str(), "lines", "2", "2", 2);
-    gnuplot_plot_xyz(h1, y_earth_spice[0], y_earth_spice[1], y_earth_spice[2], Npoints+1, (char*) "EARTH", "lines", "2", "2", 3);
-    gnuplot_plot_xyz(h1, y_moon_spice[0], y_moon_spice[1], y_moon_spice[2], Npoints+1, (char*) "MOON", "lines", "2", "2", 4);
+    gnuplot_plot_xyz(true, h1, y_from_int[0], y_from_int[1], y_from_int[2], Npoints+1, (char*) (asteroid + " (int)").c_str(), "lines", "2", "2", 1);
+    gnuplot_plot_xyz(true, h1, y_lutetia_spice[0], y_lutetia_spice[1], y_lutetia_spice[2], Npoints+1, (char*) (asteroid + " (JPL)").c_str(), "lines", "2", "2", 2);
+    gnuplot_plot_xyz(true, h1, y_earth_spice[0], y_earth_spice[1], y_earth_spice[2], Npoints+1, (char*) "EARTH", "lines", "2", "2", 3);
+    gnuplot_plot_xyz(true, h1, y_moon_spice[0], y_moon_spice[1], y_moon_spice[2], Npoints+1, (char*) "MOON", "lines", "2", "2", 4);
 
 
     //=========================================================================

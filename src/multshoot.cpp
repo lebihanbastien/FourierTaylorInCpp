@@ -220,7 +220,7 @@ int multiple_shooting_gomez(double **ymd, double *tmd,
     // Init
     //--------------------------------------------------------------------------
     //Cumulated norm of the error
-    double normC;
+    double normC = 0.0;
     //Current state along the trajectory
     double **ym  = dmatrix(0, 41, 0, mgs);
     //Current time along the trajectory
@@ -281,7 +281,7 @@ int multiple_shooting_gomez(double **ymd, double *tmd,
         //----------------------------------------------------------------------
         //Trajectory plot
         //----------------------------------------------------------------------
-        if(isPlotted) gnuplot_plot_xyz(h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "1", "4", 4);
+        gnuplot_plot_xyz(isPlotted, h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "1", "4", 4);
 
         //----------------------------------------------------------------------
         // Build the Jacobian and other useful matrices
@@ -501,7 +501,7 @@ int multiple_shooting_direct(double **ymd, double *tmd,
     string fname = "multiple_shooting_direct";
 
     //Cumulated norm of the error
-    double normC;
+    double normC = 0.0;
 
     //------------------------------------------------------------------------------------
     //Get the default coordinates system from the coord_type
@@ -561,7 +561,7 @@ int multiple_shooting_direct(double **ymd, double *tmd,
         //--------------------------------------------------------------------------------
         //Trajectory plot
         //--------------------------------------------------------------------------------
-        if(isPlotted) gnuplot_plot_X(h1, ymdn, mgs+1, (char*)"", "points", "1", "4", 4);
+        gnuplot_plot_X(isPlotted, h1, ymdn, mgs+1, (char*)"", "points", "1", "4", 4);
 
         //--------------------------------------------------------------------------------
         // Build the Jacobian and other useful matrices
@@ -643,7 +643,7 @@ int multiple_shooting_direct(double **ymd, double *tmd,
         cout << fname << ". n° " << iter+1 << "/" << itermax << ". nerror = " << normC << endl;
         if(normC < PREC_GSM)
         {
-            cout << fname << ". Desired precision was reached. break. nerror = " << normC << endl;
+            cout << fname << ". Desired precision was reached. " << endl; cout << "nerror = " << normC << endl;
             break;
         }
 
@@ -714,7 +714,7 @@ int multiple_shooting_direct_variable_time(double **ymd, double *tmd,
     // 1. Initialization
     //====================================================================================
     //Cumulated norm of the error
-    double normC;
+    double normC = 0.0;
 
     //------------------------------------------------------------------------------------
     //Get the default coordinates system from the coord_type
@@ -794,7 +794,7 @@ int multiple_shooting_direct_variable_time(double **ymd, double *tmd,
         //================================================================================
         //Trajectory plot
         //================================================================================
-        if(isPlotted) gnuplot_plot_xyz(h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "1", "4", 4);
+        gnuplot_plot_xyz(isPlotted, h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "1", "4", 4);
 
         //================================================================================
         // Build the Jacobian and other useful matrices
@@ -916,7 +916,7 @@ int multiple_shooting_direct_variable_time(double **ymd, double *tmd,
         // Check that all points are under a given threshold
         if(normC < prec)
         {
-            cout << fname << ". Desired precision was reached. break. nerror = " << normC << endl;
+            cout << fname << ". Desired precision was reached. " << endl; cout << "nerror = " << normC << endl;
             break;
         }
 
@@ -982,7 +982,7 @@ int multiple_shooting_direct_deps(double **ymd, double *tmd,
     string fname = "multiple_shooting_direct_deps";
 
     //Cumulated norm of the error
-    double normC;
+    double normC = 0.0;
     //Various temporary states and times
     double yv[N], ye[N];
 
@@ -1165,7 +1165,7 @@ int multiple_shooting_direct_deps(double **ymd, double *tmd,
     //====================================================================================
     //Last plot
     //====================================================================================
-    if(isPlotted) gnuplot_plot_X(h1, ymdn, mgs+1, (char*)"", "points", "1", "3", 2);
+    gnuplot_plot_X(isPlotted, h1, ymdn, mgs+1, (char*)"", "points", "1", "3", 2);
 
     //====================================================================================
     //Compute the null vector: QR decomposition of DP^T

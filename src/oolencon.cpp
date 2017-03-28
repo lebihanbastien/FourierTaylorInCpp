@@ -254,7 +254,7 @@ int compute_grid_CMU_EM(double dist_to_cm, ProjSt& projSt)
 
     if(projSt.dHd > 0)
     {
-        cout << "Moreover, a fixed energy has been selectect:                       " << endl;
+        cout << "Moreover, a fixed energy has been selected:                        " << endl;
         cout << "Hd - H0 = " << projSt.dHd                                            << endl;
         cout << "===================================================================" << endl;
     }
@@ -457,7 +457,7 @@ int compute_grid_CMU_EM_dH(double dist_to_cm, ProjSt& projSt)
 
     if(projSt.dHd > 0)
     {
-        cout << "Moreover, a fixed energy has been selectect:                       " << endl;
+        cout << "Moreover, a fixed energy has been selected:                        " << endl;
         cout << "Hd - H0 = " << projSt.dHd                                            << endl;
         cout << "===================================================================" << endl;
     }
@@ -665,8 +665,6 @@ int proj_subroutine(ProjResSt& projResSt, Invman& invman_SEM, ProjSt& projSt)
     int kmin = 0;
     Ofsc ofs(OFS_ORDER);
 
-
-
     //====================================================================================
     // 2. Integration of the manifold leg
     //====================================================================================
@@ -802,7 +800,6 @@ int proj_subroutine(ProjResSt& projResSt, Invman& invman_SEM, ProjSt& projSt)
 
             // Save value in crossings_NCSEM
             crossings_NCSEM = odeEvent_purge.crossings;
-
 
             // Free temporary objects
             free_dmatrix(y_purge, 0, 5, 0, 2);
@@ -1294,7 +1291,6 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt& projSt)
     return FTC_SUCCESS;
 }
 
-
 /**
  *  \brief @TODO
  **/
@@ -1466,11 +1462,10 @@ int int_proj_CMU_EM_on_CM_SEM_dH(ProjSt& projSt)
     return FTC_SUCCESS;
 }
 
-
 /**
  *  \brief @TODO
  **/
-int cmu_grid_strob(double *tNCE, double **yNCE, double **sRCM, double st0[], double t0, int N, int isPar)
+int cmu_grid_strob(double* tNCE, double** yNCE, double** sRCM, double st0[], double t0, int N, int isPar)
 {
     //====================================================================================
     // Initialization
@@ -1491,9 +1486,9 @@ int cmu_grid_strob(double *tNCE, double **yNCE, double **sRCM, double st0[], dou
     //Driver
     OdeStruct odestruct;
     //Root-finding
-    const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
+    const gsl_root_fsolver_type* T_root = gsl_root_fsolver_brent;
     //Stepper
-    const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
+    const gsl_odeiv2_step_type* T = gsl_odeiv2_step_rk8pd;
     //Parameters
     OdeParams odeParams(&SEML, dcs);
     //Init ode structure
@@ -1576,7 +1571,7 @@ int cmu_grid_strob(double *tNCE, double **yNCE, double **sRCM, double st0[], dou
 /**
  *  \brief @TODO
  **/
-int cmu_grid_orbit(double *tNCE, double **yNCE, double **sRCM, double st0[], double t0, int N, int NPeriods,  int isPar)
+int cmu_grid_orbit(double* tNCE, double** yNCE, double** sRCM, double st0[], double t0, int N, int NPeriods,  int isPar)
 {
     //====================================================================================
     // Initialization
@@ -1597,9 +1592,9 @@ int cmu_grid_orbit(double *tNCE, double **yNCE, double **sRCM, double st0[], dou
     //Driver
     OdeStruct odestruct;
     //Root-finding
-    const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
+    const gsl_root_fsolver_type* T_root = gsl_root_fsolver_brent;
     //Stepper
-    const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
+    const gsl_odeiv2_step_type* T = gsl_odeiv2_step_rk8pd;
     //Parameters
     OdeParams odeParams(&SEML, dcs);
     //Init ode structure
@@ -1680,7 +1675,7 @@ int cmu_grid_orbit(double *tNCE, double **yNCE, double **sRCM, double st0[], dou
 }
 
 
-int cmu_orbit_estimate_period(const double st0[], double t0, double *T, int *N, int Nperiods, double dt, Orbit &orbit)
+int cmu_orbit_estimate_period(const double st0[], double t0, double* T, int* N, int Nperiods, double dt, Orbit& orbit)
 {
     //====================================================================================
     //Orbit IC
@@ -1744,7 +1739,7 @@ int cmu_orbit_estimate_period(const double st0[], double t0, double *T, int *N, 
     cout << "We use the following approximation : " << rEst << endl;
 
     //Multiple by the desired number of periods
-    cout << "Moreover, the user has called for " << Nperiods << "periods." << endl;
+    cout << "Moreover, the user has called for " << Nperiods << " periods." << endl;
 
     // Period, and number of points to match a frequency of "dt" on a period
     *T = Nperiods*rEst * SEML.us_em.T;
@@ -1761,7 +1756,7 @@ int cmu_orbit_estimate_period(const double st0[], double t0, double *T, int *N, 
 /**
  *  \brief @TODO
  **/
-int cmu_grid_orbit_on_one_period(double *tNCE, double **yNCE, double **sRCM, const double st0[], double t0, double T, int N, int isPar, Orbit &orbit)
+int cmu_grid_orbit_on_one_period(double* tNCE, double** yNCE, double** sRCM, const double st0[], double t0, double T, int N, int isPar, Orbit& orbit)
 {
     //====================================================================================
     //Orbit IC
@@ -1795,7 +1790,7 @@ int cmu_grid_orbit_on_one_period(double *tNCE, double **yNCE, double **sRCM, con
     //int iter = 1;
     //COMPLETION = 0;
 
-    #pragma omp parallel for if(isPar) // shared(iter)
+    #pragma omp parallel for if(isPar) //shared(iter)
     for(int k = 0; k <= N; k++)
     {
         Ofsc ofs(OFS_ORDER);
@@ -1828,7 +1823,7 @@ int cmu_grid_orbit_on_one_period(double *tNCE, double **yNCE, double **sRCM, con
             for(int i = 0; i < 6; i++) yNCE[i][k] = yvu[i];
             for(int i = 0; i < 5; i++) sRCM[i][k] = sti[i];
             //Display
-            //displayCompletion("compute_grid_CMU_EM", (double) iter++/(N+1)*100);
+            //displayCompletion("cmu_grid_orbit_on_one_period", (double) iter++/(N+1)*100);
         }
 
         free_dvector(yvu, 0, 5);
@@ -1839,7 +1834,7 @@ int cmu_grid_orbit_on_one_period(double *tNCE, double **yNCE, double **sRCM, con
     //====================================================================================
     //Back to original precision
     //====================================================================================
-    Config::configManager().C_PREC_BACK();
+    //Config::configManager().C_PREC_BACK();
 
 
     return status;
@@ -1848,12 +1843,13 @@ int cmu_grid_orbit_on_one_period(double *tNCE, double **yNCE, double **sRCM, con
 /**
  *  \brief @TODO
  **/
-int int_proj_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods, double dt)
+int int_proj_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
 {
     //====================================================================================
     // Retrieve the parameters in the projection structure
     //====================================================================================
     bool isPar = projSt.ISPAR;
+    double dt  = projSt.dt;
 
     //====================================================================================
     // Initialization
@@ -1871,9 +1867,9 @@ int int_proj_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods, double dt)
     //Driver
     OdeStruct odestruct;
     //Root-finding
-    const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
+    const gsl_root_fsolver_type* T_root = gsl_root_fsolver_brent;
     //Stepper
-    const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
+    const gsl_odeiv2_step_type* T = gsl_odeiv2_step_rk8pd;
     //Parameters
     OdeParams odeParams(&SEML, dcs);
     //Init ode structure
@@ -1886,10 +1882,10 @@ int int_proj_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods, double dt)
 
 
     //====================================================================================
-    // Building the initial conditions of the orbit
+    // Building the initial conditions on the orbit
     //====================================================================================
     double t0;
-    double *st0 = dvector(0,4);
+    double* st0 = dvector(0,4);
 
     // Initial conditions @ t0
     t0 =  projSt.TLIM[0];
@@ -1906,14 +1902,27 @@ int int_proj_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods, double dt)
     cout << "===================================================================" << endl;
     cout << " The computation domain is the following:                          " << endl;
     cout << " - OFTS_ORDER = " << OFTS_ORDER                                      << endl;
-    cout << " - " << projSt.TSIZE  << " values"                                   << endl;
+    cout << " - " << projSt.TSIZE+1  << " values of times"                                 ;
     cout << " in ["  << projSt.TLIM[0]/SEML.us_em.T                                      ;
     cout << ", " << projSt.TLIM[1]/SEML.us_em.T  << "]"                           << endl;
-    cout << " Starting at s0 = "                                                                 ;
-    cout << "(" << st0[0]<< ", "<< st0[1]<< ", "<< st0[2] << ", "<< st0[3] << ")" << endl;
+    cout << " - " << projSt.GSIZE_SI[0]+1  << " values of s1/s3"                           ;
+    cout << " in ["  << projSt.GLIM_SI[0][0]                                             ;
+    cout << ", " << projSt.GLIM_SI[0][1]  << "]"                                  << endl;
     cout << " The data will be stored in " << filename                            << endl;
     cout << "===================================================================" << endl;
-    cout << setiosflags(ios::scientific) << setprecision(15);
+
+    //------------------------------------------------------------------------------------
+    //Building the working grids
+    //------------------------------------------------------------------------------------
+    double* grid_s1_CMU_RCM = dvector(0,  projSt.GSIZE_SI[0]);
+    //double* grid_s3_CMU_RCM = dvector(0,  projSt.GSIZE_SI[2]);
+    init_grid(grid_s1_CMU_RCM, projSt.GLIM_SI[0][0], projSt.GLIM_SI[0][1], projSt.GSIZE_SI[0]);
+    //init_grid(grid_s3_CMU_RCM, projSt.GLIM_SI[2][0], projSt.GLIM_SI[2][1], projSt.GSIZE_SI[2]);
+
+    cout << " - The detailed values of s1 are:                                   " << endl;
+    for(int i = 0; i < projSt.GSIZE_SI[0]; i++) cout << grid_s1_CMU_RCM[i] << ", ";
+    cout << grid_s1_CMU_RCM[projSt.GSIZE_SI[0]]  << endl;
+    cout << "===================================================================" << endl;
 
     //------------------------------------------------------------------------------------
     //Building the time grid
@@ -1926,7 +1935,7 @@ int int_proj_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods, double dt)
     cout << grid_t_EM[projSt.TSIZE]/SEML.us->T  << endl;
     cout << "===================================================================" << endl;
     pressEnter(true);
-
+    cout << setiosflags(ios::scientific) << setprecision(15);
 
     //====================================================================================
     // Initialize tools for the projection phase. Namely the center manifold @SEML
@@ -1966,32 +1975,6 @@ int int_proj_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods, double dt)
     filestream.open (filename.c_str(), ios::binary | ios::out);
     filestream.close();
 
-    //------------------------------------------------------------------------------------
-    // Estimate the period and the number of points on the time grid to match a
-    // frequency of dt over this period
-    //------------------------------------------------------------------------------------
-    double Tp = 0.0;
-    int N = 0.0;
-    cmu_orbit_estimate_period(st0, t0, &Tp, &N, Nperiods, dt, orbit);
-
-    //Save the initial position
-    double z0[6];
-    state_memcpy(z0, orbit.getZ0());
-
-    //------------------------------------------------------------------------------------
-    // Storing initial conditions along the orbit
-    //------------------------------------------------------------------------------------
-    //To store data
-    double **yNCE = dmatrix(0, 5, 0, N);
-    double **sRCM = dmatrix(0, 4, 0, N);
-    double *tNCE  = dvector(0, N);
-
-    //------------------------------------------------------------------------------------
-    //Number of elements
-    //------------------------------------------------------------------------------------
-    int noe = (1+N)*(1+projSt.TSIZE);
-
-
     //====================================================================================
     // Loop: only the inner loop is parallelized, since
     //    open_mp doest not allow nested // loops by default
@@ -2001,93 +1984,131 @@ int int_proj_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods, double dt)
     COMPLETION = 0;
     double stp[5];
 
-    // Time loop
-    for(int kt = 0; kt <= projSt.TSIZE; kt++)
+    //s0 loop
+    for(int ks1 = 0; ks1 <= projSt.GSIZE_SI[0]; ks1++)
     {
-        //--------------------------------------------------------------------------------
-        //Strob map & unstable directions
-        //--------------------------------------------------------------------------------
-        t0 = grid_t_EM[kt];
-
-        //Projection
-        orbit.NCprojCCMtoCM(z0, t0, stp);
-
-        cout << "stp = " << endl;
-        vector_printf_prec(stp, 4);
-
-        //cmu_grid_orbit_on_one_period(tNCE, yNCE, sRCM, st0, t0, Tp, N, isPar, orbit);
-        cmu_grid_orbit_on_one_period(tNCE, yNCE, sRCM, stp, t0, Tp, N, isPar, orbit);
 
         //--------------------------------------------------------------------------------
-        //Once the unstable directions are obtained, we propagate & project
+        // Changing the initial conditions on the orbit
         //--------------------------------------------------------------------------------
+        st0[0] =  grid_s1_CMU_RCM[ks1];
+        st0[1] =  projSt.GLIM_SI[1][0];
+        st0[2] = -grid_s1_CMU_RCM[ks1];
+        st0[3] =  projSt.GLIM_SI[3][0];
+        st0[4] =  0.0;
 
-        #pragma omp parallel for if(isPar) shared(index)
-        for(int ks = 0; ks <= N; ks++)
+        t0 = grid_t_EM[0]; //just for the specific purpose of estimating the period, right after
+
+        //--------------------------------------------------------------------------------
+        // Estimate the period and the number of points on the time grid to match a
+        // frequency of dt over this period
+        //--------------------------------------------------------------------------------
+        double Tp = 0.0;
+        int N = 0.0;
+        cmu_orbit_estimate_period(st0, t0, &Tp, &N, Nperiods, dt, orbit);
+
+        //Save the initial position
+        double z0[6];
+        state_memcpy(z0, orbit.getZ0());
+
+        //--------------------------------------------------------------------------------
+        // Storing initial conditions along the orbit
+        //--------------------------------------------------------------------------------
+        //To store data
+        double** yNCE = dmatrix(0, 5, 0, N);
+        double** sRCM = dmatrix(0, 4, 0, N);
+        double* tNCE  = dvector(0, N);
+
+        //--------------------------------------------------------------------------------
+        //Number of elements
+        //--------------------------------------------------------------------------------
+        int noe = (1+N)*(1+projSt.TSIZE)*(1+projSt.GSIZE_SI[0]);
+
+
+        // Time loop
+        for(int kt = 0; kt <= projSt.TSIZE; kt++)
         {
             //----------------------------------------------------------------------------
-            //Inputs
+            //Strob map & unstable directions
             //----------------------------------------------------------------------------
-            ProjResSt projResSt;
+            t0 = grid_t_EM[kt];
+
+            //Projection
+            orbit.NCprojCCMtoCM(z0, t0, stp);
+            stp[4] =  0.0;
+
+            cmu_grid_orbit_on_one_period(tNCE, yNCE, sRCM, stp, t0, Tp, N, isPar, orbit);
 
             //----------------------------------------------------------------------------
-            //Seeds
+            //Once the unstable directions are obtained, we propagate & project
             //----------------------------------------------------------------------------
-            //Init time (global)
-            projResSt.seed_time_EM = t0;
-            //RCM state (seed)
-            for(int i = 0; i < 4; i++) projResSt.seed_state_CMU_RCM[i] = st0[i];
-
-            //----------------------------------------------------------------------------
-            //Initial conditions
-            //----------------------------------------------------------------------------
-            // Init the time in EM coordinates
-            projResSt.init_time_EM  = tNCE[ks];
-            // Init the state in NCEM coordinates
-            for(int i = 0; i < 6; i++) projResSt.init_state_CMU_NCEM[i] = yNCE[i][ks];
-            // Init the state in RCM coordinates
-            for(int i = 0; i < 5; i++) projResSt.init_state_CMU_RCM[i] = sRCM[i][ks];
-            //Label
-            projResSt.label = label;
-
-
-            //----------------------------------------------------------------------------
-            //Projection on center manifold at SEML2
-            //----------------------------------------------------------------------------
-            proj_subroutine(projResSt, invman_SEM, projSt);
-
-            //----------------------------------------------------------------------------
-            // Save outputs
-            //----------------------------------------------------------------------------
-            //if(projResSt.min_proj_dist_SEM_o < ePdef)
-            //{
-            //Save
-            #pragma omp critical
+            #pragma omp parallel for if(isPar) shared(index)
+            for(int ks = 0; ks <= N; ks++)
             {
-                //projResSt.init_time_EM  = tNCE[0];
-                writeIntProjCUSeed_bin(filename, projResSt);
-            }
-            //}
+                //------------------------------------------------------------------------
+                //Inputs
+                //------------------------------------------------------------------------
+                ProjResSt projResSt;
+
+                //------------------------------------------------------------------------
+                //Seeds
+                //------------------------------------------------------------------------
+                //Init time (global)
+                projResSt.seed_time_EM = t0;
+                //RCM state (seed)
+                for(int i = 0; i < 4; i++) projResSt.seed_state_CMU_RCM[i] = st0[i];
+
+                //------------------------------------------------------------------------
+                //Initial conditions
+                //------------------------------------------------------------------------
+                // Init the time in EM coordinates
+                projResSt.init_time_EM  = tNCE[ks];
+                // Init the state in NCEM coordinates
+                for(int i = 0; i < 6; i++) projResSt.init_state_CMU_NCEM[i] = yNCE[i][ks];
+                // Init the state in RCM coordinates
+                for(int i = 0; i < 5; i++) projResSt.init_state_CMU_RCM[i] = sRCM[i][ks];
+                //Label
+                projResSt.label = label;
+
+                //------------------------------------------------------------------------
+                //Projection on center manifold at SEML2
+                //------------------------------------------------------------------------
+                proj_subroutine(projResSt, invman_SEM, projSt);
+
+                //------------------------------------------------------------------------
+                // Save outputs
+                //------------------------------------------------------------------------
+                //if(projResSt.min_proj_dist_SEM_o < ePdef)
+                //{
+                    //Save
+                    #pragma omp critical
+                    {
+                        writeIntProjCUSeed_bin(filename, projResSt);
+                    }
+                //}
 
 
-            //----------------------------------------------------------------------------
-            //Display completion
-            //----------------------------------------------------------------------------
-            #pragma omp critical
-            {
-                displayCompletion("int_proj_CMU_EM_on_CM_SEM", 100.0*index++/noe);
+                //------------------------------------------------------------------------
+                //Display completion
+                //------------------------------------------------------------------------
+                #pragma omp critical
+                {
+                    displayCompletion("int_proj_CMU_EM_on_CM_SEM", 100.0*index++/noe);
+                }
             }
+
+            label++;
         }
 
-        label++;
+        //--------------------------------------------------------------------------------
+        //Free
+        //--------------------------------------------------------------------------------
+        free_dmatrix(yNCE, 0, 5, 0, N);
+        free_dmatrix(sRCM, 0, 4, 0, N);
+        free_dvector(tNCE, 0, N);
     }
 
-    //------------------------------------------------------------------------------------
-    //Free
-    //------------------------------------------------------------------------------------
-    free_dmatrix(yNCE, 0, 5, 0, N);
-    free_dmatrix(sRCM, 0, 4, 0, N);
-    free_dvector(tNCE, 0, N);
+
 
 
     return FTC_SUCCESS;
@@ -2101,7 +2122,7 @@ int int_proj_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods, double dt)
 /**
  *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM.
  *         A multiple_shooting_direct is applied on the MANIFOLD trajectory (manifold leg).
- *         The initial conditions vary in the paramerization of the CMU of EML2.
+ *         The initial conditions vary in the paramerization of the CMU of EMLi.
  *         The final conditions vary in the paramerization of the CMS of SEMLi.
  *         The time at each point except the first one is allowed to vary.
  *         A continuation procedure can be performed to get more than one refined solution.
@@ -2118,7 +2139,7 @@ int refemlisemli(RefSt& refSt)
     //====================================================================================
     string fname = "refemlisemli";
     cout << "===================================================================" << endl;
-    cout << "   refemlisemli. Refinement of EML2-SEMLi arc                     " << endl;
+    cout << "   refemlisemli. Refinement of EMLi-SEMLi arc                      " << endl;
     cout << "===================================================================" << endl;
 
     //====================================================================================
@@ -2259,18 +2280,18 @@ int refemlisemli(RefSt& refSt)
         //--------------------------------------------------------------------------------
         //Gnuplot window
         //--------------------------------------------------------------------------------
-        h2 = gnuplot_init();
+        h2 = gnuplot_init(refSt.isPlotted);
 
         //--------------------------------------------------------------------------------
         //Notable points in SEM system
         //--------------------------------------------------------------------------------
-        notablePoints_sem(h2, coord_type);
+        notablePoints_sem(h2, coord_type, refSt.isPlotted);
 
         //--------------------------------------------------------------------------------
         //Multiple shooting procedure
         //--------------------------------------------------------------------------------
         status = subrefemlisemli(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, &man_grid_size, refSt, h2);
-        gnuplot_close(h2);
+        gnuplot_close(refSt.isPlotted, h2);
         if(status)
         {
             cerr << fname << ". Error during the refinement procedure. ref_errno = " << ref_strerror (status) << endl;
@@ -2284,12 +2305,12 @@ int refemlisemli(RefSt& refSt)
         //--------------------------------------------------------------------------------
         //Gnuplot window
         //--------------------------------------------------------------------------------
-        h2 = gnuplot_init();
+        h2 = gnuplot_init(refSt.isPlotted);
 
         //--------------------------------------------------------------------------------
         //Notable points in SEM system
         //--------------------------------------------------------------------------------
-        notablePoints_sem(h2, coord_type);
+        notablePoints_sem(h2, coord_type, refSt.isPlotted);
 
         //--------------------------------------------------------------------------------
         //First step: variable tn
@@ -2322,7 +2343,7 @@ int refemlisemli(RefSt& refSt)
             return FTC_FAILURE;
         }
 
-        gnuplot_close(h2);
+        gnuplot_close(refSt.isPlotted, h2);
         break;
     }
 
@@ -2331,12 +2352,12 @@ int refemlisemli(RefSt& refSt)
         //--------------------------------------------------------------------------------
         //Gnuplot window
         //--------------------------------------------------------------------------------
-        h2 = gnuplot_init();
+        h2 = gnuplot_init(refSt.isPlotted);
 
         //--------------------------------------------------------------------------------
         //Notable points in SEM system
         //--------------------------------------------------------------------------------
-        notablePoints_sem(h2, coord_type);
+        notablePoints_sem(h2, coord_type, refSt.isPlotted);
 
         //--------------------------------------------------------------------------------
         //First step: variable tn
@@ -2372,7 +2393,7 @@ int refemlisemli(RefSt& refSt)
             return FTC_FAILURE;
         }
 
-        gnuplot_close(h2);
+        gnuplot_close(refSt.isPlotted, h2);
         break;
     }
 
@@ -2394,12 +2415,12 @@ int refemlisemli(RefSt& refSt)
         //--------------------------------------------------------------------------------
         //Gnuplot window
         //--------------------------------------------------------------------------------
-        h2 = gnuplot_init();
+        h2 = gnuplot_init(refSt.isPlotted);
 
         //--------------------------------------------------------------------------------
         //Notable points in SEM system
         //--------------------------------------------------------------------------------
-        notablePoints_sem(h2, coord_type);
+        notablePoints_sem(h2, coord_type, refSt.isPlotted);
 
         //Multiple shooting procedure
         status = subrefemlisemli(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, &man_grid_size, refSt, h2);
@@ -2419,7 +2440,7 @@ int refemlisemli(RefSt& refSt)
 
         //Multiple shooting procedure
         status = subrefemlisemli(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, &man_grid_size, refSt, h2);
-        gnuplot_close(h2);
+        gnuplot_close(refSt.isPlotted, h2);
 
         if(status)
         {
@@ -2481,6 +2502,213 @@ int refemlisemli(RefSt& refSt)
     return FTC_SUCCESS;
 }
 
+
+/**
+ *  \brief Computes the best trajectories from int_proj_ORBIT_EM_on_CM_SEM.
+ *         A multiple_shooting_direct is applied on the MANIFOLD trajectory (manifold leg).
+ *         The initial conditions vary in the paramerization of the CMU of i.
+ *         The final conditions vary in the paramerization of the CMS of SEMLi.
+ *         The time at each point except the first one is allowed to vary.
+ *         A continuation procedure can be performed to get more than one refined solution.
+ *
+ *         Because of the possible use of msvt3d and msvtplan inside this routine,
+ *         the refSt.coord_type must be NCSEM. However, the user can put
+ *         other coordinate systems (VNCSEM, PSEM, PEM...), as long as these two routines
+ *         are not used.
+ *
+ *         so stands for single orbit.
+ **/
+int sorefemlisemli(RefSt& refSt)
+{
+    //====================================================================================
+    // 0. Splash screen
+    //====================================================================================
+    string fname = "sorefemlisemli";
+    cout << "===================================================================" << endl;
+    cout << "   sorefemlisemli. Refinement of EMLi-SEMLi arc                    " << endl;
+    cout << "===================================================================" << endl;
+
+    //====================================================================================
+    // 1. Get the default coordinates system from the coord_type
+    //====================================================================================
+    int coord_type    = refSt.coord_type;
+    int man_grid_size = refSt.gridSize;
+    int dcs           = default_coordinate_system(coord_type);
+    int status        = 0;
+
+    //====================================================================================
+    // 2. Structures to compute the invariant manifolds
+    //====================================================================================
+    Invman invman_EM( OFTS_ORDER, OFS_ORDER, SEML.cs_em);
+    Invman invman_SEM(OFTS_ORDER, OFS_ORDER, SEML.cs_sem);
+
+
+    //====================================================================================
+    // 3. Select the good IC for EML2-to-SEMLi connections in data files
+    //====================================================================================
+    ProjResClass projRes;
+    status = soselectemlisemli(refSt, projRes);
+
+    if(status == FTC_FAILURE)
+    {
+        cout << "No solution satisfying all the constraints has been found." << endl;
+        cout << "End of computation." << endl;
+        return FTC_FAILURE;
+    }
+
+    //====================================================================================
+    // Display
+    //====================================================================================
+    coutmp();
+    cout << "===================================================================" << endl;
+    cout << " refemlisemli. Some solutions have been found:                     " << endl;
+    //Display
+    coutmp();
+    cout << "--------------------------------------" << endl;
+    cout << "The first entry is:" << endl;
+    projRes.displayFirstEntry();
+
+    cout << "--------------------------------------" << endl;
+    cout << "The last entry is:" << endl;
+    projRes.displayLastEntry();
+    cout << "===================================================================" << endl;
+    coutlp();
+    pressEnter(refSt.isFlagOn);
+
+
+    //====================================================================================
+    // 5. We initialize the local variables with the first instance in projRes
+    //====================================================================================
+    double st_EM[5], st_SEM[5], t_EM[2], t0_SEM = 0.0, pmin_dist_SEM_out = 0.0;
+    double st_EM_seed[4], t_EM_seed = 0.0;
+    int label = 0;
+    projRes.update_ic(st_EM, st_SEM, t_EM, st_EM_seed, &t_EM_seed, &t0_SEM, &pmin_dist_SEM_out, &label, 0);
+
+    //====================================================================================
+    // 5.1 Initialize local variables: EM
+    //====================================================================================
+    //------------------------------------------------------------------------------------
+    // Initialisation of the orbit structure
+    //------------------------------------------------------------------------------------
+    OdeStruct odestruct_EM;
+    //Root-finding
+    const gsl_root_fsolver_type* T_root = gsl_root_fsolver_brent;
+    //Stepper
+    const gsl_odeiv2_step_type* T = gsl_odeiv2_step_rk8pd;
+    //Parameters
+    OdeParams odeParams_EM(&SEML_EM, I_NCEM);
+    //Init ode structure
+    init_ode_structure(&odestruct_EM, T, T_root, 6, qbcp_vfn, &odeParams_EM);
+    //Init routine
+    Orbit orbit_EM(&invman_EM, &SEML_EM, &odestruct_EM, OFTS_ORDER, OFS_ORDER, t_EM[0], t_EM[1]);
+
+    //------------------------------------------------------------------------------------
+    // Update the initial state in the orbit_EM, with the RCM coordinates
+    //------------------------------------------------------------------------------------
+    orbit_EM.update_ifc(st_EM,  t_EM[0],  t_EM[1]);
+
+    //====================================================================================
+    // 5.2 Initialize local variables: SEM
+    //====================================================================================
+
+    //------------------------------------------------------------------------------------
+    // Initialisation of the orbit structure
+    //------------------------------------------------------------------------------------
+    OdeStruct odestruct_SEM;
+    //Parameters
+    OdeParams odeParams_SEM(&SEML_SEM, I_NCSEM);
+    //Init ode structure
+    init_ode_structure(&odestruct_SEM, T, T_root, 6, qbcp_vfn, &odeParams_SEM);
+    //Init routine
+    Orbit orbit_SEM(&invman_SEM, &SEML_SEM, &odestruct_SEM, OFTS_ORDER, OFS_ORDER,
+                    t0_SEM, t0_SEM+5*SEML.us_sem.T);
+
+    //------------------------------------------------------------------------------------
+    // Update the initial state in the orbit_SEM, with the RCM coordinates
+    //------------------------------------------------------------------------------------
+    orbit_SEM.update_ic(st_SEM, t0_SEM);
+
+    //------------------------------------------------------------------------------------
+    // Time and state vectors (twice the size)
+    //------------------------------------------------------------------------------------
+    double** y_traj  = dmatrix(0, 41, 0, 2*man_grid_size);
+    double*  t_traj  = dvector(0, 2*man_grid_size);
+
+    //====================================================================================
+    // 6 Multiple shooting procedure, for all values in projRes
+    //====================================================================================
+
+    //------------------------------------------------------------------------------------
+    //Gnuplot window
+    //------------------------------------------------------------------------------------
+    gnuplot_ctrl* h2;
+    h2 = gnuplot_init(refSt.isPlotted);
+
+    string filename      = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF, SEML.li);
+    string filename_traj = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF_TRAJ, SEML.li);
+
+    for(int k = 0; k < projRes.size(); k++)
+    {
+        //--------------------------------------------------------------------------------
+        // Update initial conditions
+        //--------------------------------------------------------------------------------
+        projRes.update_ic(st_EM, st_SEM, t_EM, st_EM_seed, &t_EM_seed, &t0_SEM, &pmin_dist_SEM_out, &label, k);
+
+        orbit_EM.update_ifc(st_EM,  t_EM[0],  t_EM[1]);
+        orbit_SEM.update_ic(st_SEM, t0_SEM);
+
+        //--------------------------------------------------------------------------------
+        //Notable points in SEM system
+        //--------------------------------------------------------------------------------
+        notablePoints_sem(h2, coord_type, refSt.isPlotted);
+
+        //--------------------------------------------------------------------------------
+        //First step: variable tn
+        //--------------------------------------------------------------------------------
+        refSt.type    = REF_ORBIT;
+        refSt.time    = REF_FIXED_TIME;
+        refSt.isSaved = 0;
+
+        status = subrefemlisemli(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, &man_grid_size, refSt, h2);
+
+        if(status)
+        {
+            cerr << fname << ". Error during the continuation procedure with variable time. ref_errno = " << ref_strerror(status) << endl;
+            //return FTC_FAILURE;
+        }
+        else if(refSt.last_error < refSt.inner_prec)
+        {
+            //----------------------------------------------------------------------------
+            // Find the intersection with a certain Poincaré Section (PS)
+            //----------------------------------------------------------------------------
+            double ye[6], te = 0.0;
+            xpkemlisemli(ye, &te, t_traj, y_traj, man_grid_size, refSt);
+
+            //----------------------------------------------------------------------------
+            // Saving
+            //----------------------------------------------------------------------------
+            // Only the txt results
+            writeCONT_txt(filename, orbit_EM, orbit_SEM, te, ye, projRes, (k == 0),  k);
+            // Entire trajectory
+            writeCONT_bin(refSt, filename_traj, y_traj, t_traj, man_grid_size,
+            orbit_EM, orbit_SEM, (k == 0), 0, 0, projRes, k);
+        }
+        else
+        {
+            cout << "PRECISION NOT GOOD ENOUGH" << endl;
+        }
+
+        //--------------------------------------------------------------------------------
+        // press Enter
+        //--------------------------------------------------------------------------------
+        pressEnter(refSt.isFlagOn);
+    }
+
+    gnuplot_close(refSt.isPlotted, h2);
+
+    return FTC_SUCCESS;
+}
+
 //========================================================================================
 //
 //         Refinement of solutions: CMU to CMS - subroutines
@@ -2535,7 +2763,8 @@ int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* 
     //------------------------------------------------------------------------------------
     //Local variables for plotting
     //------------------------------------------------------------------------------------
-    int mPlot = refSt.mplot;
+    int mPlot  = refSt.mplot;
+    int isPlot = refSt.isPlotted;
     double** y_man_NCEM        = dmatrix(0, 5, 0, mPlot);
     double** y_man_NCSEM       = dmatrix(0, 5, 0, mPlot);
     double*  t_man_EM          = dvector(0, mPlot);
@@ -2584,8 +2813,8 @@ int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* 
     int man_index = icmanemlisemli(y_traj, t_traj, orbit_EM, orbit_SEM, dcs, coord_type, man_grid_size, refSt);
 
     // Plot the resulting trajectory
-    gnuplot_plot_X(h2, y_traj, man_index,   (char*)"", "lines", "1", "1", 4);
-    gnuplot_plot_X(h2, y_traj, man_index+1, (char*)"", "points", "1", "1", 4);
+    gnuplot_plot_X(isPlot, h2, y_traj, man_index,   (char*)"", "lines", "1", "1", 4);
+    gnuplot_plot_X(isPlot, h2, y_traj, man_index+1, (char*)"", "points", "1", "1", 4);
 
 
     //====================================================================================
@@ -2615,38 +2844,38 @@ int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* 
         case REF_VAR_TIME:
         case REF_VAR_TN:
 
-            h5 = gnuplot_init();
-            gnuplot_cmd(h5,  "set title \"s5_SEM vs steps\" ");
-            gnuplot_cmd(h5, "set grid");
+            h5 = gnuplot_init(refSt.isPlotted);
+            gnuplot_cmd(refSt.isPlotted, h5,  "set title \"s5_SEM vs steps\" ");
+            gnuplot_cmd(refSt.isPlotted, h5, "set grid");
             break;
 
 
         case REF_FIXED_TIME:
 
-            h3 = gnuplot_init();
-            gnuplot_cmd(h3,  "set title \"s3_EM vs s1_EM\" ");
-            gnuplot_cmd(h3, "set grid");
+            h3 = gnuplot_init(refSt.isPlotted);
+            gnuplot_cmd(refSt.isPlotted, h3,  "set title \"s3_EM vs s1_EM\" ");
+            gnuplot_cmd(refSt.isPlotted, h3, "set grid");
 
-            h4 = gnuplot_init();
-            gnuplot_cmd(h4,  "set title \"s3_SEM vs s1_SEM\" ");
-            gnuplot_cmd(h4, "set grid");
+            h4 = gnuplot_init(refSt.isPlotted);
+            gnuplot_cmd(refSt.isPlotted, h4,  "set title \"s3_SEM vs s1_SEM\" ");
+            gnuplot_cmd(refSt.isPlotted, h4, "set grid");
 
-            h5 = gnuplot_init();
-            gnuplot_cmd(h5,  "set title \"t0_SEM vs steps\" ");
-            gnuplot_cmd(h5, "set grid");
+            h5 = gnuplot_init(refSt.isPlotted);
+            gnuplot_cmd(refSt.isPlotted, h5,  "set title \"t0_SEM vs steps\" ");
+            gnuplot_cmd(refSt.isPlotted, h5, "set grid");
 
             if(refSt.type == REF_3D)
             {
-                h6 = gnuplot_init();
-                gnuplot_cmd(h6,  "set title \"s4_EM vs s2_EM\" ");
-                gnuplot_cmd(h6, "set grid");
+                h6 = gnuplot_init(refSt.isPlotted);
+                gnuplot_cmd(refSt.isPlotted, h6,  "set title \"s4_EM vs s2_EM\" ");
+                gnuplot_cmd(refSt.isPlotted, h6, "set grid");
             }
 
             if(refSt.is3D())
             {
-                h7 = gnuplot_init();
-                gnuplot_cmd(h7,  "set title \"s4_SEM vs s2_SEM\" ");
-                gnuplot_cmd(h7, "set grid");
+                h7 = gnuplot_init(refSt.isPlotted);
+                gnuplot_cmd(refSt.isPlotted, h7,  "set title \"s4_SEM vs s2_SEM\" ");
+                gnuplot_cmd(refSt.isPlotted, h7, "set grid");
             }
 
             break;
@@ -2660,11 +2889,10 @@ int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* 
     //6.1. First step of the continuation procedure.
     //====================================================================================
     int status = 0;
-    double inner_prec = 5e-8;
     int niter = 1;
 
     status = diffcorr(y_traj, t_traj, y_traj_n, t_traj_n, nullvector, 42,
-                      man_index, coord_type, inner_prec, true, orbit_EM, orbit_SEM,
+                      man_index, coord_type, true, orbit_EM, orbit_SEM,
                       h2, refSt, &niter);
 
 
@@ -2692,16 +2920,16 @@ int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* 
     // Find the intersection with a certain Poincaré Section (PS)
     //====================================================================================
     double ye[6], te = 0.0;
-    int newpos;
-    //xpkemlisemli(ye, &te, t_traj_n, y_traj_n, man_index, refSt);
-
-    xpkemlisemli(ye, &te, t_traj_n, y_traj_n, &newpos, man_index, refSt);
+    //int newpos;
+    xpkemlisemli(ye, &te, t_traj_n, y_traj_n, man_index, refSt);
+    //xpkemlisemli(ye, &te, t_traj_n, y_traj_n, &newpos, man_index, refSt);
 
     //====================================================================================
     // Save first entry if the continuation process is on
     //====================================================================================
+    string filename      = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF, SEML.li_SEM, orbit_EM.getT0xT());
     string filename_traj = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF_TRAJ,
-                                       SEML.li_SEM, orbit_EM.getT0()/SEML.us_em.T);
+                                       SEML.li_SEM, orbit_EM.getT0xT());
 
     if(refSt.isSaved && refSt.isCont())
     {
@@ -2710,7 +2938,7 @@ int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* 
         cout << "-----------------------------------------------------------"  << endl;
 
         // Main parameters
-        writeCONT_txt(orbit_EM, orbit_SEM, &te, ye, true);
+        writeCONT_txt(kn, filename, orbit_EM, orbit_SEM, te, ye, true);
 
         // Entire trajectory
         writeCONT_bin(refSt, filename_traj, dcs, coord_type,
@@ -2832,7 +3060,7 @@ int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* 
             // Diff correction
             //============================================================================
             status = diffcorr(y_traj_n, t_traj_n, y_traj_n, t_traj_n,
-                              nullvector, 42, man_index, coord_type, inner_prec,
+                              nullvector, 42, man_index, coord_type,
                               false, orbit_EM, orbit_SEM, h2, refSt, &niter);
 
             //============================================================================
@@ -2847,7 +3075,7 @@ int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* 
             if(refSt.isSaved && status == GSL_SUCCESS)
             {
                 // Main parameters
-                writeCONT_txt(orbit_EM, orbit_SEM, &te, ye, false);
+                writeCONT_txt(kn, filename, orbit_EM, orbit_SEM, te, ye, false);
 
                 // Entire trajectory
                 writeCONT_bin(refSt, filename_traj, dcs, coord_type,
@@ -2869,24 +3097,24 @@ int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* 
                 case REF_VAR_TIME:
                 case REF_VAR_TN:
                 {
-                    gnuplot_plotc_xy(h5, &dkn, &orbit_SEM.getSi()[4], 1, (char*)"", "points", "1", "2", 0);
+                    gnuplot_plotc_xy(isPlot, h5, &dkn, &orbit_SEM.getSi()[4], 1, (char*)"", "points", "1", "2", 0);
                     break;
                 }
 
                 case REF_FIXED_TIME:
                 {
-                    gnuplot_plotc_xy(h3, &orbit_EM.getSi()[0],  &orbit_EM.getSi()[2], 1, (char*)"", "points", "1", "2", 0);
-                    gnuplot_plotc_xy(h4, &orbit_SEM.getSi()[0],  &orbit_SEM.getSi()[2], 1, (char*)"", "points", "1", "2", 0);
-                    gnuplot_plotc_xy(h5, &dkn, &t0, 1, (char*)"", "points", "1", "2", 0);
+                    gnuplot_plotc_xy(isPlot, h3, &orbit_EM.getSi()[0],  &orbit_EM.getSi()[2], 1, (char*)"", "points", "1", "2", 0);
+                    gnuplot_plotc_xy(isPlot, h4, &orbit_SEM.getSi()[0],  &orbit_SEM.getSi()[2], 1, (char*)"", "points", "1", "2", 0);
+                    gnuplot_plotc_xy(isPlot, h5, &dkn, &t0, 1, (char*)"", "points", "1", "2", 0);
 
                     if(refSt.type == REF_3D)
                     {
-                        gnuplot_plotc_xy(h6, &orbit_EM.getSi()[1],  &orbit_EM.getSi()[3], 1, (char*)"", "points", "1", "2", 0);
+                        gnuplot_plotc_xy(isPlot, h6, &orbit_EM.getSi()[1],  &orbit_EM.getSi()[3], 1, (char*)"", "points", "1", "2", 0);
                     }
 
                     if(refSt.is3D())
                     {
-                        gnuplot_plotc_xy(h7, &orbit_SEM.getSi()[1],  &orbit_SEM.getSi()[3], 1, (char*)"", "points", "1", "2", 0);
+                        gnuplot_plotc_xy(isPlot, h7, &orbit_SEM.getSi()[1],  &orbit_SEM.getSi()[3], 1, (char*)"", "points", "1", "2", 0);
                     }
 
                     break;
@@ -3068,7 +3296,7 @@ int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* 
             *man_grid_size_t = man_index;
 
             //Plot the new distribution
-            gnuplot_plot_X(h2, y_traj_n, man_index+1, (char*)"", "points", "1", "1", 8);
+            gnuplot_plot_X(isPlot, h2, y_traj_n, man_index+1, (char*)"", "points", "1", "1", 8);
         }
     }
 
@@ -3149,7 +3377,7 @@ int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* 
         xpkemlisemli(ye, &te, t_traj_n, y_traj_n, man_index, refSt);
 
         // Main parameters
-        writeCONT_txt(orbit_EM, orbit_SEM, &te, ye, true);
+        writeCONT_txt(label, filename, orbit_EM, orbit_SEM, te, ye, true);
 
         // Entire trajectory
         writeCONT_bin(refSt, filename_traj, dcs, coord_type,
@@ -3166,7 +3394,7 @@ int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* 
         cerr << fname << ". Error during the continuation procedure. ref_errno = " << ref_strerror(status) << endl;
         return FTC_FAILURE;
     }
-    else
+    else if(refSt.isPlotted)
     {
         //================================================================================
         // Final trajectory, on a grid
@@ -3208,9 +3436,9 @@ int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* 
 
             //Plot on h2
             if(k == 0)
-                gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"Final.", "lines", "1", "2", 0);
+                gnuplot_plot_X(isPlot, h2, ymc, mPlot+1, (char*)"Final.", "lines", "1", "2", 0);
             else
-                gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"", "lines", "1", "2", 0);
+                gnuplot_plot_X(isPlot, h2, ymc, mPlot+1, (char*)"", "lines", "1", "2", 0);
         }
 
         //--------------------------------------------------------------------------------
@@ -3288,23 +3516,23 @@ int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* 
         case REF_VAR_TIME:
         case REF_VAR_TN:
 
-            gnuplot_close(h5);
+            gnuplot_close(refSt.isPlotted, h5);
             break;
 
         case REF_FIXED_TIME:
 
-            gnuplot_close(h3);
-            gnuplot_close(h4);
-            gnuplot_close(h5);
+            gnuplot_close(refSt.isPlotted, h3);
+            gnuplot_close(refSt.isPlotted, h4);
+            gnuplot_close(refSt.isPlotted, h5);
 
             if(refSt.type == REF_3D)
             {
-                gnuplot_close(h6);
+                gnuplot_close(refSt.isPlotted, h6);
             }
 
             if(refSt.is3D())
             {
-                gnuplot_close(h7);
+                gnuplot_close(refSt.isPlotted, h7);
             }
 
             break;
@@ -3357,38 +3585,12 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
     //------------------------------------------------------------------------------------
     //To store data from the data file
     //------------------------------------------------------------------------------------
-    vector<double> t0_EM;
-    vector<double> tf_EM;
-    vector<double> s1_CMU_EM;
-    vector<double> s2_CMU_EM;
-    vector<double> s3_CMU_EM;
-    vector<double> s4_CMU_EM;
-    vector<double> s5_CMU_EM;
-    vector<double> pmin_dist_SEM;
-    vector<double> s1_CM_SEM;
-    vector<double> s2_CM_SEM;
-    vector<double> s3_CM_SEM;
-    vector<double> s4_CM_SEM;
-    vector<double> crossings;
-    vector<size_t> sortId;
+    ProjResClass sortSt;
 
     //------------------------------------------------------------------------------------
     //To store data from a sub selection of the previous elements
     //------------------------------------------------------------------------------------
-    vector<double> t0_EM_R;
-    vector<double> tf_EM_R;
-    vector<double> s1_CMU_EM_R;
-    vector<double> s2_CMU_EM_R;
-    vector<double> s3_CMU_EM_R;
-    vector<double> s4_CMU_EM_R;
-    vector<double> s5_CMU_EM_R;
-    vector<double> pmin_dist_SEM_R;
-    vector<double> s1_CM_SEM_R;
-    vector<double> s2_CM_SEM_R;
-    vector<double> s3_CM_SEM_R;
-    vector<double> s4_CM_SEM_R;
-    vector<size_t> sortId_R;
-
+    ProjResClass subSt;
 
     //====================================================================================
     // 2. Getting back the data
@@ -3461,10 +3663,10 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
         cout << "selectemlisemli. The data will be retrieved from the server-computed file named:" << endl;
         cout << filename << endl;
 
-        readClosestIntProjCU_bin(filename, refSt.t0_des, t0_EM, tf_EM,
-                                 s1_CMU_EM, s2_CMU_EM, s3_CMU_EM, s4_CMU_EM, s5_CMU_EM,
-                                 pmin_dist_SEM, s1_CM_SEM, s2_CM_SEM, s3_CM_SEM, s4_CM_SEM,
-                                 crossings, sortId, refSt.typeOfTimeSelection);
+
+
+        //Read data file
+        sortSt.readProjRes_t0(filename, refSt.t0_des, refSt.typeOfTimeSelection);
     }
     else
     {
@@ -3483,17 +3685,17 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
 
         filename = filenameCUM(OFTS_ORDER, type, SEML.li_SEM);
 
-        readClosestIntProjCU_bin(filename, refSt.t0_des, t0_EM, tf_EM,
-                                 s1_CMU_EM, s2_CMU_EM, s3_CMU_EM, s4_CMU_EM, s5_CMU_EM,
-                                 pmin_dist_SEM, s1_CM_SEM, s2_CM_SEM, s3_CM_SEM, s4_CM_SEM,
-                                 crossings, sortId, refSt.typeOfTimeSelection);
+        //Read data file
+        sortSt.readProjRes_t0(filename, refSt.t0_des, refSt.typeOfTimeSelection);
     }
 
 
 
     //====================================================================================
-    // 3. Select given intervals for the inputs
+    // Select the subselection
     //====================================================================================
+    bool flag = subSt.push_back_conditional(sortSt, refSt);
+    /*
     double s1_CMU_EM_MIN, s1_CMU_EM_MAX;
     double s3_CMU_EM_MIN, s3_CMU_EM_MAX;
     double s2_CMU_EM_MIN, s2_CMU_EM_MAX;
@@ -3523,18 +3725,18 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
     }
     else
     {
-        s1_CMU_EM_MIN = refSt.s1_CMU_EM_MIN;
-        s1_CMU_EM_MAX = refSt.s1_CMU_EM_MAX;
-        s3_CMU_EM_MIN = refSt.s3_CMU_EM_MIN;
-        s3_CMU_EM_MAX = refSt.s3_CMU_EM_MAX;
+        s1_CMU_EM_MIN = refSt.si_CMU_EM_MIN[0];
+        s1_CMU_EM_MAX = refSt.si_CMU_EM_MAX[0];
+        s3_CMU_EM_MIN = refSt.si_CMU_EM_MIN[2];
+        s3_CMU_EM_MAX = refSt.si_CMU_EM_MAX[2];
         tof_MIN = refSt.tof_MIN;
         tof_MAX = refSt.tof_MAX;
     }
 
-    s2_CMU_EM_MIN = refSt.s2_CMU_EM_MIN;
-    s2_CMU_EM_MAX = refSt.s2_CMU_EM_MAX;
-    s4_CMU_EM_MIN = refSt.s4_CMU_EM_MIN;
-    s4_CMU_EM_MAX = refSt.s4_CMU_EM_MAX;
+    s2_CMU_EM_MIN = refSt.si_CMU_EM_MIN[1];
+    s2_CMU_EM_MAX = refSt.si_CMU_EM_MAX[1];
+    s4_CMU_EM_MIN = refSt.si_CMU_EM_MIN[3];
+    s4_CMU_EM_MAX = refSt.si_CMU_EM_MAX[3];
 
 
 
@@ -3544,53 +3746,55 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
     int kpor  = 0;
     bool cst  = 0;
     bool flag = 0;
-    for(int kpos = 0; kpos < (int) sortId.size(); kpos++)
+    for(int kpos = 0; kpos < (int) sortSt.size(); kpos++)
     {
-        kpor = sortId[kpos];
+        kpor = sortSt.sortId[kpos];
 
         //--------------------------------------------------------------------------------
         // Limit in the reduced coordinates (s1, s2, s3, s4)
         //--------------------------------------------------------------------------------
-        cst  = (s1_CMU_EM[kpor] >= s1_CMU_EM_MIN) & (s1_CMU_EM[kpor] <= s1_CMU_EM_MAX);
-        cst  = cst & (s3_CMU_EM[kpor] >= s3_CMU_EM_MIN) & (s3_CMU_EM[kpor] <= s3_CMU_EM_MAX);
+        cst  = (sortSt.s1_CMU_EM[kpor] >= s1_CMU_EM_MIN) & (sortSt.s1_CMU_EM[kpor] <= s1_CMU_EM_MAX);
+        cst  = cst & (sortSt.s3_CMU_EM[kpor] >= s3_CMU_EM_MIN) & (sortSt.s3_CMU_EM[kpor] <= s3_CMU_EM_MAX);
 
         if(refSt.is3D())
         {
-            cst  = cst & (s2_CMU_EM[kpor] >= s2_CMU_EM_MIN) & (s2_CMU_EM[kpor] <= s2_CMU_EM_MAX);
-            cst  = cst & (s4_CMU_EM[kpor] >= s4_CMU_EM_MIN) & (s4_CMU_EM[kpor] <= s4_CMU_EM_MAX);
+            cst  = cst & (sortSt.s2_CMU_EM[kpor] >= s2_CMU_EM_MIN) & (sortSt.s2_CMU_EM[kpor] <= s2_CMU_EM_MAX);
+            cst  = cst & (sortSt.s4_CMU_EM[kpor] >= s4_CMU_EM_MIN) & (sortSt.s4_CMU_EM[kpor] <= s4_CMU_EM_MAX);
         }
 
         //--------------------------------------------------------------------------------
         // Limits in the time of flight (TOF) if necessary
         //--------------------------------------------------------------------------------
-        if(tof_MIN > 0) cst = cst & ( (tf_EM[kpor] - t0_EM[kpor]) > tof_MIN );
-        if(tof_MAX > 0) cst = cst & ( (tf_EM[kpor] - t0_EM[kpor]) < tof_MAX );
+        if(tof_MIN > 0) cst = cst & ( (sortSt.tf_CMU_EM[kpor] - sortSt.t0_CMU_EM[kpor]) > tof_MIN );
+        if(tof_MAX > 0) cst = cst & ( (sortSt.tf_CMU_EM[kpor] - sortSt.t0_CMU_EM[kpor]) < tof_MAX );
 
         //--------------------------------------------------------------------------------
         // Limits in the crossings if necessary
         //--------------------------------------------------------------------------------
         if(refSt.crossings > 0)
         {
-            cst = cst & (crossings[kpor] == refSt.crossings);
+            cst = cst & (sortSt.crossings_NCSEM[kpor] == refSt.crossings);
         }
 
         if(cst)
         {
             flag = 1;
-            t0_EM_R.push_back(t0_EM[kpor]);
-            tf_EM_R.push_back(tf_EM[kpor]);
-            s1_CMU_EM_R.push_back(s1_CMU_EM[kpor]);
-            s2_CMU_EM_R.push_back(s2_CMU_EM[kpor]);
-            s3_CMU_EM_R.push_back(s3_CMU_EM[kpor]);
-            s4_CMU_EM_R.push_back(s4_CMU_EM[kpor]);
-            s5_CMU_EM_R.push_back(s5_CMU_EM[kpor]);
-            pmin_dist_SEM_R.push_back(pmin_dist_SEM[kpor]);
-            s1_CM_SEM_R.push_back(s1_CM_SEM[kpor]);
-            s2_CM_SEM_R.push_back(s2_CM_SEM[kpor]);
-            s3_CM_SEM_R.push_back(s3_CM_SEM[kpor]);
-            s4_CM_SEM_R.push_back(s4_CM_SEM[kpor]);
+            subSt.t0_CMU_EM.push_back(sortSt.t0_CMU_EM[kpor]);
+            subSt.tf_CMU_EM.push_back(sortSt.tf_CMU_EM[kpor]);
+            subSt.s1_CMU_EM.push_back(sortSt.s1_CMU_EM[kpor]);
+            subSt.s2_CMU_EM.push_back(sortSt.s2_CMU_EM[kpor]);
+            subSt.s3_CMU_EM.push_back(sortSt.s3_CMU_EM[kpor]);
+            subSt.s4_CMU_EM.push_back(sortSt.s4_CMU_EM[kpor]);
+            subSt.s5_CMU_EM.push_back(sortSt.s5_CMU_EM[kpor]);
+            subSt.s1_CM_SEM.push_back(sortSt.s1_CM_SEM[kpor]);
+            subSt.s2_CM_SEM.push_back(sortSt.s2_CM_SEM[kpor]);
+            subSt.s3_CM_SEM.push_back(sortSt.s3_CM_SEM[kpor]);
+            subSt.s4_CM_SEM.push_back(sortSt.s4_CM_SEM[kpor]);
+            subSt.pmin_dist_SEM.push_back(sortSt.pmin_dist_SEM[kpor]);
         }
     }
+
+    */
 
     //====================================================================================
     // If there at least one solution that satisfies all the criteria
@@ -3598,43 +3802,47 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
     if(flag)
     {
         //--------------------------------------------------------------------------------
-        //Sort the subselection in sortId_R
+        //Sort the subselection by pmin distance
         //--------------------------------------------------------------------------------
-        sortId_R = sort_indexes(pmin_dist_SEM_R);
+        subSt.sort_pmin_dist_SEM();
 
         //================================================================================
         // 5. The best solution in the subselection will serve as the first guess.
         //================================================================================
-        int kpos = sortId_R[0];
+        subSt.update_ic(st_EM, st_SEM, t_EM, t0_SEM, pmin_dist_SEM_out, 0);
+
+        /*
+        int kpos = subSt.sortId[0];
 
         //================================================================================
         // 6. Initialize local variables: EM
         //================================================================================
         //RCM coordinates
-        st_EM[0] = s1_CMU_EM_R[kpos];
-        st_EM[1] = s2_CMU_EM_R[kpos];
-        st_EM[2] = s3_CMU_EM_R[kpos];
-        st_EM[3] = s4_CMU_EM_R[kpos];
+        st_EM[0] = subSt.s1_CMU_EM[kpos];
+        st_EM[1] = subSt.s2_CMU_EM[kpos];
+        st_EM[2] = subSt.s3_CMU_EM[kpos];
+        st_EM[3] = subSt.s4_CMU_EM[kpos];
         st_EM[4] = PROJ_EPSILON;
         //Time
-        t_EM[0] = t0_EM_R[kpos];
-        t_EM[1] = tf_EM_R[kpos];
+        t_EM[0]  = subSt.t0_CMU_EM[kpos];
+        t_EM[1]  = subSt.tf_CMU_EM[kpos];
 
 
         //================================================================================
         // 7. Initialize local variables: SEM
         //================================================================================
         //RCM coordinates
-        st_SEM[0] = s1_CM_SEM_R[kpos];
-        st_SEM[1] = s2_CM_SEM_R[kpos];
-        st_SEM[2] = s3_CM_SEM_R[kpos];
-        st_SEM[3] = s4_CM_SEM_R[kpos];
+        st_SEM[0] = subSt.s1_CM_SEM[kpos];
+        st_SEM[1] = subSt.s2_CM_SEM[kpos];
+        st_SEM[2] = subSt.s3_CM_SEM[kpos];
+        st_SEM[3] = subSt.s4_CM_SEM[kpos];
         st_SEM[4] = 0.0;
         //Initial time in SEM units
-        *t0_SEM = tf_EM_R[kpos]*SEML.us_em.ns;
+        *t0_SEM = subSt.tf_CMU_EM[kpos]*SEML.us_em.ns;
 
         //Minimum projection distance
-        *pmin_dist_SEM_out = pmin_dist_SEM_R[kpos];
+        *pmin_dist_SEM_out = subSt.pmin_dist_SEM[kpos];
+        */
 
 
         return FTC_SUCCESS;
@@ -3647,6 +3855,91 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
         return FTC_FAILURE;
 
     }
+}
+
+
+/**
+ *  \brief Selects good initial conditions for EML2-to-SEMLi connections, searching
+ *         through data files produced by int_proj_ORBIT_EM_on_CM_SEM
+ **/
+int soselectemlisemli(RefSt& refSt, ProjResClass& subSt)
+{
+    //====================================================================================
+    // 0. Splash screen
+    //====================================================================================
+    cout << "-------------------------------------------------------------------" << endl;
+    cout << "   selectemlisemli. Selects good IC for EMLi-SEMLi arc"              << endl;
+    cout << "-------------------------------------------------------------------" << endl;
+
+    //====================================================================================
+    // 1. Init the data containers
+    //====================================================================================
+    //------------------------------------------------------------------------------------
+    //To store data from the data file
+    //------------------------------------------------------------------------------------
+    ProjResClass readSt;
+
+    //====================================================================================
+    // 2. Getting back the data
+    //====================================================================================
+    string filename;
+    if(refSt.isFromServer)
+    {
+        /// @TODO: remains to be adapted when the time comes
+
+        int type = TYPE_MAN_PROJ;
+        switch(refSt.dim)
+        {
+        case REF_PLANAR:
+            type = TYPE_MAN_PROJ;
+            break;
+
+        case REF_3D:
+        case REF_MIXED:
+            type = TYPE_MAN_PROJ_3D;
+            break;
+        }
+
+        filename = filenameCUM(OFTS_ORDER, type, SEML.li_SEM);
+
+        //Read data file
+        readSt.readProjRes(filename);
+    }
+    else
+    {
+        int type = TYPE_MAN_PROJ;
+        switch(refSt.dim)
+        {
+        case REF_PLANAR:
+            type = TYPE_MAN_PROJ;
+            break;
+
+        case REF_3D:
+        case REF_MIXED:
+            type = TYPE_MAN_PROJ_3D;
+            break;
+        }
+
+        filename = filenameCUM(OFTS_ORDER, type, SEML.li_SEM);
+
+        //Read data file
+        readSt.readProjRes(filename);
+    }
+
+    //------------------------------------------------------------------------------------
+    // Subselection
+    //------------------------------------------------------------------------------------
+    bool flag = subSt.push_back_conditional(readSt, refSt);
+
+    if(!flag)
+    {
+        cout << "soselectemlisemli. Warning: empty subselection." << endl;
+        pressEnter(true);
+
+    }
+
+
+    return FTC_SUCCESS;
 }
 
 //----------------------------------------------------------------------------------------
@@ -3875,8 +4168,8 @@ int iccompemlisemli(double** y_traj, double* t_traj,
     //------------------------------------------------------------------------------------
     //Plot
     //------------------------------------------------------------------------------------
-    gnuplot_plot_X(h2, y_man_coord, em_index+1, (char*)"", "points", "5", "3", 5);
-    gnuplot_plot_X(h3, y_man_comp, em_index+1, (char*)"", "points", "5", "3", 5);
+    gnuplot_plot_X(refSt.isPlotted, h2, y_man_coord, em_index+1, (char*)"", "points", "5", "3", 5);
+    gnuplot_plot_X(refSt.isPlotted, h3, y_man_comp, em_index+1, (char*)"", "points", "5", "3", 5);
 
     //====================================================================================
     // 4.3 Compute the manifold leg
@@ -3938,8 +4231,8 @@ int iccompemlisemli(double** y_traj, double* t_traj,
     //------------------------------------------------------------------------------------
     //Plot
     //------------------------------------------------------------------------------------
-    gnuplot_plot_X(h2, y_man_coord, man_index+1, (char*)"Man", "points", "1", "3", 4);
-    gnuplot_plot_X(h3, y_man_comp, man_index+1, (char*)"", "points", "1", "3", 4);
+    gnuplot_plot_X(refSt.isPlotted, h2, y_man_coord, man_index+1, (char*)"Man", "points", "1", "3", 4);
+    gnuplot_plot_X(refSt.isPlotted, h3, y_man_comp, man_index+1, (char*)"", "points", "1", "3", 4);
 
     //====================================================================================
     // 4.4 Compute the final SEMLi orbit
@@ -4002,8 +4295,8 @@ int iccompemlisemli(double** y_traj, double* t_traj,
     //------------------------------------------------------------------------------------
     //Plot
     //------------------------------------------------------------------------------------
-    gnuplot_plot_X(h2, y_man_coord, sem_index+1, (char*)"SEMLi", "points", "1", "3", 6);
-    gnuplot_plot_X(h3, y_man_comp, sem_index+1, (char*)"", "points", "1", "3", 6);
+    gnuplot_plot_X(refSt.isPlotted, h2, y_man_coord, sem_index+1, (char*)"SEMLi", "points", "1", "3", 6);
+    gnuplot_plot_X(refSt.isPlotted, h3, y_man_comp, sem_index+1, (char*)"", "points", "1", "3", 6);
 
     //====================================================================================
     // Entire size is: no more than sum(grid_points_des) points or so.
@@ -4103,9 +4396,8 @@ int xpkemlisemli(double ye[6], double* te, double* t_traj_n, double** y_traj_n,
     //====================================================================================
     if(test && k1 >= 0)
     {
-        cout << "xpkemlisemli. Range accross the PS found:" << endl;
-        cout << y_traj_n[0][k1] << " < " << refSt.xps << " < " << y_traj_n[0][k2] << endl;
-
+        //cout << "xpkemlisemli. Range accross the PS found:" << endl;
+        //cout << y_traj_n[0][k1] << " < " << refSt.xps << " < " << y_traj_n[0][k2] << endl;
 
         //================================================================================
         //2. Integrate until x = xps
@@ -4162,7 +4454,7 @@ int xpkemlisemli(double ye[6], double* te, double* t_traj_n, double** y_traj_n,
  *         in place of a given point, at position newpos
  **/
 int xpkemlisemli(double ye[6], double* te, double* t_traj_n, double** y_traj_n,
-                int *newpos, int man_index, RefSt& refSt)
+                 int* newpos, int man_index, RefSt& refSt)
 {
     double yv[42];
     //Get the default coordinates system from the coord_type
@@ -4189,8 +4481,8 @@ int xpkemlisemli(double ye[6], double* te, double* t_traj_n, double** y_traj_n,
     //====================================================================================
     if(test && k1 >= 0)
     {
-        cout << "xpkemlisemli. Range accross the PS found:" << endl;
-        cout << y_traj_n[0][k1] << " < " << refSt.xps << " < " << y_traj_n[0][k2] << endl;
+        //cout << "xpkemlisemli. Range accross the PS found:" << endl;
+        //cout << y_traj_n[0][k1] << " < " << refSt.xps << " < " << y_traj_n[0][k2] << endl;
 
 
         //================================================================================
@@ -4460,20 +4752,20 @@ int comprefemlisemli3d(int grid_freq_days[3], int coord_type,
     //Gnuplot window
     //------------------------------------------------------------------------------------
     gnuplot_ctrl* h2, *h3;
-    h2 = gnuplot_init();
-    h3 = gnuplot_init();
+    h2 = gnuplot_init(refSt.isPlotted);
+    h3 = gnuplot_init(refSt.isPlotted);
 
-    gnuplot_cmd(h2, "set title \"Computation coordinates\" ");
-    gnuplot_cmd(h3, "set title \"Complementary coordinates\" ");
+    gnuplot_cmd(refSt.isPlotted, h2, "set title \"Computation coordinates\" ");
+    gnuplot_cmd(refSt.isPlotted, h3, "set title \"Complementary coordinates\" ");
     //gnuplot_cmd(h2, "set view equal xyz");
     //gnuplot_cmd(h3, "set view equal xyz");
-    gnuplot_cmd(h2, "set grid");
-    gnuplot_cmd(h3, "set grid");
+    gnuplot_cmd(refSt.isPlotted, h2, "set grid");
+    gnuplot_cmd(refSt.isPlotted, h3, "set grid");
 
     //------------------------------------------------------------------------------------
     //Notable points in SEM & EM systems
     //------------------------------------------------------------------------------------
-    notablePoints(h2, h3, coord_type);
+    notablePoints(h2, h3, coord_type, refSt.isPlotted);
 
     //====================================================================================
     // 3. Init the data containers
@@ -4582,10 +4874,12 @@ int comprefemlisemli3d(int grid_freq_days[3], int coord_type,
     //------------------------------------------------------------------------------------
     // Final trajectory, on a grid
     //------------------------------------------------------------------------------------
-    cout << fname << ". Final trajectory, on a grid..."  << endl;
-    //Final trajectory on lines, segment by segment
-    plottrajsegbyseg(y_traj_n, t_traj_n, final_index, mPlot, coord_type, 0.0, 0.0,
+    if(refSt.isPlotted)
+    {   cout << fname << ". Final trajectory, on a grid..."  << endl;
+        //Final trajectory on lines, segment by segment
+        plottrajsegbyseg(y_traj_n, t_traj_n, final_index, mPlot, coord_type, 0.0, 0.0,
                      coord_type, h2, comp_type, h3, 3, "Final guess");
+    }
 
     //====================================================================================
     // 6. Store the data, in sys units
@@ -4620,8 +4914,8 @@ int comprefemlisemli3d(int grid_freq_days[3], int coord_type,
     //Gnuplot window
     //------------------------------------------------------------------------------------
     pressEnter(refSt.isFlagOn);
-    gnuplot_close(h2);
-    gnuplot_close(h3);
+    gnuplot_close(refSt.isPlotted, h2);
+    gnuplot_close(refSt.isPlotted, h3);
 
 
     //====================================================================================
@@ -4728,20 +5022,20 @@ int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst)
     //Gnuplot window
     //------------------------------------------------------------------------------------
     gnuplot_ctrl* h2, *h3;
-    h2 = gnuplot_init();
-    h3 = gnuplot_init();
+    h2 = gnuplot_init(refSt.isPlotted);
+    h3 = gnuplot_init(refSt.isPlotted);
 
-    gnuplot_cmd(h2, "set title \"Computation coordinates\" ");
-    gnuplot_cmd(h3, "set title \"Complementary coordinates\" ");
-    //gnuplot_cmd(h2, "set view equal xyz");
-    //gnuplot_cmd(h3, "set view equal xyz");
-    gnuplot_cmd(h2, "set grid");
-    gnuplot_cmd(h3, "set grid");
+    gnuplot_cmd(refSt.isPlotted, h2, "set title \"Computation coordinates\" ");
+    gnuplot_cmd(refSt.isPlotted, h3, "set title \"Complementary coordinates\" ");
+    //gnuplot_cmd(refSt.isPlotted, h2, "set view equal xyz");
+    //gnuplot_cmd(refSt.isPlotted, h3, "set view equal xyz");
+    gnuplot_cmd(refSt.isPlotted, h2, "set grid");
+    gnuplot_cmd(refSt.isPlotted, h3, "set grid");
 
     //------------------------------------------------------------------------------------
     //Notable points in SEM & EM systems
     //------------------------------------------------------------------------------------
-    notablePoints(h2, h3, coord_type);
+    notablePoints(h2, h3, coord_type, refSt.isPlotted);
 
     //====================================================================================
     // 5. Initial trajectory, on a grid
@@ -4823,7 +5117,7 @@ int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst)
     //====================================================================================
     // Initialize SPICE kernerls & VF
     //====================================================================================
-    gnuplot_ctrl* h4 = gnuplot_init();
+    gnuplot_ctrl* h4 = gnuplot_init(refSt.isPlotted);
     cout << fname << ". Initialize SPICE kernerls..." << endl;
     furnsh_c("spice/kernels/metakernel.furnsh");
     int shift = 0;
@@ -4967,13 +5261,13 @@ int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst)
     //Position of the Sun +  Earth + Initial guess in coord_type coordinates
     //------------------------------------------------------------------------------------
     ecl2coordstate_vec(y_earth_spice, et_traj_jpl, y_jpl_temp, t_jpl_temp, final_index, coord_type, et0, tsys0, eph_coord(coord_type));
-    gnuplot_plot_X(h2, y_jpl_temp, final_index+1, (char*) "EARTH", "points", "3", "2", 8);
+    gnuplot_plot_X(refSt.isPlotted, h2, y_jpl_temp, final_index+1, (char*) "EARTH", "points", "3", "2", 8);
 
     //ecl2coordstate_vec(y_moon_spice, et_traj_jpl, y_jpl_temp, t_jpl_temp, final_index, coord_type, et0, tsys0, eph_coord(coord_type));
-    //gnuplot_plot_X(h2, y_jpl_temp, final_index+1, (char*) "MOON", "points", "4", "2", 8);
+    //gnuplot_plot_X(refSt.isPlotted, h2, y_jpl_temp, final_index+1, (char*) "MOON", "points", "4", "2", 8);
 
     ecl2coordstate_vec(y_l2_spice, et_traj_jpl, y_jpl_temp, t_jpl_temp, final_index, coord_type, et0, tsys0, eph_coord(coord_type));
-    gnuplot_plot_X(h2, y_jpl_temp, final_index+1, (char*) "SEMLi", "points", "5", "2", 8);
+    gnuplot_plot_X(refSt.isPlotted, h2, y_jpl_temp, final_index+1, (char*) "SEMLi", "points", "5", "2", 8);
 
     //====================================================================================
     // Plotting Initial Guess
@@ -4997,7 +5291,7 @@ int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst)
     //status  = multiple_shooting_direct_variable_time(y_traj_jpl, t_traj_jpl, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, coord_int,  5e-10, true, h4, 0);
     status  = multiple_shooting_direct(y_traj_jpl, t_traj_jpl, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, coord_int, true, h4, 0);
     //Plot
-    gnuplot_plot_X(h4, y_traj_jpl_n, final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
+    gnuplot_plot_X(refSt.isPlotted, h4, y_traj_jpl_n, final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
 
     //------------------------------------------------------------------------------------
     // If something went bad, an error is returned
@@ -5028,9 +5322,9 @@ int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst)
     //Gnuplot window
     //------------------------------------------------------------------------------------
     pressEnter(refSt.isFlagOn);
-    gnuplot_close(h2);
-    gnuplot_close(h3);
-    gnuplot_close(h4);
+    gnuplot_close(refSt.isPlotted, h2);
+    gnuplot_close(refSt.isPlotted, h3);
+    gnuplot_close(refSt.isPlotted, h4);
 
     //====================================================================================
     // Reset the focus in SEML, if necessary
@@ -5141,20 +5435,20 @@ int comptojplref3d(int coord_type, RefSt& refSt)
     //Gnuplot window
     gnuplot_ctrl* h2, *h3, * h4;
 
-    h2 = gnuplot_init();
-    h3 = gnuplot_init();
-    h4 = gnuplot_init();
+    h2 = gnuplot_init(refSt.isPlotted);
+    h3 = gnuplot_init(refSt.isPlotted);
+    h4 = gnuplot_init(refSt.isPlotted);
 
-    gnuplot_cmd(h2, "set title \"Computation coordinates\" ");
-    gnuplot_cmd(h3, "set title \"Complementary coordinates\" ");
-    gnuplot_cmd(h4, "set title \"Continuation steps\" ");
+    gnuplot_cmd(refSt.isPlotted, h2, "set title \"Computation coordinates\" ");
+    gnuplot_cmd(refSt.isPlotted, h3, "set title \"Complementary coordinates\" ");
+    gnuplot_cmd(refSt.isPlotted, h4, "set title \"Continuation steps\" ");
 
-    gnuplot_cmd(h2, "set grid");
-    gnuplot_cmd(h3, "set grid");
-    gnuplot_cmd(h4, "set grid");
+    gnuplot_cmd(refSt.isPlotted, h2, "set grid");
+    gnuplot_cmd(refSt.isPlotted, h3, "set grid");
+    gnuplot_cmd(refSt.isPlotted, h4, "set grid");
 
     //Notable points in SEM & EM systems
-    notablePoints(h2, h3, coord_type);
+    notablePoints(h2, h3, coord_type, refSt.isPlotted);
 
     //Color for plots
     int color = 1;
@@ -5223,7 +5517,7 @@ int comptojplref3d(int coord_type, RefSt& refSt)
     //DiffCorr
     status  = multiple_shooting_direct(y_traj_ecisem, t_traj_ecisem, y_traj_ecisem, t_traj_ecisem, 42, final_index, coord_int, true, h4, 0);
     //Plot
-    gnuplot_plot_X(h4, y_traj_ecisem, final_index+1, (char*) "Final trajectory", "lines", "2", "2", color);
+    gnuplot_plot_X(refSt.isPlotted, h4, y_traj_ecisem, final_index+1, (char*) "Final trajectory", "lines", "2", "2", color);
 
     //------------------------------------------------------------------------------------
     // If something went bad, an error is returned
@@ -5287,7 +5581,7 @@ int comptojplref3d(int coord_type, RefSt& refSt)
     // ECISEM -> NJ2000
     coord2necistate_vec(y_traj_n, t_traj_n, y_jpl_temp, t_jpl_temp, final_index, coord_type, et0,  tsys0, eph_coord(coord_int), *SEML.ss);
     //Plot
-    gnuplot_plot_X(h4, y_jpl_temp, final_index+1, (char*)"Inertial state (NJ2000)", "lines", "1", "1", color);
+    gnuplot_plot_X(refSt.isPlotted, h4, y_jpl_temp, final_index+1, (char*)"Inertial state (NJ2000)", "lines", "1", "1", color);
 
     //Moon's position (NJ2000)
     SpiceDouble lt, RS1[6], RS2[6], RE[6], REM[6];
@@ -5296,7 +5590,7 @@ int comptojplref3d(int coord_type, RefSt& refSt)
     spkezr_c ("EARTH MOON BARYCENTER", et0, DEFFRAME,  "NONE",  DEFOBS, REM, &lt);
     ecl2neci(RS1, REM, RS2, *SEML.ss);
     RS2[2] = 0.0;
-    gnuplot_plot_xyz(h4, RS2, RS2+1, RS2+2, 1, (char*)"Moon (NJ2000, projected)", "points", "3", "5", color);
+    gnuplot_plot_xyz(refSt.isPlotted, h4, RS2, RS2+1, RS2+2, 1, (char*)"Moon (NJ2000, projected)", "points", "3", "5", color);
 
     //Moon's position (Custom)
     double me = SEML.us_sem.me;
@@ -5307,7 +5601,7 @@ int comptojplref3d(int coord_type, RefSt& refSt)
     double r1 = creal(evz(SEML.cs_sem.zt, tsys0, n, ni, ai));
     double r2 = cimag(evz(SEML.cs_sem.zt, tsys0, n, ni, ai));
     double Pm[3] = {- me/(mm + me)* r1, - me/(mm + me)* r2, 0.0};
-    gnuplot_plot_xyz(h4, Pm, Pm+1, Pm+2, 1, (char*)"Moon (ECISEM)", "points", "4", "5", color++);
+    gnuplot_plot_xyz(refSt.isPlotted, h4, Pm, Pm+1, Pm+2, 1, (char*)"Moon (ECISEM)", "points", "4", "5", color++);
 
 
     //====================================================================================
@@ -5372,7 +5666,7 @@ int comptojplref3d(int coord_type, RefSt& refSt)
 
 
     gnuplot_ctrl* h1;
-    h1 = gnuplot_init();
+    h1 = gnuplot_init(refSt.isPlotted);
 
 
     //------------------------------------------------------------------------------------
@@ -5426,7 +5720,7 @@ int comptojplref3d(int coord_type, RefSt& refSt)
         // Plotting the direction of motion
         // in the (x, eps) space
         //--------------------------------------------------------------------------------
-        gnuplot_plot_xy(h1, &y_traj_ecisem_c[0][0], &(SEML.epsilon), 1, "", "points", "7", "3", 1);
+        gnuplot_plot_xy(refSt.isPlotted, h1, &y_traj_ecisem_c[0][0], &(SEML.epsilon), 1, "", "points", "7", "3", 1);
 
 
         //--------------------------------------------------------------------------------
@@ -5449,9 +5743,9 @@ int comptojplref3d(int coord_type, RefSt& refSt)
     //Gnuplot window
     //------------------------------------------------------------------------------------
     pressEnter(refSt.isFlagOn);
-    gnuplot_close(h2);
-    gnuplot_close(h3);
-    gnuplot_close(h4);
+    gnuplot_close(refSt.isPlotted, h2);
+    gnuplot_close(refSt.isPlotted, h3);
+    gnuplot_close(refSt.isPlotted, h4);
 
     //====================================================================================
     // Free the data containers
@@ -6211,21 +6505,20 @@ int compref3d_test_seml_synjpl(int man_grid_size_t,
     //Gnuplot window
     //----------------------------------------------------------
     gnuplot_ctrl* h2, *h3;
-    h2 = gnuplot_init();
-    h3 = gnuplot_init();
+    h2 = gnuplot_init(refSt.isPlotted);
+    h3 = gnuplot_init(refSt.isPlotted);
 
-    gnuplot_cmd(h2, "set title \"Computation coordinates\" ");
-    gnuplot_cmd(h3, "set title \"Complementary coordinates\" ");
-
-    //gnuplot_cmd(h2, "set view equal xyz");
-    //gnuplot_cmd(h3, "set view equal xyz");
-    gnuplot_cmd(h2, "set grid");
-    gnuplot_cmd(h3, "set grid");
+    gnuplot_cmd(refSt.isPlotted, h2, "set title \"Computation coordinates\" ");
+    gnuplot_cmd(refSt.isPlotted, h3, "set title \"Complementary coordinates\" ");
+    //gnuplot_cmd(refSt.isPlotted, h2, "set view equal xyz");
+    //gnuplot_cmd(refSt.isPlotted, h3, "set view equal xyz");
+    gnuplot_cmd(refSt.isPlotted, h2, "set grid");
+    gnuplot_cmd(refSt.isPlotted, h3, "set grid");
 
     //----------------------------------------------------------
     //Notable points in SEM & EM systems
     //----------------------------------------------------------
-    notablePoints(h2, h3, coord_type);
+    notablePoints(h2, h3, coord_type, refSt.isPlotted);
 
     //----------------------------------------------------------
     //Complementary coordinate type
@@ -6333,8 +6626,8 @@ int compref3d_test_seml_synjpl(int man_grid_size_t,
     //------------------------------------------------------------------------------------
     //Plot
     //------------------------------------------------------------------------------------
-    gnuplot_plot_X(h2, y_man_coord, sem_index+1, (char*)"SEMLi", "points", "1", "3", 6);
-    gnuplot_plot_X(h3, y_man_comp, sem_index+1, (char*)"", "points", "1", "3", 6);
+    gnuplot_plot_X(refSt.isPlotted, h2, y_man_coord, sem_index+1, (char*)"SEMLi", "points", "1", "3", 6);
+    gnuplot_plot_X(refSt.isPlotted, h3, y_man_comp, sem_index+1, (char*)"", "points", "1", "3", 6);
 
     //====================================================================================
     // Entire size is: no more than 3*man_grid_size_t points or so.
@@ -6416,11 +6709,11 @@ int compref3d_test_seml_synjpl(int man_grid_size_t,
     qbcp_coc_vec(ymc_v, tmc_v, ymc_comp_v, tmc_comp_v, mPlot*final_index, coord_type, comp_type);
 
     //Plot on h2: lines
-    gnuplot_plot_X(h2, ymc_v, mPlot*final_index+1, (char*)"Initial guess", "lines", "1", "2", 7);
+    gnuplot_plot_X(refSt.isPlotted, h2, ymc_v, mPlot*final_index+1, (char*)"Initial guess", "lines", "1", "2", 7);
     //Plot on h2: points
-    gnuplot_plot_X(h2, y_traj, final_index+1, (char*)"", "points", "1", "2", 7);
+    gnuplot_plot_X(refSt.isPlotted, h2, y_traj, final_index+1, (char*)"", "points", "1", "2", 7);
     //Plot on h3: lines
-    gnuplot_plot_X(h3, ymc_comp_v, mPlot*final_index+1, (char*)"Initial guess", "lines", "1", "2", 7);
+    gnuplot_plot_X(refSt.isPlotted, h3, ymc_comp_v, mPlot*final_index+1, (char*)"Initial guess", "lines", "1", "2", 7);
 
 
     //====================================================================================
@@ -6456,10 +6749,10 @@ int compref3d_test_seml_synjpl(int man_grid_size_t,
     //To complementary coordinates
     qbcp_coc_vec(ymc_v, tmc_v, ymc_comp_v, tmc_comp_v, mPlot*final_index, coord_type, comp_type);
     //Plot on h2
-    gnuplot_plot_X(h2, ymc_v, mPlot*final_index+1, (char*)"Final guess", "lines", "1", "2", 3);
-    gnuplot_plot_X(h2, y_traj_n, final_index+1, (char*)"", "points", "1", "2", 3);
+    gnuplot_plot_X(refSt.isPlotted, h2, ymc_v, mPlot*final_index+1, (char*)"Final guess", "lines", "1", "2", 3);
+    gnuplot_plot_X(refSt.isPlotted, h2, y_traj_n, final_index+1, (char*)"", "points", "1", "2", 3);
     //Plot on h3
-    gnuplot_plot_X(h3, ymc_comp_v, mPlot*final_index+1, (char*)"Final guess", "lines", "1", "2", 3);
+    gnuplot_plot_X(refSt.isPlotted, h3, ymc_comp_v, mPlot*final_index+1, (char*)"Final guess", "lines", "1", "2", 3);
 
     //====================================================================================
     // JPL
@@ -6474,7 +6767,7 @@ int compref3d_test_seml_synjpl(int man_grid_size_t,
         //====================================================================================
         // Initialize SPICE kernerls
         //====================================================================================
-        gnuplot_ctrl* h4 = gnuplot_init();
+        gnuplot_ctrl* h4 = gnuplot_init(refSt.isPlotted);
         cout << fname << ". Initialize SPICE kernerls..." << endl;
         furnsh_c("spice/kernels/metakernel.furnsh");
 
@@ -6570,8 +6863,8 @@ int compref3d_test_seml_synjpl(int man_grid_size_t,
             qbcp_coc_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, eph_coord(coord_type), coord_type);
 
             //Plot on h2
-            if(k == 0) gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"Initial guess in JPL", "lines", "1", "2", 1);
-            else gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"", "lines", "1", "2", 1);
+            if(k == 0) gnuplot_plot_X(refSt.isPlotted, h2, ymc, mPlot+1, (char*)"Initial guess in JPL", "lines", "1", "2", 1);
+            else gnuplot_plot_X(refSt.isPlotted, h2, ymc, mPlot+1, (char*)"", "lines", "1", "2", 1);
 
             //----------------------------------------------------
             //Back to comp_type coordinates
@@ -6583,8 +6876,8 @@ int compref3d_test_seml_synjpl(int man_grid_size_t,
             ecl2coordstate_vec(ymc, tmc, ymc_comp, tmc_comp, mPlot, comp_type, et0, tsys0_comp, eph_coord(comp_type));
 
             //Plot on h3
-            if(k == 0) gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"Initial guess in JPL", "lines", "1", "2", 1);
-            else gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"", "lines", "1", "2", 1);
+            if(k == 0) gnuplot_plot_X(refSt.isPlotted, h3, ymc_comp, mPlot+1, (char*)"Initial guess in JPL", "lines", "1", "2", 1);
+            else gnuplot_plot_X(refSt.isPlotted, h3, ymc_comp, mPlot+1, (char*)"", "lines", "1", "2", 1);
         }
 
         //====================================================================================
@@ -6596,7 +6889,7 @@ int compref3d_test_seml_synjpl(int man_grid_size_t,
         isPlotted   = 1;
         multiple_shooting_direct(y_traj_syn, t_traj_syn, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, eph_coord(coord_type), isPlotted, h4, 0);
         //Plot
-        gnuplot_plot_X(h4, y_traj_jpl_n, final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
+        gnuplot_plot_X(refSt.isPlotted, h4, y_traj_jpl_n, final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
 
 
         //--------------------------------------------------------------------------------
@@ -6616,8 +6909,8 @@ int compref3d_test_seml_synjpl(int man_grid_size_t,
             qbcp_coc_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, eph_coord(coord_type), coord_type);
 
             //Plot on h2
-            if(k == 0) gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"Final traj in JPL", "lines", "1", "2", 2);
-            else gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"", "lines", "1", "2", 2);
+            if(k == 0) gnuplot_plot_X(refSt.isPlotted, h2, ymc, mPlot+1, (char*)"Final traj in JPL", "lines", "1", "2", 2);
+            else gnuplot_plot_X(refSt.isPlotted, h2, ymc, mPlot+1, (char*)"", "lines", "1", "2", 2);
 
             //----------------------------------------------------
             //Back to comp_type coordinates
@@ -6629,23 +6922,23 @@ int compref3d_test_seml_synjpl(int man_grid_size_t,
             ecl2coordstate_vec(ymc, tmc, ymc_comp, tmc_comp, mPlot, comp_type, et0, tsys0_comp, eph_coord(comp_type));
 
             //Plot on h3
-            if(k == 0) gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"Final traj in JPL", "lines", "1", "2", 2);
-            else gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"", "lines", "1", "2", 2);
+            if(k == 0) gnuplot_plot_X(refSt.isPlotted, h3, ymc_comp, mPlot+1, (char*)"Final traj in JPL", "lines", "1", "2", 2);
+            else gnuplot_plot_X(refSt.isPlotted, h3, ymc_comp, mPlot+1, (char*)"", "lines", "1", "2", 2);
         }
 
         //----------------------------------------------------------
         //Gnuplot window
         //----------------------------------------------------------
         pressEnter(refSt.isFlagOn);
-        gnuplot_close(h4);
+        gnuplot_close(refSt.isPlotted, h4);
     }
 
     //----------------------------------------------------------
     //Gnuplot window
     //----------------------------------------------------------
     pressEnter(refSt.isFlagOn);
-    gnuplot_close(h2);
-    gnuplot_close(h3);
+    gnuplot_close(refSt.isPlotted, h2);
+    gnuplot_close(refSt.isPlotted, h3);
 
 
     //====================================================================================
@@ -6711,21 +7004,20 @@ int compref3d_test_eml_synjpl(int man_grid_size_t,
     //Gnuplot window
     //----------------------------------------------------------
     gnuplot_ctrl* h2, *h3;
-    h2 = gnuplot_init();
-    h3 = gnuplot_init();
+    h2 = gnuplot_init(refSt.isPlotted);
+    h3 = gnuplot_init(refSt.isPlotted);
 
-    gnuplot_cmd(h2, "set title \"Computation coordinates\" ");
-    gnuplot_cmd(h3, "set title \"Complementary coordinates\" ");
-
-    //gnuplot_cmd(h2, "set view equal xyz");
-    //gnuplot_cmd(h3, "set view equal xyz");
-    gnuplot_cmd(h2, "set grid");
-    gnuplot_cmd(h3, "set grid");
+    gnuplot_cmd(refSt.isPlotted, h2, "set title \"Computation coordinates\" ");
+    gnuplot_cmd(refSt.isPlotted, h3, "set title \"Complementary coordinates\" ");
+    //gnuplot_cmd(refSt.isPlotted, h2, "set view equal xyz");
+    //gnuplot_cmd(refSt.isPlotted, h3, "set view equal xyz");
+    gnuplot_cmd(refSt.isPlotted, h2, "set grid");
+    gnuplot_cmd(refSt.isPlotted, h3, "set grid");
 
     //----------------------------------------------------------
     //Notable points in SEM & EM systems
     //----------------------------------------------------------
-    notablePoints(h2, h3, coord_type);
+    notablePoints(h2, h3, coord_type, refSt.isPlotted);
 
     //----------------------------------------------------------
     //Complementary coordinate type
@@ -6835,8 +7127,8 @@ int compref3d_test_eml_synjpl(int man_grid_size_t,
     //------------------------------------------------------------------------------------
     //Plot
     //------------------------------------------------------------------------------------
-    gnuplot_plot_X(h2, y_man_coord, em_index+1, (char*)"", "lines", "5", "3", 5);
-    gnuplot_plot_X(h3, y_man_comp, em_index+1, (char*)"", "lines", "5", "3", 5);
+    gnuplot_plot_X(refSt.isPlotted, h2, y_man_coord, em_index+1, (char*)"", "lines", "5", "3", 5);
+    gnuplot_plot_X(refSt.isPlotted, h3, y_man_comp, em_index+1, (char*)"", "lines", "5", "3", 5);
 
 
     //====================================================================================
@@ -6918,11 +7210,11 @@ int compref3d_test_eml_synjpl(int man_grid_size_t,
     qbcp_coc_vec(ymc_v, tmc_v, ymc_comp_v, tmc_comp_v, mPlot*final_index, coord_type, comp_type);
 
     //Plot on h2: lines
-    gnuplot_plot_X(h2, ymc_v, mPlot*final_index+1, (char*)"Initial guess", "lines", "1", "2", 7);
+    gnuplot_plot_X(refSt.isPlotted, h2, ymc_v, mPlot*final_index+1, (char*)"Initial guess", "lines", "1", "2", 7);
     //Plot on h2: points
-    gnuplot_plot_X(h2, y_traj, final_index+1, (char*)"", "points", "1", "2", 7);
+    gnuplot_plot_X(refSt.isPlotted, h2, y_traj, final_index+1, (char*)"", "points", "1", "2", 7);
     //Plot on h3: lines
-    gnuplot_plot_X(h3, ymc_comp_v, mPlot*final_index+1, (char*)"Initial guess", "lines", "1", "2", 7);
+    gnuplot_plot_X(refSt.isPlotted, h3, ymc_comp_v, mPlot*final_index+1, (char*)"Initial guess", "lines", "1", "2", 7);
 
 
     //====================================================================================
@@ -6960,10 +7252,10 @@ int compref3d_test_eml_synjpl(int man_grid_size_t,
     //To complementary coordinates
     qbcp_coc_vec(ymc_v, tmc_v, ymc_comp_v, tmc_comp_v, mPlot*final_index, coord_type, comp_type);
     //Plot on h2
-    gnuplot_plot_X(h2, ymc_v, mPlot*final_index+1, (char*)"Final guess", "lines", "1", "2", 3);
-    gnuplot_plot_X(h2, y_traj_n, final_index+1, (char*)"", "points", "1", "2", 3);
+    gnuplot_plot_X(refSt.isPlotted, h2, ymc_v, mPlot*final_index+1, (char*)"Final guess", "lines", "1", "2", 3);
+    gnuplot_plot_X(refSt.isPlotted, h2, y_traj_n, final_index+1, (char*)"", "points", "1", "2", 3);
     //Plot on h3
-    gnuplot_plot_X(h3, ymc_comp_v, mPlot*final_index+1, (char*)"Final guess", "lines", "1", "2", 3);
+    gnuplot_plot_X(refSt.isPlotted, h3, ymc_comp_v, mPlot*final_index+1, (char*)"Final guess", "lines", "1", "2", 3);
 
     //====================================================================================
     // JPL
@@ -6980,7 +7272,7 @@ int compref3d_test_eml_synjpl(int man_grid_size_t,
         //====================================================================================
         // Initialize SPICE kernerls
         //====================================================================================
-        gnuplot_ctrl* h4 = gnuplot_init();
+        gnuplot_ctrl* h4 = gnuplot_init(refSt.isPlotted);
         cout << fname << ". Initialize SPICE kernerls..." << endl;
         furnsh_c("spice/kernels/metakernel.furnsh");
 
@@ -7075,8 +7367,8 @@ int compref3d_test_eml_synjpl(int man_grid_size_t,
             qbcp_coc_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, eph_coord(coord_type), coord_type);
 
             //Plot on h2
-            if(k == 0) gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"Initial guess in JPL", "lines", "1", "2", 1);
-            else gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"", "lines", "1", "2", 1);
+            if(k == 0) gnuplot_plot_X(refSt.isPlotted, h2, ymc, mPlot+1, (char*)"Initial guess in JPL", "lines", "1", "2", 1);
+            else gnuplot_plot_X(refSt.isPlotted, h2, ymc, mPlot+1, (char*)"", "lines", "1", "2", 1);
 
             //----------------------------------------------------
             //Back to comp_type coordinates
@@ -7088,8 +7380,8 @@ int compref3d_test_eml_synjpl(int man_grid_size_t,
             ecl2coordstate_vec(ymc, tmc, ymc_comp, tmc_comp, mPlot, comp_type, et0, tsys0_comp, eph_coord(comp_type));
 
             //Plot on h3
-            if(k == 0) gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"Initial guess in JPL", "lines", "1", "2", 1);
-            else gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"", "lines", "1", "2", 1);
+            if(k == 0) gnuplot_plot_X(refSt.isPlotted, h3, ymc_comp, mPlot+1, (char*)"Initial guess in JPL", "lines", "1", "2", 1);
+            else gnuplot_plot_X(refSt.isPlotted, h3, ymc_comp, mPlot+1, (char*)"", "lines", "1", "2", 1);
 
         }
 
@@ -7103,7 +7395,7 @@ int compref3d_test_eml_synjpl(int man_grid_size_t,
         isPlotted   = 1;
         multiple_shooting_direct(y_traj_syn, t_traj_syn, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, eph_coord(coord_type), isPlotted, h4, 0);
         //Plot
-        gnuplot_plot_X(h4, y_traj_jpl_n, final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
+        gnuplot_plot_X(refSt.isPlotted, h4, y_traj_jpl_n, final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
 
 
         //--------------------------------------------------------------------------------
@@ -7123,8 +7415,8 @@ int compref3d_test_eml_synjpl(int man_grid_size_t,
             qbcp_coc_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, eph_coord(coord_type), coord_type);
 
             //Plot on h2
-            if(k == 0) gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"Final traj in JPL", "lines", "1", "2", 2);
-            else gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"", "lines", "1", "2", 2);
+            if(k == 0) gnuplot_plot_X(refSt.isPlotted, h2, ymc, mPlot+1, (char*)"Final traj in JPL", "lines", "1", "2", 2);
+            else gnuplot_plot_X(refSt.isPlotted, h2, ymc, mPlot+1, (char*)"", "lines", "1", "2", 2);
 
             //----------------------------------------------------
             //Back to comp_type coordinates
@@ -7136,8 +7428,8 @@ int compref3d_test_eml_synjpl(int man_grid_size_t,
             ecl2coordstate_vec(ymc, tmc, ymc_comp, tmc_comp, mPlot, comp_type, et0, tsys0_comp, eph_coord(comp_type));
 
             //Plot on h3
-            if(k == 0) gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"Final traj in JPL", "lines", "1", "2", 2);
-            else gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"", "lines", "1", "2", 2);
+            if(k == 0) gnuplot_plot_X(refSt.isPlotted, h3, ymc_comp, mPlot+1, (char*)"Final traj in JPL", "lines", "1", "2", 2);
+            else gnuplot_plot_X(refSt.isPlotted, h3, ymc_comp, mPlot+1, (char*)"", "lines", "1", "2", 2);
         }
 
         //----------------------------------------------------------
@@ -7145,7 +7437,7 @@ int compref3d_test_eml_synjpl(int man_grid_size_t,
         //----------------------------------------------------------
         printf("Press ENTER to go on\n");
         scanf("%c",&ch);
-        gnuplot_close(h4);
+        gnuplot_close(refSt.isPlotted, h4);
     }
 
     //----------------------------------------------------------
@@ -7153,8 +7445,8 @@ int compref3d_test_eml_synjpl(int man_grid_size_t,
     //----------------------------------------------------------
     printf("Press ENTER to go on\n");
     scanf("%c",&ch);
-    gnuplot_close(h2);
-    gnuplot_close(h3);
+    gnuplot_close(refSt.isPlotted, h2);
+    gnuplot_close(refSt.isPlotted, h3);
 
 
     //====================================================================================
@@ -7259,20 +7551,19 @@ int compref3d_test_eml2seml_synjpl(int coord_type)
     //Gnuplot window
     //----------------------------------------------------------
     gnuplot_ctrl* h2, *h3;
-    h2 = gnuplot_init();
-    h3 = gnuplot_init();
-
-    gnuplot_cmd(h2, "set title \"Computation coordinates\" ");
-    gnuplot_cmd(h3, "set title \"Complementary coordinates\" ");
-    //gnuplot_cmd(h2, "set view equal xyz");
-    //gnuplot_cmd(h3, "set view equal xyz");
-    gnuplot_cmd(h2, "set grid");
-    gnuplot_cmd(h3, "set grid");
+    h2 = gnuplot_init(true);
+    h3 = gnuplot_init(true);
+    gnuplot_cmd(true, h2, "set title \"Computation coordinates\" ");
+    gnuplot_cmd(true, h3, "set title \"Complementary coordinates\" ");
+    //gnuplot_cmd(true, h2, "set view equal xyz");
+    //gnuplot_cmd(true, h3, "set view equal xyz");
+    gnuplot_cmd(true, h2, "set grid");
+    gnuplot_cmd(true, h3, "set grid");
 
     //----------------------------------------------------------
     //Notable points in SEM & EM systems
     //----------------------------------------------------------
-    notablePoints(h2, h3, coord_type);
+    notablePoints(h2, h3, coord_type, true);
 
     //====================================================================================
     // Initial trajectory, on a grid
@@ -7299,10 +7590,10 @@ int compref3d_test_eml2seml_synjpl(int coord_type)
     //To complementary coordinates
     qbcp_coc_vec(ymc_v, tmc_v, ymc_comp_v, tmc_comp_v, mPlot*final_index, coord_type, comp_type);
     //Plot on h2
-    gnuplot_plot_X(h2, ymc_v, mPlot*final_index+1, (char*)"Final guess", "lines", "1", "2", 3);
-    gnuplot_plot_X(h2, y_traj_n, final_index+1, (char*)"", "points", "1", "2", 3);
+    gnuplot_plot_X(true, h2, ymc_v, mPlot*final_index+1, (char*)"Final guess", "lines", "1", "2", 3);
+    gnuplot_plot_X(true, h2, y_traj_n, final_index+1, (char*)"", "points", "1", "2", 3);
     //Plot on h3
-    gnuplot_plot_X(h3, ymc_comp_v, mPlot*final_index+1, (char*)"Final guess", "lines", "1", "2", 3);
+    gnuplot_plot_X(true, h3, ymc_comp_v, mPlot*final_index+1, (char*)"Final guess", "lines", "1", "2", 3);
 
     //====================================================================================
     // JPL
@@ -7318,7 +7609,7 @@ int compref3d_test_eml2seml_synjpl(int coord_type)
     //====================================================================================
     // Initialize SPICE kernerls
     //====================================================================================
-    gnuplot_ctrl* h4 = gnuplot_init();
+    gnuplot_ctrl* h4 = gnuplot_init(true);
     cout << fname << ". Initialize SPICE kernerls..." << endl;
     furnsh_c("spice/kernels/metakernel.furnsh");
 
@@ -7504,8 +7795,8 @@ int compref3d_test_eml2seml_synjpl(int coord_type)
         qbcp_coc_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, eph_coord(coord_type), coord_type);
 
         //Plot on h2
-        if(k == 0) gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"Initial guess in JPL", "lines", "1", "2", 1);
-        else gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"", "lines", "1", "2", 1);
+        if(k == 0) gnuplot_plot_X(true, h2, ymc, mPlot+1, (char*)"Initial guess in JPL", "lines", "1", "2", 1);
+        else gnuplot_plot_X(true, h2, ymc, mPlot+1, (char*)"", "lines", "1", "2", 1);
 
         if(k == 0 || k == final_index-1)
         {
@@ -7522,8 +7813,8 @@ int compref3d_test_eml2seml_synjpl(int coord_type)
         ecl2coordstate_vec(ymc, tmc, ymc_comp, tmc_comp, mPlot, comp_type, et0, tsys0_comp, eph_coord(comp_type));
 
         //Plot on h3
-        if(k == 0) gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"Initial guess in JPL", "lines", "1", "2", 1);
-        else gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"", "lines", "1", "2", 1);
+        if(k == 0) gnuplot_plot_X(true, h3, ymc_comp, mPlot+1, (char*)"Initial guess in JPL", "lines", "1", "2", 1);
+        else gnuplot_plot_X(true, h3, ymc_comp, mPlot+1, (char*)"", "lines", "1", "2", 1);
     }
 
     //====================================================================================
@@ -7537,7 +7828,7 @@ int compref3d_test_eml2seml_synjpl(int coord_type)
     multiple_shooting_direct(y_traj_syn, t_traj_syn, y_traj_syn_n, t_traj_syn_n, 42, final_index, eph_coord(coord_type), isPlotted, h4, 0);
     //multiple_shooting_direct_variable_time(y_traj_syn, t_traj_syn, y_traj_syn_n, t_traj_syn_n,  42, final_index, eph_coord(coord_type), 5e-9, isPlotted, h4);
     //Plot
-    gnuplot_plot_X(h4, y_traj_syn_n, final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
+    gnuplot_plot_X(true, h4, y_traj_syn_n, final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
 
 
     //------------------------------------------------------------------------------------
@@ -7555,8 +7846,8 @@ int compref3d_test_eml2seml_synjpl(int coord_type)
         qbcp_coc_vec(ymc_comp, tmc_comp, ymc, tmc, mPlot, eph_coord(coord_type), coord_type);
 
         //Plot on h2
-        if(k == 0) gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"Final traj in JPL", "lines", "1", "2", 2);
-        else gnuplot_plot_X(h2, ymc, mPlot+1, (char*)"", "lines", "1", "2", 2);
+        if(k == 0) gnuplot_plot_X(true, h2, ymc, mPlot+1, (char*)"Final traj in JPL", "lines", "1", "2", 2);
+        else gnuplot_plot_X(true, h2, ymc, mPlot+1, (char*)"", "lines", "1", "2", 2);
 
         //Back to comp_type coordinates
         //qbcp_coc_vec(ymc, tmc, ymc_comp, tmc_comp, mPlot, coord_type, comp_type);
@@ -7564,8 +7855,8 @@ int compref3d_test_eml2seml_synjpl(int coord_type)
         ecl2coordstate_vec(ymc, tmc, ymc_comp, tmc_comp, mPlot, comp_type, et0, tsys0_comp, eph_coord(comp_type));
 
         //Plot on h3
-        if(k == 0) gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"Final traj in JPL", "lines", "1", "2", 2);
-        else gnuplot_plot_X(h3, ymc_comp, mPlot+1, (char*)"", "lines", "1", "2", 2);
+        if(k == 0) gnuplot_plot_X(true, h3, ymc_comp, mPlot+1, (char*)"Final traj in JPL", "lines", "1", "2", 2);
+        else gnuplot_plot_X(true, h3, ymc_comp, mPlot+1, (char*)"", "lines", "1", "2", 2);
     }
 
     //----------------------------------------------------------
@@ -7573,7 +7864,7 @@ int compref3d_test_eml2seml_synjpl(int coord_type)
     //----------------------------------------------------------
     printf("Press ENTER to go on\n");
     scanf("%c",&ch);
-    gnuplot_close(h4);
+    gnuplot_close(true, h4);
 
 
     //----------------------------------------------------------
@@ -7581,8 +7872,8 @@ int compref3d_test_eml2seml_synjpl(int coord_type)
     //----------------------------------------------------------
     printf("Press ENTER to go on\n");
     scanf("%c",&ch);
-    gnuplot_close(h2);
-    gnuplot_close(h3);
+    gnuplot_close(true, h2);
+    gnuplot_close(true, h3);
 
 
     //====================================================================================
@@ -7613,7 +7904,7 @@ int compref3d_test_eml2seml_synjpl(int coord_type)
 /**
  *  \brief Plotting the notable points in the SEM system, in coord_type coordinates
  **/
-int notablePoints_sem(gnuplot_ctrl* h2, int coord_type)
+int notablePoints_sem(gnuplot_ctrl* h2, int coord_type, int isPlot)
 {
     //------------------------------------------------------------------------------------
     //Container
@@ -7628,22 +7919,22 @@ int notablePoints_sem(gnuplot_ctrl* h2, int coord_type)
     case PSEM:
     case VSEM:
         semPoints(0.0, semP_coord);
-        semPlot(h2, semP_coord);
+        semPlot(h2, semP_coord, isPlot);
         break;
     case NCSEM:
     case VNCSEM:
         semNCPoints(0.0, semP_coord);
-        semPlot(h2, semP_coord);
+        semPlot(h2, semP_coord, isPlot);
         break;
     case PEM:
     case VEM:
         emPoints(0.0, semP_coord);
-        emPlot(h2, semP_coord);
+        emPlot(h2, semP_coord, isPlot);
         break;
     case NCEM:
     case VNCEM:
         emNCPoints(0.0, semP_coord);
-        emPlot(h2, semP_coord);
+        emPlot(h2, semP_coord, isPlot);
         break;
     default:
         cerr << "notablePoints_sem. Unknown coord_type. " << endl;
@@ -7663,7 +7954,7 @@ int notablePoints_sem(gnuplot_ctrl* h2, int coord_type)
  *  \brief Plotting the notable points in the SEM & EM systems in coord_type coordinates,
  *         as well as complementary coordinates.
  **/
-int notablePoints(gnuplot_ctrl* h2, gnuplot_ctrl* h3, int coord_type)
+int notablePoints(gnuplot_ctrl* h2, gnuplot_ctrl* h3, int coord_type, int isPlot)
 {
     //------------------------------------------------------------------------------------
     //Container
@@ -7680,80 +7971,80 @@ int notablePoints(gnuplot_ctrl* h2, gnuplot_ctrl* h3, int coord_type)
     case VSEM:
     {
         semPoints(0.0, semP_coord);
-        semPlot(h2, semP_coord);
+        semPlot(h2, semP_coord, isPlot);
         //Comp
         emPoints(0.0, semP_comp);
-        emPlot(h3, semP_comp);
+        emPlot(h3, semP_comp, isPlot);
 
         //h2 displays the system in SEM coordinates
-        gnuplot_set_xlabel(h2, (char*) "Xsem");
-        gnuplot_set_ylabel(h2, (char*) "Ysem");
-        gnuplot_set_zlabel(h2, (char*) "Zsem");
+        gnuplot_set_xlabel(isPlot, h2, (char*) "Xsem");
+        gnuplot_set_ylabel(isPlot, h2, (char*) "Ysem");
+        gnuplot_set_zlabel(isPlot, h2, (char*) "Zsem");
 
         //h3 displays the system in EM coordinates
-        gnuplot_set_xlabel(h3, (char*) "Xem");
-        gnuplot_set_ylabel(h3, (char*) "Yem");
-        gnuplot_set_zlabel(h3, (char*) "Zem");
+        gnuplot_set_xlabel(isPlot, h3, (char*) "Xem");
+        gnuplot_set_ylabel(isPlot, h3, (char*) "Yem");
+        gnuplot_set_zlabel(isPlot, h3, (char*) "Zem");
         break;
     }
     case NCSEM:
     case VNCSEM:
     {
         semNCPoints(0.0, semP_coord);
-        semPlot(h2, semP_coord);
+        semPlot(h2, semP_coord, true);
         //Comp
         emNCPoints(0.0, semP_comp);
-        emPlot(h3, semP_comp);
+        emPlot(h3, semP_comp, true);
 
         //h2 displays the system in NCSEM coordinates
-        gnuplot_set_xlabel(h2, (char*) "xsem");
-        gnuplot_set_ylabel(h2, (char*) "ysem");
-        gnuplot_set_zlabel(h2, (char*) "zsem");
+        gnuplot_set_xlabel(isPlot, h2, (char*) "xsem");
+        gnuplot_set_ylabel(isPlot, h2, (char*) "ysem");
+        gnuplot_set_zlabel(isPlot, h2, (char*) "zsem");
 
         //h3 displays the system in NCEM coordinates
-        gnuplot_set_xlabel(h3, (char*) "xem");
-        gnuplot_set_ylabel(h3, (char*) "yem");
-        gnuplot_set_zlabel(h3, (char*) "zem");
+        gnuplot_set_xlabel(isPlot, h3, (char*) "xem");
+        gnuplot_set_ylabel(isPlot, h3, (char*) "yem");
+        gnuplot_set_zlabel(isPlot, h3, (char*) "zem");
         break;
     }
     case PEM:
     case VEM:
     {
         emPoints(0.0, semP_coord);
-        emPlot(h2, semP_coord);
+        emPlot(h2, semP_coord, true);
         //Comp
         semPoints(0.0, semP_comp);
-        semPlot(h3, semP_comp);
+        semPlot(h3, semP_comp, true);
 
         //h3 displays the system in SEM coordinates
-        gnuplot_set_xlabel(h3, (char*) "Xsem");
-        gnuplot_set_ylabel(h3, (char*) "Ysem");
-        gnuplot_set_zlabel(h3, (char*) "Zsem");
+        gnuplot_set_xlabel(isPlot, h3, (char*) "Xsem");
+        gnuplot_set_ylabel(isPlot, h3, (char*) "Ysem");
+        gnuplot_set_zlabel(isPlot, h3, (char*) "Zsem");
 
         //h2 displays the system in EM coordinates
-        gnuplot_set_xlabel(h2, (char*) "Xem");
-        gnuplot_set_ylabel(h2, (char*) "Yem");
-        gnuplot_set_zlabel(h2, (char*) "Zem");
+        gnuplot_set_xlabel(isPlot, h2, (char*) "Xem");
+        gnuplot_set_ylabel(isPlot, h2, (char*) "Yem");
+        gnuplot_set_zlabel(isPlot, h2, (char*) "Zem");
         break;
     }
     case NCEM:
     case VNCEM:
     {
         emNCPoints(0.0, semP_coord);
-        emPlot(h2, semP_coord);
+        emPlot(h2, semP_coord, true);
         //Comp
         semNCPoints(0.0, semP_comp);
-        semPlot(h3, semP_comp);
+        semPlot(h3, semP_comp, true);
 
         //h3 displays the system in NCSEM coordinates
-        gnuplot_set_xlabel(h3, (char*) "xsem");
-        gnuplot_set_ylabel(h3, (char*) "ysem");
-        gnuplot_set_zlabel(h3, (char*) "zsem");
+        gnuplot_set_xlabel(isPlot, h3, (char*) "xsem");
+        gnuplot_set_ylabel(isPlot, h3, (char*) "ysem");
+        gnuplot_set_zlabel(isPlot, h3, (char*) "zsem");
 
         //h2 displays the system in NCEM coordinates
-        gnuplot_set_xlabel(h2, (char*) "xem");
-        gnuplot_set_ylabel(h2, (char*) "yem");
-        gnuplot_set_zlabel(h2, (char*) "zem");
+        gnuplot_set_xlabel(isPlot, h2, (char*) "xem");
+        gnuplot_set_ylabel(isPlot, h2, (char*) "yem");
+        gnuplot_set_zlabel(isPlot, h2, (char*) "zem");
         break;
     }
     default:
@@ -7924,10 +8215,10 @@ int plottrajsegbyseg(double** y_traj, double* t_traj,
     //Plotting
     //------------------------------------------------------------------------------------
     //Plot on h2
-    gnuplot_plot_X(h2, ymc_v, mPlot*final_index+1, (char*)title.c_str(), "lines", "1", "2", color);
+    gnuplot_plot_X(true, h2, ymc_v, mPlot*final_index+1, (char*)title.c_str(), "lines", "1", "2", color);
 
     //Plot on h3
-    gnuplot_plot_X(h3, ymc_comp_v, mPlot*final_index+1, (char*)title.c_str(), "lines", "1", "2", color);
+    gnuplot_plot_X(true, h3, ymc_comp_v, mPlot*final_index+1, (char*)title.c_str(), "lines", "1", "2", color);
 
     //------------------------------------------------------------------------------------
     //Free
@@ -8161,19 +8452,18 @@ int savetrajsegbyseg(double** y_traj, double* t_traj,
 
 //========================================================================================
 //
-//          I/O (to set in oolencon_io.cpp)
+//          I/O (continuation procedures)
 //
 //========================================================================================
 /**
  *   \brief Storing the results of the continuation procedure, in txt file.
  **/
-void writeCONT_txt(Orbit& orbit_EM, Orbit& orbit_SEM,
-                   double* te_NCSEM, double* ye_NCSEM,  int isFirst)
+void writeCONT_txt(int label, string filename, Orbit& orbit_EM, Orbit& orbit_SEM,
+                   double te_NCSEM, double* ye_NCSEM,  int isFirst)
 {
     //====================================================================================
     // Initialize the I/O objects
     //====================================================================================
-    string filename  = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF, SEML.li_SEM, orbit_EM.getT0xT());
     fstream filestream;
 
     if(isFirst)
@@ -8183,7 +8473,7 @@ void writeCONT_txt(Orbit& orbit_EM, Orbit& orbit_SEM,
         //================================================================================
         filestream.open (filename.c_str(), ios::out);
         //Title
-        filestream << "t0_CMU_EM  s1_CMU_EM  s2_CMU_EM  s3_CMU_EM  s4_CMU_EM s5_CMU_EM ";
+        filestream << "label t0_CMU_EM  s1_CMU_EM  s2_CMU_EM  s3_CMU_EM  s4_CMU_EM s5_CMU_EM ";
         filestream << "tf_CMU_EM  s1_CMS_SEM s2_CMS_SEM s3_CMS_SEM s4_CMS_SEM s5_CMS_SEM ";
         filestream << "x0_CMU_NCEM  y0_CMU_NCEM z0_CMU_NCEM px0_CMU_NCEM py0_CMU_NCEM pz0_CMU_NCEM ";
         filestream << "x0_CMS_NCSEM y0_CMS_NCSEM z0_CMS_NCSEM px0_CMS_NCSEM py0_CMS_NCSEM pz0_CMS_NCSEM ";
@@ -8210,6 +8500,8 @@ void writeCONT_txt(Orbit& orbit_EM, Orbit& orbit_SEM,
     //------------------------------------------------------------------------------------
     // Store from 1 to 8
     //------------------------------------------------------------------------------------
+    //0. label
+    filestream << label << "  ";
     //1. t0 in EM units
     filestream << orbit_EM.getT0() << "  ";
     //2. s0 in RCM coordinates
@@ -8223,7 +8515,7 @@ void writeCONT_txt(Orbit& orbit_EM, Orbit& orbit_SEM,
     //6. zf in NCSEM coordinates
     for(int i = 0; i <6; i++) filestream << orbit_SEM.getZ0()[i] << "  ";
     //7. thetae_NCSEM
-    filestream << *te_NCSEM* SEML.us_sem.n << "  ";
+    filestream << te_NCSEM* SEML.us_sem.n << "  ";
     //8. ze in NCSEM coordinates
     for(int i = 0; i <6; i++) filestream << ye_NCSEM[i] << "  ";
 
@@ -8947,6 +9239,712 @@ int writeCONT_bin(RefSt& refSt, string filename_traj, int dcs, int coord_type,
     return FTC_SUCCESS;
 }
 
+//========================================================================================
+//
+//          I/O (continuation procedures on one orbit)
+//
+//========================================================================================
+/**
+ *   \brief Storing the results of the continuation procedure, in txt file.
+ **/
+void writeCONT_txt(string filename, Orbit& orbit_EM, Orbit& orbit_SEM,
+                   double te_NCSEM, double* ye_NCSEM, ProjResClass& projRes, int isFirst,  int k)
+{
+    //====================================================================================
+    // Initialize the I/O objects
+    //====================================================================================
+    fstream filestream;
+
+    if(isFirst)
+    {
+        //================================================================================
+        // If it is the first entry, the title of the columns are written
+        //================================================================================
+        filestream.open (filename.c_str(), ios::out);
+        //Title
+        filestream << "label t0_CMU_EM  s1_CMU_EM  s2_CMU_EM  s3_CMU_EM  s4_CMU_EM s5_CMU_EM ";
+        filestream << "t0_CMU_EM_seed  s1_CMU_EM_seed  s2_CMU_EM_seed  s3_CMU_EM_seed  s4_CMU_EM_seed ";
+        filestream << "tf_CMU_EM  s1_CMS_SEM s2_CMS_SEM s3_CMS_SEM s4_CMS_SEM s5_CMS_SEM ";
+        filestream << "x0_CMU_NCEM  y0_CMU_NCEM z0_CMU_NCEM px0_CMU_NCEM py0_CMU_NCEM pz0_CMU_NCEM ";
+        filestream << "x0_CMS_NCSEM y0_CMS_NCSEM z0_CMS_NCSEM px0_CMS_NCSEM py0_CMS_NCSEM pz0_CMS_NCSEM ";
+        filestream << "te_NCSEM xe_CMS_NCSEM ye_CMS_NCSEM ze_CMS_NCSEM pxe_CMS_NCSEM pye_CMS_NCSEM pze_CMS_NCSEM ";
+        filestream << "H0_NCEM H0_NCSEM H0_EM H0_SEM ";
+        filestream << "H0_emli_NCEM H0_emli_NCSEM H0_emli_EM H0_emli_SEM ";
+        filestream << "Hf_NCEM Hf_NCSEM Hf_EM Hf_SEM ";
+        filestream << "Hf_semli_NCEM Hf_semli_NCSEM Hf_semli_EM Hf_semli_SEM ";
+        filestream << endl;
+    }
+    else
+    {
+        //================================================================================
+        // Else, we append
+        //================================================================================
+        filestream.open (filename.c_str(), ios::out | ios::app);
+    }
+
+    //====================================================================================
+    //Update the seed via projRes
+    //====================================================================================
+    double st_EM[5], st_SEM[5], t_EM[2], t0_SEM = 0.0, pmin_dist_SEM_out = 0.0;
+    double st_EM_seed[4], t_EM_seed = 0.0; int label = 0;
+    projRes.update_ic(st_EM, st_SEM, t_EM, st_EM_seed, &t_EM_seed, &t0_SEM, &pmin_dist_SEM_out, &label, k);
+
+    //====================================================================================
+    //Data storage
+    //====================================================================================
+    filestream << setprecision(15) <<  setiosflags(ios::scientific) << std::showpos;
+
+    //------------------------------------------------------------------------------------
+    // Store from 1 to 8
+    //------------------------------------------------------------------------------------
+    //0. label
+    filestream << label << "  ";
+    //1. t0 in EM units
+    filestream << orbit_EM.getT0() << "  ";
+    //2. s0 in RCM coordinates
+    for(int i = 0; i <5; i++) filestream << orbit_EM.getSi()[i]  << "  ";
+    //3. t0_seed in EM units
+    filestream << t_EM_seed << "  ";
+    //4. s0_seed in RCM coordinates
+    for(int i = 0; i < 4; i++) filestream << st_EM_seed[i]  << "  ";
+    //5. tf in EM units
+    filestream << orbit_EM.getTf() << "  ";
+    //4. sf in RCM coordinates
+    for(int i = 0; i <5; i++) filestream << orbit_SEM.getSi()[i] << "  ";
+    //6. z0 in NCEM coordinates
+    for(int i = 0; i <6; i++) filestream << orbit_EM.getZ0()[i]  << "  ";
+    //7. zf in NCSEM coordinates
+    for(int i = 0; i <6; i++) filestream << orbit_SEM.getZ0()[i] << "  ";
+    //8. thetae_NCSEM
+    filestream << te_NCSEM* SEML.us_sem.n << "  ";
+    //9. ze in NCSEM coordinates
+    for(int i = 0; i <6; i++) filestream << ye_NCSEM[i] << "  ";
+
+
+    //------------------------------------------------------------------------------------
+    // Computing Energies at t = t0 & t = tf
+    //------------------------------------------------------------------------------------
+    double H0_NCEM, H0_NCSEM, H0_EM, H0_SEM;
+    double H0_emli_NCEM, H0_emli_NCSEM, H0_emli_EM, H0_emli_SEM;
+    double Hf_NCEM, Hf_NCSEM, Hf_EM, Hf_SEM;
+    double Hf_semli_NCEM, Hf_semli_NCSEM, Hf_semli_EM, Hf_semli_SEM;
+
+    double yv_NCEM[6], yv_NCSEM[6];
+    double yv_emli_NCEM[6], yv_semli_NCSEM[6];
+    double tv_EM, tv_SEM;
+
+    //Origins at both ends
+    for(int i = 0; i <6; i++)
+    {
+        yv_emli_NCEM[i]   = 0.0;
+        yv_semli_NCSEM[i] = 0.0;
+    }
+
+    //t0, z0 in NCEM coordinates
+    tv_EM = orbit_EM.getT0();
+    for(int i = 0; i <6; i++) yv_NCEM[i] = orbit_EM.getZ0()[i];
+
+    // H0 at IC
+    H0_NCEM  = qbcp_H_complete(tv_EM, yv_NCEM, NCEM, NCEM);
+    H0_NCSEM = qbcp_H_complete(tv_EM, yv_NCEM, NCEM, NCSEM);
+    H0_EM    = qbcp_H_complete(tv_EM, yv_NCEM, NCEM, PEM);
+    H0_SEM   = qbcp_H_complete(tv_EM, yv_NCEM, NCEM, PSEM);
+
+    // H0 at emli
+    H0_emli_NCEM  = qbcp_H_complete(tv_EM, yv_emli_NCEM, NCEM, NCEM);
+    H0_emli_NCSEM = qbcp_H_complete(tv_EM, yv_emli_NCEM, NCEM, NCSEM);
+    H0_emli_EM    = qbcp_H_complete(tv_EM, yv_emli_NCEM, NCEM, PEM);
+    H0_emli_SEM   = qbcp_H_complete(tv_EM, yv_emli_NCEM, NCEM, PSEM);
+
+    //tf, yf in NCSEM coordinates
+    tv_SEM = orbit_EM.getTf()*SEML.us_em.ns;
+    for(int i = 0; i <6; i++) yv_NCSEM[i] = orbit_SEM.getZ0()[i];
+
+    // Hf
+    Hf_NCEM  = qbcp_H_complete(tv_SEM, yv_NCSEM, NCSEM, NCEM);
+    Hf_NCSEM = qbcp_H_complete(tv_SEM, yv_NCSEM, NCSEM, NCSEM);
+    Hf_EM    = qbcp_H_complete(tv_SEM, yv_NCSEM, NCSEM, PEM);
+    Hf_SEM   = qbcp_H_complete(tv_SEM, yv_NCSEM, NCSEM, PSEM);
+
+    // Hf at semli
+    Hf_semli_NCEM  = qbcp_H_complete(tv_SEM, yv_semli_NCSEM, NCSEM, NCEM);
+    Hf_semli_NCSEM = qbcp_H_complete(tv_SEM, yv_semli_NCSEM, NCSEM, NCSEM);
+    Hf_semli_EM    = qbcp_H_complete(tv_SEM, yv_semli_NCSEM, NCSEM, PEM);
+    Hf_semli_SEM   = qbcp_H_complete(tv_SEM, yv_semli_NCSEM, NCSEM, PSEM);
+
+
+    //------------------------------------------------------------------------------------
+    // Storing Energies
+    //------------------------------------------------------------------------------------
+    filestream << H0_NCEM  << "  ";
+    filestream << H0_NCSEM << "  ";
+    filestream << H0_EM    << "  ";
+    filestream << H0_SEM   << "  ";
+
+    filestream << H0_emli_NCEM  << "  ";
+    filestream << H0_emli_NCSEM << "  ";
+    filestream << H0_emli_EM    << "  ";
+    filestream << H0_emli_SEM   << "  ";
+
+    filestream << Hf_NCEM  << "  ";
+    filestream << Hf_NCSEM << "  ";
+    filestream << Hf_EM    << "  ";
+    filestream << Hf_SEM   << "  ";
+
+    filestream << Hf_semli_NCEM  << "  ";
+    filestream << Hf_semli_NCSEM << "  ";
+    filestream << Hf_semli_EM    << "  ";
+    filestream << Hf_semli_SEM   << "  ";
+
+    filestream << endl;
+
+    filestream.close();
+}
+
+/**
+ *  \brief Save a given solution as a complete trajectory
+ **/
+int writeCONT_bin(RefSt& refSt, string filename_traj, double** y_traj_n, double* t_traj_n, int man_index,
+                  Orbit& orbit_EM, Orbit& orbit_SEM, bool isFirst, int comp_orb_eml, int comp_orb_seml,
+                  ProjResClass& projRes, int k)
+{
+    string fname = "writeCONT_bin";
+
+    //====================================================================================
+    //Framework
+    //====================================================================================
+    int coord_type    = refSt.coord_type;
+    int dcs           = default_coordinate_system(coord_type);
+
+    //====================================================================================
+    //Update the seed via projRes
+    //====================================================================================
+    double st_EM[5], st_SEM[5], t_EM[2], t0_SEM = 0.0, pmin_dist_SEM_out = 0.0;
+    double st_EM_seed[4], t_EM_seed = 0.0; int label = 0;
+    projRes.update_ic(st_EM, st_SEM, t_EM, st_EM_seed, &t_EM_seed, &t0_SEM, &pmin_dist_SEM_out, &label, k);
+
+    double r0_CMU_EMT = t_EM[0]/SEML.us_em.T;
+
+    //====================================================================================
+    // Initialization of temporary variables
+    //====================================================================================
+    fstream filestream;
+    double yv[42], res = 0.0;
+    int ode78coll  = 0, status;
+
+    double** ymc_NCSEM  = dmatrix(0, 5, 0, refSt.mplot);
+    double* tmc_SEM     = dvector(0, refSt.mplot);
+    double** ymc_NCEM   = dmatrix(0, 5, 0, refSt.mplot);
+    double* tmc_EM      = dvector(0, refSt.mplot);
+
+    //====================================================================================
+    // Transfer leg
+    //====================================================================================
+    //------------------------------------------------------------------------------------
+    // Open the stream. If it is not the first element of the continuation procedure,
+    // we append results to the preexisting file
+    //------------------------------------------------------------------------------------
+    if(isFirst) filestream.open (filename_traj.c_str(), ios::out | ios::binary);
+    else filestream.open (filename_traj.c_str(), ios::out | ios::binary | ios::app);
+
+    //------------------------------------------------------------------------------------
+    //Final trajectory on lines, segment by segment + saving
+    //------------------------------------------------------------------------------------
+    for(int k = 0; k < man_index; k++)
+    {
+        //Integration segment by segment
+        for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
+        status = ode78(ymc_NCSEM, tmc_SEM, &ode78coll, t_traj_n[k], t_traj_n[k+1], yv, 6, refSt.mplot, dcs, coord_type, coord_type);
+
+        //Checks and warnings, if necessary
+        if(status != FTC_SUCCESS)
+        {
+            //At this step (final plot), a simple warning is issued
+            cout << fname << ". Warning: ode78 returned a flag." << endl;
+            cout << "A collision may have occured during the transfer." << endl;
+        }
+
+        if(ode78coll)
+        {
+            //At this step (plot), a simple warning is issued
+            cout << "plottrajsegbyseg. Warning: a collision with a primary has occurred." << endl;
+        }
+
+        //--------------------------------------------------------------------------------
+        //To NCEM coordinates
+        //--------------------------------------------------------------------------------
+        qbcp_coc_vec(ymc_NCSEM, tmc_SEM, ymc_NCEM, tmc_EM, refSt.mplot, NCSEM, NCEM);
+
+        //--------------------------------------------------------------------------------
+        // Save to data file
+        // We save the following outputs:
+        //  1. Label of the solution (number)
+        //  2. Type of leg: either emli orbit (1), transfer leg (2) or semli orbit (3)
+        //  3. Current time in NCSEM coordinates
+        //  4. Current state in NCSEM coordinates
+        //  5. Current state in NCEM coordinates
+        //  6. Hamiltonian in NCSEM coordinates
+        //  7. t_EM_0 as a ratio
+        //--------------------------------------------------------------------------------
+        for(int p = 0; p <= refSt.mplot; p++)
+        {
+            //1. Label of the solution
+            res = label;
+            filestream.write((char*) &res, sizeof(double));
+
+            //2. Type of leg: either emli orbit (1), transfer leg (2) or semli orbit (3)
+            res = 2;
+            filestream.write((char*) &res, sizeof(double));
+
+            //3. Current time in NCSEM coordinates
+            res = tmc_SEM[p];
+            filestream.write((char*) &res, sizeof(double));
+
+            //4. Current state in NCSEM coordinates
+            for(int i = 0; i < 6; i++)
+            {
+                res  = ymc_NCSEM[i][p];
+                yv[i] = ymc_NCSEM[i][p];
+                filestream.write((char*) &res, sizeof(double));
+            }
+
+            //5. Current state in NCEM coordinates
+            for(int i = 0; i < 6; i++)
+            {
+                res = ymc_NCEM[i][p];
+                filestream.write((char*) &res, sizeof(double));
+            }
+
+            //6. Hamiltonian in NCSEM coordinates
+            res = qbcp_Hn_SEM(tmc_SEM[p], yv, &SEML);
+            filestream.write((char*) &res, sizeof(double));
+
+            //7. t_EM_0 as a ratio
+            res = r0_CMU_EMT;
+            filestream.write((char*) &res, sizeof(double));
+        }
+    }
+    filestream.close();
+
+
+    //====================================================================================
+    // Compute the initial orbit if necessary
+    //====================================================================================
+    if(comp_orb_eml)
+    {
+        //--------------------------------------------------------------------------------
+        // Initialize
+        //--------------------------------------------------------------------------------
+        //We plot every 0.5 day
+        int oPlot = 1.0/0.5*refSt.tspan_EM*SEML.cs_em.cr3bp.T/(86400*2*M_PI);
+        int nPlot = oPlot;
+        double** yorb_NCEM  = dmatrix(0, 5, 0, oPlot);
+        double*  torb_EM    = dvector(0, oPlot);
+        double** yorb_NCSEM = dmatrix(0, 5, 0, oPlot);
+        double*  torb_SEM   = dvector(0, oPlot);
+
+
+        //Reset the unstable direction
+        orbit_EM.setSi(0, 4);
+
+        //Set the final time
+        orbit_EM.setTf(orbit_EM.getT0()-refSt.tspan_EM);
+
+        //Update the initial state in the orbit, with the RCM coordinates
+        orbit_EM.update_ic(orbit_EM.getSi(), orbit_EM.getT0());
+
+        //--------------------------------------------------------------------------------
+        //Integration on oPlot+1 fixed grid
+        //--------------------------------------------------------------------------------
+        int output = orbit_EM.traj_int_grid(orbit_EM.getTf(), yorb_NCEM, torb_EM, oPlot, 1);
+
+        //If output is strictly greater than 0, then the projection procedure inside
+        //the integration went wrong, and the new indix is output.
+        //It output == ORBIT_EPROJ, the projection procedure failed so bad that there
+        //is no point stored in the data, except the first one, and the new indix is zero
+        if(output == ORBIT_EPROJ) nPlot = 0;
+        else if(output > 0) nPlot = output;
+
+
+        //--------------------------------------------------------------------------------
+        //To NCSEM coordinates
+        //--------------------------------------------------------------------------------
+        qbcp_coc_vec(yorb_NCEM, torb_EM, yorb_NCSEM, torb_SEM, nPlot, NCEM, NCSEM);
+
+        //--------------------------------------------------------------------------------
+        // Save to data file
+        // We save the following outputs:
+        //  1. Label of the solution (number)
+        //  2. Type of leg: either emli orbit (1), transfer leg (2) or semli orbit (3)
+        //  3. Current time in NCSEM coordinates
+        //  4. Current state in NCSEM coordinates
+        //  5. Current state in NCEM coordinates
+        //  6. Hamiltonian in NCSEM coordinates
+        //  7. t_EM_0 as a ratio
+        //--------------------------------------------------------------------------------
+        if(nPlot > 0)
+        {
+            //Reopen stream
+            filestream.open (filename_traj.c_str(), ios::out | ios::binary | ios::app);
+
+            //Storing all points between 0 and nPlot
+            for(int p = 0; p <= nPlot; p++)
+            {
+                //1. Label of the solution
+                res = label;
+                filestream.write((char*) &res, sizeof(double));
+
+                //2. Type of leg: either emli orbit (1), transfer leg (2) or semli orbit (3)
+                res = 1;
+                filestream.write((char*) &res, sizeof(double));
+
+                //3. Current time in NCSEM coordinates
+                res = torb_SEM[p];
+                filestream.write((char*) &res, sizeof(double));
+
+                //4. Current state in NCSEM coordinates
+                for(int i = 0; i < 6; i++)
+                {
+                    res = yorb_NCSEM[i][p];
+                    yv[i] = yorb_NCSEM[i][p];
+                    filestream.write((char*) &res, sizeof(double));
+                }
+
+                //5. Current state in NCEM coordinates
+                for(int i = 0; i < 6; i++)
+                {
+                    res = yorb_NCEM[i][p];
+                    filestream.write((char*) &res, sizeof(double));
+                }
+
+                //6. Hamiltonian in NCSEM coordinates
+                res = qbcp_Hn_SEM(torb_SEM[p], yv, &SEML);
+                filestream.write((char*) &res, sizeof(double));
+
+                //7. t_EM_0 as a ratio
+                res = r0_CMU_EMT;
+                filestream.write((char*) &res, sizeof(double));
+            }
+            filestream.close();
+        }
+        else
+        {
+            cout << fname << ". Warning: computation of the orbit at EMLi went wrong." << endl;
+            cout << "The orbit is not stored." << endl;
+        }
+
+        //================================================================================
+        // At EML2. The first 4 RCM components are good, as well as the initial time.
+        // Hence, we need to update:
+        // 1. The last RCM component (unstable part),
+        // 2. The final time.
+        //================================================================================
+        orbit_EM.setSi(PROJ_EPSILON, 4);
+        orbit_EM.setTf(t_traj_n[man_index]/SEML.us_em.ns);
+
+        //--------------------------------------------------------------------------------
+        // Update the initial state in the orbit, with the RCM coordinates
+        //--------------------------------------------------------------------------------
+        orbit_EM.update_ic(orbit_EM.getSi(), orbit_EM.getT0());
+
+
+        //--------------------------------------------------------------------------------
+        //Free variables
+        //--------------------------------------------------------------------------------
+        free_dmatrix(yorb_NCEM, 0, 5, 0, oPlot);
+        free_dvector(torb_EM, 0, oPlot);
+        free_dmatrix(yorb_NCSEM, 0, 5, 0, oPlot);
+        free_dvector(torb_SEM, 0, oPlot);
+    }
+
+
+    //====================================================================================
+    // Compute the final orbit if necessary
+    //====================================================================================
+    if(comp_orb_seml)
+    {
+        switch(comp_orb_seml)
+        {
+        case 1: //computation using projection method
+        {
+            //----------------------------------------------------------------------------
+            // Initialize
+            //----------------------------------------------------------------------------
+            //We plot every 0.5 days
+            int oPlot = 1.0/0.5*refSt.tspan_SEM*SEML.cs_sem.cr3bp.T/(86400*2*M_PI);
+            int nPlot = oPlot;
+            double** yorb_NCEM  = dmatrix(0, 5, 0, oPlot);
+            double*  torb_EM    = dvector(0, oPlot);
+            double** yorb_NCSEM = dmatrix(0, 5, 0, oPlot);
+            double*  torb_SEM   = dvector(0, oPlot);
+
+            //Save unstable value
+            double s5 = orbit_SEM.getSi(4);
+
+            //Reset the unstable direction
+            orbit_SEM.setSi(0, 4);
+
+            //Set the final time
+            orbit_SEM.setTf(orbit_SEM.getT0()+refSt.tspan_SEM);
+
+            //Update the initial state in the orbit, with the RCM coordinates
+            orbit_SEM.update_ic(orbit_SEM.getSi(), orbit_SEM.getT0());
+
+            //----------------------------------------------------------------------------
+            //Integration on oPlot+1 fixed grid
+            //----------------------------------------------------------------------------
+            int output = orbit_SEM.traj_int_grid(orbit_SEM.getTf(), yorb_NCSEM, torb_SEM, oPlot, 1);
+
+            //If output is strictly greater than 0, then the projection procedure inside
+            //the integration went wrong, and the new indix is output.
+            //It output == ORBIT_EPROJ, the projection procedure failed so bad that there
+            //is no point stored in the data, except the first one, and the new indix is zero
+            if(output == ORBIT_EPROJ) nPlot = 0;
+            else if(output > 0) nPlot = output;
+
+            //----------------------------------------------------------------------------
+            //To NCEM coordinates
+            //----------------------------------------------------------------------------
+            qbcp_coc_vec(yorb_NCSEM, torb_SEM, yorb_NCEM, torb_EM, nPlot, NCSEM, NCEM);
+
+            //----------------------------------------------------------------------------
+            // Save to data file
+            // We save the following outputs:
+            //  1. Label of the solution (number)
+            //  2. Type of leg: either emli orbit (1), transfer leg (2) or semli orbit (3)
+            //  3. Current time in NCSEM coordinates
+            //  4. Current state in NCSEM coordinates
+            //  5. Current state in NCEM coordinates
+            //  6. Hamiltonian in NCSEM coordinates
+            //  7. t_EM_0 as a ratio
+            //----------------------------------------------------------------------------
+            if(nPlot > 0)
+            {
+                //Reopen stream
+                filestream.open (filename_traj.c_str(), ios::out | ios::binary | ios::app);
+
+                //Storing all points between 0 and nPlot
+                for(int p = 0; p <= nPlot; p++)
+                {
+                    //1. Label of the solution
+                    res = label;
+                    filestream.write((char*) &res, sizeof(double));
+
+                    //2. Type of leg: either emli orbit (1), transfer leg (2) or semli orbit (3)
+                    res = 3;
+                    filestream.write((char*) &res, sizeof(double));
+
+                    //3. Current time in NCSEM coordinates
+                    res = torb_SEM[p];
+                    filestream.write((char*) &res, sizeof(double));
+
+                    //4. Current state in NCSEM coordinates
+                    for(int i = 0; i < 6; i++)
+                    {
+                        res   = yorb_NCSEM[i][p];
+                        yv[i] = yorb_NCSEM[i][p];
+                        filestream.write((char*) &res, sizeof(double));
+                    }
+
+                    //4. Current state in NCEM coordinates
+                    for(int i = 0; i < 6; i++)
+                    {
+                        res = yorb_NCEM[i][p];
+                        filestream.write((char*) &res, sizeof(double));
+                    }
+
+                    //6. Hamiltonian in NCSEM coordinates
+                    res = qbcp_Hn_SEM(torb_SEM[p], yv, &SEML);
+                    filestream.write((char*) &res, sizeof(double));
+
+                    //7. t_EM_0 as a ratio
+                    res = r0_CMU_EMT;
+                    filestream.write((char*) &res, sizeof(double));
+                }
+                filestream.close();
+            }
+            else
+            {
+                cout << fname << ". Warning: computation of the orbit at EMLi went wrong." << endl;
+                cout << "The orbit is not stored." << endl;
+            }
+
+            //============================================================================
+            // At SEMLi, we need to update:
+            // 1. The unstable direction, that has been previously erased.
+            // 2. The initial time.
+            //============================================================================
+            orbit_SEM.setSi(s5, 4);
+            orbit_SEM.setT0(t_traj_n[man_index]);
+
+            //----------------------------------------------------------------------------
+            // Update the initial state in the orbit, with the RCM coordinates
+            //----------------------------------------------------------------------------
+            orbit_SEM.update_ic(orbit_SEM.getSi(), orbit_SEM.getT0());
+
+            //----------------------------------------------------------------------------
+            //Free variables
+            //----------------------------------------------------------------------------
+            free_dmatrix(yorb_NCEM, 0, 5, 0, oPlot);
+            free_dvector(torb_EM, 0, oPlot);
+            free_dmatrix(yorb_NCSEM, 0, 5, 0, oPlot);
+            free_dvector(torb_SEM, 0, oPlot);
+
+            break;
+        }
+        case 2: //computation using reduced coordinates
+        {
+            //----------------------------------------------------------------------------
+            //Read the reduced vector field
+            //----------------------------------------------------------------------------
+            vector<Oftsc> Fh;
+            Fh.reserve(5);
+            for(int i = 0; i < 5; i++) Fh.push_back(Oftsc(5, OFTS_ORDER, OFS_NV, OFS_ORDER));
+            readVOFTS_bin(Fh, SEML_SEM.cs->F_PMS+"rvf/fh");
+
+            //----------------------------------------------------------------------------
+            //For dot(s) = fh(s)
+            //----------------------------------------------------------------------------
+            RVF rvf;
+            rvf.ofs_order  = SEML.eff_nf_SEM;
+            Ofsc AUX(rvf.ofs_order);
+            rvf.fh         = &Fh;
+            rvf.ofs        = &AUX;
+            rvf.order      = OFTS_ORDER;
+            rvf.n          = orbit_SEM.getN();
+            rvf.reduced_nv = 5;
+
+            gsl_odeiv2_system sys_fh;
+            sys_fh.function  = qbfbp_fh;
+            sys_fh.jacobian  = NULL;
+            sys_fh.dimension = 2*rvf.reduced_nv;
+            sys_fh.params    = &rvf;
+            const gsl_odeiv2_step_type* T_fh = gsl_odeiv2_step_rk8pd;
+
+            gsl_odeiv2_driver* d_fh = gsl_odeiv2_driver_alloc_y_new (&sys_fh, T_fh,
+                                      Config::configManager().G_PREC_HSTART(),
+                                      Config::configManager().G_PREC_ABS(),
+                                      Config::configManager().G_PREC_REL());
+
+
+            //----------------------------------------------------------------------------
+            // Temp variables
+            //----------------------------------------------------------------------------
+            double t0_SEM = orbit_SEM.getT0();
+            double t1_SEM = t0_SEM+refSt.tspan_SEM;
+            double z[6], z_EM[6];
+            double t2 = t0_SEM;
+            int k  = 0;
+            double  s1ccm8[2*rvf.reduced_nv]; //CCM8
+
+            //----------------------------------------------------------------------------
+            // Initial state in CCM8 form
+            //----------------------------------------------------------------------------
+            RCMtoCCM8(orbit_SEM.getSi(), s1ccm8, 5);
+
+            //----------------------------------------------------------------------------
+            // Reopen  stream
+            //----------------------------------------------------------------------------
+            filestream.open (filename_traj.c_str(), ios::out | ios::binary | ios::app);
+
+            //----------------------------------------------------------------------------
+            // Loop
+            //----------------------------------------------------------------------------
+            while(t2 < t1_SEM && k <= refSt.mplot)
+            {
+                cout << "t1_SEM -  t2 = " << t1_SEM -  t2       << endl;
+                cout << "z[0]         = " << z[0]               << endl;
+                cout << "mPlot - k    = " << refSt.mplot - k    << endl;
+
+                //------------------------------------------------------------------------
+                //------------------------------------------------------------------------
+                //To NCSEM coordinates
+                //------------------------------------------------------------------------
+                //------------------------------------------------------------------------
+                orbit_SEM.evalRCMtoNC(t2, z);
+
+                //------------------------------------------------------------------------
+                //To NCEM coordinates
+                //------------------------------------------------------------------------
+                //------------------------------------------------------------------------
+                qbcp_coc(t2, z, z_EM, NCSEM, NCEM);
+
+
+                //------------------------------------------------------------------------
+                // Save to data file
+                // We save the following outputs:
+                //  1. Label of the solution (number)
+                //  2. Type of leg: either emli orbit (1), transfer leg (2) or semli orbit (3)
+                //  3. Current time in NCSEM coordinates
+                //  4. Current state in NCSEM coordinates
+                //  5. Current state in NCEM coordinates
+                //  6. Hamiltonian in NCSEM coordinates
+                //------------------------------------------------------------------------
+                //1. Label of the solution
+                res = label;
+                filestream.write((char*) &res, sizeof(double));
+
+                //2. Type of leg: either emli orbit (1), transfer leg (2) or semli orbit (3)
+                res = 3;
+                filestream.write((char*) &res, sizeof(double));
+
+                //3. Current time in NCSEM coordinates
+                res = t2;
+                filestream.write((char*) &res, sizeof(double));
+
+                //4. Current state in NCSEM coordinates
+                for(int i = 0; i < 6; i++)
+                {
+                    res   = z[i];
+                    filestream.write((char*) &res, sizeof(double));
+                }
+
+                //4. Current state in NCEM coordinates
+                for(int i = 0; i < 6; i++)
+                {
+                    res = z_EM[i];
+                    filestream.write((char*) &res, sizeof(double));
+                }
+
+                //6. Hamiltonian in NCSEM coordinates
+                res = qbcp_Hn_SEM(t2, z, &SEML);
+                filestream.write((char*) &res, sizeof(double));
+
+
+                //------------------------------------------------------------------------
+                //Advance one step
+                //------------------------------------------------------------------------
+                gsl_odeiv2_evolve_apply (d_fh->e, d_fh->c, d_fh->s, d_fh->sys, &t2, t1_SEM, &d_fh->h, s1ccm8);
+                orbit_SEM.ccm8torcm(s1ccm8);
+                k++;
+            }
+            filestream.close();
+
+            break;
+        }
+        }
+
+    }
+
+
+    //====================================================================================
+    // Free
+    //====================================================================================
+    free_dmatrix(ymc_NCSEM, 0, 5, 0, refSt.mplot);
+    free_dvector(tmc_SEM, 0, refSt.mplot);
+    free_dmatrix(ymc_NCEM, 0, 5, 0, refSt.mplot);
+    free_dvector(tmc_EM, 0, refSt.mplot);
+
+
+
+    return FTC_SUCCESS;
+}
+
+//========================================================================================
+//
+//          I/O (misc)
+//
+//========================================================================================
 /**
  * \brief Reads a given \c Ofsc  object within a \c Oftsc, in txt format.
  **/
