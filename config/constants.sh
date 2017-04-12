@@ -83,6 +83,7 @@ export REF_ORBIT=21
 export REF_CONT=30		#simple continuation, defined with REF_FIXED_TIME/REF_VAR_TN/REF_VAR_TIME and REF_FIXED_GRID/REF_VAR_GRID/REF_GIVEN_GRID
 export REF_CONT_D=31		#double continuation: (1) first a continuation with variable final time, (2) second continuation with fixed time 
 export REF_CONT_D_HARD_CASE=32  #same as REF_CONT_D but with additionnal refinement procedures between the two continuations
+export REF_CONT_ORBIT=33		# only some orbit connections refined, but a continuation procedure is performed on the final time
 
 # Refinement of a complete trajectory: orbit at EML2 + transfer + orbit at SEMLi
 export REF_COMP=4

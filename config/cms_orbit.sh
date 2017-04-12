@@ -66,7 +66,7 @@ ISNOHUP=0
 #-----------------------------------------------------
 # Parameters that change often
 #-----------------------------------------------------
-REFST_TYPE=$REF_ORBIT            # Type of refinement - rk: set REF_CONT_D_HARD_CASE for difficult cases with REF_CONT_D (ex: EML2-SEMLi via SEML1...)
+REFST_TYPE=$REF_CONT_ORBIT            # Type of refinement - either REF_ORBIT or REF_CONT_ORBIT
 REFST_DIM=$REF_PLANAR            # Type of dimensions planar or 3d?
 REFST_T0_DES=0.0                 # Initial time - given as %T, with T the SEM period   
 
@@ -85,7 +85,7 @@ REFST_TOF_LIM=(-1 -1)
 REFST_CROSSINGS=-1
 
 # Maximum projection distance allowed during subselection
-REFST_PMAX_DIST_SEM=1e-4
+REFST_PMAX_DIST_SEM=5e-4
 
 # Number of steps in the continuation procedure
 REFST_CONT_STEP_MAX=+450;        # with fixed times
@@ -109,8 +109,8 @@ REFST_ISDIRUD=0			 # is it user defined?
 REFST_DIR=-1    		 # if not, +1 or -1
  
 # User parameters
-REFST_ISFLAGON=0   	         # do we have steps in the procedure - asking the user to press enter to go on?
-REFST_ISPLOTTED=0   		 # do we plot the results during the computation?
+REFST_ISFLAGON=1   	         # do we have steps in the procedure - asking the user to press enter to go on?
+REFST_ISPLOTTED=1   		 # do we plot the results during the computation?
 REFST_ISSAVED=0     		 # do we save the results in data files?
 REFST_ISFROMSERVER=0		 # does the raw data comes from server files?
 

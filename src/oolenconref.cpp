@@ -1000,18 +1000,8 @@ int msftmixed(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nu
     //====================================================================================
     //Compute the null vector: QR decomposition of DP^T
     //====================================================================================
-    //QR elements
-    gsl_vector* work  = gsl_vector_calloc(ncs);
-    gsl_matrix* Q     = gsl_matrix_calloc(nfv,nfv);
-    gsl_matrix* R     = gsl_matrix_calloc(nfv,ncs);
-    gsl_matrix* DFT   = gsl_matrix_calloc(nfv,ncs);
-
-
-    //DPT = transpose(DP)
-    gsl_matrix_transpose_memcpy(DFT, DF);
-    //QR decomposition
-    gsl_linalg_QR_decomp (DFT, work);
-    gsl_linalg_QR_unpack (DFT, work, Q, R);
+    double nullvector_temp[nfv];
+    nullvectorjac(nullvector_temp, DF, ncs, nfv);
 
     //------------------------------------------------------------------------------------
     //Null vector is the last column of Q
@@ -1040,13 +1030,13 @@ int msftmixed(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nu
         else ti = refSt.Dir;
 
         //Here, we want to make s_EM[1] "grow"
-        sign = gsl_matrix_get(Q, 1, nfv-1) > 0? ti:-ti;
+        sign = nullvector_temp[1] > 0? ti:-ti;
     }
     else
     {
         //OR
         //Here, we want to go "in the same direction for some components of Q
-        for(int i = 0; i < 2; i++) dotNV += gsl_matrix_get(Q, i, nfv-1)*nullvector[i];    //CMU of  EML2
+        for(int i = 0; i < 2; i++) dotNV += nullvector_temp[i]*nullvector[i];    //CMU of  EML2
         sign = dotNV > 0? 1:-1;
 
         //        dotNV += gsl_matrix_get(Q, nfv-4, nfv-1)*nullvector[nfv-4];                //CMS of  SEMLi
@@ -1065,7 +1055,8 @@ int msftmixed(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nu
     }
 
     //Null vector is the last column of Q
-    for(int i = 0; i < nfv; i++) nullvector[i] = sign*gsl_matrix_get(Q, i, nfv-1);
+    for(int i = 0; i < nfv; i++) nullvector[i] = sign*nullvector_temp[i];
+
 
     //------------------------------------------------------------------------------------
     //Number of iterations
@@ -1091,10 +1082,6 @@ int msftmixed(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nu
     gsl_matrix_free(Id);
     gsl_matrix_free(Phi0);
     gsl_matrix_free(PhiN);
-    gsl_vector_free(work);
-    gsl_matrix_free(Q);
-    gsl_matrix_free(R);
-    gsl_matrix_free(DFT);
 
     return GSL_SUCCESS;
 }
@@ -1538,18 +1525,10 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
 
 
     //====================================================================================
-    // 3. Compute the null vector: QR decomposition of DP^T
+    //Compute the null vector: QR decomposition of DP^T
     //====================================================================================
-    //QR elements
-    gsl_vector *work  = gsl_vector_calloc(ncs);
-    gsl_matrix *Q     = gsl_matrix_calloc(nfv,nfv);
-    gsl_matrix *R     = gsl_matrix_calloc(nfv,ncs);
-    gsl_matrix *DFT   = gsl_matrix_calloc(nfv,ncs);
-    //DPT = transpose(DP)
-    gsl_matrix_transpose_memcpy(DFT, DF);
-    //QR decomposition
-    gsl_linalg_QR_decomp (DFT, work);
-    gsl_linalg_QR_unpack (DFT, work, Q, R);
+    double nullvector_temp[nfv];
+    nullvectorjac(nullvector_temp, DF, ncs, nfv);
 
     //------------------------------------------------------------------------------------
     //Null vector is the last column of Q
@@ -1567,8 +1546,8 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
             // center manifold (unstable component is small enough)
             // So, here, we want to make s_SEM[4] "decrease"
             //----------------------------------------------------------------------------
-            if(orbit_SEM.getSi()[4] > 0) sign = gsl_matrix_get(Q, nfv-2, nfv-1) < 0? 1:-1;
-            else sign = gsl_matrix_get(Q, nfv-2, nfv-1) > 0? 1:-1;
+            if(orbit_SEM.getSi()[4] > 0) sign = nullvector_temp[nfv-2] < 0? 1:-1;
+            else sign = nullvector_temp[nfv-2]  > 0? 1:-1;
             break;
         }
         case REF_COND_T:
@@ -1577,7 +1556,7 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
             // Another possible condition: enough turns around SEMLi. So, here,
             // we just want to increase the last time, at position nfv-1 = 5*mgs
             //----------------------------------------------------------------------------
-            sign = gsl_matrix_get(Q, nfv-1, nfv-1) > 0? 1:-1;
+            sign = nullvector_temp[nfv-1] > 0? 1:-1;
             break;
         }
         }
@@ -1593,8 +1572,8 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
             // center manifold (unstable component is small enough)
             // So, here, we want to make s_SEM[4] "decrease"
             //----------------------------------------------------------------------------
-            if(orbit_SEM.getSi()[4] > 0) sign = gsl_matrix_get(Q, nfv-2, nfv-1) < 0? 1:-1;
-            else sign = gsl_matrix_get(Q, nfv-2, nfv-1) > 0? 1:-1;
+            if(orbit_SEM.getSi()[4] > 0) sign = nullvector_temp[nfv-2] < 0? 1:-1;
+            else sign = nullvector_temp[nfv-2] > 0? 1:-1;
             break;
         }
         case REF_COND_T:
@@ -1603,14 +1582,14 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
             // Another possible condition: enough turns around SEMLi. So, here,
             // we just want to increase the last time, at position nfv-1 = 5*mgs
             //----------------------------------------------------------------------------
-            sign = gsl_matrix_get(Q, nfv-1, nfv-1) > 0? 1:-1;
+            sign = nullvector_temp[nfv-1] > 0? 1:-1;
             break;
         }
         }
     }
 
     //Null vector is the last column of Q
-    for(int i = 0; i < nfv; i++) nullvector[i] = sign*gsl_matrix_get(Q, i, nfv-1);
+    for(int i = 0; i < nfv; i++) nullvector[i] = sign*nullvector_temp[i];
 
     //------------------------------------------------------------------------------------
     //Number of iterations
@@ -1638,10 +1617,6 @@ int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullv
     gsl_matrix_free(Id);
     gsl_matrix_free(Phi0);
     gsl_matrix_free(PhiN);
-    gsl_vector_free(work);
-    gsl_matrix_free(Q);
-    gsl_matrix_free(R);
-    gsl_matrix_free(DFT);
 
 
     return GSL_SUCCESS;
@@ -2092,18 +2067,10 @@ int msvtmixed(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
 
 
     //====================================================================================
-    // 3. Compute the null vector: QR decomposition of DP^T
+    //Compute the null vector: QR decomposition of DP^T
     //====================================================================================
-    //QR elements
-    gsl_vector *work  = gsl_vector_calloc(ncs);
-    gsl_matrix *Q     = gsl_matrix_calloc(nfv,nfv);
-    gsl_matrix *R     = gsl_matrix_calloc(nfv,ncs);
-    gsl_matrix *DFT   = gsl_matrix_calloc(nfv,ncs);
-    //DPT = transpose(DP)
-    gsl_matrix_transpose_memcpy(DFT, DF);
-    //QR decomposition
-    gsl_linalg_QR_decomp (DFT, work);
-    gsl_linalg_QR_unpack (DFT, work, Q, R);
+    double nullvector_temp[nfv];
+    nullvectorjac(nullvector_temp, DF, ncs, nfv);
 
     //------------------------------------------------------------------------------------
     //Null vector is the last column of Q
@@ -2122,8 +2089,8 @@ int msvtmixed(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
             // center manifold (unstable component is small enough)
             // So, here, we want to make s_SEM[4] "decrease"
             //----------------------------------------------------------------------------
-            if(orbit_SEM.getSi()[4] > 0) sign = gsl_matrix_get(Q, nfv-2, nfv-1) < 0? 1:-1;
-            else sign = gsl_matrix_get(Q, nfv-2, nfv-1) > 0? 1:-1;
+            if(orbit_SEM.getSi()[4] > 0) sign = nullvector_temp[nfv-2] < 0? 1:-1;
+            else sign = nullvector_temp[nfv-2] > 0? 1:-1;
             break;
         }
         case REF_COND_T:
@@ -2132,7 +2099,7 @@ int msvtmixed(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
             // Another possible condition: enough turns around SEMLi. So, here,
             // we just want to increase the last time, at position nfv-1 = 5*mgs
             //----------------------------------------------------------------------------
-            sign = gsl_matrix_get(Q, nfv-1, nfv-1) > 0? 1:-1;
+            sign = nullvector_temp[nfv-1] > 0? 1:-1;
             break;
         }
         }
@@ -2148,8 +2115,8 @@ int msvtmixed(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
             // center manifold (unstable component is small enough)
             // So, here, we want to make s_SEM[4] "decrease"
             //----------------------------------------------------------------------------
-            if(orbit_SEM.getSi()[4] > 0) sign = gsl_matrix_get(Q, nfv-2, nfv-1) < 0? 1:-1;
-            else sign = gsl_matrix_get(Q, nfv-2, nfv-1) > 0? 1:-1;
+            if(orbit_SEM.getSi()[4] > 0) sign = nullvector_temp[nfv-2] < 0? 1:-1;
+            else sign = nullvector_temp[nfv-2] > 0? 1:-1;
             break;
         }
         case REF_COND_T:
@@ -2158,14 +2125,14 @@ int msvtmixed(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
             // Another possible condition: enough turns around SEMLi. So, here,
             // we just want to increase the last time, at position nfv-1 = 5*mgs
             //----------------------------------------------------------------------------
-            sign = gsl_matrix_get(Q, nfv-1, nfv-1) > 0? 1:-1;
+            sign = nullvector_temp[nfv-1] > 0? 1:-1;
             break;
         }
         }
     }
 
     //Null vector is the last column of Q
-    for(int i = 0; i < nfv; i++) nullvector[i] = sign*gsl_matrix_get(Q, i, nfv-1);
+    for(int i = 0; i < nfv; i++) nullvector[i] = sign*nullvector_temp[i];
 
     //------------------------------------------------------------------------------------
     //Number of iterations
@@ -2193,11 +2160,6 @@ int msvtmixed(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
     gsl_matrix_free(Id);
     gsl_matrix_free(Phi0);
     gsl_matrix_free(PhiN);
-    gsl_vector_free(work);
-    gsl_matrix_free(Q);
-    gsl_matrix_free(R);
-    gsl_matrix_free(DFT);
-
 
     return GSL_SUCCESS;
 }
@@ -2499,25 +2461,15 @@ int msftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
     //------------------------------------------------------------------------------------
     //Last plot
     //------------------------------------------------------------------------------------
-    gnuplot_plot_xyz(refSt.isPlotted, h1, ymdn[0], ymdn[1],  ymdn[2], mgs+1, (char*)"", "points", "2", "2", 4);
-    gnuplot_plot_xyz(refSt.isPlotted, h1, &ymdn[0][mgs], &ymdn[1][mgs],  &ymdn[2][mgs], 1, (char*)"", "points", "2", "2", 0);
-    gnuplot_plot_xyz(refSt.isPlotted, h1, &ymdn[0][0], &ymdn[1][0],  &ymdn[2][0], 1, (char*)"", "points", "2", "2", 0);
+    gnuplot_plot_xyz(refSt.isPlotted, h1,  ymdn[0],       ymdn[1],       ymdn[2],     mgs+1, (char*)"", "points", "2", "2", 4);
+    gnuplot_plot_xyz(refSt.isPlotted, h1, &ymdn[0][mgs], &ymdn[1][mgs], &ymdn[2][mgs], 1, (char*)"", "points", "2", "2", 0);
+    gnuplot_plot_xyz(refSt.isPlotted, h1, &ymdn[0][0],   &ymdn[1][0],   &ymdn[2][0],   1, (char*)"", "points", "2", "2", 0);
 
     //====================================================================================
-    // 3. Compute the null vector: QR decomposition of DP^T
+    //3. Compute the null vector: QR decomposition of DP^T
     //====================================================================================
-    //QR elements
-    gsl_vector *work  = gsl_vector_calloc(ncs);
-    gsl_matrix *Q     = gsl_matrix_calloc(nfv,nfv);
-    gsl_matrix *R     = gsl_matrix_calloc(nfv,ncs);
-    gsl_matrix *DFT   = gsl_matrix_calloc(nfv,ncs);
-
-
-    //DPT = transpose(DP)
-    gsl_matrix_transpose_memcpy(DFT, DF);
-    //QR decomposition
-    gsl_linalg_QR_decomp (DFT, work);
-    gsl_linalg_QR_unpack (DFT, work, Q, R);
+    double nullvector_temp[nfv];
+    nullvectorjac(nullvector_temp, DF, ncs, nfv);
 
     //------------------------------------------------------------------------------------
     //Null vector is the last column of Q
@@ -2546,12 +2498,12 @@ int msftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
         else ti = refSt.Dir;
 
         //Here, we want to make s_EM[0] "grow"
-        sign = gsl_matrix_get(Q, 0, nfv-1) > 0? ti:-ti;
+        sign = nullvector_temp[0] > 0? ti:-ti;
     }
     else
     {
         //Here, we want to go "in the same direction for some components of Q
-        for(int i = 0; i < 2; i++) dotNV += gsl_matrix_get(Q, i, nfv-1)*nullvector[i];    //CMU of  EML2
+        for(int i = 0; i < 2; i++) dotNV += nullvector_temp[i]*nullvector[i];    //CMU of  EML2
         sign = dotNV > 0? 1:-1;
 
         //OR
@@ -2566,7 +2518,7 @@ int msftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
     }
 
     //Null vector is the last column of Q
-    for(int i = 0; i < nfv; i++) nullvector[i] = sign*gsl_matrix_get(Q, i, nfv-1);
+    for(int i = 0; i < nfv; i++) nullvector[i] = sign*nullvector_temp[i];
 
     //------------------------------------------------------------------------------------
     //Number of iterations
@@ -2595,10 +2547,6 @@ int msftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
     gsl_matrix_free(Id);
     gsl_matrix_free(Phi0);
     gsl_matrix_free(PhiN);
-    gsl_vector_free(work);
-    gsl_matrix_free(Q);
-    gsl_matrix_free(R);
-    gsl_matrix_free(DFT);
 
     return GSL_SUCCESS;
 }
@@ -3091,20 +3039,10 @@ int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
     gnuplot_plot_xyz(refSt.isPlotted, h1, &ymdn[0][0], &ymdn[1][0],  &ymdn[2][0], 1, (char*)"", "points", "2", "2", 0);
 
     //====================================================================================
-    // 3. Compute the null vector: QR decomposition of DP^T
+    // Compute the null vector: QR decomposition of DP^T
     //====================================================================================
-    //QR elements
-    gsl_vector *work  = gsl_vector_calloc(ncs);
-    gsl_matrix *Q     = gsl_matrix_calloc(nfv,nfv);
-    gsl_matrix *R     = gsl_matrix_calloc(nfv,ncs);
-    gsl_matrix *DFT   = gsl_matrix_calloc(nfv,ncs);
-
-
-    //DPT = transpose(DP)
-    gsl_matrix_transpose_memcpy(DFT, DF);
-    //QR decomposition
-    gsl_linalg_QR_decomp (DFT, work);
-    gsl_linalg_QR_unpack (DFT, work, Q, R);
+    double nullvector_temp[nfv];
+    nullvectorjac(nullvector_temp, DF, ncs, nfv);
 
     //------------------------------------------------------------------------------------
     //Null vector is the last column of Q
@@ -3122,8 +3060,8 @@ int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
             // center manifold (unstable component is small enough)
             // So, here, we want to make s_SEM[4] "decrease"
             //----------------------------------------------------------------------------
-            if(orbit_SEM.getSi()[4] > 0) sign = gsl_matrix_get(Q, nfv-2, nfv-1) < 0? 1:-1;
-            else sign = gsl_matrix_get(Q, nfv-2, nfv-1) > 0? 1:-1;
+            if(orbit_SEM.getSi()[4] > 0) sign = nullvector_temp[nfv-2] < 0? 1:-1;
+            else sign = nullvector_temp[nfv-2] > 0? 1:-1;
             break;
         }
         case REF_COND_T:
@@ -3132,7 +3070,7 @@ int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
             // Another possible condition: enough turns around SEMLi. So, here,
             // we just want to increase the last time, at position nfv-1 = 5*mgs
             //----------------------------------------------------------------------------
-            sign = gsl_matrix_get(Q, nfv-1, nfv-1) > 0? 1:-1;
+            sign = nullvector_temp[nfv-1] > 0? 1:-1;
             break;
         }
         }
@@ -3148,8 +3086,8 @@ int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
             // center manifold (unstable component is small enough)
             // So, here, we want to make s_SEM[4] "decrease"
             //----------------------------------------------------------------------------
-            if(orbit_SEM.getSi()[4] > 0) sign = gsl_matrix_get(Q, nfv-2, nfv-1) < 0? 1:-1;
-            else sign = gsl_matrix_get(Q, nfv-2, nfv-1) > 0? 1:-1;
+            if(orbit_SEM.getSi()[4] > 0) sign = nullvector_temp[nfv-2] < 0? 1:-1;
+            else sign = nullvector_temp[nfv-2] > 0? 1:-1;
             break;
         }
         case REF_COND_T:
@@ -3158,14 +3096,14 @@ int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
             // Another possible condition: enough turns around SEMLi. So, here,
             // we just want to increase the last time, at position nfv-1 = 5*mgs
             //----------------------------------------------------------------------------
-            sign = gsl_matrix_get(Q, nfv-1, nfv-1) > 0? 1:-1;
+            sign = nullvector_temp[nfv-1] > 0? 1:-1;
             break;
         }
         }
     }
 
     //Null vector is the last column of Q
-    for(int i = 0; i < nfv; i++) nullvector[i] = sign*gsl_matrix_get(Q, i, nfv-1);
+    for(int i = 0; i < nfv; i++) nullvector[i] = sign*nullvector_temp[i];
 
     //------------------------------------------------------------------------------------
     //Number of iterations
@@ -3189,10 +3127,6 @@ int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nul
     gsl_matrix_free(Id);
     gsl_matrix_free(Phi0);
     gsl_matrix_free(PhiN);
-    gsl_vector_free(work);
-    gsl_matrix_free(Q);
-    gsl_matrix_free(R);
-    gsl_matrix_free(DFT);
 
 
     return FTC_SUCCESS;
@@ -3639,20 +3573,10 @@ int msvltplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
 
 
     //====================================================================================
-    // 3. Compute the null vector: QR decomposition of DP^T
+    //Compute the null vector: QR decomposition of DP^T
     //====================================================================================
-    //QR elements
-    gsl_vector *work  = gsl_vector_calloc(ncs);
-    gsl_matrix *Q     = gsl_matrix_calloc(nfv,nfv);
-    gsl_matrix *R     = gsl_matrix_calloc(nfv,ncs);
-    gsl_matrix *DFT   = gsl_matrix_calloc(nfv,ncs);
-
-
-    //DPT = transpose(DP)
-    gsl_matrix_transpose_memcpy(DFT, DF);
-    //QR decomposition
-    gsl_linalg_QR_decomp (DFT, work);
-    gsl_linalg_QR_unpack (DFT, work, Q, R);
+    double nullvector_temp[nfv];
+    nullvectorjac(nullvector_temp, DF, ncs, nfv);
 
     //------------------------------------------------------------------------------------
     //Null vector is the last column of Q
@@ -3670,8 +3594,8 @@ int msvltplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
             // center manifold (unstable component is small enough)
             // So, here, we want to make s_SEM[4] "decrease"
             //----------------------------------------------------------------------------
-            if(orbit_SEM.getSi()[4] > 0) sign = gsl_matrix_get(Q, nfv-2, nfv-1) < 0? 1:-1;
-            else sign = gsl_matrix_get(Q, nfv-2, nfv-1) > 0? 1:-1;
+            if(orbit_SEM.getSi()[4] > 0) sign = nullvector_temp[nfv-2] < 0? 1:-1;
+            else sign = nullvector_temp[nfv-2] > 0? 1:-1;
             break;
         }
         case REF_COND_T:
@@ -3680,7 +3604,7 @@ int msvltplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
             // Another possible condition: enough turns around SEMLi. So, here,
             // we just want to increase the last time, at position nfv-1 = 4*mgs+1
             //----------------------------------------------------------------------------
-            sign = gsl_matrix_get(Q, nfv-1, nfv-1) > 0? 1:-1;
+            sign = nullvector_temp[nfv-1] > 0? 1:-1;
             break;
         }
         }
@@ -3696,8 +3620,8 @@ int msvltplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
             // center manifold (unstable component is small enough)
             // So, here, we want to make s_SEM[4] "decrease"
             //----------------------------------------------------------------------------
-            if(orbit_SEM.getSi()[4] > 0) sign = gsl_matrix_get(Q, nfv-2, nfv-1) < 0? 1:-1;
-            else sign = gsl_matrix_get(Q, nfv-2, nfv-1) > 0? 1:-1;
+            if(orbit_SEM.getSi()[4] > 0) sign = nullvector_temp[nfv-2] < 0? 1:-1;
+            else sign = nullvector_temp[nfv-2] > 0? 1:-1;
             break;
         }
         case REF_COND_T:
@@ -3706,14 +3630,14 @@ int msvltplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
             // Another possible condition: enough turns around SEMLi. So, here,
             // we just want to increase the last time, at position nfv-1 = nfv-1 = 4*mgs+1
             //----------------------------------------------------------------------------
-            sign = gsl_matrix_get(Q, nfv-1, nfv-1) > 0? 1:-1;
+            sign = nullvector_temp[nfv-1] > 0? 1:-1;
             break;
         }
         }
     }
 
     //Null vector is the last column of Q
-    for(int i = 0; i < nfv; i++) nullvector[i] = sign*gsl_matrix_get(Q, i, nfv-1);
+    for(int i = 0; i < nfv; i++) nullvector[i] = sign*nullvector_temp[i];
 
     //------------------------------------------------------------------------------------
     //Number of iterations
@@ -3737,10 +3661,6 @@ int msvltplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nu
     gsl_matrix_free(Id);
     gsl_matrix_free(Phi0);
     gsl_matrix_free(PhiN);
-    gsl_vector_free(work);
-    gsl_matrix_free(Q);
-    gsl_matrix_free(R);
-    gsl_matrix_free(DFT);
 
 
     return FTC_SUCCESS;

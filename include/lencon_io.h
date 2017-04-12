@@ -33,7 +33,7 @@
 #define REF_CONT             30
 #define REF_CONT_D           31
 #define REF_CONT_D_HARD_CASE 32
-
+#define REF_CONT_ORBIT       33
 
 #define REF_COMP       4
 
@@ -157,7 +157,7 @@ struct RefSt
     int typeOfTimeSelection;
 
     //Check if the type is of continuation type
-    bool isCont(){return (type == REF_CONT || type == REF_CONT_D || type == REF_CONT_D_HARD_CASE );}
+    bool isCont(){return (type == REF_CONT || type == REF_CONT_D || type == REF_CONT_D_HARD_CASE || type == REF_CONT_ORBIT  );}
     // Check if the trajectory are 3D
     bool is3D(){return (dim == REF_3D || dim == REF_MIXED);}
 

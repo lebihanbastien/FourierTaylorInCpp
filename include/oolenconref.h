@@ -46,127 +46,130 @@ typedef int (*predictorptr)(double**, double*, double*, double, double*, Orbit&,
  *        - The times t0,..., tN are fixed.
  *        - The null vector associated to the solution is computed.
  **/
-int msft3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
+int msft3d(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nullvector,
            int number_of_variables, int man_grid_size, int coord_type,
-            int isFirst,
-           Orbit &orbit_EM, Orbit &orbit_SEM,
-           gnuplot_ctrl *h1, RefSt &refSt, int *niter);
+           int isFirst, Orbit& orbit_EM, Orbit& orbit_SEM,
+           gnuplot_ctrl* h1, RefSt& refSt, int* niter);
 
 int msftmixed(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nullvector,
-               int nov, int mgs, int coord_type,  int isFirst,
-               Orbit& orbit_EM, Orbit& orbit_SEM, gnuplot_ctrl* h1, RefSt& refSt, int *niter);
-
-
-int msvt3d(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
-           int number_of_variables, int man_grid_size, int coord_type,
-            int isFirst,
-           Orbit &orbit_EM, Orbit &orbit_SEM,
-           gnuplot_ctrl *h1, RefSt &refSt, int *niter);
-
-int msvtmixed(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
-               int nov, int mgs, int coord_type,
-                int isFirst,
-               Orbit &orbit_EM, Orbit &orbit_SEM,
-               gnuplot_ctrl *h1, RefSt &refSt, int *niter);
-
-
-int msftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
-             int number_of_variables, int man_grid_size,
-             int coord_type,  int isFirst,
-             Orbit &orbit_EM, Orbit &orbit_SEM,
-             gnuplot_ctrl *h1, RefSt &refSt, int *niter);
-
-int msvtplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
-             int number_of_variables, int man_grid_size,
-             int coord_type,  int isFirst,
-             Orbit &orbit_EM, Orbit &orbit_SEM,
-             gnuplot_ctrl *h1, RefSt &refSt, int *niter);
-
-int msvltplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
-             int number_of_variables, int man_grid_size,
-             int coord_type,  int isFirst,
-             Orbit &orbit_EM, Orbit &orbit_SEM,
-             gnuplot_ctrl *h1, RefSt &refSt, int *niter);
-
-int msvftplan(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
               int nov, int mgs, int coord_type,  int isFirst,
-              Orbit &orbit_EM, Orbit &orbit_SEM, gnuplot_ctrl *h1, RefSt &refSt, int *niter);
+              Orbit& orbit_EM, Orbit& orbit_SEM, gnuplot_ctrl* h1,
+              RefSt& refSt, int* niter);
 
 
-int msftplan_pa(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
-                int nov, int mgs, int coord_type,  int isFirst,
-                Orbit &orbit_EM, Orbit &orbit_SEM, gnuplot_ctrl *h1, RefSt &refSt, int *niter);
+int msvt3d(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nullvector,
+           int number_of_variables, int man_grid_size, int coord_type,
+           int isFirst,
+           Orbit& orbit_EM, Orbit& orbit_SEM,
+           gnuplot_ctrl* h1, RefSt& refSt, int* niter);
 
-int msvftplan_dH(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
-                 int nov, int mgs, int coord_type,  int isFirst,
-                 Orbit &orbit_EM, Orbit &orbit_SEM, gnuplot_ctrl *h1, RefSt &refSt, int *niter);
+int msvtmixed(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nullvector,
+              int nov, int mgs, int coord_type,
+              int isFirst,
+              Orbit& orbit_EM, Orbit& orbit_SEM,
+              gnuplot_ctrl* h1, RefSt& refSt, int* niter);
 
-int msvftplan_dte(double **ymd, double *tmd, double **ymdn, double *tmdn, double *nullvector,
-                 int nov, int mgs, int coord_type,  int isFirst,
-                 Orbit &orbit_EM, Orbit &orbit_SEM, gnuplot_ctrl *h1, RefSt &refSt, int *niter);
+int msftplan(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nullvector,
+             int number_of_variables, int man_grid_size,
+             int coord_type,  int isFirst,
+             Orbit& orbit_EM, Orbit& orbit_SEM,
+             gnuplot_ctrl* h1, RefSt& refSt, int* niter);
+
+int msvtplan(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nullvector,
+             int number_of_variables, int man_grid_size,
+             int coord_type,  int isFirst,
+             Orbit& orbit_EM, Orbit& orbit_SEM,
+             gnuplot_ctrl* h1, RefSt& refSt, int* niter);
+
+int msvltplan(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nullvector,
+              int number_of_variables, int man_grid_size,
+              int coord_type,  int isFirst,
+              Orbit& orbit_EM, Orbit& orbit_SEM,
+              gnuplot_ctrl* h1, RefSt& refSt, int* niter);
+
+int msvftplan(double** ymd, double* tmd, double** ymdn, double* tmdn, double* nullvector,
+              int nov, int mgs, int coord_type,  int isFirst,
+              Orbit& orbit_EM, Orbit& orbit_SEM, gnuplot_ctrl* h1,
+              RefSt& refSt, int* niter);
+
+
+int msftplan_pa(double** ymd, double* tmd, double** ymdn, double* tmdn,
+                double* nullvector, int nov, int mgs, int coord_type,  int isFirst,
+                Orbit& orbit_EM, Orbit& orbit_SEM, gnuplot_ctrl* h1, RefSt& refSt,
+                int* niter);
+
+int msvftplan_dH(double** ymd, double* tmd, double** ymdn, double* tmdn,
+                 double* nullvector,int nov, int mgs, int coord_type,  int isFirst,
+                 Orbit& orbit_EM, Orbit& orbit_SEM, gnuplot_ctrl* h1, RefSt& refSt,
+                 int* niter);
+
+int msvftplan_dte(double** ymd, double* tmd, double** ymdn, double* tmdn,
+                  double* nullvector, int nov, int mgs, int coord_type,  int isFirst,
+                  Orbit& orbit_EM, Orbit& orbit_SEM, gnuplot_ctrl* h1, RefSt& refSt,
+                  int* niter);
 
 ;//========================================================================================
 //
 //          DIFFCORR CUSTOM: CMU to CMS: JACOBIAN MATRICES
 //
 //========================================================================================
-int jacvftplan(int k, gsl_matrix* DF, int dim, int mgs, gsl_matrix **Ji, gsl_matrix *Phi0, gsl_matrix *PhiN, gsl_vector *K4, gsl_matrix *Id);
-int jacftplan(int k, gsl_matrix* DF, int mgs, gsl_matrix** Ji, gsl_matrix* Phi0, gsl_matrix* PhiN, gsl_matrix *Id);
-int jacftplan_dt0(int k, gsl_matrix* DF, int dim, int mgs, gsl_matrix **Ji, gsl_matrix *Phi0, gsl_matrix *PhiN, gsl_vector *K4, gsl_matrix *Id);
-int nullvectorjac(double *nullvector, gsl_matrix* DF, int ncs, int nfv);
-int t0jac(gsl_vector *Kout, double* tmdn, double **ymdn, Orbit &orbit_EM, Orbit &orbit_SEM,
-          OdeParams &odeParams, vfptr vf, gsl_matrix* Phi0, gsl_vector *Ktemp);
+int jacvftplan(int k, gsl_matrix* DF, int dim, int mgs, gsl_matrix** Ji, gsl_matrix* Phi0, gsl_matrix* PhiN, gsl_vector* K4, gsl_matrix* Id);
+int jacftplan(int k, gsl_matrix* DF, int mgs, gsl_matrix** Ji, gsl_matrix* Phi0, gsl_matrix* PhiN, gsl_matrix* Id);
+int jacftplan_dt0(int k, gsl_matrix* DF, int dim, int mgs, gsl_matrix** Ji, gsl_matrix* Phi0, gsl_matrix* PhiN, gsl_vector* K4, gsl_matrix* Id);
+int nullvectorjac(double* nullvector, gsl_matrix* DF, int ncs, int nfv);
+int t0jac(gsl_vector* Kout, double* tmdn, double** ymdn, Orbit& orbit_EM, Orbit& orbit_SEM,
+          OdeParams& odeParams, vfptr vf, gsl_matrix* Phi0, gsl_vector* Ktemp);
 //========================================================================================
 //
 //          DIFFCORR CUSTOM: CMU to CMS: UPDATE FREE VARIABLES with NEW IMPLEMENTATION
 //
 //========================================================================================
 
-int ufvarft3d(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
-              double *nullvector,
-              Orbit &orbit_EM, Orbit &orbit_SEM,
-              int mgs, int coord_type,  RefSt &refSt);
+int ufvarft3d(double** y_traj_n, double* t_traj_n, double* ds, double ds0,
+              double* nullvector,
+              Orbit& orbit_EM, Orbit& orbit_SEM,
+              int mgs, int coord_type,  RefSt& refSt);
 
-int ufvarvt3d(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
-                double *nullvector,
-                Orbit &orbit_EM, Orbit &orbit_SEM,
-                int mgs, int coord_type,  RefSt &refSt);
+int ufvarvt3d(double** y_traj_n, double* t_traj_n, double* ds, double ds0,
+              double* nullvector,
+              Orbit& orbit_EM, Orbit& orbit_SEM,
+              int mgs, int coord_type,  RefSt& refSt);
 
-int ufvarftmixed(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
-                double *nullvector,
-                Orbit &orbit_EM, Orbit &orbit_SEM,
-                int mgs, int coord_type,  RefSt &refSt);
+int ufvarftmixed(double** y_traj_n, double* t_traj_n, double* ds, double ds0,
+                 double* nullvector,
+                 Orbit& orbit_EM, Orbit& orbit_SEM,
+                 int mgs, int coord_type,  RefSt& refSt);
 
-int ufvarvtmixed(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
-                double *nullvector,
-                Orbit &orbit_EM, Orbit &orbit_SEM,
-                int mgs, int coord_type,  RefSt &refSt);
+int ufvarvtmixed(double** y_traj_n, double* t_traj_n, double* ds, double ds0,
+                 double* nullvector,
+                 Orbit& orbit_EM, Orbit& orbit_SEM,
+                 int mgs, int coord_type,  RefSt& refSt);
 
 
-int ufvarftplan(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
-                double *nullvector,
-                Orbit &orbit_EM, Orbit &orbit_SEM,
-                int mgs, int coord_type,  RefSt &refSt);
+int ufvarftplan(double** y_traj_n, double* t_traj_n, double* ds, double ds0,
+                double* nullvector,
+                Orbit& orbit_EM, Orbit& orbit_SEM,
+                int mgs, int coord_type,  RefSt& refSt);
 
-int ufvarvtplan(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
-                double *nullvector,
-                Orbit &orbit_EM, Orbit &orbit_SEM,
-                int man_grid_size, int coord_type,  RefSt &refSt);
+int ufvarvtplan(double** y_traj_n, double* t_traj_n, double* ds, double ds0,
+                double* nullvector,
+                Orbit& orbit_EM, Orbit& orbit_SEM,
+                int man_grid_size, int coord_type,  RefSt& refSt);
 
-int ufvarvltplan(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
-                double *nullvector,
-                Orbit &orbit_EM, Orbit &orbit_SEM,
-                int man_grid_size, int coord_type,  RefSt &refSt);
+int ufvarvltplan(double** y_traj_n, double* t_traj_n, double* ds, double ds0,
+                 double* nullvector,
+                 Orbit& orbit_EM, Orbit& orbit_SEM,
+                 int man_grid_size, int coord_type,  RefSt& refSt);
 
-int ufvarvftplan(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
-                double *nullvector,
-                Orbit &orbit_EM, Orbit &orbit_SEM,
-                int mgs, int coord_type,  RefSt &refSt);
+int ufvarvftplan(double** y_traj_n, double* t_traj_n, double* ds, double ds0,
+                 double* nullvector,
+                 Orbit& orbit_EM, Orbit& orbit_SEM,
+                 int mgs, int coord_type,  RefSt& refSt);
 
-int ufvarvftplan_dH(double **y_traj_n, double *t_traj_n, double *ds, double ds0,
-                double *nullvector,
-                Orbit &orbit_EM, Orbit &orbit_SEM,
-                int mgs, int coord_type,  RefSt &refSt);
+int ufvarvftplan_dH(double** y_traj_n, double* t_traj_n, double* ds, double ds0,
+                    double* nullvector,
+                    Orbit& orbit_EM, Orbit& orbit_SEM,
+                    int mgs, int coord_type,  RefSt& refSt);
 
 //========================================================================================
 //

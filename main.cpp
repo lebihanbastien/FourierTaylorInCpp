@@ -49,21 +49,12 @@ using namespace std;
 /************* NOTES *********************************************************************
  Notes from Reunion with Josep (15/12/2015)
 
- Step 3: Fix a given Pk section and fix the phase @ this section
-+ what about refinment in the JPL eph?
 + Book I for an example of continuation.
 
 + @TODO: see if we can fasten the JPL and QBCP vf codes! Started to be sloooow. Can we also fasten ode78?
 
 + @TODO: in reffromcontemlisemli, try to move around the et0. Is there a connection with the size of the final refined EML2 orbit?
 + @TODO: in reffromcontemlisemli, what happens if we search for et0 in more than 3 month span? we can probably find a month for which the size is roughly equivalent
-
-+ @TODO: do NOT use function that select pointers to function (does not work in C/C++)
-but pass the desired function as argument. Should replace ftc_select_vf that does
-NOT work!!! Ou alors dans le return?? Yes, by creating a typedef
-
-+ @TODO: look for the other kinds of switch... typically in subrefemlisemli (call to mft3d...)
-
 
 *****************************************************************************************/
 int main(int argc, char** argv)
@@ -691,9 +682,9 @@ int main(int argc, char** argv)
         break;
     }
 
-    //================================================================================
-    // Projection CMU EML2 to CM SEMLi
-    //================================================================================
+        //================================================================================
+        // Projection CMU EML2 to CM SEMLi
+        //================================================================================
     case COMP_CM_EML2_TO_CM_SEML:
     {
         //--------------------------------------------------------------------------------
@@ -713,18 +704,20 @@ int main(int argc, char** argv)
         break;
     }
 
-    //================================================================================
-    // Projection CMU EML2 to CM SEMLi, on a given orbit
-    //================================================================================
+        //================================================================================
+        // Projection CMU EML2 to CM SEMLi, on a given orbit
+        //================================================================================
     case COMP_ORBIT_EML2_TO_CM_SEML:
     {
+        tic();
         int_proj_ORBIT_EM_on_CM_SEM(projSt, 1);
+        cout << "End of in int_proj_ORBIT_EM_on_CM_SEM in " << toc() << endl;
         break;
     }
 
-    //================================================================================
-    // Projection CMU EML2 to CM SEMLi, at a fixed energy
-    //================================================================================
+        //================================================================================
+        // Projection CMU EML2 to CM SEMLi, at a fixed energy
+        //================================================================================
     case COMP_CM_EML2_TO_CM_SEML_H:
     {
         //--------------------------------------------------------------------------------
@@ -743,9 +736,9 @@ int main(int argc, char** argv)
 
         break;
     }
-    //================================================================================
-    // Refinement CMU EML2 to CMS SEMLi
-    //================================================================================
+        //================================================================================
+        // Refinement CMU EML2 to CMS SEMLi
+        //================================================================================
     case COMP_CM_EML2_TO_CMS_SEML:
     {
         //--------------------------------------------------------------------------------
@@ -754,6 +747,7 @@ int main(int argc, char** argv)
         switch(refSt.type)
         {
         case REF_ORBIT:
+        case REF_CONT_ORBIT:
             sorefemlisemli(refSt);
             break;
 
@@ -771,9 +765,9 @@ int main(int argc, char** argv)
         break;
     }
 
-    //================================================================================
-    // Refinement of the whole trajectory to JPL ephemerides
-    //================================================================================
+        //================================================================================
+        // Refinement of the whole trajectory to JPL ephemerides
+        //================================================================================
     case COMP_REF_JPL:
     {
         reffromcontemlisemli(refSt);
@@ -784,9 +778,9 @@ int main(int argc, char** argv)
         break;
     }
 
-    //================================================================================
-    // Test on ephemerides
-    //================================================================================
+        //================================================================================
+        // Test on ephemerides
+        //================================================================================
     case COMP_EPHEMERIDES_TEST:
     {
         //----------------------
@@ -826,9 +820,9 @@ int main(int argc, char** argv)
 
         break;
     }
-    //================================================================================
-    // READ CMU EML2 to CMS SEMLi
-    //================================================================================
+        //================================================================================
+        // READ CMU EML2 to CMS SEMLi
+        //================================================================================
     case COMP_CM_EML2_TO_CMS_SEML_READ:
     {
         //Filename;
@@ -854,16 +848,16 @@ int main(int argc, char** argv)
         break;
     }
 
-    //================================================================================
-    // Just some examples of solutions
-    //================================================================================
+        //================================================================================
+        // Just some examples of solutions
+        //================================================================================
     case COMP_SINGLE_ORBIT:
     {
         //Reduced number of variables in the default invariant manifolds
         reduced_nv = Invman::compRNV(SEML.cs_em);
-        //----------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         // Initial conditions
-        //----------------------------------------------------------------------------
+        //--------------------------------------------------------------------------------
         double st0[reduced_nv];
         switch(MODEL_TYPE)
         {
@@ -929,19 +923,19 @@ int main(int argc, char** argv)
 
         break;
     }
-    //================================================================================
-    // Test of the vector fields. Better in OOFTDA??
-    // @todo set this routine (qbtbp_test) in OOFTDA
-    //================================================================================
+        //================================================================================
+        // Test of the vector fields. Better in OOFTDA??
+        // @todo set this routine (qbtbp_test) in OOFTDA
+        //================================================================================
     case COMP_VF_TEST:
     {
         qbtbp_test(SEML.us->T, SEML);
         break;
     }
 
-    //================================================================================
-    // Test of the new invariant manifold representation
-    //================================================================================
+        //================================================================================
+        // Test of the new invariant manifold representation
+        //================================================================================
     case COMP_test_INVMAN:
     {
         test_evalCCMtoTFC();
@@ -951,10 +945,10 @@ int main(int argc, char** argv)
     }
     break;
 
-    //================================================================================
-    // Store CS/CU into one-dimensionnal series to gain memory.
-    // DEPRECATED: NOW DONE IN OOFTDA
-    //================================================================================
+        //================================================================================
+        // Store CS/CU into one-dimensionnal series to gain memory.
+        // DEPRECATED: NOW DONE IN OOFTDA
+        //================================================================================
     case COMP_VOFTS_TO_VOFTS:
     {
         cout << "-------------------------------------------------------" << endl;

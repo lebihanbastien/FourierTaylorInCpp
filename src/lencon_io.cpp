@@ -1666,13 +1666,13 @@ bool ProjResClass::push_back_conditional(ProjResClass& inSt, RefSt& refSt)
         //--------------------------------------------------------------------------------
         // Limit in the reduced coordinates (s1, s2, s3, s4) - SEEDS
         //--------------------------------------------------------------------------------
-        cst  =       (inSt.s1_CMU_EM[kpor] >= refSt.si_SEED_EM_MIN[0]) & (inSt.s1_CMU_EM[kpor] <= refSt.si_SEED_EM_MAX[0]);
-        cst  = cst & (inSt.s3_CMU_EM[kpor] >= refSt.si_SEED_EM_MIN[2]) & (inSt.s3_CMU_EM[kpor] <= refSt.si_SEED_EM_MAX[2]);
+        cst  =       (inSt.s1_CMU_EM_seed[kpor] >= refSt.si_SEED_EM_MIN[0]) & (inSt.s1_CMU_EM_seed[kpor] <= refSt.si_SEED_EM_MAX[0]);
+        cst  = cst & (inSt.s3_CMU_EM_seed[kpor] >= refSt.si_SEED_EM_MIN[2]) & (inSt.s3_CMU_EM_seed[kpor] <= refSt.si_SEED_EM_MAX[2]);
 
         if(refSt.is3D())
         {
-            cst  = cst & (inSt.s2_CMU_EM[kpor] >= refSt.si_SEED_EM_MIN[1]) & (inSt.s2_CMU_EM[kpor] <= refSt.si_SEED_EM_MAX[1]);
-            cst  = cst & (inSt.s4_CMU_EM[kpor] >= refSt.si_SEED_EM_MIN[3]) & (inSt.s4_CMU_EM[kpor] <= refSt.si_SEED_EM_MAX[3]);
+            cst  = cst & (inSt.s2_CMU_EM_seed[kpor] >= refSt.si_SEED_EM_MIN[1]) & (inSt.s2_CMU_EM_seed[kpor] <= refSt.si_SEED_EM_MAX[1]);
+            cst  = cst & (inSt.s4_CMU_EM_seed[kpor] >= refSt.si_SEED_EM_MIN[3]) & (inSt.s4_CMU_EM_seed[kpor] <= refSt.si_SEED_EM_MAX[3]);
         }
 
         //--------------------------------------------------------------------------------
@@ -1793,6 +1793,7 @@ int ProjResClass::readProjRes(string filename)
         cout << fname << ". " << filename << ": " << strerror(errno) << endl;
         return FTC_ENOENT;
     }
+    else cout << "Getting back data from " << filename << endl;
 
     //====================================================================================
     //Get the number of columns
@@ -1908,6 +1909,7 @@ int ProjResClass::readProjRes(string filename)
                 //38. Number of crossings of the x = -1 line (clock/counterclockwise)
                 this->crossings_NCSEM.push_back(res);
 
+                res = 0.0;
                 //39. Collision flag, from NCEM flow
                 this->collision_NCEM.push_back(res);
 

@@ -2665,11 +2665,19 @@ int sorefemlisemli(RefSt& refSt)
         //--------------------------------------------------------------------------------
         //First step: variable tn
         //--------------------------------------------------------------------------------
-        refSt.type    = REF_ORBIT;
         refSt.time    = REF_FIXED_TIME;
         refSt.isSaved = 0;
 
         status = subrefemlisemli(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, &man_grid_size, refSt, h2);
+
+        //--------------------------------------------------------------------------------
+        //Second step: variable tn & continuation
+        //--------------------------------------------------------------------------------
+        if(status && refSt.type == REF_CONT_ORBIT)
+        {
+            refSt.time  = REF_VAR_TN;
+            status      = subrefemlisemli(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, &man_grid_size, refSt, h2);
+        }
 
         if(status)
         {
@@ -2691,7 +2699,7 @@ int sorefemlisemli(RefSt& refSt)
             writeCONT_txt(filename, orbit_EM, orbit_SEM, te, ye, projRes, (k == 0),  k);
             // Entire trajectory
             writeCONT_bin(refSt, filename_traj, y_traj, t_traj, man_grid_size,
-            orbit_EM, orbit_SEM, (k == 0), 0, 0, projRes, k);
+                          orbit_EM, orbit_SEM, (k == 0), 0, 0, projRes, k);
         }
         else
         {
@@ -3232,7 +3240,6 @@ int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* 
                 break;
             case REF_FIXED_TIME:
                 ds = min(dsmax, max(dsmin, ds*niterd/niter));
-                pressEnter(true);
                 break;
             }
 
@@ -3936,7 +3943,7 @@ int soselectemlisemli(RefSt& refSt, ProjResClass& subSt)
     {
         cout << "soselectemlisemli. Warning: empty subselection." << endl;
         pressEnter(true);
-
+        return FTC_FAILURE;
     }
 
 
@@ -9880,6 +9887,7 @@ int writeCONT_bin(RefSt& refSt, string filename_traj, double** y_traj_n, double*
                 //  4. Current state in NCSEM coordinates
                 //  5. Current state in NCEM coordinates
                 //  6. Hamiltonian in NCSEM coordinates
+                //  7. t_EM_0 as a ratio
                 //------------------------------------------------------------------------
                 //1. Label of the solution
                 res = label;
@@ -9909,6 +9917,10 @@ int writeCONT_bin(RefSt& refSt, string filename_traj, double** y_traj_n, double*
 
                 //6. Hamiltonian in NCSEM coordinates
                 res = qbcp_Hn_SEM(t2, z, &SEML);
+                filestream.write((char*) &res, sizeof(double));
+
+                //7. t_EM_0 as a ratio
+                res = r0_CMU_EMT;
                 filestream.write((char*) &res, sizeof(double));
 
 
