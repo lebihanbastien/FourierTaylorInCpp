@@ -65,6 +65,7 @@ class Orbit
         void setT0(double t0);
         void setSi(double value, int i);
         void addSi(double value, int i);
+        void setEPmaxx(double ePmax);
 
         //--------------------------------------------------------------------------------
         //Update

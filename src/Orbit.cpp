@@ -248,6 +248,14 @@ void Orbit::addSi(double value, int i)
     six[i] += value;
 }
 
+/**
+ *  \brief Set ePmaxx.
+ **/
+void Orbit::setEPmaxx(double ePmax)
+{
+    ePmaxx = ePmax;
+}
+
 //========================================================================================
 // Integrate
 //========================================================================================
@@ -390,6 +398,9 @@ int Orbit::traj_int_grid(double tfc, double **yNCE, double *tNCE, int N, int isR
     //Plot
     double ti;
 
+    //tproj
+    double trpoji = tprojx;
+
     //------------------------------------------------------------------------------------
     //Evolving yv(t) up to tf
     //------------------------------------------------------------------------------------
@@ -470,10 +481,27 @@ int Orbit::traj_int_grid(double tfc, double **yNCE, double *tNCE, int N, int isR
     {
         cout << "Orbit::traj_int_grid. Error: the interval of projection is too small." << endl;
         cout << "The index corresponding to the last good state is returned if it is not zero." << endl;
+
+        //--------------------------------------------------------------------------------
+        // Reset the tprojx
+        //--------------------------------------------------------------------------------
+        tprojx = trpoji;
+
+        //--------------------------------------------------------------------------------
+        //Return
+        //--------------------------------------------------------------------------------
         if(nt-1 > 0) return nt-1;
         else return ORBIT_EPROJ;
     }
 
+    //------------------------------------------------------------------------------------
+    // Reset the tprojx
+    //------------------------------------------------------------------------------------
+    tprojx = trpoji;
+
+    //------------------------------------------------------------------------------------
+    //Return
+    //------------------------------------------------------------------------------------
     return FTC_SUCCESS;
 }
 
@@ -511,6 +539,9 @@ int Orbit::traj_int_grid(double **yNCE, double *tgridNCE, int N, int isResetOn)
 
     //Plot
     double ti;
+
+    //tproj
+    double trpoji = tprojx;
 
     //------------------------------------------------------------------------------------
     //Evolving yv(t) up to tf
@@ -589,10 +620,27 @@ int Orbit::traj_int_grid(double **yNCE, double *tgridNCE, int N, int isResetOn)
     {
         cout << "Orbit::traj_int_grid. Error: the interval of projection is too small." << endl;
         cout << "The index corresponding to the last good state is returned if it is not zero." << endl;
+
+        //--------------------------------------------------------------------------------
+        // Reset the tprojx
+        //--------------------------------------------------------------------------------
+        tprojx = trpoji;
+
+        //--------------------------------------------------------------------------------
+        //Return
+        //--------------------------------------------------------------------------------
         if(nt-1 > 0) return nt-1;
         else return ORBIT_EPROJ;
     }
 
+    //------------------------------------------------------------------------------------
+    // Reset the tprojx
+    //------------------------------------------------------------------------------------
+    tprojx = trpoji;
+
+    //------------------------------------------------------------------------------------
+    //Return
+    //------------------------------------------------------------------------------------
     return FTC_SUCCESS;
 }
 
@@ -628,6 +676,9 @@ int Orbit::traj_int_var_grid(double tfc, double **yNCE, double *tNCE, int N, int
     //Projection tools
     double projdist;
     int nreset, nt;
+
+    //tproj
+    double trpoji = tprojx;
 
     //------------------------------------------------------------------------------------
     //Evolving yv(t) up to tf
@@ -713,9 +764,23 @@ int Orbit::traj_int_var_grid(double tfc, double **yNCE, double *tNCE, int N, int
     {
         cout << "Orbit::traj_int_grid. Error: the interval of projection is too small." << endl;
         cout << "The index corresponding to the last good state is returned if it is not zero." << endl;
+
+        //--------------------------------------------------------------------------------
+        // Reset the tprojx
+        //--------------------------------------------------------------------------------
+        tprojx = trpoji;
+
+        //--------------------------------------------------------------------------------
+        //Return
+        //--------------------------------------------------------------------------------
         if(nt-1 > 0) return nt-1;
         else return ORBIT_EPROJ;
     }
+
+    //------------------------------------------------------------------------------------
+    // Reset the tprojx
+    //------------------------------------------------------------------------------------
+    tprojx = trpoji;
 
     //------------------------------------------------------------------------------------
     //If the whole integration went well, the last indix is returned.

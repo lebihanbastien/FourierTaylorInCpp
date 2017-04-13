@@ -3047,6 +3047,7 @@ int sorefemlisemli(RefSt& refSt)
     //------------------------------------------------------------------------------------
     // Loop on all first guesses
     //------------------------------------------------------------------------------------
+    int isfirst = 1;
     for(int k = 0; k < projRes.size(); k++)
     {
         //--------------------------------------------------------------------------------
@@ -3098,10 +3099,11 @@ int sorefemlisemli(RefSt& refSt)
             // Saving
             //----------------------------------------------------------------------------
             // Only the txt results
-            writeCONT_txt(filename, orbit_EM, orbit_SEM, te, ye, projRes, (k == 0),  k);
+            writeCONT_txt(filename, orbit_EM, orbit_SEM, te, ye, projRes, isfirst,  k);
             // Entire trajectory
             writeCONT_bin(refSt, filename_traj, y_traj, t_traj, man_grid_size,
-                          orbit_EM, orbit_SEM, (k == 0), 0, 0, projRes, k);
+                          orbit_EM, orbit_SEM, isfirst, 0, 0, projRes, k);
+            isfirst = 0;
         }
         else
         {
