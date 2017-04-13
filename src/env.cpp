@@ -1137,13 +1137,13 @@ void init_CSYS(CSYS* csys, QBCP_L* qbcp_l, QBCP* qbcp, int fwrk, int li, int coe
         case M_ERTBP:
         {
             compType = 1; //from FFTs
-            //-------------------------
+            //----------------------------------------------------------------------------
             // Default set of vector field coefficients
-            //-------------------------
+            //----------------------------------------------------------------------------
             coefRetrieving(csys->F_COEF+"alpha", csys->coeffs, nf, 0, compType, coefNumber);
-            //-------------------------
+            //----------------------------------------------------------------------------
             // primaries position
-            //-------------------------
+            //----------------------------------------------------------------------------
             coefRetrieving(csys->F_COEF+"Ps", csys->Ps, nf, 0, compType, 3);
             coefRetrieving(csys->F_COEF+"Pe", csys->Pe, nf, 0, compType, 3);
             coefRetrieving(csys->F_COEF+"Pm", csys->Pm, nf, 0, compType, 3);
@@ -1157,11 +1157,12 @@ void init_CSYS(CSYS* csys, QBCP_L* qbcp_l, QBCP* qbcp, int fwrk, int li, int coe
         case M_RTBP:
         {
             //cout << "init_CSYS. The use of the RTBP has been detected." << endl;
-            //----------------------------------------
+            //----------------------------------------------------------------------------
             // Default set of vector field coefficients
-            // A REVOIR: METTRE UN SWITCH GEANT POUR TOUS LES CAS
-            // OU: LES METTRE DANS DES FICHIERS TXT via une routine type bcp
-            //----------------------------------------
+            // Warning: it is not efficient to compute them each time. Maybe we can think
+            // of putting each coefficients in a txt files, as it has been done for the
+            // QBCP. But works ok anyway!
+            //----------------------------------------------------------------------------
             csys->coeffs[0] = 1.0;
             csys->coeffs[1] = 0.0;
             csys->coeffs[2] = 1.0;
@@ -1200,10 +1201,9 @@ void init_CSYS(CSYS* csys, QBCP_L* qbcp_l, QBCP* qbcp, int fwrk, int li, int coe
             csys->coeffs[13] = 0.0;           //alpha14 = alpha[13] = 0
 
 
-            //----------------------------------------
-            // Earth, Moon, and Sun €€TODO: a revoir!
-            // Mettre dans un fichier txt...
-            //----------------------------------------
+            //----------------------------------------------------------------------------
+            // Earth, Moon, and Sun
+            //----------------------------------------------------------------------------
             switch(fwrk)
             {
             case F_EM:
@@ -1250,9 +1250,9 @@ void init_CSYS(CSYS* csys, QBCP_L* qbcp_l, QBCP* qbcp, int fwrk, int li, int coe
     }
 
 
-    //--------------------------------------
+    //------------------------------------------------------------------------------------
     // Storing the solutions of the QBTBP
-    //--------------------------------------
+    //------------------------------------------------------------------------------------
     csys->zt = Ofsc(nf);
     csys->Zt = Ofsc(nf);
     csys->ztdot = Ofsc(nf);

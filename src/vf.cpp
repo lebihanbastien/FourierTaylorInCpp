@@ -1520,7 +1520,7 @@ int jpl_vf_syn(double t, const double y[], double f[], void* params_void)
 
     //////////////////////////////////////////////////////////////////////////////////////
     //
-    //€€TODO:
+    //@TODO:
     //read the double derivatives of the ei + hpp and kpp
     //set a latex document that sum up these calculus (see p44 of Dei Tos).
     //
@@ -1747,7 +1747,7 @@ int jpl_vf_syn_var(double t, const double y[], double f[], void* params_void)
 
     //////////////////////////////////////////////////////////////////////////////////////
     //
-    //€€TODO:
+    //@TODO:
     //read the double derivatives of the ei + hpp and kpp
     //set a latex document that sum up these calculus (see p44 of Dei Tos).
     //

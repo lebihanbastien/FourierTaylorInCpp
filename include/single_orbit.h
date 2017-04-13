@@ -36,7 +36,8 @@
 #define TYPE_COMP_FOR_JPL  12
 #define TYPE_CONT_JPL_TRAJ 13
 
-#define TYPE_MAN_PROJ_3D   61
+#define TYPE_MAN_PROJ_3D    61
+#define TYPE_MAN_PROJ_ORBIT 62
 
 #define GSIZE 50;
 #define ORBIT_SEM_UNSTABLE_MIN 1e-5

@@ -32,9 +32,10 @@ bool fileExists(const std::string& filename)
  **/
 string filenameCUM(int ofts_order, int type, int destination)
 {
-    string order_bin             = numTostring(ofts_order)+".bin";
-    string order_destination_bin = numTostring(ofts_order)+"_dest_L"+numTostring(destination)+".bin";
-    string order_destination_txt = numTostring(ofts_order)+"_dest_L"+numTostring(destination)+".txt";
+    string order_bin                   = numTostring(ofts_order)+".bin";
+    string order_destination_bin       = numTostring(ofts_order)+"_dest_L"+numTostring(destination)+".bin";
+    string order_destination_orbit_bin = numTostring(ofts_order)+"_dest_L"+numTostring(destination)+"_Orbit.bin";
+    string order_destination_txt       = numTostring(ofts_order)+"_dest_L"+numTostring(destination)+".txt";
     switch(type)
     {
     case TYPE_CU:
@@ -43,6 +44,8 @@ string filenameCUM(int ofts_order, int type, int destination)
         return SEML.cs_em.F_PLOT+"intcu_order_"+order_bin;
     case TYPE_MAN_PROJ:
         return SEML.cs_em.F_PLOT+"projcu_order_"+order_destination_bin;
+    case TYPE_MAN_PROJ_ORBIT:
+        return SEML.cs_em.F_PLOT+"projcu_order_"+order_destination_orbit_bin;
     case TYPE_CU_3D:
         return SEML.cs_em.F_PLOT+"cu_3d_order_"+order_destination_bin;
     case TYPE_MAN_PROJ_3D:
@@ -1469,7 +1472,1501 @@ int numberOfColumns(string filename, int ncol[], int nncol)
     return FTC_FAILURE;
 }
 
+//========================================================================================
+//
+//          I/O (continuation procedures)
+//
+//========================================================================================
+/**
+ *   \brief Storing the results of the continuation procedure, in txt file.
+ **/
+void writeCONT_txt(int label, string filename, Orbit& orbit_EM, Orbit& orbit_SEM,
+                   double te_NCSEM, double* ye_NCSEM,  int isFirst)
+{
+    //====================================================================================
+    // Initialize the I/O objects
+    //====================================================================================
+    fstream filestream;
 
+    if(isFirst)
+    {
+        //================================================================================
+        // If it is the first entry, the title of the columns are written
+        //================================================================================
+        filestream.open (filename.c_str(), ios::out);
+        //Title
+        filestream << "label t0_CMU_EM  s1_CMU_EM  s2_CMU_EM  s3_CMU_EM  s4_CMU_EM s5_CMU_EM ";
+        filestream << "tf_CMU_EM  s1_CMS_SEM s2_CMS_SEM s3_CMS_SEM s4_CMS_SEM s5_CMS_SEM ";
+        filestream << "x0_CMU_NCEM  y0_CMU_NCEM z0_CMU_NCEM px0_CMU_NCEM py0_CMU_NCEM pz0_CMU_NCEM ";
+        filestream << "x0_CMS_NCSEM y0_CMS_NCSEM z0_CMS_NCSEM px0_CMS_NCSEM py0_CMS_NCSEM pz0_CMS_NCSEM ";
+        filestream << "te_NCSEM xe_CMS_NCSEM ye_CMS_NCSEM ze_CMS_NCSEM pxe_CMS_NCSEM pye_CMS_NCSEM pze_CMS_NCSEM ";
+        filestream << "H0_NCEM H0_NCSEM H0_EM H0_SEM ";
+        filestream << "H0_emli_NCEM H0_emli_NCSEM H0_emli_EM H0_emli_SEM ";
+        filestream << "Hf_NCEM Hf_NCSEM Hf_EM Hf_SEM ";
+        filestream << "Hf_semli_NCEM Hf_semli_NCSEM Hf_semli_EM Hf_semli_SEM ";
+        filestream << endl;
+    }
+    else
+    {
+        //================================================================================
+        // Else, we append
+        //================================================================================
+        filestream.open (filename.c_str(), ios::out | ios::app);
+    }
+
+    //====================================================================================
+    //Data storage
+    //====================================================================================
+    filestream << setprecision(15) <<  setiosflags(ios::scientific) << std::showpos;
+
+    //------------------------------------------------------------------------------------
+    // Store from 1 to 8
+    //------------------------------------------------------------------------------------
+    //0. label
+    filestream << label << "  ";
+    //1. t0 in EM units
+    filestream << orbit_EM.getT0() << "  ";
+    //2. s0 in RCM coordinates
+    for(int i = 0; i <5; i++) filestream << orbit_EM.getSi()[i]  << "  ";
+    //3. tf in EM units
+    filestream << orbit_EM.getTf() << "  ";
+    //4. sf in RCM coordinates
+    for(int i = 0; i <5; i++) filestream << orbit_SEM.getSi()[i] << "  ";
+    //5. z0 in NCEM coordinates
+    for(int i = 0; i <6; i++) filestream << orbit_EM.getZ0()[i]  << "  ";
+    //6. zf in NCSEM coordinates
+    for(int i = 0; i <6; i++) filestream << orbit_SEM.getZ0()[i] << "  ";
+    //7. thetae_NCSEM
+    filestream << te_NCSEM* SEML.us_sem.n << "  ";
+    //8. ze in NCSEM coordinates
+    for(int i = 0; i <6; i++) filestream << ye_NCSEM[i] << "  ";
+
+
+    //------------------------------------------------------------------------------------
+    // Computing Energies at t = t0 & t = tf
+    //------------------------------------------------------------------------------------
+    double H0_NCEM, H0_NCSEM, H0_EM, H0_SEM;
+    double H0_emli_NCEM, H0_emli_NCSEM, H0_emli_EM, H0_emli_SEM;
+    double Hf_NCEM, Hf_NCSEM, Hf_EM, Hf_SEM;
+    double Hf_semli_NCEM, Hf_semli_NCSEM, Hf_semli_EM, Hf_semli_SEM;
+
+    double yv_NCEM[6], yv_NCSEM[6];
+    double yv_emli_NCEM[6], yv_semli_NCSEM[6];
+    double tv_EM, tv_SEM;
+
+    //Origins at both ends
+    for(int i = 0; i <6; i++)
+    {
+        yv_emli_NCEM[i]   = 0.0;
+        yv_semli_NCSEM[i] = 0.0;
+    }
+
+    //t0, z0 in NCEM coordinates
+    tv_EM = orbit_EM.getT0();
+    for(int i = 0; i <6; i++) yv_NCEM[i] = orbit_EM.getZ0()[i];
+
+    // H0 at IC
+    H0_NCEM  = qbcp_H_complete(tv_EM, yv_NCEM, NCEM, NCEM);
+    H0_NCSEM = qbcp_H_complete(tv_EM, yv_NCEM, NCEM, NCSEM);
+    H0_EM    = qbcp_H_complete(tv_EM, yv_NCEM, NCEM, PEM);
+    H0_SEM   = qbcp_H_complete(tv_EM, yv_NCEM, NCEM, PSEM);
+
+    // H0 at emli
+    H0_emli_NCEM  = qbcp_H_complete(tv_EM, yv_emli_NCEM, NCEM, NCEM);
+    H0_emli_NCSEM = qbcp_H_complete(tv_EM, yv_emli_NCEM, NCEM, NCSEM);
+    H0_emli_EM    = qbcp_H_complete(tv_EM, yv_emli_NCEM, NCEM, PEM);
+    H0_emli_SEM   = qbcp_H_complete(tv_EM, yv_emli_NCEM, NCEM, PSEM);
+
+    //tf, yf in NCSEM coordinates
+    tv_SEM = orbit_EM.getTf()*SEML.us_em.ns;
+    for(int i = 0; i <6; i++) yv_NCSEM[i] = orbit_SEM.getZ0()[i];
+
+    // Hf
+    Hf_NCEM  = qbcp_H_complete(tv_SEM, yv_NCSEM, NCSEM, NCEM);
+    Hf_NCSEM = qbcp_H_complete(tv_SEM, yv_NCSEM, NCSEM, NCSEM);
+    Hf_EM    = qbcp_H_complete(tv_SEM, yv_NCSEM, NCSEM, PEM);
+    Hf_SEM   = qbcp_H_complete(tv_SEM, yv_NCSEM, NCSEM, PSEM);
+
+    // Hf at semli
+    Hf_semli_NCEM  = qbcp_H_complete(tv_SEM, yv_semli_NCSEM, NCSEM, NCEM);
+    Hf_semli_NCSEM = qbcp_H_complete(tv_SEM, yv_semli_NCSEM, NCSEM, NCSEM);
+    Hf_semli_EM    = qbcp_H_complete(tv_SEM, yv_semli_NCSEM, NCSEM, PEM);
+    Hf_semli_SEM   = qbcp_H_complete(tv_SEM, yv_semli_NCSEM, NCSEM, PSEM);
+
+
+    //------------------------------------------------------------------------------------
+    // Storing Energies
+    //------------------------------------------------------------------------------------
+    filestream << H0_NCEM  << "  ";
+    filestream << H0_NCSEM << "  ";
+    filestream << H0_EM    << "  ";
+    filestream << H0_SEM   << "  ";
+
+    filestream << H0_emli_NCEM  << "  ";
+    filestream << H0_emli_NCSEM << "  ";
+    filestream << H0_emli_EM    << "  ";
+    filestream << H0_emli_SEM   << "  ";
+
+    filestream << Hf_NCEM  << "  ";
+    filestream << Hf_NCSEM << "  ";
+    filestream << Hf_EM    << "  ";
+    filestream << Hf_SEM   << "  ";
+
+    filestream << Hf_semli_NCEM  << "  ";
+    filestream << Hf_semli_NCSEM << "  ";
+    filestream << Hf_semli_EM    << "  ";
+    filestream << Hf_semli_SEM   << "  ";
+
+    filestream << endl;
+
+    filestream.close();
+}
+
+/**
+ *  \brief Get the length the results of the continuation procedure, in txt file.
+ **/
+int getLengthCONT_txt(double t0xT)
+{
+    //====================================================================================
+    // Initialize the I/O objects
+    //====================================================================================
+    string filename  = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF, SEML.li_SEM, t0xT);
+
+    //Check the existence of the file
+    if(!fileExists(filename))
+    {
+        cout << "getLengthCONT_txt. " << filename << ": " << strerror(errno) << endl;
+        return FTC_ENOENT;
+    }
+
+
+    fstream filestream;
+    filestream.open (filename.c_str(), ios::in);
+
+    //====================================================================================
+    // Check the opening
+    //====================================================================================
+    if (!filestream.is_open())
+    {
+        cerr << "getLengthCONT_txt. Cannot open file." << endl;
+        return FTC_FAILURE;
+    }
+
+    //====================================================================================
+    // First value is discarded: these are the column titles
+    //====================================================================================
+    string ct;
+    getline(filestream,  ct);
+
+    //====================================================================================
+    // Get the size of the file
+    //====================================================================================
+    int fsize = 0;
+    while (!filestream.eof())
+    {
+        getline(filestream,  ct);
+        fsize++;
+    }
+    filestream.close();
+
+    return fsize-1;
+}
+
+/**
+ *  \brief Reads the results of the continuation procedure, in txt file.
+ **/
+int readCONT_txt(double*  t0_CMU_EM, double*   tf_CMU_EM,
+                 double** si_CMU_EM, double** si_CMS_SEM,
+                 double** z0_CMU_NCEM, double** z0_CMS_NCSEM,
+                 double* tethae, double** ye_NCSEM,
+                 double* H0_NCEM, double* He_NCEM,
+                 double* H0_NCSEM, double* He_NCSEM,
+                 double tr0, int fsize)
+{
+    //====================================================================================
+    // Get the size of the file
+    //====================================================================================
+    int fsize0 = getLengthCONT_txt(tr0);
+    if(fsize0 != fsize)
+    {
+        cerr << "readCONT_txt. The user-defined file size mismatch the true size." << endl;
+        return FTC_FAILURE;
+    }
+
+    //====================================================================================
+    // Initialize the I/O objects
+    //====================================================================================
+    string filename  = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF, SEML.li_SEM, tr0);
+    fstream filestream;
+    filestream.open (filename.c_str(), ios::in);
+
+    //====================================================================================
+    // Check the opening
+    //====================================================================================
+    if (!filestream.is_open())
+    {
+        cerr << "readCONT_txt. Cannot open file." << endl;
+        return FTC_FAILURE;
+    }
+
+    //====================================================================================
+    // First value is discarded: these are the column titles
+    //====================================================================================
+    string ct;
+    getline(filestream,  ct);
+
+    //====================================================================================
+    // Read the data on each line and close
+    //====================================================================================
+    for(int k = 0; k < fsize; k++)
+    {
+        //1. t0 in EM units
+        filestream >> t0_CMU_EM[k];
+        //2. s0 in RCM coordinates
+        for(int i = 0; i <5; i++) filestream >> si_CMU_EM[i][k];
+        //3. tf in EM units
+        filestream >> tf_CMU_EM[k];
+        //4. sf in RCM coordinates
+        for(int i = 0; i <5; i++) filestream >> si_CMS_SEM[i][k];
+        //5. z0 in NCEM coordinates
+        for(int i = 0; i <6; i++) filestream >> z0_CMU_NCEM[i][k];
+        //6. zf in NCEM coordinates
+        for(int i = 0; i <6; i++) filestream >> z0_CMS_NCSEM[i][k];
+        //7. tethae
+        filestream >> tethae[k];
+        //8. ze in NCSEM coordinates
+        for(int i = 0; i <6; i++) filestream >> ye_NCSEM[i][k];
+        // 9.  Initial energy in NCEM coordinates
+        filestream >> H0_NCEM[k];
+        // 10. Final energy in NCEM coordinates
+        filestream >> He_NCEM[k];
+        // 11. Initial energy in NCSEM coordinates
+        filestream >> H0_NCSEM[k];
+        // 12. Final energy in NCSEM coordinates
+        filestream >> He_NCSEM[k];
+    }
+
+    filestream.close();
+
+    return FTC_SUCCESS;
+}
+
+/**
+ *  \brief Save a given solution as a complete trajectory
+ **/
+int writeCONT_bin(RefSt& refSt, string filename_traj, int dcs, int coord_type,
+                  double** y_traj_n, double* t_traj_n, int man_index, int mPlot,
+                  Orbit& orbit_EM, Orbit& orbit_SEM, int label,
+                  bool isFirst, int comp_orb_eml, int comp_orb_seml)
+{
+    string fname = "writeCONT_bin";
+
+    //====================================================================================
+    // Initialization of temporary variables
+    //====================================================================================
+    fstream filestream;
+    double yv[42], res = 0.0;
+    int ode78coll  = 0, status;
+
+    double** ymc_NCSEM  = dmatrix(0, 5, 0, mPlot);
+    double* tmc_SEM     = dvector(0, mPlot);
+    double** ymc_NCEM   = dmatrix(0, 5, 0, mPlot);
+    double* tmc_EM      = dvector(0, mPlot);
+
+    //====================================================================================
+    // Transfer leg
+    //====================================================================================
+    //------------------------------------------------------------------------------------
+    // Open the stream. If it is not the first element of the continuation procedure,
+    // we append results to the preexisting file
+    //------------------------------------------------------------------------------------
+    if(isFirst) filestream.open (filename_traj.c_str(), ios::out | ios::binary);
+    else filestream.open (filename_traj.c_str(), ios::out | ios::binary | ios::app);
+
+    //------------------------------------------------------------------------------------
+    //Final trajectory on lines, segment by segment + saving
+    //------------------------------------------------------------------------------------
+    for(int k = 0; k < man_index; k++)
+    {
+        //Integration segment by segment
+        for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
+        status = ode78(ymc_NCSEM, tmc_SEM, &ode78coll, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
+
+        //Checks and warnings, if necessary
+        if(status != FTC_SUCCESS)
+        {
+            //At this step (final plot), a simple warning is issued
+            cout << fname << ". Warning: ode78 returned a flag." << endl;
+            cout << "A collision may have occured during the transfer." << endl;
+        }
+
+        if(ode78coll)
+        {
+            //At this step (plot), a simple warning is issued
+            cout << "plottrajsegbyseg. Warning: a collision with a primary has occurred." << endl;
+        }
+
+        //--------------------------------------------------------------------------------
+        //To NCEM coordinates
+        //--------------------------------------------------------------------------------
+        qbcp_coc_vec(ymc_NCSEM, tmc_SEM, ymc_NCEM, tmc_EM, mPlot, NCSEM, NCEM);
+
+        //--------------------------------------------------------------------------------
+        // Save to data file
+        // We save the following outputs:
+        //  1. Label of the solution (number)
+        //  2. Type of leg: either emli orbit (1), transfer leg (2) or semli orbit (3)
+        //  3. Current time in NCSEM coordinates
+        //  4. Current state in NCSEM coordinates
+        //  5. Current state in NCEM coordinates
+        //  6. Hamiltonian in NCSEM coordinates
+        //--------------------------------------------------------------------------------
+        for(int p = 0; p <= mPlot; p++)
+        {
+            //1. Label of the solution
+            res = label;
+            filestream.write((char*) &res, sizeof(double));
+
+            //2. Type of leg: either emli orbit (1), transfer leg (2) or semli orbit (3)
+            res = 2;
+            filestream.write((char*) &res, sizeof(double));
+
+            //3. Current time in NCSEM coordinates
+            res = tmc_SEM[p];
+            filestream.write((char*) &res, sizeof(double));
+
+            //4. Current state in NCSEM coordinates
+            for(int i = 0; i < 6; i++)
+            {
+                res  = ymc_NCSEM[i][p];
+                yv[i] = ymc_NCSEM[i][p];
+                filestream.write((char*) &res, sizeof(double));
+            }
+
+            //5. Current state in NCEM coordinates
+            for(int i = 0; i < 6; i++)
+            {
+                res = ymc_NCEM[i][p];
+                filestream.write((char*) &res, sizeof(double));
+            }
+
+            //6. Hamiltonian in NCSEM coordinates
+            res = qbcp_Hn_SEM(tmc_SEM[p], yv, &SEML);
+            filestream.write((char*) &res, sizeof(double));
+        }
+    }
+    filestream.close();
+
+
+    //====================================================================================
+    // Compute the initial orbit if necessary
+    //====================================================================================
+    if(comp_orb_eml)
+    {
+        //--------------------------------------------------------------------------------
+        // Initialize
+        //--------------------------------------------------------------------------------
+        //We plot every 0.5 day
+        int oPlot = 1.0/0.5*refSt.tspan_EM*SEML.cs_em.cr3bp.T/(86400*2*M_PI);
+        int nPlot = oPlot;
+        double** yorb_NCEM  = dmatrix(0, 5, 0, oPlot);
+        double*  torb_EM    = dvector(0, oPlot);
+        double** yorb_NCSEM = dmatrix(0, 5, 0, oPlot);
+        double*  torb_SEM   = dvector(0, oPlot);
+
+
+        //Reset the unstable direction
+        orbit_EM.setSi(0, 4);
+
+        //Set the final time
+        orbit_EM.setTf(orbit_EM.getT0()-refSt.tspan_EM);
+
+        //Update the initial state in the orbit, with the RCM coordinates
+        orbit_EM.update_ic(orbit_EM.getSi(), orbit_EM.getT0());
+
+        //--------------------------------------------------------------------------------
+        //Integration on oPlot+1 fixed grid
+        //--------------------------------------------------------------------------------
+        int output = orbit_EM.traj_int_grid(orbit_EM.getTf(), yorb_NCEM, torb_EM, oPlot, 1);
+
+        //If output is strictly greater than 0, then the projection procedure inside
+        //the integration went wrong, and the new indix is output.
+        //It output == ORBIT_EPROJ, the projection procedure failed so bad that there
+        //is no point stored in the data, except the first one, and the new indix is zero
+        if(output == ORBIT_EPROJ) nPlot = 0;
+        else if(output > 0) nPlot = output;
+
+
+        //--------------------------------------------------------------------------------
+        //To NCSEM coordinates
+        //--------------------------------------------------------------------------------
+        qbcp_coc_vec(yorb_NCEM, torb_EM, yorb_NCSEM, torb_SEM, nPlot, NCEM, NCSEM);
+
+        //--------------------------------------------------------------------------------
+        // Save to data file
+        // We save the following outputs:
+        //  1. Label of the solution (number)
+        //  2. Type of leg: either emli orbit (1), transfer leg (2) or semli orbit (3)
+        //  3. Current time in NCSEM coordinates
+        //  4. Current state in NCSEM coordinates
+        //  5. Current state in NCEM coordinates
+        //  6. Hamiltonian in NCSEM coordinates
+        //--------------------------------------------------------------------------------
+        if(nPlot > 0)
+        {
+            //Reopen stream
+            filestream.open (filename_traj.c_str(), ios::out | ios::binary | ios::app);
+
+            //Storing all points between 0 and nPlot
+            for(int p = 0; p <= nPlot; p++)
+            {
+                //1. Label of the solution
+                res = label;
+                filestream.write((char*) &res, sizeof(double));
+
+                //2. Type of leg: either emli orbit (1), transfer leg (2) or semli orbit (3)
+                res = 1;
+                filestream.write((char*) &res, sizeof(double));
+
+                //3. Current time in NCSEM coordinates
+                res = torb_SEM[p];
+                filestream.write((char*) &res, sizeof(double));
+
+                //4. Current state in NCSEM coordinates
+                for(int i = 0; i < 6; i++)
+                {
+                    res = yorb_NCSEM[i][p];
+                    yv[i] = yorb_NCSEM[i][p];
+                    filestream.write((char*) &res, sizeof(double));
+                }
+
+                //5. Current state in NCEM coordinates
+                for(int i = 0; i < 6; i++)
+                {
+                    res = yorb_NCEM[i][p];
+                    filestream.write((char*) &res, sizeof(double));
+                }
+
+                //6. Hamiltonian in NCSEM coordinates
+                res = qbcp_Hn_SEM(torb_SEM[p], yv, &SEML);
+                filestream.write((char*) &res, sizeof(double));
+            }
+            filestream.close();
+        }
+        else
+        {
+            cout << fname << ". Warning: computation of the orbit at EMLi went wrong." << endl;
+            cout << "The orbit is not stored." << endl;
+        }
+
+        //================================================================================
+        // At EML2. The first 4 RCM components are good, as well as the initial time.
+        // Hence, we need to update:
+        // 1. The last RCM component (unstable part),
+        // 2. The final time.
+        //================================================================================
+        orbit_EM.setSi(PROJ_EPSILON, 4);
+        orbit_EM.setTf(t_traj_n[man_index]/SEML.us_em.ns);
+
+        //--------------------------------------------------------------------------------
+        // Update the initial state in the orbit, with the RCM coordinates
+        //--------------------------------------------------------------------------------
+        orbit_EM.update_ic(orbit_EM.getSi(), orbit_EM.getT0());
+
+
+        //--------------------------------------------------------------------------------
+        //Free variables
+        //--------------------------------------------------------------------------------
+        free_dmatrix(yorb_NCEM, 0, 5, 0, oPlot);
+        free_dvector(torb_EM, 0, oPlot);
+        free_dmatrix(yorb_NCSEM, 0, 5, 0, oPlot);
+        free_dvector(torb_SEM, 0, oPlot);
+    }
+
+
+    //====================================================================================
+    // Compute the final orbit if necessary
+    //====================================================================================
+    if(comp_orb_seml)
+    {
+        switch(comp_orb_seml)
+        {
+        case 1: //computation using projection method
+        {
+            //----------------------------------------------------------------------------
+            // Initialize
+            //----------------------------------------------------------------------------
+            //We plot every 0.5 days
+            int oPlot = 1.0/0.5*refSt.tspan_SEM*SEML.cs_sem.cr3bp.T/(86400*2*M_PI);
+            int nPlot = oPlot;
+            double** yorb_NCEM  = dmatrix(0, 5, 0, oPlot);
+            double*  torb_EM    = dvector(0, oPlot);
+            double** yorb_NCSEM = dmatrix(0, 5, 0, oPlot);
+            double*  torb_SEM   = dvector(0, oPlot);
+
+            //Save unstable value
+            double s5 = orbit_SEM.getSi(4);
+
+            //Reset the unstable direction
+            orbit_SEM.setSi(0, 4);
+
+            //Set the final time
+            orbit_SEM.setTf(orbit_SEM.getT0()+refSt.tspan_SEM);
+
+            //Update the initial state in the orbit, with the RCM coordinates
+            orbit_SEM.update_ic(orbit_SEM.getSi(), orbit_SEM.getT0());
+
+            //----------------------------------------------------------------------------
+            //Integration on oPlot+1 fixed grid
+            //----------------------------------------------------------------------------
+            int output = orbit_SEM.traj_int_grid(orbit_SEM.getTf(), yorb_NCSEM, torb_SEM, oPlot, 1);
+
+            //If output is strictly greater than 0, then the projection procedure inside
+            //the integration went wrong, and the new indix is output.
+            //It output == ORBIT_EPROJ, the projection procedure failed so bad that there
+            //is no point stored in the data, except the first one, and the new indix is zero
+            if(output == ORBIT_EPROJ) nPlot = 0;
+            else if(output > 0) nPlot = output;
+
+            //----------------------------------------------------------------------------
+            //To NCEM coordinates
+            //----------------------------------------------------------------------------
+            qbcp_coc_vec(yorb_NCSEM, torb_SEM, yorb_NCEM, torb_EM, nPlot, NCSEM, NCEM);
+
+            //----------------------------------------------------------------------------
+            // Save to data file
+            // We save the following outputs:
+            //  1. Label of the solution (number)
+            //  2. Type of leg: either emli orbit (1), transfer leg (2) or semli orbit (3)
+            //  3. Current time in NCSEM coordinates
+            //  4. Current state in NCSEM coordinates
+            //  5. Current state in NCEM coordinates
+            //  6. Hamiltonian in NCSEM coordinates
+            //----------------------------------------------------------------------------
+            if(nPlot > 0)
+            {
+                //Reopen stream
+                filestream.open (filename_traj.c_str(), ios::out | ios::binary | ios::app);
+
+                //Storing all points between 0 and nPlot
+                for(int p = 0; p <= nPlot; p++)
+                {
+                    //1. Label of the solution
+                    res = label;
+                    filestream.write((char*) &res, sizeof(double));
+
+                    //2. Type of leg: either emli orbit (1), transfer leg (2) or semli orbit (3)
+                    res = 3;
+                    filestream.write((char*) &res, sizeof(double));
+
+                    //3. Current time in NCSEM coordinates
+                    res = torb_SEM[p];
+                    filestream.write((char*) &res, sizeof(double));
+
+                    //4. Current state in NCSEM coordinates
+                    for(int i = 0; i < 6; i++)
+                    {
+                        res   = yorb_NCSEM[i][p];
+                        yv[i] = yorb_NCSEM[i][p];
+                        filestream.write((char*) &res, sizeof(double));
+                    }
+
+                    //4. Current state in NCEM coordinates
+                    for(int i = 0; i < 6; i++)
+                    {
+                        res = yorb_NCEM[i][p];
+                        filestream.write((char*) &res, sizeof(double));
+                    }
+
+                    //6. Hamiltonian in NCSEM coordinates
+                    res = qbcp_Hn_SEM(torb_SEM[p], yv, &SEML);
+                    filestream.write((char*) &res, sizeof(double));
+                }
+                filestream.close();
+            }
+            else
+            {
+                cout << fname << ". Warning: computation of the orbit at EMLi went wrong." << endl;
+                cout << "The orbit is not stored." << endl;
+            }
+
+            //============================================================================
+            // At SEMLi, we need to update:
+            // 1. The unstable direction, that has been previously erased.
+            // 2. The initial time.
+            //============================================================================
+            orbit_SEM.setSi(s5, 4);
+            orbit_SEM.setT0(t_traj_n[man_index]);
+
+            //----------------------------------------------------------------------------
+            // Update the initial state in the orbit, with the RCM coordinates
+            //----------------------------------------------------------------------------
+            orbit_SEM.update_ic(orbit_SEM.getSi(), orbit_SEM.getT0());
+
+            //----------------------------------------------------------------------------
+            //Free variables
+            //----------------------------------------------------------------------------
+            free_dmatrix(yorb_NCEM, 0, 5, 0, oPlot);
+            free_dvector(torb_EM, 0, oPlot);
+            free_dmatrix(yorb_NCSEM, 0, 5, 0, oPlot);
+            free_dvector(torb_SEM, 0, oPlot);
+
+            break;
+        }
+        case 2: //computation using reduced coordinates
+        {
+            //----------------------------------------------------------------------------
+            //Read the reduced vector field
+            //----------------------------------------------------------------------------
+            vector<Oftsc> Fh;
+            Fh.reserve(5);
+            for(int i = 0; i < 5; i++) Fh.push_back(Oftsc(5, OFTS_ORDER, OFS_NV, OFS_ORDER));
+            readVOFTS_bin(Fh, SEML_SEM.cs->F_PMS+"rvf/fh");
+
+            //----------------------------------------------------------------------------
+            //For dot(s) = fh(s)
+            //----------------------------------------------------------------------------
+            RVF rvf;
+            rvf.ofs_order  = SEML.eff_nf_SEM;
+            Ofsc AUX(rvf.ofs_order);
+            rvf.fh         = &Fh;
+            rvf.ofs        = &AUX;
+            rvf.order      = OFTS_ORDER;
+            rvf.n          = orbit_SEM.getN();
+            rvf.reduced_nv = 5;
+
+            gsl_odeiv2_system sys_fh;
+            sys_fh.function  = qbfbp_fh;
+            sys_fh.jacobian  = NULL;
+            sys_fh.dimension = 2*rvf.reduced_nv;
+            sys_fh.params    = &rvf;
+            const gsl_odeiv2_step_type* T_fh = gsl_odeiv2_step_rk8pd;
+
+            gsl_odeiv2_driver* d_fh = gsl_odeiv2_driver_alloc_y_new (&sys_fh, T_fh,
+                                      Config::configManager().G_PREC_HSTART(),
+                                      Config::configManager().G_PREC_ABS(),
+                                      Config::configManager().G_PREC_REL());
+
+
+            //----------------------------------------------------------------------------
+            // Temp variables
+            //----------------------------------------------------------------------------
+            double t0_SEM = orbit_SEM.getT0();
+            double t1_SEM = t0_SEM+refSt.tspan_SEM;
+            double z[6], z_EM[6];
+            double t2 = t0_SEM;
+            int k  = 0;
+            double  s1ccm8[2*rvf.reduced_nv]; //CCM8
+
+            //----------------------------------------------------------------------------
+            // Initial state in CCM8 form
+            //----------------------------------------------------------------------------
+            RCMtoCCM8(orbit_SEM.getSi(), s1ccm8, 5);
+
+            //----------------------------------------------------------------------------
+            // Reopen  stream
+            //----------------------------------------------------------------------------
+            filestream.open (filename_traj.c_str(), ios::out | ios::binary | ios::app);
+
+            //----------------------------------------------------------------------------
+            // Loop
+            //----------------------------------------------------------------------------
+            while(t2 < t1_SEM && k <= mPlot)
+            {
+                cout << "t1_SEM -  t2 = " << t1_SEM -  t2 << endl;
+                cout << "z[0]         = " << z[0]         << endl;
+                cout << "mPlot - k    = " << mPlot - k    << endl;
+
+                //------------------------------------------------------------------------
+                //------------------------------------------------------------------------
+                //To NCSEM coordinates
+                //------------------------------------------------------------------------
+                //------------------------------------------------------------------------
+                orbit_SEM.evalRCMtoNC(t2, z);
+
+                //------------------------------------------------------------------------
+                //To NCEM coordinates
+                //------------------------------------------------------------------------
+                //------------------------------------------------------------------------
+                qbcp_coc(t2, z, z_EM, NCSEM, NCEM);
+
+
+                //------------------------------------------------------------------------
+                // Save to data file
+                // We save the following outputs:
+                //  1. Label of the solution (number)
+                //  2. Type of leg: either emli orbit (1), transfer leg (2) or semli orbit (3)
+                //  3. Current time in NCSEM coordinates
+                //  4. Current state in NCSEM coordinates
+                //  5. Current state in NCEM coordinates
+                //  6. Hamiltonian in NCSEM coordinates
+                //------------------------------------------------------------------------
+                //1. Label of the solution
+                res = label;
+                filestream.write((char*) &res, sizeof(double));
+
+                //2. Type of leg: either emli orbit (1), transfer leg (2) or semli orbit (3)
+                res = 3;
+                filestream.write((char*) &res, sizeof(double));
+
+                //3. Current time in NCSEM coordinates
+                res = t2;
+                filestream.write((char*) &res, sizeof(double));
+
+                //4. Current state in NCSEM coordinates
+                for(int i = 0; i < 6; i++)
+                {
+                    res   = z[i];
+                    filestream.write((char*) &res, sizeof(double));
+                }
+
+                //4. Current state in NCEM coordinates
+                for(int i = 0; i < 6; i++)
+                {
+                    res = z_EM[i];
+                    filestream.write((char*) &res, sizeof(double));
+                }
+
+                //6. Hamiltonian in NCSEM coordinates
+                res = qbcp_Hn_SEM(t2, z, &SEML);
+                filestream.write((char*) &res, sizeof(double));
+
+
+                //------------------------------------------------------------------------
+                //Advance one step
+                //------------------------------------------------------------------------
+                gsl_odeiv2_evolve_apply (d_fh->e, d_fh->c, d_fh->s, d_fh->sys, &t2, t1_SEM, &d_fh->h, s1ccm8);
+                orbit_SEM.ccm8torcm(s1ccm8);
+                k++;
+            }
+            filestream.close();
+
+            break;
+        }
+        }
+
+    }
+
+
+    //====================================================================================
+    // Free
+    //====================================================================================
+    free_dmatrix(ymc_NCSEM, 0, 5, 0, mPlot);
+    free_dvector(tmc_SEM, 0, mPlot);
+    free_dmatrix(ymc_NCEM, 0, 5, 0, mPlot);
+    free_dvector(tmc_EM, 0, mPlot);
+
+
+
+    return FTC_SUCCESS;
+}
+
+
+//========================================================================================
+//
+//          I/O (continuation procedures on one orbit)
+//
+//========================================================================================
+/**
+ *   \brief Storing the results of the continuation procedure, in txt file.
+ **/
+void writeCONT_txt(string filename, Orbit& orbit_EM, Orbit& orbit_SEM,
+                   double te_NCSEM, double* ye_NCSEM, ProjResClass& projRes, int isFirst,  int k)
+{
+    //====================================================================================
+    // Initialize the I/O objects
+    //====================================================================================
+    fstream filestream;
+
+    if(isFirst)
+    {
+        //================================================================================
+        // If it is the first entry, the title of the columns are written
+        //================================================================================
+        filestream.open (filename.c_str(), ios::out);
+        //Title
+        filestream << "label t0_CMU_EM  s1_CMU_EM  s2_CMU_EM  s3_CMU_EM  s4_CMU_EM s5_CMU_EM ";
+        filestream << "t0_CMU_EM_seed  s1_CMU_EM_seed  s2_CMU_EM_seed  s3_CMU_EM_seed  s4_CMU_EM_seed ";
+        filestream << "tf_CMU_EM  s1_CMS_SEM s2_CMS_SEM s3_CMS_SEM s4_CMS_SEM s5_CMS_SEM ";
+        filestream << "x0_CMU_NCEM  y0_CMU_NCEM z0_CMU_NCEM px0_CMU_NCEM py0_CMU_NCEM pz0_CMU_NCEM ";
+        filestream << "x0_CMS_NCSEM y0_CMS_NCSEM z0_CMS_NCSEM px0_CMS_NCSEM py0_CMS_NCSEM pz0_CMS_NCSEM ";
+        filestream << "te_NCSEM xe_CMS_NCSEM ye_CMS_NCSEM ze_CMS_NCSEM pxe_CMS_NCSEM pye_CMS_NCSEM pze_CMS_NCSEM ";
+        filestream << "H0_NCEM H0_NCSEM H0_EM H0_SEM ";
+        filestream << "H0_emli_NCEM H0_emli_NCSEM H0_emli_EM H0_emli_SEM ";
+        filestream << "Hf_NCEM Hf_NCSEM Hf_EM Hf_SEM ";
+        filestream << "Hf_semli_NCEM Hf_semli_NCSEM Hf_semli_EM Hf_semli_SEM ";
+        filestream << endl;
+    }
+    else
+    {
+        //================================================================================
+        // Else, we append
+        //================================================================================
+        filestream.open (filename.c_str(), ios::out | ios::app);
+    }
+
+    //====================================================================================
+    //Update the seed via projRes
+    //====================================================================================
+    double st_EM[5], st_SEM[5], t_EM[2], t0_SEM = 0.0, pmin_dist_SEM_out = 0.0;
+    double st_EM_seed[4], t_EM_seed = 0.0; int label = 0;
+    projRes.update_ic(st_EM, st_SEM, t_EM, st_EM_seed, &t_EM_seed, &t0_SEM, &pmin_dist_SEM_out, &label, k);
+
+    //====================================================================================
+    //Data storage
+    //====================================================================================
+    filestream << setprecision(15) <<  setiosflags(ios::scientific) << std::showpos;
+
+    //------------------------------------------------------------------------------------
+    // Store from 1 to 8
+    //------------------------------------------------------------------------------------
+    //0. label
+    filestream << label << "  ";
+    //1. t0 in EM units
+    filestream << orbit_EM.getT0() << "  ";
+    //2. s0 in RCM coordinates
+    for(int i = 0; i <5; i++) filestream << orbit_EM.getSi()[i]  << "  ";
+    //3. t0_seed in EM units
+    filestream << t_EM_seed << "  ";
+    //4. s0_seed in RCM coordinates
+    for(int i = 0; i < 4; i++) filestream << st_EM_seed[i]  << "  ";
+    //5. tf in EM units
+    filestream << orbit_EM.getTf() << "  ";
+    //4. sf in RCM coordinates
+    for(int i = 0; i <5; i++) filestream << orbit_SEM.getSi()[i] << "  ";
+    //6. z0 in NCEM coordinates
+    for(int i = 0; i <6; i++) filestream << orbit_EM.getZ0()[i]  << "  ";
+    //7. zf in NCSEM coordinates
+    for(int i = 0; i <6; i++) filestream << orbit_SEM.getZ0()[i] << "  ";
+    //8. thetae_NCSEM
+    filestream << te_NCSEM* SEML.us_sem.n << "  ";
+    //9. ze in NCSEM coordinates
+    for(int i = 0; i <6; i++) filestream << ye_NCSEM[i] << "  ";
+
+
+    //------------------------------------------------------------------------------------
+    // Computing Energies at t = t0 & t = tf
+    //------------------------------------------------------------------------------------
+    double H0_NCEM, H0_NCSEM, H0_EM, H0_SEM;
+    double H0_emli_NCEM, H0_emli_NCSEM, H0_emli_EM, H0_emli_SEM;
+    double Hf_NCEM, Hf_NCSEM, Hf_EM, Hf_SEM;
+    double Hf_semli_NCEM, Hf_semli_NCSEM, Hf_semli_EM, Hf_semli_SEM;
+
+    double yv_NCEM[6], yv_NCSEM[6];
+    double yv_emli_NCEM[6], yv_semli_NCSEM[6];
+    double tv_EM, tv_SEM;
+
+    //Origins at both ends
+    for(int i = 0; i <6; i++)
+    {
+        yv_emli_NCEM[i]   = 0.0;
+        yv_semli_NCSEM[i] = 0.0;
+    }
+
+    //t0, z0 in NCEM coordinates
+    tv_EM = orbit_EM.getT0();
+    for(int i = 0; i <6; i++) yv_NCEM[i] = orbit_EM.getZ0()[i];
+
+    // H0 at IC
+    H0_NCEM  = qbcp_H_complete(tv_EM, yv_NCEM, NCEM, NCEM);
+    H0_NCSEM = qbcp_H_complete(tv_EM, yv_NCEM, NCEM, NCSEM);
+    H0_EM    = qbcp_H_complete(tv_EM, yv_NCEM, NCEM, PEM);
+    H0_SEM   = qbcp_H_complete(tv_EM, yv_NCEM, NCEM, PSEM);
+
+    // H0 at emli
+    H0_emli_NCEM  = qbcp_H_complete(tv_EM, yv_emli_NCEM, NCEM, NCEM);
+    H0_emli_NCSEM = qbcp_H_complete(tv_EM, yv_emli_NCEM, NCEM, NCSEM);
+    H0_emli_EM    = qbcp_H_complete(tv_EM, yv_emli_NCEM, NCEM, PEM);
+    H0_emli_SEM   = qbcp_H_complete(tv_EM, yv_emli_NCEM, NCEM, PSEM);
+
+    //tf, yf in NCSEM coordinates
+    tv_SEM = orbit_EM.getTf()*SEML.us_em.ns;
+    for(int i = 0; i <6; i++) yv_NCSEM[i] = orbit_SEM.getZ0()[i];
+
+    // Hf
+    Hf_NCEM  = qbcp_H_complete(tv_SEM, yv_NCSEM, NCSEM, NCEM);
+    Hf_NCSEM = qbcp_H_complete(tv_SEM, yv_NCSEM, NCSEM, NCSEM);
+    Hf_EM    = qbcp_H_complete(tv_SEM, yv_NCSEM, NCSEM, PEM);
+    Hf_SEM   = qbcp_H_complete(tv_SEM, yv_NCSEM, NCSEM, PSEM);
+
+    // Hf at semli
+    Hf_semli_NCEM  = qbcp_H_complete(tv_SEM, yv_semli_NCSEM, NCSEM, NCEM);
+    Hf_semli_NCSEM = qbcp_H_complete(tv_SEM, yv_semli_NCSEM, NCSEM, NCSEM);
+    Hf_semli_EM    = qbcp_H_complete(tv_SEM, yv_semli_NCSEM, NCSEM, PEM);
+    Hf_semli_SEM   = qbcp_H_complete(tv_SEM, yv_semli_NCSEM, NCSEM, PSEM);
+
+
+    //------------------------------------------------------------------------------------
+    // Storing Energies
+    //------------------------------------------------------------------------------------
+    filestream << H0_NCEM  << "  ";
+    filestream << H0_NCSEM << "  ";
+    filestream << H0_EM    << "  ";
+    filestream << H0_SEM   << "  ";
+
+    filestream << H0_emli_NCEM  << "  ";
+    filestream << H0_emli_NCSEM << "  ";
+    filestream << H0_emli_EM    << "  ";
+    filestream << H0_emli_SEM   << "  ";
+
+    filestream << Hf_NCEM  << "  ";
+    filestream << Hf_NCSEM << "  ";
+    filestream << Hf_EM    << "  ";
+    filestream << Hf_SEM   << "  ";
+
+    filestream << Hf_semli_NCEM  << "  ";
+    filestream << Hf_semli_NCSEM << "  ";
+    filestream << Hf_semli_EM    << "  ";
+    filestream << Hf_semli_SEM   << "  ";
+
+    filestream << endl;
+
+    filestream.close();
+}
+
+/**
+ *  \brief Save a given solution as a complete trajectory
+ **/
+int writeCONT_bin(RefSt& refSt, string filename_traj, double** y_traj_n, double* t_traj_n, int man_index,
+                  Orbit& orbit_EM, Orbit& orbit_SEM, bool isFirst, int comp_orb_eml, int comp_orb_seml,
+                  ProjResClass& projRes, int k)
+{
+    string fname = "writeCONT_bin";
+
+    //====================================================================================
+    //Framework
+    //====================================================================================
+    int coord_type    = refSt.coord_type;
+    int dcs           = default_coordinate_system(coord_type);
+
+    //====================================================================================
+    //Update the seed via projRes
+    //====================================================================================
+    double st_EM[5], st_SEM[5], t_EM[2], t0_SEM = 0.0, pmin_dist_SEM_out = 0.0;
+    double st_EM_seed[4], t_EM_seed = 0.0; int label = 0;
+    projRes.update_ic(st_EM, st_SEM, t_EM, st_EM_seed, &t_EM_seed, &t0_SEM, &pmin_dist_SEM_out, &label, k);
+
+    double r0_CMU_EMT = t_EM[0]/SEML.us_em.T;
+
+    //====================================================================================
+    // Initialization of temporary variables
+    //====================================================================================
+    fstream filestream;
+    double yv[42], res = 0.0;
+    int ode78coll  = 0, status;
+
+    double** ymc_NCSEM  = dmatrix(0, 5, 0, refSt.mplot);
+    double* tmc_SEM     = dvector(0, refSt.mplot);
+    double** ymc_NCEM   = dmatrix(0, 5, 0, refSt.mplot);
+    double* tmc_EM      = dvector(0, refSt.mplot);
+
+    //====================================================================================
+    // Transfer leg
+    //====================================================================================
+    //------------------------------------------------------------------------------------
+    // Open the stream. If it is not the first element of the continuation procedure,
+    // we append results to the preexisting file
+    //------------------------------------------------------------------------------------
+    if(isFirst) filestream.open (filename_traj.c_str(), ios::out | ios::binary);
+    else filestream.open (filename_traj.c_str(), ios::out | ios::binary | ios::app);
+
+    //------------------------------------------------------------------------------------
+    //Final trajectory on lines, segment by segment + saving
+    //------------------------------------------------------------------------------------
+    for(int k = 0; k < man_index; k++)
+    {
+        //Integration segment by segment
+        for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
+        status = ode78(ymc_NCSEM, tmc_SEM, &ode78coll, t_traj_n[k], t_traj_n[k+1], yv, 6, refSt.mplot, dcs, coord_type, coord_type);
+
+        //Checks and warnings, if necessary
+        if(status != FTC_SUCCESS)
+        {
+            //At this step (final plot), a simple warning is issued
+            cout << fname << ". Warning: ode78 returned a flag." << endl;
+            cout << "A collision may have occured during the transfer." << endl;
+        }
+
+        if(ode78coll)
+        {
+            //At this step (plot), a simple warning is issued
+            cout << "plottrajsegbyseg. Warning: a collision with a primary has occurred." << endl;
+        }
+
+        //--------------------------------------------------------------------------------
+        //To NCEM coordinates
+        //--------------------------------------------------------------------------------
+        qbcp_coc_vec(ymc_NCSEM, tmc_SEM, ymc_NCEM, tmc_EM, refSt.mplot, NCSEM, NCEM);
+
+        //--------------------------------------------------------------------------------
+        // Save to data file
+        // We save the following outputs:
+        //  1. Label of the solution (number)
+        //  2. Type of leg: either emli orbit (1), transfer leg (2) or semli orbit (3)
+        //  3. Current time in NCSEM coordinates
+        //  4. Current state in NCSEM coordinates
+        //  5. Current state in NCEM coordinates
+        //  6. Hamiltonian in NCSEM coordinates
+        //  7. t_EM_0 as a ratio
+        //--------------------------------------------------------------------------------
+        for(int p = 0; p <= refSt.mplot; p++)
+        {
+            //1. Label of the solution
+            res = label;
+            filestream.write((char*) &res, sizeof(double));
+
+            //2. Type of leg: either emli orbit (1), transfer leg (2) or semli orbit (3)
+            res = 2;
+            filestream.write((char*) &res, sizeof(double));
+
+            //3. Current time in NCSEM coordinates
+            res = tmc_SEM[p];
+            filestream.write((char*) &res, sizeof(double));
+
+            //4. Current state in NCSEM coordinates
+            for(int i = 0; i < 6; i++)
+            {
+                res  = ymc_NCSEM[i][p];
+                yv[i] = ymc_NCSEM[i][p];
+                filestream.write((char*) &res, sizeof(double));
+            }
+
+            //5. Current state in NCEM coordinates
+            for(int i = 0; i < 6; i++)
+            {
+                res = ymc_NCEM[i][p];
+                filestream.write((char*) &res, sizeof(double));
+            }
+
+            //6. Hamiltonian in NCSEM coordinates
+            res = qbcp_Hn_SEM(tmc_SEM[p], yv, &SEML);
+            filestream.write((char*) &res, sizeof(double));
+
+            //7. t_EM_0 as a ratio
+            res = r0_CMU_EMT;
+            filestream.write((char*) &res, sizeof(double));
+        }
+    }
+    filestream.close();
+
+
+    //====================================================================================
+    // Compute the initial orbit if necessary
+    //====================================================================================
+    if(comp_orb_eml)
+    {
+        //--------------------------------------------------------------------------------
+        // Initialize
+        //--------------------------------------------------------------------------------
+        //We plot every 0.5 day
+        int oPlot = 1.0/0.5*refSt.tspan_EM*SEML.cs_em.cr3bp.T/(86400*2*M_PI);
+        int nPlot = oPlot;
+        double** yorb_NCEM  = dmatrix(0, 5, 0, oPlot);
+        double*  torb_EM    = dvector(0, oPlot);
+        double** yorb_NCSEM = dmatrix(0, 5, 0, oPlot);
+        double*  torb_SEM   = dvector(0, oPlot);
+
+
+        //Reset the unstable direction
+        orbit_EM.setSi(0, 4);
+
+        //Set the final time
+        orbit_EM.setTf(orbit_EM.getT0()-refSt.tspan_EM);
+
+        //Update the initial state in the orbit, with the RCM coordinates
+        orbit_EM.update_ic(orbit_EM.getSi(), orbit_EM.getT0());
+
+        //--------------------------------------------------------------------------------
+        //Integration on oPlot+1 fixed grid
+        //--------------------------------------------------------------------------------
+        int output = orbit_EM.traj_int_grid(orbit_EM.getTf(), yorb_NCEM, torb_EM, oPlot, 1);
+
+        //If output is strictly greater than 0, then the projection procedure inside
+        //the integration went wrong, and the new indix is output.
+        //It output == ORBIT_EPROJ, the projection procedure failed so bad that there
+        //is no point stored in the data, except the first one, and the new indix is zero
+        if(output == ORBIT_EPROJ) nPlot = 0;
+        else if(output > 0) nPlot = output;
+
+
+        //--------------------------------------------------------------------------------
+        //To NCSEM coordinates
+        //--------------------------------------------------------------------------------
+        qbcp_coc_vec(yorb_NCEM, torb_EM, yorb_NCSEM, torb_SEM, nPlot, NCEM, NCSEM);
+
+        //--------------------------------------------------------------------------------
+        // Save to data file
+        // We save the following outputs:
+        //  1. Label of the solution (number)
+        //  2. Type of leg: either emli orbit (1), transfer leg (2) or semli orbit (3)
+        //  3. Current time in NCSEM coordinates
+        //  4. Current state in NCSEM coordinates
+        //  5. Current state in NCEM coordinates
+        //  6. Hamiltonian in NCSEM coordinates
+        //  7. t_EM_0 as a ratio
+        //--------------------------------------------------------------------------------
+        if(nPlot > 0)
+        {
+            //Reopen stream
+            filestream.open (filename_traj.c_str(), ios::out | ios::binary | ios::app);
+
+            //Storing all points between 0 and nPlot
+            for(int p = 0; p <= nPlot; p++)
+            {
+                //1. Label of the solution
+                res = label;
+                filestream.write((char*) &res, sizeof(double));
+
+                //2. Type of leg: either emli orbit (1), transfer leg (2) or semli orbit (3)
+                res = 1;
+                filestream.write((char*) &res, sizeof(double));
+
+                //3. Current time in NCSEM coordinates
+                res = torb_SEM[p];
+                filestream.write((char*) &res, sizeof(double));
+
+                //4. Current state in NCSEM coordinates
+                for(int i = 0; i < 6; i++)
+                {
+                    res = yorb_NCSEM[i][p];
+                    yv[i] = yorb_NCSEM[i][p];
+                    filestream.write((char*) &res, sizeof(double));
+                }
+
+                //5. Current state in NCEM coordinates
+                for(int i = 0; i < 6; i++)
+                {
+                    res = yorb_NCEM[i][p];
+                    filestream.write((char*) &res, sizeof(double));
+                }
+
+                //6. Hamiltonian in NCSEM coordinates
+                res = qbcp_Hn_SEM(torb_SEM[p], yv, &SEML);
+                filestream.write((char*) &res, sizeof(double));
+
+                //7. t_EM_0 as a ratio
+                res = r0_CMU_EMT;
+                filestream.write((char*) &res, sizeof(double));
+            }
+            filestream.close();
+        }
+        else
+        {
+            cout << fname << ". Warning: computation of the orbit at EMLi went wrong." << endl;
+            cout << "The orbit is not stored." << endl;
+        }
+
+        //================================================================================
+        // At EML2. The first 4 RCM components are good, as well as the initial time.
+        // Hence, we need to update:
+        // 1. The last RCM component (unstable part),
+        // 2. The final time.
+        //================================================================================
+        orbit_EM.setSi(PROJ_EPSILON, 4);
+        orbit_EM.setTf(t_traj_n[man_index]/SEML.us_em.ns);
+
+        //--------------------------------------------------------------------------------
+        // Update the initial state in the orbit, with the RCM coordinates
+        //--------------------------------------------------------------------------------
+        orbit_EM.update_ic(orbit_EM.getSi(), orbit_EM.getT0());
+
+
+        //--------------------------------------------------------------------------------
+        //Free variables
+        //--------------------------------------------------------------------------------
+        free_dmatrix(yorb_NCEM, 0, 5, 0, oPlot);
+        free_dvector(torb_EM, 0, oPlot);
+        free_dmatrix(yorb_NCSEM, 0, 5, 0, oPlot);
+        free_dvector(torb_SEM, 0, oPlot);
+    }
+
+
+    //====================================================================================
+    // Compute the final orbit if necessary
+    //====================================================================================
+    if(comp_orb_seml)
+    {
+        switch(comp_orb_seml)
+        {
+        case 1: //computation using projection method
+        {
+            //----------------------------------------------------------------------------
+            // Initialize
+            //----------------------------------------------------------------------------
+            //We plot every 0.5 days
+            int oPlot = 1.0/0.5*refSt.tspan_SEM*SEML.cs_sem.cr3bp.T/(86400*2*M_PI);
+            int nPlot = oPlot;
+            double** yorb_NCEM  = dmatrix(0, 5, 0, oPlot);
+            double*  torb_EM    = dvector(0, oPlot);
+            double** yorb_NCSEM = dmatrix(0, 5, 0, oPlot);
+            double*  torb_SEM   = dvector(0, oPlot);
+
+            //Save unstable value
+            double s5 = orbit_SEM.getSi(4);
+
+            //Reset the unstable direction
+            orbit_SEM.setSi(0, 4);
+
+            //Set the final time
+            orbit_SEM.setTf(orbit_SEM.getT0()+refSt.tspan_SEM);
+
+            //Update the initial state in the orbit, with the RCM coordinates
+            orbit_SEM.update_ic(orbit_SEM.getSi(), orbit_SEM.getT0());
+
+            //----------------------------------------------------------------------------
+            //Integration on oPlot+1 fixed grid
+            //----------------------------------------------------------------------------
+            int output = orbit_SEM.traj_int_grid(orbit_SEM.getTf(), yorb_NCSEM, torb_SEM, oPlot, 1);
+
+            //If output is strictly greater than 0, then the projection procedure inside
+            //the integration went wrong, and the new indix is output.
+            //It output == ORBIT_EPROJ, the projection procedure failed so bad that there
+            //is no point stored in the data, except the first one, and the new indix is zero
+            if(output == ORBIT_EPROJ) nPlot = 0;
+            else if(output > 0) nPlot = output;
+
+            //----------------------------------------------------------------------------
+            //To NCEM coordinates
+            //----------------------------------------------------------------------------
+            qbcp_coc_vec(yorb_NCSEM, torb_SEM, yorb_NCEM, torb_EM, nPlot, NCSEM, NCEM);
+
+            //----------------------------------------------------------------------------
+            // Save to data file
+            // We save the following outputs:
+            //  1. Label of the solution (number)
+            //  2. Type of leg: either emli orbit (1), transfer leg (2) or semli orbit (3)
+            //  3. Current time in NCSEM coordinates
+            //  4. Current state in NCSEM coordinates
+            //  5. Current state in NCEM coordinates
+            //  6. Hamiltonian in NCSEM coordinates
+            //  7. t_EM_0 as a ratio
+            //----------------------------------------------------------------------------
+            if(nPlot > 0)
+            {
+                //Reopen stream
+                filestream.open (filename_traj.c_str(), ios::out | ios::binary | ios::app);
+
+                //Storing all points between 0 and nPlot
+                for(int p = 0; p <= nPlot; p++)
+                {
+                    //1. Label of the solution
+                    res = label;
+                    filestream.write((char*) &res, sizeof(double));
+
+                    //2. Type of leg: either emli orbit (1), transfer leg (2) or semli orbit (3)
+                    res = 3;
+                    filestream.write((char*) &res, sizeof(double));
+
+                    //3. Current time in NCSEM coordinates
+                    res = torb_SEM[p];
+                    filestream.write((char*) &res, sizeof(double));
+
+                    //4. Current state in NCSEM coordinates
+                    for(int i = 0; i < 6; i++)
+                    {
+                        res   = yorb_NCSEM[i][p];
+                        yv[i] = yorb_NCSEM[i][p];
+                        filestream.write((char*) &res, sizeof(double));
+                    }
+
+                    //4. Current state in NCEM coordinates
+                    for(int i = 0; i < 6; i++)
+                    {
+                        res = yorb_NCEM[i][p];
+                        filestream.write((char*) &res, sizeof(double));
+                    }
+
+                    //6. Hamiltonian in NCSEM coordinates
+                    res = qbcp_Hn_SEM(torb_SEM[p], yv, &SEML);
+                    filestream.write((char*) &res, sizeof(double));
+
+                    //7. t_EM_0 as a ratio
+                    res = r0_CMU_EMT;
+                    filestream.write((char*) &res, sizeof(double));
+                }
+                filestream.close();
+            }
+            else
+            {
+                cout << fname << ". Warning: computation of the orbit at EMLi went wrong." << endl;
+                cout << "The orbit is not stored." << endl;
+            }
+
+            //============================================================================
+            // At SEMLi, we need to update:
+            // 1. The unstable direction, that has been previously erased.
+            // 2. The initial time.
+            //============================================================================
+            orbit_SEM.setSi(s5, 4);
+            orbit_SEM.setT0(t_traj_n[man_index]);
+
+            //----------------------------------------------------------------------------
+            // Update the initial state in the orbit, with the RCM coordinates
+            //----------------------------------------------------------------------------
+            orbit_SEM.update_ic(orbit_SEM.getSi(), orbit_SEM.getT0());
+
+            //----------------------------------------------------------------------------
+            //Free variables
+            //----------------------------------------------------------------------------
+            free_dmatrix(yorb_NCEM, 0, 5, 0, oPlot);
+            free_dvector(torb_EM, 0, oPlot);
+            free_dmatrix(yorb_NCSEM, 0, 5, 0, oPlot);
+            free_dvector(torb_SEM, 0, oPlot);
+
+            break;
+        }
+        case 2: //computation using reduced coordinates
+        {
+            //----------------------------------------------------------------------------
+            //Read the reduced vector field
+            //----------------------------------------------------------------------------
+            vector<Oftsc> Fh;
+            Fh.reserve(5);
+            for(int i = 0; i < 5; i++) Fh.push_back(Oftsc(5, OFTS_ORDER, OFS_NV, OFS_ORDER));
+            readVOFTS_bin(Fh, SEML_SEM.cs->F_PMS+"rvf/fh");
+
+            //----------------------------------------------------------------------------
+            //For dot(s) = fh(s)
+            //----------------------------------------------------------------------------
+            RVF rvf;
+            rvf.ofs_order  = SEML.eff_nf_SEM;
+            Ofsc AUX(rvf.ofs_order);
+            rvf.fh         = &Fh;
+            rvf.ofs        = &AUX;
+            rvf.order      = OFTS_ORDER;
+            rvf.n          = orbit_SEM.getN();
+            rvf.reduced_nv = 5;
+
+            gsl_odeiv2_system sys_fh;
+            sys_fh.function  = qbfbp_fh;
+            sys_fh.jacobian  = NULL;
+            sys_fh.dimension = 2*rvf.reduced_nv;
+            sys_fh.params    = &rvf;
+            const gsl_odeiv2_step_type* T_fh = gsl_odeiv2_step_rk8pd;
+
+            gsl_odeiv2_driver* d_fh = gsl_odeiv2_driver_alloc_y_new (&sys_fh, T_fh,
+                                      Config::configManager().G_PREC_HSTART(),
+                                      Config::configManager().G_PREC_ABS(),
+                                      Config::configManager().G_PREC_REL());
+
+
+            //----------------------------------------------------------------------------
+            // Temp variables
+            //----------------------------------------------------------------------------
+            double t0_SEM = orbit_SEM.getT0();
+            double t1_SEM = t0_SEM+refSt.tspan_SEM;
+            double z[6], z_EM[6];
+            double t2 = t0_SEM;
+            int k  = 0;
+            double  s1ccm8[2*rvf.reduced_nv]; //CCM8
+
+            //----------------------------------------------------------------------------
+            // Initial state in CCM8 form
+            //----------------------------------------------------------------------------
+            RCMtoCCM8(orbit_SEM.getSi(), s1ccm8, 5);
+
+            //----------------------------------------------------------------------------
+            // Reopen  stream
+            //----------------------------------------------------------------------------
+            filestream.open (filename_traj.c_str(), ios::out | ios::binary | ios::app);
+
+            //----------------------------------------------------------------------------
+            // Loop
+            //----------------------------------------------------------------------------
+            while(t2 < t1_SEM && k <= refSt.mplot)
+            {
+                cout << "t1_SEM -  t2 = " << t1_SEM -  t2       << endl;
+                cout << "z[0]         = " << z[0]               << endl;
+                cout << "mPlot - k    = " << refSt.mplot - k    << endl;
+
+                //------------------------------------------------------------------------
+                //------------------------------------------------------------------------
+                //To NCSEM coordinates
+                //------------------------------------------------------------------------
+                //------------------------------------------------------------------------
+                orbit_SEM.evalRCMtoNC(t2, z);
+
+                //------------------------------------------------------------------------
+                //To NCEM coordinates
+                //------------------------------------------------------------------------
+                //------------------------------------------------------------------------
+                qbcp_coc(t2, z, z_EM, NCSEM, NCEM);
+
+
+                //------------------------------------------------------------------------
+                // Save to data file
+                // We save the following outputs:
+                //  1. Label of the solution (number)
+                //  2. Type of leg: either emli orbit (1), transfer leg (2) or semli orbit (3)
+                //  3. Current time in NCSEM coordinates
+                //  4. Current state in NCSEM coordinates
+                //  5. Current state in NCEM coordinates
+                //  6. Hamiltonian in NCSEM coordinates
+                //  7. t_EM_0 as a ratio
+                //------------------------------------------------------------------------
+                //1. Label of the solution
+                res = label;
+                filestream.write((char*) &res, sizeof(double));
+
+                //2. Type of leg: either emli orbit (1), transfer leg (2) or semli orbit (3)
+                res = 3;
+                filestream.write((char*) &res, sizeof(double));
+
+                //3. Current time in NCSEM coordinates
+                res = t2;
+                filestream.write((char*) &res, sizeof(double));
+
+                //4. Current state in NCSEM coordinates
+                for(int i = 0; i < 6; i++)
+                {
+                    res   = z[i];
+                    filestream.write((char*) &res, sizeof(double));
+                }
+
+                //4. Current state in NCEM coordinates
+                for(int i = 0; i < 6; i++)
+                {
+                    res = z_EM[i];
+                    filestream.write((char*) &res, sizeof(double));
+                }
+
+                //6. Hamiltonian in NCSEM coordinates
+                res = qbcp_Hn_SEM(t2, z, &SEML);
+                filestream.write((char*) &res, sizeof(double));
+
+                //7. t_EM_0 as a ratio
+                res = r0_CMU_EMT;
+                filestream.write((char*) &res, sizeof(double));
+
+
+                //------------------------------------------------------------------------
+                //Advance one step
+                //------------------------------------------------------------------------
+                gsl_odeiv2_evolve_apply (d_fh->e, d_fh->c, d_fh->s, d_fh->sys, &t2, t1_SEM, &d_fh->h, s1ccm8);
+                orbit_SEM.ccm8torcm(s1ccm8);
+                k++;
+            }
+            filestream.close();
+
+            break;
+        }
+        }
+
+    }
+
+
+    //====================================================================================
+    // Free
+    //====================================================================================
+    free_dmatrix(ymc_NCSEM, 0, 5, 0, refSt.mplot);
+    free_dvector(tmc_SEM, 0, refSt.mplot);
+    free_dmatrix(ymc_NCEM, 0, 5, 0, refSt.mplot);
+    free_dvector(tmc_EM, 0, refSt.mplot);
+
+
+
+    return FTC_SUCCESS;
+}
 
 //========================================================================================
 //
@@ -1650,6 +3147,8 @@ bool ProjResClass::push_back_conditional(ProjResClass& inSt, RefSt& refSt)
     while(kpos < inSt.size() && (inSt.pmin_dist_SEM[inSt.sortId[kpos]] <= refSt.pmax_dist_SEM))
     {
         kpor = inSt.sortId[kpos];
+
+        cout << "here" << endl;
 
         //--------------------------------------------------------------------------------
         // Limit in the reduced coordinates (s1, s2, s3, s4)

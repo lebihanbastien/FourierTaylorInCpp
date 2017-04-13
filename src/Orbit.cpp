@@ -27,7 +27,12 @@ Orbit::Orbit(Invman const *invman_, QBCP_L const *qbcp_l_, OdeStruct *odestruct_
 //----------------------------------------------------------------------------------------
 {
     //------------------------------------------------------------------------------------
-    // ePmax: maximum projection error allowed during the computation €€TODO
+    // ePmax: maximum projection error allowed during the computation
+    // Note that this value is questionable: what is the "acceptable" error on a
+    // given orbit about a libration point? Each of this orbit is aimed to be refined
+    // in a higher-fidelity model anyway. Hence, this value (and the projection method
+    // during orbit integration) can be seen as a helper, in order to fasten the
+    // numerical integration of the orbits with a minimum of numerical stability.
     //------------------------------------------------------------------------------------
     ePmaxx = (fwrk == F_SEM)? 5e-3:1e-4;
 

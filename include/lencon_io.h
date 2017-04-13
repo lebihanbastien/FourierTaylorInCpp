@@ -12,6 +12,7 @@
 #include <sys/stat.h>
 
 #include "single_orbit.h"
+#include "Orbit.h"
 
 //For selection of the times
 #define TIME_SELECTION_ABSOLUTE 1
@@ -599,5 +600,22 @@ void writeIntProjCUSeed_bin(string filename,
  *   \brief Display the current completion (percent) of a routine.
  **/
 void displayCompletion(string funcname, double percent);
+
+//========================================================================================
+//
+//          I/O (refinement & continuation)
+//
+//========================================================================================
+/**
+ *   \brief Storing the results of the continuation procedure, in txt file.
+ **/
+void writeCONT_txt(string filename, Orbit& orbit_EM, Orbit& orbit_SEM,
+                   double te_NCSEM, double* ye_NCSEM, ProjResClass& projRes, int isFirst,  int k);
+
+/**
+ *   \brief Storing the results of the continuation procedure, in txt file.
+ **/
+void writeCONT_txt(int label, string filename, Orbit& orbit_EM, Orbit& orbit_SEM,
+                   double te_NCSEM, double* ye_NCSEM,  int isFirst);
 
 #endif // SINGLE_ORBIT_IO_H_INCLUDED

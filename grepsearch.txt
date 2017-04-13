@@ -1,0 +1,10 @@
+main.sh~:		$COMP_SINGLE_ORBIT)              echo 'COMP_TYPE    = COMP_SINGLE_ORBIT'
+main.sh~:		$COMP_SINGLE_ORBIT)              
+main.sh:		$COMP_SINGLE_ORBIT)              echo 'COMP_TYPE    = COMP_SINGLE_ORBIT'
+main.sh:		$COMP_SINGLE_ORBIT)              
+config/constants.sh~:export COMP_SINGLE_ORBIT=2    		 #Just some example of solutions
+config/constants.sh:export COMP_SINGLE_ORBIT=2    		 #Just some example of solutions
+main.cpp:#define COMP_SINGLE_ORBIT              2    //just some example of solutions
+main.cpp:    case COMP_SINGLE_ORBIT:
+main.cpp:        case COMP_SINGLE_ORBIT:
+main.cpp:    case COMP_SINGLE_ORBIT:

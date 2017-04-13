@@ -16,7 +16,9 @@
 // Constructor
 //========================================================================================
 /**
- *  \brief Constructor. €€TODO: comment on the particular case of the GRAPH_STYLE.
+ *  \brief Constructor.
+ *         If the graph style is used, the series are very sparse
+ *         and some simplifications can be made.
  **/
 Invman::Invman(int ofts_order_, int ofs_order_, CSYS& csys):
 //----------------------------------------------------------------------------------------

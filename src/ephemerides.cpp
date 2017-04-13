@@ -2084,7 +2084,6 @@ void eci2ecl(double yeci[6], double YEARTH[6], double YECL[6])//, SS &ss)
 /**
  * \brief From ecliptic to synodic coordinates, vector format.
  *        The final time is in Julian date.
- *        @TODO: merge with
  **/
 void eci2syndpos_vec(double **yeci, double *teci, double **yout, double *tout, int N, int coord_eph)//, SS & ss)
 {
@@ -2132,9 +2131,9 @@ void eci2syndpos_vec(double **yeci, double *teci, double **yout, double *tout, i
 }
 
 
-//---------------------------------
+//----------------------------------------------------------------------------------------
 // Normalized Earth-centered inertial (NECI) coordinates <-> any other native type (NCEM, NCSEM...)
-//---------------------------------
+//----------------------------------------------------------------------------------------
 /**
  *  From Normalized-Ecliptic coordinates to a generic other coordinate system. The initial time tsys0 is given in SEM/EM coordinates, and yields the correspondance
  *  between the ephemerides epoch and the normalized QBCP time.

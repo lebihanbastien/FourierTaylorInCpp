@@ -14,7 +14,7 @@ source config/constants.sh
 #-----------------------------------------------------
 # TYPE OF COMPUTATION (COMP_TYPE)
 #-----------------------------------------------------
-COMP_TYPE=$COMP_SINGLE_ORBIT_EML2_TO_CM_SEML
+COMP_TYPE=$COMP_ORBIT_EML2_TO_CM_SEML
 
 #-----------------------------------------------------
 # MODEL

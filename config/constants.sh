@@ -40,7 +40,8 @@ export COMP_VOFTS_TO_VOFTS=8     	 #Store CS/CU into one-dimensionnal series to 
 export COMP_test_INVMAN=9    		 #Test of the new invariant manifold implementation
 export COMP_REF_JPL=10  		 #Refine to JPL ephemerides
 export COMP_CM_EML2_TO_CM_SEML_H=11   #Planar EMLi Center Manifold to SEMLi Center Manifold, at a given energy
-export COMP_ORBIT_EML2_TO_CM_SEML=12   #EMLi Center Manifold to SEMLi Center Manifold, on a given orbit
+export COMP_ORBIT_EML2_TO_CM_SEML=12   #EMLi Center Manifold to SEMLi Center Manifold, on a given set of orbits
+export COMP_SINGLE_ORBIT_EML2_TO_CM_SEML=13 #EMLi Center Manifold to SEMLi Center Manifold, on a given orbit
 
 #-----------------------------------------------------
 # MODEL

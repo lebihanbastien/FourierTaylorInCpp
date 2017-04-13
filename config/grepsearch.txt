@@ -1,0 +1,2 @@
+constants.sh~:export COMP_SINGLE_ORBIT=2    		 #Just some example of solutions
+constants.sh:export COMP_SINGLE_ORBIT=2    		 #Just some example of solutions

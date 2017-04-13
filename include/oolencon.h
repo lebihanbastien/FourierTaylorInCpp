@@ -81,7 +81,32 @@ int compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt &projSt);
 int compute_grid_CMU_EM(double dist_to_cm, ProjSt &projSt);
 
 /**
- *  \brief @TODO
+ *  \brief Computes initial conditions in the Planar Center-Unstable Manifold about EML2,
+ *         in the QBCP model. The initial conditions (IC) are computed in a
+ *         two-dimensional box: one dimension for the starting time (t0), one dimension
+ *         for the parameterization of the Center Manifold (s1 coordinates).
+ *         The RCM coordinate s5 along the unstable direction is fixed to dist_to_cm.
+ *
+ *          Two possibilities exist:
+ *          (i) if projSt.dHd > 0, then a fixed value of energy
+ *          at departure is desired by the user. Thereore, the value s3 = f(s1, t0)
+ *          is computed and the IC are of the form (s1, 0, f(s1, t0), 0, dist_to_cm)
+ *
+ *          (ii) if projSt.dHd <= 0, the IC are of the form (s1, 0, 0 0, dist_to_cm)
+ *
+ *
+ *  \param dist_to_cm:           the value in RCM coordinates on the unst. direction s5.
+ *  \param projSt.TLIM[0]:       the minimum starting time (in EM units) in the IC box.
+ *  \param projSt.TLIM[1]:       the maximum starting time (in EM units) in the IC box.
+ *  \param projSt.TSIZE:         the number of points on the time grid in the IC box.
+ *  \param projSt.GLIM_SI[0][0]: the minimum s1 value (in RCM coordinates) in the IC box.
+ *  \param projSt.GLIM_SI[0][1]: the maximum s1 value (in RCM coordinates) in the IC box.
+ *  \param projSt.GSIZE_SI[0]:   the number of points on the s1 grid in the IC box.
+ *  \param projSt.ISPAR:         if TRUE, the computation is parallelized.
+ *
+ *
+ * The output data are saved in a binary file of the form:
+ *               "plot/QBCP/EM/L2/cu_order_16_dH_0.005.bin"
  **/
 int compute_grid_CMU_EM_dH(double dist_to_cm, ProjSt& projSt);
 
@@ -166,11 +191,170 @@ int int_proj_CMU_EM_on_CM_SEM_3D(ProjSt &projSt);
  **/
 int int_proj_CMU_EM_on_CM_SEM(ProjSt &projSt);
 
-
+/**
+ *  \brief Same as int_proj_CMU_EM_on_CM_SEM but for the outputs from the routine
+ *         compute_grid_CMU_EM_dH.
+ *
+ *         Integrates the central-unstable legs from a discrete set of unstable directions
+ *         obtained using the routine compute_grid_CMU_EM_dH.
+ *         Then, each point on the integration grid is projected on the center Manifold
+ *         about SEMLi (denoted here CM_SEM_NC).
+ *         The best solution (minimum distance of projection) is stored.
+ *
+ *  \param projSt.TM:......the maximum integration time on each leg, in EM units.
+ *  \param projSt.MSIZE:...the number of points on each manifold leg.
+ *  \param projSt.NSMIN:...the number of best solutions that are kept
+ *  \param projSt.NOD:.....the number of dimensions on which the distance of
+ *                         projection is computed - usually either 3
+ *                         (the physical distance) or 6 (the whole phase space).
+ *  \param projSt.ISPAR:...if TRUE, the computation is parallelized.
+ *  \param projSt.YNMAX:...the maximum norm in NCSEM coordinates for which a given
+ *                         state on the integration grid is projected on CM_SEM_NC.
+ *                         More precisely: for a given state y along the manifold leg,
+ *                         if norm(y, 3) < projSt.YNMAX, the state is projected.
+ *                         Otherwise, it is considered too far away from SEMLi to
+ *                         be a good candidate for projection.
+ *  \param projSt.SNMAX:...the maximum norm in RCM SEM coordinates for which a given
+ *                         projection state on the CM of SEMLi (CM_SEM_NC) is
+ *                         computed back in NCSEM coordinates. More precisely, for a
+ *                         given state y in NCSEM coordinates, the result of the
+ *                         projection on CM_SEM_NC gives a state sproj in RCM SEM
+ *                         coordinates. If norm(sproj, 4) < projSt.SNMAX, the computation
+ *                         yproj = CM_SEM_NC(sproj, t) is performed. Otherwise,
+ *                         the state sproj is considered too far away from the RCM
+ *                         origin to be a good candidate - it is out of the domain of
+ *                         practical convergence of CM_SEM_NC.
+ *
+ * The output data are saved in a binary file of the form
+ *      "plot/QBCP/EM/L2/projcu_order_16_dH_0.005.bin"
+ **/
 int int_proj_CMU_EM_on_CM_SEM_dH(ProjSt &projSt);
 
-
+/**
+ *  \brief Detection of the possible connections between a set of orbits about EMLi
+ *         and the center manifold at SEMLj.
+ *         The routine works with a system of seefs in RCM coordinates.
+ *
+ *         For all projSt.GSIZE_SI[0] values of s1 in
+ *         [projSt.GLIM_SI[0][0], projSt.GLIM_SI[0][1]], we define the following initial
+ *         conditions:
+ *                       s0 = (s1, projSt.GLIM_SI[1][0], -s1, projSt.GLIM_SI[3][0])
+ *
+ *         Note that s3 = -s1 guarantees that the IC are on the y = 0 plane in NC coord.
+ *         (at least in the planar case).
+ *
+ *
+ *
+ *         Then, for all projSt.TSIZE value of initial time t0 in
+ *         [projSt.TLIM[0], projSt.TLIM[1] ], we cen compute z0 = W(s0, t0). We can then
+ *         project z0 on the center manifold, in order to get
+ *                  si = (s1, s3, s3, s4) = W^{-1}(z0, t0),
+ *
+ *         Roughly speaking, si provides IC for a similar orbit but a different starting
+ *         phase for the Sun-Earth-Moon system. These IC define a given orbit
+ *         whose period is estimated via cmu_orbit_estimate_period. We can then integrate
+ *         this orbit on one of its period and look for connections on a fine grid along
+ *         the resulting trajectory
+ *
+ *  The output data are saved in a binary file of the form
+ *      "plot/QBCP/EM/L2/projcu_order_16_Orbit.bin"
+ **/
 int int_proj_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int N);
+
+/**
+ *  \brief Detection of the possible connections between a set of orbits about EMLi
+ *         and the center manifold at SEMLj.
+ *         We define the following initial
+ *         conditions:
+ *         s0 = (projSt.GLIM_SI[0][0], projSt.GLIM_SI[1][0], projSt.GLIM_SI[2][0], projSt.GLIM_SI[3][0])
+ *
+ *         Then, for all projSt.TSIZE value of initial time t0 in
+ *         [projSt.TLIM[0], projSt.TLIM[1] ], we cen compute z0 = W(s0, t0). We can then
+ *         project z0 on the center manifold, in order to get
+ *                  si = (s1, s3, s3, s4) = W^{-1}(z0, t0),
+ *
+ *         Roughly speaking, si provides IC for a similar orbit but a different starting
+ *         phase for the Sun-Earth-Moon system. These IC define a given orbit
+ *         whose period is estimated via cmu_orbit_estimate_period. We can then integrate
+ *         this orbit on one of its period and look for connections on a fine grid along
+ *         the resulting trajectory
+ *
+ *  The output data are saved in a binary file of the form
+ *      "plot/QBCP/EM/L2/projcu_order_16_Orbit.bin"
+ **/
+int int_proj_SINGLE_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods);
+
+//========================================================================================
+//
+//         Initial conditions for projection of single orbits
+//
+//========================================================================================
+/**
+ *  \brief Computes the stroboscopic map on N+1 points along a trajectory in the QBCP.
+ *
+ *         The initial conditions (IC) are (s0, t0), in RCM coordinates.
+ *
+ *         The routine stores N+1 points corresponding to the following positions:
+ *              - tNCE[k] = t0 + k*SEML.us->T, for all k in [0, N],
+ *              - yNCE[k] is the NC state at tNCE[k],
+ *                (NC coordinates given by SEML.cs (either NCSEM or NCEM)
+ *              - sRCM[k] is the RCM state at tNCE[k].
+ *
+ *         If isPar == true, the computation and storage of sRCM is made parallel
+ *         (but careful with that, may not work with higher parallelized loops).
+ **/
+int cmu_grid_strob(double* tNCE, double** yNCE, double** sRCM, double st0[], double t0, int N, int isPar);
+
+/**
+ *  \brief Computes N+1 points along a trajectory in the QBCP, on NPeriods periods T
+ *         of the QBCP.
+ *
+ *         The initial conditions (IC) are (s0, t0), in RCM coordinates.
+ *
+ *         The routine stores N+1 points corresponding to the following positions:
+ *              - tNCE[k] is the time, in [0 NPeriods*T]
+ *              - yNCE[k] is the NC state at tNCE[k],
+ *                (NC coordinates given by SEML.cs (either NCSEM or NCEM)
+ *              - sRCM[k] is the RCM state at tNCE[k].
+ *
+ *         If isPar == true, the computation and storage of sRCM is made parallel
+ *         (but careful with that, may not work with higher parallelized loops).
+ **/
+int cmu_grid_orbit(double* tNCE, double** yNCE, double** sRCM, double st0[], double t0, int N, int NPeriods,  int isPar);
+
+/**
+ *  \brief Estimates the period T (in adimensionalized units) of a given orbit Orbit
+ *         in the QBCP.
+ *
+ *         The initial conditions (IC) are (s0, t0), in RCM coordinates.
+ *         The period is estimated as follows:
+ *         The initial condition are z0v = (x0, y0, z0, px0, py0, pz0) = W(s0, t0).
+ *         The polar argument of (x0, y0) is computed.
+ *         And the integration is stopped when a similar argument is obtained.
+ *         The time of the event is the desired time T.
+ *
+ *         Moreover, the number of points N is computed as the desired number of points to
+ *         achieve a frequency of dt in [0 T].
+ *         Hence, N = floor(T/dt);
+ **/
+int cmu_orbit_estimate_period(const double st0[], double t0, double* T, int* N, double dt, Orbit& orbit);
+
+/**
+ *  \brief Computes N+1 points along a trajectory in the QBCP, on one period T
+ *         of the orbit Orbit, in the QBCP.
+ *
+ *         The initial conditions (IC) are (s0, t0), in RCM coordinates.
+ *
+ *         The routine stores N+1 points corresponding to the following positions:
+ *              - tNCE[k] is the time, in [0 T]
+ *              - yNCE[k] is the NC state at tNCE[k],
+ *                (NC coordinates given by SEML.cs (either NCSEM or NCEM)
+ *              - sRCM[k] is the RCM state at tNCE[k].
+ *
+ *         If isPar == true, the computation and storage of sRCM is made parallel
+ *         (but careful with that, may not work with higher parallelized loops).
+ **/
+int cmu_grid_orbit_on_one_period(Orbit& orbit, double* tNCE, double** yNCE, double** sRCM, const double st0[], double t0, double T, int N, int isPar);
 
 //========================================================================================
 //
@@ -438,22 +622,7 @@ int savetrajsegbyseg(double** y_traj, double* t_traj,
                      int coordsys1,   int coordsys2,
                      string filename, int label, bool isFirst);
 
-//========================================================================================
-//
-//          I/O (to set in oolencon_io.cpp)
-//
-//========================================================================================
-/**
- *   \brief Storing the results of the continuation procedure, in txt file.
- **/
-void writeCONT_txt(string filename, Orbit& orbit_EM, Orbit& orbit_SEM,
-                   double te_NCSEM, double* ye_NCSEM, ProjResClass& projRes, int isFirst,  int k);
 
-/**
- *   \brief Storing the results of the continuation procedure, in txt file.
- **/
-void writeCONT_txt(int label, string filename, Orbit& orbit_EM, Orbit& orbit_SEM,
-                   double te_NCSEM, double* ye_NCSEM,  int isFirst);
 
 /**
  *  \brief Get the length the results of the continuation procedure, in txt file.

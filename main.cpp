@@ -32,19 +32,21 @@ using namespace std;
 // Constants
 //========================================================================================
 // TYPE OF COMPUTATIONS
-#define COMP_CM_EML2_TO_CM_SEML        0    //EMLi Center Manifold to SEMLi Center Manifold
-#define COMP_CM_EML2_TO_CMS_SEML       1    //EMLi Center Manifold to SEMLi Center-Stable Manifold
-#define COMP_SINGLE_ORBIT              2    //just some example of solutions
-#define COMP_CM_EML2_TO_CMS_SEML_READ  3    //Read
-#define COMP_VF_TEST                   4    //Test of the QBCP vector field. Should probably be put in OOFTDA
-#define COMP_CM_EML2_TO_CM_SEML_REFINE 5    //EML2 Center Manifold to SEMLi Center Manifold
-#define COMP_EPHEMERIDES_TEST          6    //Ephemerides test
-#define COMP_CM_EML2_TO_CM_SEML_3D     7    //EML2 Center Manifold to SEMLi Center Manifold in 3D
-#define COMP_VOFTS_TO_VOFTS            8    //Store CS/CU into one-dimensionnal series to gain memory
-#define COMP_test_INVMAN               9    //Test of the new invariant manifold implementation
-#define COMP_REF_JPL                   10   //Refine to JPL ephemerides
-#define COMP_CM_EML2_TO_CM_SEML_H      11   //Planar EMLi Center Manifold to SEMLi Center Manifold, at a given energy
-#define COMP_ORBIT_EML2_TO_CM_SEML     12   //EMLi Center Manifold to SEMLi Center Manifold, on a given orbit
+#define COMP_CM_EML2_TO_CM_SEML           0    //EMLi Center Manifold to SEMLi Center Manifold
+#define COMP_CM_EML2_TO_CMS_SEML          1    //EMLi Center Manifold to SEMLi Center-Stable Manifold
+#define COMP_SINGLE_ORBIT                 2    //just some example of solutions
+#define COMP_CM_EML2_TO_CMS_SEML_READ     3    //Read
+#define COMP_VF_TEST                      4    //Test of the QBCP vector field. Should probably be put in OOFTDA
+#define COMP_CM_EML2_TO_CM_SEML_REFINE    5    //EML2 Center Manifold to SEMLi Center Manifold
+#define COMP_EPHEMERIDES_TEST             6    //Ephemerides test
+#define COMP_CM_EML2_TO_CM_SEML_3D        7    //EML2 Center Manifold to SEMLi Center Manifold in 3D
+#define COMP_VOFTS_TO_VOFTS               8    //Store CS/CU into one-dimensionnal series to gain memory
+#define COMP_test_INVMAN                  9    //Test of the new invariant manifold implementation
+#define COMP_REF_JPL                      10   //Refine to JPL ephemerides
+#define COMP_CM_EML2_TO_CM_SEML_H         11   //Planar EMLi Center Manifold to SEMLi Center Manifold, at a given energy
+#define COMP_ORBIT_EML2_TO_CM_SEML        12   //EMLi Center Manifold to SEMLi Center Manifold, on a given set of orbits
+#define COMP_SINGLE_ORBIT_EML2_TO_CM_SEML 13   //EMLi Center Manifold to SEMLi Center Manifold, on a single orbit
+
 
 /************* NOTES *********************************************************************
  Notes from Reunion with Josep (15/12/2015)
@@ -52,7 +54,6 @@ using namespace std;
 + Book I for an example of continuation.
 
 + @TODO: see if we can fasten the JPL and QBCP vf codes! Started to be sloooow. Can we also fasten ode78?
-
 + @TODO: in reffromcontemlisemli, try to move around the et0. Is there a connection with the size of the final refined EML2 orbit?
 + @TODO: in reffromcontemlisemli, what happens if we search for et0 in more than 3 month span? we can probably find a month for which the size is roughly equivalent
 
@@ -86,7 +87,7 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         // Type of computation
         //--------------------------------------------------------------------------------
-        COMP_TYPE   = COMP_CM_EML2_TO_CMS_SEML;
+        COMP_TYPE   = COMP_SINGLE_ORBIT_EML2_TO_CM_SEML;
 
         //--------------------------------------------------------------------------------
         // Model and libration points
@@ -182,6 +183,7 @@ int main(int argc, char** argv)
     case COMP_CM_EML2_TO_CM_SEML_REFINE:
     case COMP_CM_EML2_TO_CM_SEML_H:
     case COMP_ORBIT_EML2_TO_CM_SEML:
+    case COMP_SINGLE_ORBIT_EML2_TO_CM_SEML:
         model     = MODEL_TYPE;
         fwrk      = F_EM;
         isNorm    = 1;
@@ -258,26 +260,26 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         //Time grid: min, max and number of points on the grid
         //--------------------------------------------------------------------------------
-        projSt.TMIN  = 0.0*SEML.us_em.T;
+        projSt.TMIN  = 0.5*SEML.us_em.T;
         projSt.TMAX  = 1.0*SEML.us_em.T;
 
-        projSt.TSIZE    = 0;
+        projSt.TSIZE    = 10;
         projSt.TLIM[0]  = projSt.TMIN;
         projSt.TLIM[1]  = projSt.TMAX;
 
         //--------------------------------------------------------------------------------
         // Configuration (s1, s2, s3, s4) grid
         //--------------------------------------------------------------------------------
-        projSt.GLIM_SI[0][0] = -30;
+        projSt.GLIM_SI[0][0] = -10;
         projSt.GLIM_SI[0][1] = +30;
 
-        projSt.GLIM_SI[1][0] = +0;
+        projSt.GLIM_SI[1][0] = +2;
         projSt.GLIM_SI[1][1] = +10;
 
-        projSt.GLIM_SI[2][0] = -35;
+        projSt.GLIM_SI[2][0] = -10;
         projSt.GLIM_SI[2][1] = +35;
 
-        projSt.GLIM_SI[3][0] = +0;
+        projSt.GLIM_SI[3][0] = +1;
         projSt.GLIM_SI[3][1] = +10;
 
         projSt.GSIZE_SI[0]   = 2;
@@ -449,6 +451,7 @@ int main(int argc, char** argv)
         case COMP_CM_EML2_TO_CM_SEML:
         case COMP_CM_EML2_TO_CM_SEML_H:
         case COMP_ORBIT_EML2_TO_CM_SEML:
+        case COMP_SINGLE_ORBIT_EML2_TO_CM_SEML:
         {
             //----------------------------------------------------------------------------
             //Time grid: min, max and number of points on the grid
@@ -705,12 +708,23 @@ int main(int argc, char** argv)
     }
 
         //================================================================================
-        // Projection CMU EML2 to CM SEMLi, on a given orbit
+        // Projection CMU EML2 to CM SEMLi, on a given set of orbits
         //================================================================================
     case COMP_ORBIT_EML2_TO_CM_SEML:
     {
         tic();
         int_proj_ORBIT_EM_on_CM_SEM(projSt, 1);
+        cout << "End of in int_proj_ORBIT_EM_on_CM_SEM in " << toc() << endl;
+        break;
+    }
+
+        //================================================================================
+        // Projection CMU EML2 to CM SEMLi, on a given orbit
+        //================================================================================
+    case COMP_SINGLE_ORBIT_EML2_TO_CM_SEML:
+    {
+        tic();
+        int_proj_SINGLE_ORBIT_EM_on_CM_SEM(projSt, 1);
         cout << "End of in int_proj_ORBIT_EM_on_CM_SEM in " << toc() << endl;
         break;
     }
@@ -877,10 +891,10 @@ int main(int argc, char** argv)
                     if(reduced_nv == 5) st0[4] = 0.0;
                     break;
                 case 2:
-                    st0[0] = 7.327409882046186;//-20 ;
-                    st0[1] = 0.0;//-6.316522019280152e-03;
-                    st0[2] = -10.0764777378366;//-36;
-                    st0[3] = 0.0;//-1.681003648125090e-03;
+                    st0[0] = 28;//-20 ;
+                    st0[1] = 1.74347452709299;//-6.316522019280152e-03;
+                    st0[2] = 36;//-36;
+                    st0[3] = 1.74347452709299;//-1.681003648125090e-03;
                     if(reduced_nv == 5) st0[4] = 0.0;
 
                     break;
@@ -915,10 +929,10 @@ int main(int argc, char** argv)
         int isFlagOn = 1;
         int isPlot   = 1;
         double t0 = 0.96*SEML.us->T;
-        double  N = 10;
+        double  N = 20;
 
-        //gridOrbit_si(st0, t0, t0 + N*SEML.us->T, 1e-2*SEML.us->T, isFlagOn);
-        gridOrbit_strob(st0, t0, N, isFlagOn, isPlot);
+        gridOrbit_si(st0, t0, t0 + N*SEML.us->T, 1e-2*SEML.us->T, isFlagOn, isPlot);
+        //gridOrbit_strob(st0, t0, N, isFlagOn, isPlot);
 
 
         break;

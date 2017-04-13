@@ -357,7 +357,7 @@ void qbcp_coc_vec(double** y0, double* t0, double** yout, int N, int inputType, 
  *  \brief COC: from inputType to outputType.
  *         Used ONLY in qbcp_coc and qbcp_coc_vec, since specific checks
  *         are made in these routines prior to any computations.
- *         €€TODO: simplify the COCs. Done for now: VNCEM.
+ *         @TODO: simplify the COCs. Done for now: VNCEM.
  **/
 void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, int outputType)
 {
