@@ -80,6 +80,12 @@ REFST_SI_CMU_EM_LIM=(-2.0 -1.75 0 0 0.5 1.0 0 0)
 # Or, if we want the user to define such domain:
 REFST_ISLIMUD=0
 
+# Domain of search (min s1, max s1, min s3, max s3) for the seed of first guess
+REFST_SI_SEED_EM_LIM=(-40 +40 0 0 -40 +40 0 0)
+
+# Maximum projection distance allowed during subselection
+REFST_PMAX_DIST_SEM=5e-3
+
 # Limits for the time of flight during transfers - not used if -1
 REFST_TOF_LIM=(-1 -1)
 

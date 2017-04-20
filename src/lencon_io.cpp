@@ -3278,7 +3278,7 @@ bool ProjResClass::push_back_conditional(ProjResClass& inSt, RefSt& refSt)
         //--------------------------------------------------------------------------------
         // Limit in the reduced coordinates (s1, s2, s3, s4) - SEEDS
         //--------------------------------------------------------------------------------
-        cst  =       (inSt.s1_CMU_EM_seed[kpor] >= refSt.si_SEED_EM_MIN[0]) & (inSt.s1_CMU_EM_seed[kpor] <= refSt.si_SEED_EM_MAX[0]);
+        cst  = cst & (inSt.s1_CMU_EM_seed[kpor] >= refSt.si_SEED_EM_MIN[0]) & (inSt.s1_CMU_EM_seed[kpor] <= refSt.si_SEED_EM_MAX[0]);
         cst  = cst & (inSt.s3_CMU_EM_seed[kpor] >= refSt.si_SEED_EM_MIN[2]) & (inSt.s3_CMU_EM_seed[kpor] <= refSt.si_SEED_EM_MAX[2]);
 
         if(refSt.is3D())

@@ -83,6 +83,13 @@ GLIM_S3=(-10 +35)
 GLIM_S4=(+0 +0)
 GSIZE_SI=(+0 +0 +10 +0)
 
+# Values for QHalor orbit
+# GLIM_S1=(+28 +30)
+# GLIM_S2=(+1.74347452709299 +0)
+# GLIM_S3=(36 +35)
+# GLIM_S4=(1.74347452709299 +0)
+# GSIZE_SI=(+0 +0 +10 +0)
+
 # Primary family
 PRIMARY=1
 

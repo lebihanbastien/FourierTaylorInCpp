@@ -3817,7 +3817,7 @@ int sorefemlisemli(RefSt& refSt)
         //--------------------------------------------------------------------------------
         //Second step: variable tn & continuation, if necessary
         //--------------------------------------------------------------------------------
-        if(status && refst_type == REF_CONT_ORBIT)
+        if(status == FTC_SUCCESS  && refst_type == REF_CONT_ORBIT)
         {
             refSt.type  = REF_CONT_ORBIT;
             refSt.time  = REF_VAR_TN;

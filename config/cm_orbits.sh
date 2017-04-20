@@ -73,16 +73,16 @@ IO_HANDLING=$IO_DIALOG
 # Parameters that change often
 #-----------------------------------------------------
 # Time grid: min, max and number of points on the grid
-TMIN=0.5    # (given as %T, with T the SEM period)
+TMIN=0.0    # (given as %T, with T the SEM period)
 TMAX=1.0    # (given as %T, with T the SEM period)
-TSIZE=10	  
+TSIZE=100	  
 
 # Configuration (s1, s2, s3, s4) grid
-GLIM_S1=(+4 +30)
+GLIM_S1=(+10 +40)
 GLIM_S2=(+0 +0)
 GLIM_S3=(-10 +35)
 GLIM_S4=(+0 +0)
-GSIZE_SI=(+0 +0 +10 +0)
+GSIZE_SI=(+3 +0 +10 +0)
 
 # Primary family - keep in mind that the first minimum rule is used now for the primary!
 PRIMARY=1

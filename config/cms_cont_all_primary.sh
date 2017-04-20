@@ -92,6 +92,9 @@ REFST_SI_SEED_EM_LIM=(-40 +40 0 0 -40 +40 0 0)
 REFST_ISDIRUD=0			 # is it user defined?
 REFST_DIR=-1    		 # if not, +1 or -1
 
+# Maximum projection distance allowed during subselection
+REFST_PMAX_DIST_SEM=5e-3
+
 # Limits for the time of flight during transfers - not used if -1
 REFST_TOF_LIM=(-1 -1)
 
