@@ -59,6 +59,11 @@ ISPAR=1
 #-----------------------------------------------------
 ISNOHUP=0
 
+#-----------------------------------------------------
+# I/O Handling
+#-----------------------------------------------------
+IO_HANDLING=$IO_DIALOG
+
 #=====================================================
 #  ---- Refinement parameters ----
 #=====================================================
@@ -71,16 +76,19 @@ REFST_DIM=$REF_MIXED             # Type of dimensions planar or 3d?
 REFST_T0_DES=0.995               # Initial time - given as %T, with T the SEM period   
 
 # Domain of search (min s1, max s1, min s2, max s2, min s3, max s3, min s4, max s4) for the first guess
-REFST_SI_CMU_EM_LIM=(-35 35 0 0 -35 35 12 12)
+REFST_SI_CMU_EM_LIM=(-35 35 -35 +35 -35 35 -35 +35)
 # Or, if we want the user to define such domain:
 REFST_ISLIMUD=0
 
 # Domain of search (min s1, max s1, min s3, max s3) for the seed of first guess
-REFST_SI_SEED_EM_LIM=(-40 +40 0 0 -40 +40 0 0)
+REFST_SI_SEED_EM_LIM=(-40 +40 -40 +40 -40 +40 -40 +40)
 
 # Direction of the continuation procedure
 REFST_ISDIRUD=0			 # is it user defined?
 REFST_DIR=-1    		 # if not, +1 or -1
+
+# Maximum projection distance allowed during subselection
+REFST_PMAX_DIST_SEM=10
 
 # Limits for the time of flight during transfers - not used if -1
 REFST_TOF_LIM=(-1 -1)
@@ -100,7 +108,6 @@ else
 fi
 REFST_VAR_TIME_DS0=1e-2	      # for variable times
 
-
 # Desired number of iterations in Newton's method in the continuation procedure
 REFST_FIXED_TIME_NU0=2       # for fixed times
 REFST_VAR_TIME_NU0=3 	     # for variable times
@@ -109,10 +116,16 @@ REFST_VAR_TIME_NU0=3 	     # for variable times
 REFST_ISFLAGON=1   	         # do we have steps in the procedure - asking the user to press enter to go on?
 REFST_ISPLOTTED=1   		 # do we plot the results during the computation?
 REFST_ISSAVED=1     		 # do we save the results in data files?
-REFST_ISFROMSERVER=1		 # does the raw data comes from server files?
+REFST_ISFROMSERVER=0		 # does the raw data comes from server files?
 
 # Maximum angle around SEMLi if REF_COND_T is used (in degrees)
 REFST_THETAMAX=180           # should be a multiple of 90°
+
+# Filenames (used only if IO_HANDLING==$IO_BASH)
+FILE_PCU="projcu_3d.bin"
+FILE_CONT="cont_atf.txt"
+FILE_CONT_TRAJ="cont_atf_traj.bin"
+FILE_JPL="cont_jpl.bin"
 
 #-----------------------------------------------------
 # Parameters that are stable

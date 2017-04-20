@@ -8,12 +8,12 @@
  **/
 Config::Config()
 {
-    PREC_ABS    = 1e-10;
-    PREC_REL    = 1e-10;
-    PREC_ROOT   = 1e-13;
-    PREC_DIFF   = 1e-12;
-    PREC_HSTART = 1e-8;
-    DC_ITERMAX  = 20;
+    PREC_ABS        = 1e-10;
+    PREC_REL        = 1e-10;
+    PREC_ROOT       = 1e-13;
+    PREC_DIFF       = 1e-12;
+    PREC_HSTART     = 1e-8;
+    DC_ITERMAX      = 20;
 
     PREC_ABS_BACKUP = PREC_ABS;
     PREC_REL_BACKUP = PREC_REL;

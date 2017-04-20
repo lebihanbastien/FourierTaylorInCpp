@@ -3,8 +3,14 @@
 
 #include "oolenconref.h"
 #include "oolencon.h"
+#include "tinyfiledialogs.h"
 
 
+//========================================================================================
+//
+//          Structure for projection parameters
+//
+//========================================================================================
 /**
  *  \struct ProjSt
  *  \brief  Define a given projection structure, with a set of parameters
@@ -12,20 +18,152 @@
 typedef struct ProjSt ProjSt;
 struct ProjSt
 {
-    double TM, TMIN, TMAX, TLIM[2], GLIM_SI[4][2];
-    int    TSIZE, GSIZE_SI[4], MSIZE, NSMIN, NOD, ISPAR, PRIMARY;
-    double YNMAX, SNMAX, dHd;
-    double dt;
+    //------------------------------------------------------------------------------------
+    // ... filename handling is private
+    //------------------------------------------------------------------------------------
+    private:
+
+    //filename for the data file output of routines such as compute_grid_CMU_EM_3D/int_proj_CMU_EM_on_CM_SEM_3D
+    string filename_output;
+
+
+    //------------------------------------------------------------------------------------
+    // Most of the structure is public to ease use...
+    //------------------------------------------------------------------------------------
+    public:
+
+    int    OFTS_ORDER, LI_EM, LI_SEM, LI_START, LI_TARGET;
+    int    IO_HANDLING, ISPAR;
+    double TM, RMIN, RMAX, TMIN, TMAX, TLIM[2], GLIM_SI[4][2];
+    int    TSIZE, GSIZE_SI[4], MSIZE, NSMIN, NOD, PRIMARY;
+    double YNMAX, SNMAX, dHd, dt;
+    double hyp_epsilon_eml2, hyp_epsilon_seml2;
+    string plot_folder;
+    string FILE_CU, FILE_PCU;
 
     /**
      *  \brief Constructor for ProjSt
      **/
-     ProjSt():dHd(-1.0), dt(0.001){}
+     ProjSt(int OFTS_ORDER_, int LI_EM_, int LI_SEM_,
+            int LI_START_, int LI_TARGET_,
+            int IO_HANDLING_, int ISPAR_,
+            double hyp_epsilon_eml2_, double hyp_epsilon_seml2_,
+            string plot_folder_):
+            OFTS_ORDER(OFTS_ORDER_), LI_EM(LI_EM_), LI_SEM(LI_SEM_),
+            LI_START(LI_START_), LI_TARGET(LI_TARGET_),
+            IO_HANDLING(IO_HANDLING_), ISPAR(ISPAR_),
+            dHd(-1.0), dt(0.001),
+            hyp_epsilon_eml2(hyp_epsilon_eml2_),
+            hyp_epsilon_seml2(hyp_epsilon_eml2_),
+            plot_folder(plot_folder_)
+    {
+        // filename_output is initialized empty
+        filename_output = "";
+    }
+
+    /**
+     *  \brief Update the filename and return it.
+     **/
+    string get_and_update_filename(string filename_bash, int type, int mode)
+    {
+        // If TSIZE == 0, there is only one time in the time vector, and we can add the
+        // initial time to the default filename
+
+        double t0 = (TSIZE == 0)? RMIN:-1;
+        this->filename_output = get_filenameCUM(this->IO_HANDLING, this->plot_folder,
+                                                filename_bash, this->OFTS_ORDER, type,
+                                                this->LI_TARGET, t0, dHd, mode);
+        return this->filename_output;
+    }
+
+    string get_filename(int type, int mode)
+    {
+        //Updating the filename if it does not exist.
+        if(this->filename_output.empty())
+        {
+            this->get_and_update_filename("", type, mode);
+        }
+
+        //Return its value
+        return this->filename_output;
+    }
+
 };
 
 
 
-#include "oolencon.h"
+//========================================================================================
+//
+//          Computation of the CMU about SEMLi
+//
+//========================================================================================
+/**
+ *  \brief Computes initial conditions in the 3D Center-Unstable Manifold about SEMLi,
+ *         in the QBCP model. The initial conditions (IC) are computed in a 5-dimensional
+ *         box: one dimension for the starting time, four dimensions for the
+ *         parameterization of the Center Manifold (s1 to s4 coordinates). The RCM
+ *         coordinate s5 along the unstable direction is fixed to dist_to_cm.
+ *
+ *  \param dist_to_cm:      the value in RCM coordinates on the unstable direction s5.
+ *  \param projSt.TLIM:     the min/max starting time (in SEM units) in the IC box.
+ *  \param projSt.TSIZE:    the number of points on the time grid in the IC box.
+ *  \param projSt.GLIM_SI:  the min/max of s1, s2, s3, s4 values (in RCM coordinates)
+ *                          in the IC box.
+ *  \param projSt.GSIZE_SI: the number of points on the  s1, s2, s3, s4 values  grids
+ *                          in the IC box.
+ *  \param projSt.ISPAR;    if TRUE, the computation is parallelized.
+ *
+ *
+ * The output data are saved in a binary file of the form:
+ *                   "plot/QBCP/SEM/L2/cu_3d_order_16.bin"
+ **/
+int compute_grid_CMU_SEM_3D(double dist_to_cm, ProjSt& projSt);
+
+
+//========================================================================================
+//
+//         Projection on the CM/CMS/CMU of EMLi
+//
+//========================================================================================
+/**
+ *  \brief Integrates the central-unstable legs from a discrete set of unstable directions
+ *         obtained using the routine compute_grid_CMU_EM. Then, each point on the
+ *         integration grid is projected on the Center Manifold CM_EM_NC about EMLi.
+ *         The best solution (minimum distance of projection) is stored.
+ *
+ *  \param projSt.TM:          the maximum integration time on each leg, in SEM units.
+ *
+ *  \param projSt.MSIZE:       the number of points on each manifold leg.
+ *
+ *  \param projSt.NOD:         the number of dimensions on which the distance of
+ *                             projection is computed (usually either 3 (the physical
+ *                             distance) or 6 (the whole phase space)).
+ *
+ *  \param projSt.ISPAR:       if TRUE, the computation is parallelized.
+ *
+ *  \param projSt.YNMAX:       the maximum norm in NCEM coordinates for which a given
+ *                             state on the integration grid is projected on CM_EM_NC
+ *                             More precisely: for a given state y along the manifold leg,
+ *                             if norm(y, 3) < projSt.YNMAX, the state is projected.
+ *                             Otherwise, it is considered too far away from EMLi to be
+ *                             a good candidate for projection.
+ *
+ *  \param projSt.SNMAX:       the maximum norm in RCM EM coordinates for which a given
+ *                             projection state on the CM of EMLi (CM_SEM_NC) is
+ *                             computed back in NCSEM coordinates. More precisely, for a
+ *                             given state y in NCSEM coordinates, the result of the
+ *                             projection on CM_SEM_NC gives a state sproj in RCM SEM
+ *                             coordinates.
+ *                             if norm(sproj, 4) < projSt.SNMAX, the computation
+ *                             yproj = CM_EM_NC(sproj, t) is performed. Otherwise, the
+ *                             state sproj is considered too far away from the RCM origin
+ *                             to be a good candidate - it is out of the domain of
+ *                             practical convergence of CM_SEM_NC.
+ *
+ * The output data are saved in a binary file of the form:
+ *          "plot/QBCP/SEM/L2/projcu_3d_order_16.bin".
+ **/
+int int_proj_CMU_SEM_on_CM_EM_3D(ProjSt& projSt);
 
 
 //========================================================================================
@@ -115,6 +253,39 @@ int compute_grid_CMU_EM_dH(double dist_to_cm, ProjSt& projSt);
 //         Projection on the CM/CMS/CMU of SEMLi
 //
 //========================================================================================
+/**
+ *  \brief Projection subroutine, used in all the subsequent routines in this section.
+ *         All outputs in projResSt are updated
+ *         (see the declaration of this structure for details).
+ *
+ *         This routine performs the following steps:
+ *
+ *          - It integrates the initial state at emli, stored in projResSt
+ *          - It compute the minimum and the argminimum distance of projection along the
+ *            corresponding trajectory, targeting the center manifold invman_target
+ *          - The information relative to this min/argmin are stored in projResSt.
+ *
+ *         The coordinates within which the results are saved are encoded in ProjResSt.
+ **/
+int proj_subroutine(ProjResSt& projResSt, Invman& invman_target, ProjSt& projSt);
+
+/**
+ *  \brief Projection subroutine, used in all the subsequent routines in this section.
+ *         All outputs in projResSt are updated
+ *         (see the declaration of this structure for details).
+ *
+ *         This routine performs the following steps:
+ *
+ *          - It integrates the initial state at emli, stored in projResSt
+ *          - It compute the minimum and the argminimum distance of projection along the
+ *            corresponding trajectory, targeting the center manifold invman_SEM
+ *          - The information relative to this min/argmin are stored in projResSt.
+ *
+ *
+ *         Note: this routine is the old version from the EML to SEML case.
+ **/
+int proj_subroutine_old_from_EML(ProjResSt& projResSt, Invman& invman_SEM, ProjSt& projSt);
+
 /**
  *  \brief Integrates the central-unstable legs from a discrete set of unstable directions
  *         obtained using the routine compute_grid_CMU_EM. Then, each point on the
@@ -303,7 +474,7 @@ int int_proj_SINGLE_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods);
  *         If isPar == true, the computation and storage of sRCM is made parallel
  *         (but careful with that, may not work with higher parallelized loops).
  **/
-int cmu_grid_strob(double* tNCE, double** yNCE, double** sRCM, double st0[], double t0, int N, int isPar);
+int cmu_grid_strob(double* tNCE, double** yNCE, double** sRCM, double st0[], double t0, int N, int isPar, double hyp_epsilon);
 
 /**
  *  \brief Computes N+1 points along a trajectory in the QBCP, on NPeriods periods T
@@ -320,7 +491,7 @@ int cmu_grid_strob(double* tNCE, double** yNCE, double** sRCM, double st0[], dou
  *         If isPar == true, the computation and storage of sRCM is made parallel
  *         (but careful with that, may not work with higher parallelized loops).
  **/
-int cmu_grid_orbit(double* tNCE, double** yNCE, double** sRCM, double st0[], double t0, int N, int NPeriods,  int isPar);
+int cmu_grid_orbit(double* tNCE, double** yNCE, double** sRCM, double st0[], double t0, int N, int NPeriods,  int isPar, double hyp_epsilon);
 
 /**
  *  \brief Estimates the period T (in adimensionalized units) of a given orbit Orbit
@@ -354,7 +525,7 @@ int cmu_orbit_estimate_period(const double st0[], double t0, double* T, int* N, 
  *         If isPar == true, the computation and storage of sRCM is made parallel
  *         (but careful with that, may not work with higher parallelized loops).
  **/
-int cmu_grid_orbit_on_one_period(Orbit& orbit, double* tNCE, double** yNCE, double** sRCM, const double st0[], double t0, double T, int N, int isPar);
+int cmu_grid_orbit_on_one_period(Orbit& orbit, double* tNCE, double** yNCE, double** sRCM, const double st0[], double t0, double T, int N, int isPar, double hyp_epsilon);
 
 //========================================================================================
 //
@@ -518,13 +689,13 @@ int comprefemlisemli3d(int grid_freq_days[3], int coord_type,
 /**
  *  \brief Refine a given output of comprefemlisemli3d into JPL ephemerides.
  **/
-int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst);
+int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst, string filename_in);
 
 /**
  *  \brief Refine a given output of comprefemlisemli3d into Inertial Coordinates, then into
  *         JPL coordinates.
  **/
-int comptojplref3d(int coord_type, RefSt& refSt);
+int comptojplref3d(int coord_type, RefSt& refSt, string filename_in);
 
 //----------------------------------------------------------------------------------------
 //         Refinement of solutions: to JPL - Subroutines
@@ -584,7 +755,7 @@ int compref3d_test_eml_synjpl(int man_grid_size_t,
 /**
  *  \brief Computes only a EML2-SEMLi connection and test a JPL refinement, in synodical coordinates
  **/
-int compref3d_test_eml2seml_synjpl(int coord_type);
+int compref3d_test_eml2seml_synjpl(int coord_type, string filename_in);
 
 //========================================================================================
 //
@@ -627,7 +798,7 @@ int savetrajsegbyseg(double** y_traj, double* t_traj,
 /**
  *  \brief Get the length the results of the continuation procedure, in txt file.
  **/
-int getLengthCONT_txt(double t0xT);
+int getLengthCONT_txt(string filename);
 
 /**
  *  \brief Reads the results of the continuation procedure, in txt file.
@@ -638,7 +809,7 @@ int readCONT_txt(double*  t0_CMU_EM, double*   tf_CMU_EM,
                  double* tethae, double** ye_NCSEM,
                  double* H0_NCEM, double* He_NCEM,
                  double* H0_NCSEM, double* He_NCSEM,
-                 double tr0, int fsize);
+                 int fsize, string filename);
 
 /**
  *  \brief Save a given solution as a complete trajectory

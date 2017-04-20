@@ -1216,8 +1216,9 @@ int gridOrbit_si(double st0[], double t0, double tf, double dt, int isFlagOn, in
     double *tNCE  = dvector(0, N);
     double *tNCET = dvector(0, N);
 
-    double *HNC  = dvector(0, N);
-    double *HNC0 = dvector(0, N);
+    double *HNC   = dvector(0, N);
+    double *dHNC  = dvector(0, N);
+    double *HNC0  = dvector(0, N);
 
     //====================================================================================
     //Integration
@@ -1242,6 +1243,8 @@ int gridOrbit_si(double st0[], double t0, double tf, double dt, int isFlagOn, in
         tNCET[k] = tNCE[k]/SEML.us->T;
     }
 
+
+
     //====================================================================================
     //Projection
     //====================================================================================
@@ -1256,7 +1259,20 @@ int gridOrbit_si(double st0[], double t0, double tf, double dt, int isFlagOn, in
     //====================================================================================
     //Delta Hamiltonian
     //====================================================================================
-    for(int k= 0; k <= N; k++) HNC[k] -= HNC0[k];
+    for(int k= 0; k <= N; k++) dHNC[k] = HNC[k] - HNC0[k];
+    for(int k= 0; k <= N; k++)  HNC[k] = HNC[k] - HNC0[0];
+
+    //Mean and Standard-deviation
+    double mean = gsl_stats_mean (HNC, 1, N+1);
+    double sd   = gsl_stats_sd_m (HNC, 1, N+1, mean);
+    cout << "mean(HNC) = " << mean << endl;
+    cout << "sd(HNC) = "   << sd << endl;
+
+    //Mean and Standard-deviation
+    mean = gsl_stats_mean (dHNC, 1, N+1);
+    sd   = gsl_stats_sd_m (dHNC, 1, N+1, mean);
+    cout << "mean(dHNC) = " << mean << endl;
+    cout << "sd(dHNC) = "   << sd << endl;
 
     //====================================================================================
     //Plotting
@@ -1272,8 +1288,10 @@ int gridOrbit_si(double st0[], double t0, double tf, double dt, int isFlagOn, in
     h2 = gnuplot_init(isPlot);
     gnuplot_setstyle(isPlot, h2,   (char*)"lines");
     gnuplot_set_xlabel(isPlot, h2, (char*)"t [x T]");
-    gnuplot_set_ylabel(isPlot, h2, (char*)"H [-]");
-    gnuplot_plot_xy(isPlot, h2, tNCET, HNC, N+1, (char*)"H(t) - H(0, t)", "lines", "1", "1", 1);
+    gnuplot_set_ylabel(isPlot, h2, (char*)"H[-]");
+    gnuplot_plot_xy(isPlot, h2, tNCET, dHNC, N+1, (char*)"H(t) - H(0, t)", "lines", "1", "1", 1);
+    gnuplot_plot_xy(isPlot, h2, tNCET, HNC, N+1, (char*)"H(t) - H(0, 0)", "lines", "1", "1", 2);
+
 
     gnuplot_ctrl  *h3;
     h3 = gnuplot_init(isPlot);
@@ -1297,6 +1315,7 @@ int gridOrbit_si(double st0[], double t0, double tf, double dt, int isFlagOn, in
     free_dvector(tNCE, 0, N);
     free_dvector(tNCET, 0, N);
     free_dvector(HNC, 0, N);
+    free_dvector(dHNC, 0, N);
     free_dvector(HNC0, 0, N);
     return status;
 

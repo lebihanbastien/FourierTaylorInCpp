@@ -257,8 +257,9 @@ int ode78(double **yv, double *tv, OdeEvent *odeEvent,
     //====================================================================================
     // Update the collisionner
     //====================================================================================
-    odeEvent->coll      = odeParams.event.coll;
-    odeEvent->crossings = odeParams.event.crossings;
+    odeEvent->coll           = odeParams.event.coll;
+    odeEvent->crossings      = odeParams.event.crossings;
+    odeEvent->crossings_moon = odeParams.event.crossings_moon;
 
     //====================================================================================
     // 10. Free memory
@@ -1588,6 +1589,7 @@ int gslc_event_step(OdeStruct* odestruct, OdeParams* odP, double yv[], double* t
     //Initialize
     //------------------------------------------------------------------------------------
     double x1, x2;
+    double dist_to_Bem;
 
     //------------------------------------------------------------------------------------
     //Evolve one step
@@ -1595,27 +1597,55 @@ int gslc_event_step(OdeStruct* odestruct, OdeParams* odP, double yv[], double* t
     int status = gsl_odeiv2_evolve_apply (odestruct->e, odestruct->c, odestruct->s, &odestruct->sys, t, t1, &odestruct->h, yv);
 
     //------------------------------------------------------------------------------------
-    //Check crossings of x = -1
+    //Check crossings of x = -1, in EML2 NCSEM coordinates
     //------------------------------------------------------------------------------------
-        x1 = odP->event.x1;
-        if(x1 == -1.0) odP->event.x1 = yv[0] + 1.0; //first use
-        else
+    x1 = odP->event.x1;
+    if(x1 == -1.0) odP->event.x1 = yv[0] + 1.0; //first use
+    else
+    {
+        x2 = yv[0] + 1.0;
+
+        if(x1 > 0 && x2 < 0)
         {
-            x2 = yv[0] + 1.0;
-
-            if(x1 > 0 && x2 < 0)
-            {
-                if(yv[1] > 0) odP->event.crossings += 1.0;    //clockwise
-                else          odP->event.crossings += 0.1;    //counterclockwise
-            }
-            else if(x1 < 0 && x2 > 0)
-            {
-
-                if(yv[1] < 0) odP->event.crossings += 1.0;    //clockwise
-                else          odP->event.crossings += 0.1;    //counterclockwise
-            }
-            odP->event.x1 = x2;
+            if(yv[1] > 0) odP->event.crossings += 1.0;    //clockwise
+            else          odP->event.crossings += 0.1;    //counterclockwise
         }
+        else if(x1 < 0 && x2 > 0)
+        {
+
+            if(yv[1] < 0) odP->event.crossings += 1.0;    //clockwise
+            else          odP->event.crossings += 0.1;    //counterclockwise
+        }
+        odP->event.x1 = x2;
+    }
+
+    //------------------------------------------------------------------------------------
+    // Check crossings with the radius of the Moon, in EML2 NCSEM coordinates
+    // Mean radius of the lunar orbit:
+    //          odP->event.mr_moon = 2.518747349676265e-01 (see env.h)
+    // being centered on (-1.0, 0, 0), the position of Bem, the Earth-Moon center of mass.
+    //------------------------------------------------------------------------------------
+    x1 = odP->event.x1_moon;
+    if(x1 == -1.0)
+    {
+        //We compare the distance to (-1.0, 0) wrt to the radius of the lunar orbit
+        dist_to_Bem = sqrt((-1.0 - yv[0])*(-1.0 - yv[0]) + yv[1]*yv[1] + yv[2]*yv[2]);
+        odP->event.x1_moon = dist_to_Bem - odP->event.mr_moon; //first use
+    }
+    else
+    {
+        //We compare the distance to (-1.0, 0) wrt to the radius of the lunar orbit
+        dist_to_Bem = sqrt((-1.0 - yv[0])*(-1.0 - yv[0]) + yv[1]*yv[1] + yv[2]*yv[2]);
+        x2 = dist_to_Bem - odP->event.mr_moon; //first use
+
+        //Detecting a cross of the lunar orbit
+        if(x1*x2 < 0)
+        {
+            odP->event.crossings_moon += 1.0;
+        }
+
+        odP->event.x1_moon = x2;
+    }
 
     return status;
 }
@@ -2422,8 +2452,6 @@ string filenameOrbit(int ofts_order, int sizeOrbit, int type)
         return SEML.cs->F_PLOT+"cu_order_"+numTostring(ofts_order)+"_size_"+numTostring(sizeOrbit)+".txt";
     case TYPE_CS:
         return SEML.cs->F_PLOT+"cs_order_"+numTostring(ofts_order)+"_size_"+numTostring(sizeOrbit)+".txt";
-    case TYPE_MAN:
-        return SEML.cs->F_PLOT+"man_order_"+numTostring(ofts_order)+"_size_"+numTostring(sizeOrbit)+".bin";
     case TYPE_MAN_PROJ:
         return SEML.cs->F_PLOT+"man_proj_"+numTostring(ofts_order)+"_size_"+numTostring(sizeOrbit)+".bin";
     default:

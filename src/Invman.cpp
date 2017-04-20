@@ -982,7 +982,7 @@ void Invman::evalDRCMtoCOORD(double const st0[], double const t, gsl_matrix* m1,
     else
     {
         //--------------------------------------------------------------------------------
-        //A direction computation is possible, since the result is desired in NC
+        //A direct computation is possible, since the result is desired in NC
         //coordinates
         //--------------------------------------------------------------------------------
         evalDRCMtoNC(st0, t, m1, ofts_order, ofs_order);

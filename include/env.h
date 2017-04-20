@@ -36,10 +36,9 @@
 #define MAN_CENTER_U  2
 #define MAN_CENTER_US 3
 
-//Projection distance
-#define PROJ_EPSILON     1e-6
-#define PROJ_EPSILON_SEM 1e-6
-
+//Hyperbolic component (default values)
+#define HYP_EPSILON_EML2_DEFAULT   1e-6
+#define HYP_EPSILON_SEML2_DEFAULT  1e-6
 
 using namespace std;
 
@@ -341,6 +340,11 @@ struct OdeEvent
     //Crossings
     double crossings;
     double x1;
+    //Crossings of the moon's orbit
+    double crossings_moon;
+    double x1_moon;
+    //Mean radius of the lunar orbit, in EML2 NCSEM coordinates, centered on (-1.0, 0, 0)
+    double mr_moon;
     //Detection is on/off
     int detection;
     //Warnings
@@ -354,7 +358,10 @@ struct OdeEvent
          coll  = FTC_SUCCESS;  //at initialisation, no collision so == FTC_SUCCESS
          crossings = 0.0;      //at initialisation, no crossing
          x1        = -1;
+         crossings_moon = 0.0; //at initialisation, no crossing
+         x1_moon   = -1;
          detection = 0;
+         mr_moon   = 2.518747349676265e-01; //Mean radius of the lunar orbit, in EML2 NCSEM coordinates
      }
 
      /**
@@ -365,8 +372,11 @@ struct OdeEvent
          coll  = FTC_SUCCESS;  //at initialisation, no collision so == FTC_SUCCESS
          crossings = 0.0;      //at initialisation, no crossing
          x1        = -1;
+         crossings_moon = 0.0; //at initialisation, no crossing
+         x1_moon   = -1;
          detection = detection_;
          warnings  = warnings_;
+         mr_moon   = 2.518747349676265e-01; //Mean radius of the lunar orbit, in EML2 NCSEM coordinates
      }
 };
 

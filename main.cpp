@@ -19,6 +19,9 @@
 #include "Invman.h"
 #include "Orbit.h"
 #include "Config.h"
+
+#include "tinyfiledialogs.h"
+
 //C
 extern "C" {
 #include "gnuplot_i.h"
@@ -47,6 +50,8 @@ using namespace std;
 #define COMP_ORBIT_EML2_TO_CM_SEML        12   //EMLi Center Manifold to SEMLi Center Manifold, on a given set of orbits
 #define COMP_SINGLE_ORBIT_EML2_TO_CM_SEML 13   //EMLi Center Manifold to SEMLi Center Manifold, on a single orbit
 
+#define COMP_CMU_SEML_TO_CM_EML           14   //SEMLi Center-Unstable Manifold to EMLj Center Manifold
+#define COMP_CMU_SEML_TO_CMS_EML          15   //SEMLi Center-Unstable Manifold to EMLj Center-Stable Manifold
 
 /************* NOTES *********************************************************************
  Notes from Reunion with Josep (15/12/2015)
@@ -61,14 +66,16 @@ using namespace std;
 int main(int argc, char** argv)
 {
     //====================================================================================
+    //Tests
+    //====================================================================================
+
+
+    //====================================================================================
     //Declare configuration parameters
     //====================================================================================
     // General parameters (orders, etc)
-    int COMP_TYPE, NUM_THREADS, MODEL_TYPE, LI_EM, LI_SEM, ISPAR;
-    // Projection parameters (in structure)
-    ProjSt projSt;
-    // Refinement parameters (in structure)
-    RefSt refSt;
+    int COMP_TYPE, NUM_THREADS, MODEL_TYPE, LI_EM, LI_SEM, ISPAR, IO_HANDLING;
+    double HYP_EPSILON_EML2, HYP_EPSILON_SEML2;
 
     //------------------------------------------------------------------------------------
     // The variable index contains the index of the current argument of
@@ -87,7 +94,7 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         // Type of computation
         //--------------------------------------------------------------------------------
-        COMP_TYPE   = COMP_SINGLE_ORBIT_EML2_TO_CM_SEML;
+        COMP_TYPE   = COMP_CM_EML2_TO_CM_SEML_3D;
 
         //--------------------------------------------------------------------------------
         // Model and libration points
@@ -108,6 +115,17 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         ISPAR       = 1;
         NUM_THREADS = 4;
+
+        //--------------------------------------------------------------------------------
+        // Hyperbolic component (default values)
+        //--------------------------------------------------------------------------------
+        HYP_EPSILON_EML2  = HYP_EPSILON_EML2_DEFAULT;
+        HYP_EPSILON_SEML2 = HYP_EPSILON_SEML2_DEFAULT;
+
+        //--------------------------------------------------------------------------------
+        // I/O handling
+        //--------------------------------------------------------------------------------
+        IO_HANDLING = IO_DEFAULT;
     }
     else  //arguments were passed
     {
@@ -134,6 +152,17 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         ISPAR       = atoi(argv[index++]);
         NUM_THREADS = atoi(argv[index++]);
+
+        //--------------------------------------------------------------------------------
+        // Hyperbolic component
+        //--------------------------------------------------------------------------------
+        HYP_EPSILON_EML2  = atof(argv[index++]);
+        HYP_EPSILON_SEML2 = atof(argv[index++]);
+
+        //--------------------------------------------------------------------------------
+        // I/O handling
+        //--------------------------------------------------------------------------------
+        IO_HANDLING = atoi(argv[index++]);
     }
 
     //====================================================================================
@@ -142,9 +171,14 @@ int main(int argc, char** argv)
     cout << setiosflags(ios::scientific) << setprecision(15);
     omp_set_num_threads(NUM_THREADS);
 
+    //Target is LI_SEM by default
+    int LI_TARGET = LI_SEM;
+    //Start is LI_EM by default
+    int LI_START  = LI_EM;
+
 
     //====================================================================================
-    // Some other parameters depend on the type of computation
+    // Parameters that depend on the type of computation
     //====================================================================================
     int model = 0, fwrk = 0, isNorm = 0;
     int pms_EM = 0, pms_SEM = 0, mType_EM = 0, mType_SEM = 0, reduced_nv = 0;
@@ -194,7 +228,23 @@ int main(int argc, char** argv)
         break;
 
         //================================================================================
-        // Projection CMU EML2 to CMS SEMLi
+        // Projection CMU SEMLi to CM EMLj
+        //================================================================================
+    case COMP_CMU_SEML_TO_CM_EML:
+        model     = MODEL_TYPE;
+        fwrk      = F_SEM;
+        isNorm    = 1;
+        pms_EM    = PMS_GRAPH;
+        pms_SEM   = PMS_GRAPH;
+        mType_EM  = MAN_CENTER;
+        mType_SEM = MAN_CENTER_U;
+        // Target & start are inversed
+        LI_TARGET = LI_EM;
+        LI_START  = LI_SEM;
+        break;
+
+        //================================================================================
+        // Refinement CMU EML2 to CMS SEMLi
         //================================================================================
     case COMP_CM_EML2_TO_CMS_SEML:
     case COMP_CM_EML2_TO_CMS_SEML_READ:
@@ -206,6 +256,19 @@ int main(int argc, char** argv)
         pms_SEM   = PMS_GRAPH;
         mType_EM  = MAN_CENTER_U;
         mType_SEM = MAN_CENTER_S;
+        break;
+
+        //================================================================================
+        // Refinement CMU SEMLi to CMS EMLj
+        //================================================================================
+    case COMP_CMU_SEML_TO_CMS_EML:
+        model     = MODEL_TYPE;
+        fwrk      = F_SEM;
+        isNorm    = 1;
+        pms_EM    = PMS_GRAPH;
+        pms_SEM   = PMS_GRAPH;
+        mType_EM  = MAN_CENTER_S;
+        mType_SEM = MAN_CENTER_U;
         break;
 
         //================================================================================
@@ -238,6 +301,7 @@ int main(int argc, char** argv)
         cout << "main. Warning: unknown COMP_TYPE!" << endl;
     }
 
+
     //====================================================================================
     // Initialization of the environnement
     // Mandatory to perform any computation
@@ -249,6 +313,17 @@ int main(int argc, char** argv)
     //====================================================================================
     //Update the parameters specific to the type of computation (COMP_TYPE)
     //====================================================================================
+
+    //------------------------------------------------------------------------------------
+    // Structures
+    //------------------------------------------------------------------------------------
+    // Projection parameters (in structure)
+    ProjSt projSt(OFTS_ORDER, LI_EM, LI_SEM, LI_START, LI_TARGET, IO_HANDLING, ISPAR,
+                  HYP_EPSILON_EML2_DEFAULT, HYP_EPSILON_SEML2_DEFAULT, SEML.cs->F_PLOT);
+    // Refinement parameters (in structure)
+    RefSt refSt(OFTS_ORDER, LI_EM, LI_SEM, LI_START, LI_TARGET, IO_HANDLING, SEML.cs->F_PLOT);
+
+
     //------------------------------------------------------------------------------------
     //Check if arguments have been passed
     //------------------------------------------------------------------------------------
@@ -258,31 +333,39 @@ int main(int argc, char** argv)
         // Projection parameters
         //================================================================================
         //--------------------------------------------------------------------------------
+        // Hyperbolic component (default values)
+        //--------------------------------------------------------------------------------
+        projSt.hyp_epsilon_eml2  = HYP_EPSILON_EML2;
+        projSt.hyp_epsilon_seml2 = HYP_EPSILON_SEML2;
+
+        //--------------------------------------------------------------------------------
         //Time grid: min, max and number of points on the grid
         //--------------------------------------------------------------------------------
-        projSt.TMIN  = 0.5*SEML.us_em.T;
-        projSt.TMAX  = 1.0*SEML.us_em.T;
+        projSt.RMIN  = 0.99;
+        projSt.RMAX  = 1.0;
+        projSt.TMIN  = projSt.RMIN*SEML.us->T;
+        projSt.TMAX  = projSt.RMAX*SEML.us->T;
 
-        projSt.TSIZE    = 10;
+        projSt.TSIZE    = 0;
         projSt.TLIM[0]  = projSt.TMIN;
         projSt.TLIM[1]  = projSt.TMAX;
 
         //--------------------------------------------------------------------------------
         // Configuration (s1, s2, s3, s4) grid
         //--------------------------------------------------------------------------------
-        projSt.GLIM_SI[0][0] = -10;
+        projSt.GLIM_SI[0][0] = -30;
         projSt.GLIM_SI[0][1] = +30;
 
-        projSt.GLIM_SI[1][0] = +2;
-        projSt.GLIM_SI[1][1] = +10;
+        projSt.GLIM_SI[1][0] = +0;
+        projSt.GLIM_SI[1][1] = +0;
 
-        projSt.GLIM_SI[2][0] = -10;
-        projSt.GLIM_SI[2][1] = +35;
+        projSt.GLIM_SI[2][0] = -30;
+        projSt.GLIM_SI[2][1] = +30;
 
-        projSt.GLIM_SI[3][0] = +1;
-        projSt.GLIM_SI[3][1] = +10;
+        projSt.GLIM_SI[3][0] = +0;
+        projSt.GLIM_SI[3][1] = +0;
 
-        projSt.GSIZE_SI[0]   = 2;
+        projSt.GSIZE_SI[0]   = 50;
         projSt.GSIZE_SI[1]   = 0;
         projSt.GSIZE_SI[2]   = 50;
         projSt.GSIZE_SI[3]   = 0;
@@ -305,13 +388,19 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         //Stable parameters (are not supposed to change)
         //--------------------------------------------------------------------------------
-        projSt.TM    = 12.0*SEML.us_em.T; // Maximum integration time
-        projSt.MSIZE = 500;            // Number of points on each trajectory
-        projSt.NSMIN = 20;             // Number of sorted solutions
-        projSt.YNMAX = 0.6;            // The maximum norm (in SEM normalized units) for a projection to occur on the CM_NC of SEMLi
-        projSt.SNMAX = 0.6;            // The maximum norm (in RCM normalized units) for a projection to occur on the CM_NC of SEMLi
-        projSt.NOD   = 6;              // Number of dimensions on which we compute the norm of the projection
-        projSt.ISPAR = ISPAR;          // Boolean for parallel computation
+        projSt.TM    = 12.0*SEML.us->T; // Maximum integration time
+        projSt.MSIZE = 500;             // Number of points on each trajectory
+        projSt.NSMIN = 20;              // Number of sorted solutions
+        projSt.YNMAX = 0.6;             // The maximum norm (in SEM normalized units) for a projection to occur on the CM_NC of SEMLi
+        projSt.SNMAX = 0.6;             // The maximum norm (in RCM normalized units) for a projection to occur on the CM_NC of SEMLi
+        projSt.NOD   = 6;               // Number of dimensions on which we compute the norm of the projection
+
+        //--------------------------------------------------------------------------------
+        // Filenames (used only if IO_HANDLING==$IO_BASH)
+        //--------------------------------------------------------------------------------
+        projSt.FILE_CU  = "cu.bin";
+        projSt.FILE_PCU = "projcu.bin";
+
 
         //================================================================================
         // Refinement parameters
@@ -322,10 +411,10 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         //rk: set REF_CONT_D_HARD_CASE for difficult cases
         //with REF_CONT_D (ex: EML2-SEMLi via SEML1...)
-        refSt.type          = REF_ORBIT;                       // Type of refinement
+        refSt.type          = REF_CONT;                       // Type of refinement
         refSt.dim           = REF_PLANAR;                      // Type of dimensions planar or 3d?
-        refSt.t0xT_des      = 0.96;                            // Initial time (xT)
-        refSt.t0_des        = refSt.t0xT_des*SEML.us_em.T;     // Initial time
+        refSt.t0xT_des      = 0.99;                            // Initial time (xT)
+        refSt.t0_des        = refSt.t0xT_des*SEML.us->T;     // Initial time
 
         // Direction of the continuation procedure
         refSt.isDirUD       = 0;                  // is it user defined?
@@ -365,10 +454,10 @@ int main(int argc, char** argv)
         refSt.tof_MAX       = -1;
 
         // Values for crossings
-        refSt.crossings     = 2;
+        refSt.crossings     = -1;
 
         // Maximum projection distance allowed during subselection
-        refSt.pmax_dist_SEM = 5e-4;
+        refSt.pmax_dist_SEM = 1e-0;
 
         // Number of steps in the continuation procedure
         refSt.cont_step_max    = +450;            // with fixed times
@@ -383,8 +472,8 @@ int main(int argc, char** argv)
         refSt.nu0_vt = 3;       //with variable time
 
         //User parameters
-        refSt.isFlagOn      = 0;                  // do we have steps in the procedure - asking the user to press enter to go on?
-        refSt.isPlotted     = 0;                  // do we plot the results during the computation?
+        refSt.isFlagOn      = 1;                  // do we have steps in the procedure - asking the user to press enter to go on?
+        refSt.isPlotted     = 1;                  // do we plot the results during the computation?
         refSt.isSaved       = 1;                  // do we save the results in data files?
         refSt.isFromServer  = 0;                  // does the raw data comes from server files?
         refSt.isPar         = 0;                  //is parallel computation allowed?
@@ -435,6 +524,15 @@ int main(int argc, char** argv)
 
         //Type of time selection
         refSt.typeOfTimeSelection = TIME_SELECTION_RATIO;
+
+        //--------------------------------------------------------------------------------
+        // Filenames (used only if IO_HANDLING==$IO_BASH)
+        //--------------------------------------------------------------------------------
+        refSt.FILE_PCU       ="projcu_order_16_dest_L2_t0_0.995.bin";
+        refSt.FILE_CONT      ="cont_atf.txt";
+        refSt.FILE_CONT_TRAJ ="cont_atf_traj.bin";
+        refSt.FILE_JPL       ="cont_jpl.bin";
+
     }
     else  //arguments were passed
     {
@@ -449,6 +547,7 @@ int main(int argc, char** argv)
             //============================================================================
         case COMP_CM_EML2_TO_CM_SEML_3D:
         case COMP_CM_EML2_TO_CM_SEML:
+        case COMP_CMU_SEML_TO_CM_EML:
         case COMP_CM_EML2_TO_CM_SEML_H:
         case COMP_ORBIT_EML2_TO_CM_SEML:
         case COMP_SINGLE_ORBIT_EML2_TO_CM_SEML:
@@ -456,9 +555,11 @@ int main(int argc, char** argv)
             //----------------------------------------------------------------------------
             //Time grid: min, max and number of points on the grid
             //----------------------------------------------------------------------------
-            projSt.TMIN  = atof(argv[index++])*SEML.us_em.T;
-            projSt.TMAX  = atof(argv[index++])*SEML.us_em.T;
-            projSt.TM    = atof(argv[index++])*SEML.us_em.T;
+            projSt.RMIN  = atof(argv[index++]);
+            projSt.RMAX  = atof(argv[index++]);
+            projSt.TMIN  = projSt.RMIN*SEML.us->T;
+            projSt.TMAX  = projSt.RMAX*SEML.us->T;
+            projSt.TM    = atof(argv[index++])*SEML.us->T;
 
             projSt.TSIZE   = atoi(argv[index++]);
             projSt.TLIM[0] = projSt.TMIN;
@@ -497,17 +598,22 @@ int main(int argc, char** argv)
             projSt.YNMAX = atof(argv[index++]);
             projSt.SNMAX = atof(argv[index++]);
             projSt.NOD   = atoi(argv[index++]);
-            projSt.ISPAR = ISPAR;
 
             //----------------------------------------------------------------------------
             // Energy
             //----------------------------------------------------------------------------
-            projSt.dHd   = atof(argv[index++]);
+            projSt.dHd  = atof(argv[index++]);
 
             //----------------------------------------------------------------------------
             // Time frequency, in %T
             //----------------------------------------------------------------------------
             projSt.dt   = atof(argv[index++]);
+
+            //----------------------------------------------------------------------------
+            // Filenames (used only if IO_HANDLING==$IO_BASH)
+            //----------------------------------------------------------------------------
+            projSt.FILE_CU  = argv[index++];
+            projSt.FILE_PCU = argv[index++];
 
             break;
         }
@@ -517,17 +623,18 @@ int main(int argc, char** argv)
         // Refinement CMU EML2 to CMS SEMLi
         //================================================================================
         case COMP_CM_EML2_TO_CMS_SEML:
+        case COMP_CMU_SEML_TO_CMS_EML:
         case COMP_REF_JPL:
         {
-            //------------------------------------------------------------------------
+            //----------------------------------------------------------------------------
             // Parameters that change often
-            //------------------------------------------------------------------------
+            //----------------------------------------------------------------------------
             //rk: set REF_CONT_D_HARD_CASE for difficult cases
             //with REF_CONT_D (ex: EML2-SEMLi via SEML1...)
             refSt.type          = atoi(argv[index++]);            // Type of refinement
             refSt.dim           = atoi(argv[index++]);            // Type of dimensions planar or 3d?
             refSt.t0xT_des      = atof(argv[index++]);            // Initial time (xT)
-            refSt.t0_des        = refSt.t0xT_des*SEML.us_em.T;       // Initial time
+            refSt.t0_des        = refSt.t0xT_des*SEML.us->T;      // Initial time
 
             // Direction of the continuation procedure
             refSt.isDirUD       = atoi(argv[index++]);    // is it user defined?
@@ -563,8 +670,8 @@ int main(int argc, char** argv)
             refSt.si_SEED_EM_MAX[3] = atof(argv[index++]);
 
             //Limits for the time of flight during transfers - not used if negative
-            refSt.tof_MIN       = atof(argv[index++])*SEML.us_em.T;
-            refSt.tof_MAX       = atof(argv[index++])*SEML.us_em.T;
+            refSt.tof_MIN       = atof(argv[index++])*SEML.us->T;
+            refSt.tof_MAX       = atof(argv[index++])*SEML.us->T;
 
             // Values for crossings
             refSt.crossings     = atof(argv[index++]);
@@ -594,9 +701,9 @@ int main(int argc, char** argv)
             //Maximum angle around SEMLi if REF_COND_T is used (in degrees)
             refSt.thetaMax      = atof(argv[index++]);     //should be a multiple of 90°
 
-            //------------------------------------------------------------------------
+            //----------------------------------------------------------------------------
             // Parameters that are stable
-            //------------------------------------------------------------------------
+            //----------------------------------------------------------------------------
             refSt.isDebug       = atoi(argv[index++]);  // if yes, additionnal tests are performed
             refSt.gridSize      = atoi(argv[index++]);  // number of points on the refinement grid. 20 is taken by heuristics.
             refSt.mplot         = atoi(argv[index++]);  // number of points per plot between to pach points (e.g. total plot points is gridSize*mplot)
@@ -624,8 +731,8 @@ int main(int argc, char** argv)
             refSt.sf_seml2 = atof(argv[index++]);       // orbit at SEML2
 
             // Integration window for each orbit
-            refSt.tspan_EM      = atof(argv[index++])*SEML.us_em.T;
-            refSt.tspan_SEM     = atof(argv[index++])*SEML.us_sem.T;
+            refSt.tspan_EM      = atof(argv[index++])*SEML.us->T;
+            refSt.tspan_SEM     = atof(argv[index++])*SEML.us->T;
 
             // Storing the orbits at each step?
             refSt.isSaved_EM    = atoi(argv[index++]);  //0: don't save, 1: save using projection method
@@ -635,6 +742,13 @@ int main(int argc, char** argv)
             //Type of time selection
             refSt.typeOfTimeSelection = atoi(argv[index++]);
 
+            //----------------------------------------------------------------------------
+            // Filenames (used only if IO_HANDLING==$IO_BASH)
+            //----------------------------------------------------------------------------
+            refSt.FILE_PCU       = argv[index++];
+            refSt.FILE_CONT      = argv[index++];
+            refSt.FILE_CONT_TRAJ = argv[index++];
+            refSt.FILE_JPL       = argv[index++];
             break;
         }
 
@@ -672,7 +786,7 @@ int main(int argc, char** argv)
         // Compute initial conditions in CMU EML2 on a given grid
         //--------------------------------------------------------------------------------
         tic();
-        compute_grid_CMU_EM_3D(PROJ_EPSILON, projSt);
+        compute_grid_CMU_EM_3D(HYP_EPSILON_EML2, projSt);
         cout << "End of in compute_grid_CMU_EM_3D in " << toc() << endl;
 
 
@@ -686,6 +800,28 @@ int main(int argc, char** argv)
     }
 
         //================================================================================
+        // 3D Projection CMU SEMLi to CM EMLj
+        //================================================================================
+    case COMP_CMU_SEML_TO_CM_EML:
+    {
+        //--------------------------------------------------------------------------------
+        // Compute initial conditions in CMU SEMLi on a given grid
+        //--------------------------------------------------------------------------------
+        tic();
+        compute_grid_CMU_SEM_3D(HYP_EPSILON_SEML2, projSt);
+        cout << "End of in compute_grid_CMU_SEM_3D in " << toc() << endl;
+
+
+        //--------------------------------------------------------------------------------
+        // Integrate those initial conditions and project them on the CM EMLj
+        //--------------------------------------------------------------------------------
+        tic();
+        int_proj_CMU_SEM_on_CM_EM_3D(projSt);
+        cout << "End of in int_proj_CMU_SEM_on_CM_EM_3D in " << toc() << endl;
+        break;
+    }
+
+        //================================================================================
         // Projection CMU EML2 to CM SEMLi
         //================================================================================
     case COMP_CM_EML2_TO_CM_SEML:
@@ -694,7 +830,7 @@ int main(int argc, char** argv)
         // Compute initial conditions in CMU EML2 on a given grid
         //--------------------------------------------------------------------------------
         tic();
-        compute_grid_CMU_EM(PROJ_EPSILON, projSt);
+        compute_grid_CMU_EM(HYP_EPSILON_EML2, projSt);
         cout << "End of in compute_grid_CMU_EM in " << toc() << endl;
 
         //--------------------------------------------------------------------------------
@@ -738,7 +874,7 @@ int main(int argc, char** argv)
         // Compute initial conditions in CMU EML2 on a given grid
         //--------------------------------------------------------------------------------
         tic();
-        compute_grid_CMU_EM_dH(PROJ_EPSILON, projSt);
+        compute_grid_CMU_EM_dH(HYP_EPSILON_EML2, projSt);
         cout << "End of in compute_grid_CMU_EM in " << toc() << endl;
 
         //--------------------------------------------------------------------------------
@@ -776,6 +912,18 @@ int main(int argc, char** argv)
         // Celestia format (for movies)
         //--------------------------------------------------------------------------------
         //toCelestiaFormat("jpltraj.xyz");
+        break;
+    }
+
+        //================================================================================
+        // Refinement CMU SEMLi to CMS EMLj
+        //================================================================================
+    case COMP_CMU_SEML_TO_CMS_EML:
+    {
+        //--------------------------------------------------------------------------------
+        // Complete routine: new version
+        //--------------------------------------------------------------------------------
+
         break;
     }
 
@@ -840,7 +988,7 @@ int main(int argc, char** argv)
     case COMP_CM_EML2_TO_CMS_SEML_READ:
     {
         //Filename;
-        string filename = filenameCUM(OFTS_ORDER, TYPE_MAN_PROJ, SEML.li_SEM);
+        string filename = get_filenameCUM(IO_DEFAULT, SEML.cs->F_PLOT, "", OFTS_ORDER, TYPE_MAN_PROJ, SEML.li_SEM, -1, -1, ios::in);
 
         //Structure to store data;
         ProjResClass sortSt;
@@ -929,11 +1077,26 @@ int main(int argc, char** argv)
         int isFlagOn = 1;
         int isPlot   = 1;
         double t0 = 0.96*SEML.us->T;
-        double  N = 20;
+        double  N = 50;
 
-        gridOrbit_si(st0, t0, t0 + N*SEML.us->T, 1e-2*SEML.us->T, isFlagOn, isPlot);
-        //gridOrbit_strob(st0, t0, N, isFlagOn, isPlot);
+        //gridOrbit_si(st0, t0, t0 + N*SEML.us->T, 1e-2*SEML.us->T, isFlagOn, isPlot);
+        gridOrbit_strob(st0, t0, N, isFlagOn, isPlot);
 
+        //--------------------------------------------------------------------------------
+        // Mean orbit of the Moon, in NCSEM coordinates
+        //--------------------------------------------------------------------------------
+        N = 1000;
+        double tk = 0;
+        double pm[3];
+        double qpm, mean_qpm = 0.0;
+        for(int k = 0; k < N; k++)
+        {
+            tk = (1.0*k)/N*SEML.us->T;
+            evaluateCoef(pm, tk, SEML.us->n, SEML.nf, SEML.cs->pm, 3);
+            qpm = sqrt((-1.0 - pm[0]) * (-1.0 - pm[0]) + (0.0 - pm[1]) * (0.0 - pm[1]) + (0.0 - pm[2]) * (0.0 - pm[2]));
+            mean_qpm += qpm/N;
+        }
+        cout << "mean_qpm = " << mean_qpm << endl;
 
         break;
     }

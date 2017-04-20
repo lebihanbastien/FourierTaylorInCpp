@@ -59,6 +59,11 @@ ISPAR=0
 #-----------------------------------------------------
 ISNOHUP=0
 
+#-----------------------------------------------------
+# I/O Handling
+#-----------------------------------------------------
+IO_HANDLING=$IO_DIALOG
+
 #=====================================================
 #  ---- Refinement parameters ----
 #=====================================================
@@ -117,11 +122,17 @@ REFST_ISFROMSERVER=0		 # does the raw data comes from server files?
 # Maximum angle around SEMLi if REF_COND_T is used (in degrees)
 REFST_THETAMAX=270                # should be a multiple of 90°
 
+# Filenames (used only if IO_HANDLING==$IO_BASH)
+FILE_PCU="projcu_orbit.bin"
+FILE_CONT="cont_atf_orbit.txt"
+FILE_CONT_TRAJ="cont_atf_traj_orbit.bin"
+FILE_JPL="cont_jpl_orbit.bin"
+
 #-----------------------------------------------------
 # Parameters that are stable
 #-----------------------------------------------------
-REFST_ISDEBUG=0			 # if yes, additionnal tests are performed
-REFST_GRIDSIZE=20        	 # number of points on the refinement grid
+REFST_ISDEBUG=0			         # if yes, additionnal tests are performed
+REFST_GRIDSIZE=20        	     # number of points on the refinement grid
 REFST_MPLOT=200        	         # number of points per plot between to pach points (e.g. total plot points is REFST_MPLOT*REFST_GRIDSIZE)
 
 REFST_TIME=$REF_VAR_TN		 # type of constraints on the times in REF_CONT

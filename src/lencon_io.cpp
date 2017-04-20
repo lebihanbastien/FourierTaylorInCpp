@@ -1,6 +1,33 @@
 #include "lencon_io.h"
 
 
+//========================================================================================
+// To get current path
+//========================================================================================
+/**
+ *  \brief Return the path of the program that is currently running
+ **/
+string getexepath()
+{
+  char result[ PATH_MAX ];
+  ssize_t count = readlink( "/proc/self/exe", result, PATH_MAX );
+  return std::string( result, (count > 0) ? count : 0 );
+}
+
+/**
+ *  \brief Return the path of the main folder from with the program is currently running.
+ *         It is assumed that the binaries are stored in "main/bin/", so that we can
+ *         retrieve "main/" by cutting the result of getexepath() before the string "bin/"
+ **/
+string getmainpath()
+{
+    string exepath   = getexepath();
+    string delimiter = "bin/";
+    string mainpath  = exepath.substr(0, exepath.find(delimiter));
+
+    return mainpath;
+}
+
 
 //========================================================================================
 // Function: fileExists
@@ -28,108 +55,258 @@ bool fileExists(const std::string& filename)
 //
 //========================================================================================
 /**
- *  \brief Computes a data filename as a string, depending on the ofts_order, sizeOrbit, and type of the data.
+ *  \brief Prefix for the data filenames.
  **/
-string filenameCUM(int ofts_order, int type, int destination)
+string fileprefix(int type)
 {
-    string order_bin                   = numTostring(ofts_order)+".bin";
-    string order_destination_bin       = numTostring(ofts_order)+"_dest_L"+numTostring(destination)+".bin";
-    string order_destination_orbit_bin = numTostring(ofts_order)+"_dest_L"+numTostring(destination)+"_Orbit.bin";
-    string order_destination_txt       = numTostring(ofts_order)+"_dest_L"+numTostring(destination)+".txt";
-    switch(type)
+     switch(type)
     {
     case TYPE_CU:
-        return SEML.cs_em.F_PLOT+"cu_order_"+order_bin;
-    case TYPE_MAN:
-        return SEML.cs_em.F_PLOT+"intcu_order_"+order_bin;
+        return "cu_order_";
+    case TYPE_CU_3D:
+        return "cu_3d_order_";
     case TYPE_MAN_PROJ:
-        return SEML.cs_em.F_PLOT+"projcu_order_"+order_destination_bin;
+        return "projcu_order_";
     case TYPE_MAN_PROJ_ORBIT:
-        return SEML.cs_em.F_PLOT+"projcu_order_"+order_destination_orbit_bin;
-    case TYPE_CU_3D:
-        return SEML.cs_em.F_PLOT+"cu_3d_order_"+order_destination_bin;
+        return "projcu_orbit_order_";
     case TYPE_MAN_PROJ_3D:
-        return SEML.cs_em.F_PLOT+"projcu_3d_order_"+order_destination_bin;
+        return "projcu_3d_order_";
     case TYPE_CONT_ATF_TRAJ:
-        return SEML.cs_em.F_PLOT+"cont_atf_traj_order_"+order_destination_bin;
-
+        return "cont_atf_traj_order_";
     case TYPE_COMP_FOR_JPL:
-        return SEML.cs_em.F_PLOT+"comp_for_jpl_order_"+order_destination_txt;
+        return "comp_for_jpl_order_";
+    case TYPE_CONT_JPL_TRAJ:
+        return "cont_jpl_order_";
     case TYPE_CONT_ATF:
-        return SEML.cs_em.F_PLOT+"cont_atf_order_"+order_destination_txt;
+        return "cont_atf_order_";
 
     default:
-        cout << "filenameOrbit: unknown type." << endl;
+        cout << "fileprefix: unknown type. An empty string is returned." << endl;
         return "";
     }
 }
 
 /**
- *  \brief Computes a data filename as a string, depending on the ofts_order, sizeOrbit, and type of the data.
+ *  \brief Extension for the data filenames.
  **/
-string filenameCUM(int ofts_order, int type, int destination, double t0)
+string fileext(int type)
 {
-    string order_t0_bin      = numTostring(ofts_order)+"_t0_"+numTostring(t0)+".bin";
-    string order_dest_t0_bin = numTostring(ofts_order)+"_dest_L"+numTostring(destination)+"_t0_"+numTostring(t0)+".bin";
-    string order_dest_t0_txt = numTostring(ofts_order)+"_dest_L"+numTostring(destination)+"_t0_"+numTostring(t0)+".txt";
+     switch(type)
+    {
+    case TYPE_CU:
+    case TYPE_MAN_PROJ:
+    case TYPE_MAN_PROJ_ORBIT:
+    case TYPE_CU_3D:
+    case TYPE_MAN_PROJ_3D:
+    case TYPE_CONT_ATF_TRAJ:
+    case TYPE_CONT_JPL_TRAJ:
+        return ".bin";
+    case TYPE_COMP_FOR_JPL:
+    case TYPE_CONT_ATF:
+        return ".txt";
+
+    default:
+        cout << "fileext: unknown type. An empty .txt is returned." << endl;
+        return ".txt";
+    }
+}
+
+///**
+// *  \brief Computes a data filename as a string, depending on the ofts_order, type,
+// *         and target of the data.
+// **/
+//string filenameCUM(string plot_folder, int ofts_order, int type, int target)
+//{
+//    string order      = numTostring(ofts_order);
+//    string order_dest = numTostring(ofts_order)+"_dest_L"+numTostring(target);
+//
+//    switch(type)
+//    {
+//    case TYPE_CU:
+//        return plot_folder+fileprefix(type)+order+fileext(type);
+//    case TYPE_MAN_PROJ:
+//    case TYPE_MAN_PROJ_ORBIT:
+//    case TYPE_CU_3D:
+//    case TYPE_MAN_PROJ_3D:
+//    case TYPE_CONT_ATF_TRAJ:
+//    case TYPE_COMP_FOR_JPL:
+//    case TYPE_CONT_ATF:
+//        return plot_folder+fileprefix(type)+order_dest+fileext(type);
+//    default:
+//        cout << "filenameCUM: unknown type." << endl;
+//        return "";
+//    }
+//}
+//
+///**
+// *  \brief Computes a data filename as a string, depending on the ofts_order, type,
+// *         target, and initial time t0 of the data.
+// **/
+//string filenameCUM(string plot_folder, int ofts_order, int type, int target, double t0)
+//{
+//    string order_t0      = numTostring(ofts_order)+"_t0_"+numTostring(t0);
+//    string order_dest_t0 = numTostring(ofts_order)+"_dest_L"+numTostring(target)+"_t0_"+numTostring(t0);
+//
+//    switch(type)
+//    {
+//    case TYPE_CU:
+//        return plot_folder+fileprefix(type)+order_t0+fileext(type);
+//    case TYPE_MAN_PROJ:
+//    case TYPE_MAN_PROJ_ORBIT:
+//    case TYPE_CU_3D:
+//    case TYPE_MAN_PROJ_3D:
+//    case TYPE_CONT_ATF_TRAJ:
+//    case TYPE_COMP_FOR_JPL:
+//    case TYPE_CONT_ATF:
+//        return plot_folder+fileprefix(type)+order_dest_t0+fileext(type);
+//    default:
+//        cout << "filenameCUM: unknown type." << endl;
+//        return "";
+//    }
+//}
+//
+///**
+// *  \brief Computes a data filename as a string, depending on the ofts_order, type,
+// *         target, and initial energy delta dH of the data.
+// **/
+//string filenameCUM_dH(string plot_folder, int ofts_order, int type, int target, double dH)
+//{
+//    string order_dH      = numTostring(ofts_order)+"_t0_"+numTostring(dH);
+//    string order_dest_dH = numTostring(ofts_order)+"_dest_L"+numTostring(target)+"_dH_"+numTostring(dH);
+//
+//    switch(type)
+//    {
+//    case TYPE_CU:
+//        return plot_folder+fileprefix(type)+order_dH+fileext(type);
+//    case TYPE_MAN_PROJ:
+//    case TYPE_MAN_PROJ_ORBIT:
+//    case TYPE_CU_3D:
+//    case TYPE_MAN_PROJ_3D:
+//    case TYPE_CONT_ATF_TRAJ:
+//    case TYPE_COMP_FOR_JPL:
+//    case TYPE_CONT_ATF:
+//        return plot_folder+fileprefix(type)+order_dest_dH+fileext(type);
+//    default:
+//        cout << "filenameCUM_dH: unknown type." << endl;
+//        return "";
+//    }
+//}
+
+/**
+ *  \brief Computes a data filename as a string, depending on the ofts_order, type,
+ *         target, and initial energy delta dH of the data.
+ **/
+string get_filenameCUM_default(string plot_folder, int ofts_order, int type, int target, double t0, double dH)
+{
+    string order_dt0dH      = numTostring(ofts_order);
+    string order_dest_dt0dH = numTostring(ofts_order)+"_dest_L"+numTostring(target);
+
+
+    if(t0 != -1)
+    {
+        order_dt0dH      += "_t0_"+numTostring(t0);
+        order_dest_dt0dH += "_t0_"+numTostring(t0);
+    }
+
+    if(dH != -1)
+    {
+        order_dt0dH      += "_dH_"+numTostring(dH);
+        order_dest_dt0dH += "_dH_"+numTostring(dH);
+    }
+
+
     switch(type)
     {
     case TYPE_CU:
-        return SEML.cs_em.F_PLOT+"cu_order_"+order_t0_bin;
-    case TYPE_CU_3D:
-        return SEML.cs_em.F_PLOT+"cu_3d_order_"+order_t0_bin;
-    case TYPE_MAN:
-        return SEML.cs_em.F_PLOT+"intcu_order_"+order_t0_bin;
-
+        return plot_folder+fileprefix(type)+order_dt0dH+fileext(type);
     case TYPE_MAN_PROJ:
-        return SEML.cs_em.F_PLOT+"projcu_order_"+order_dest_t0_bin;
+    case TYPE_MAN_PROJ_ORBIT:
+    case TYPE_CU_3D:
+    case TYPE_MAN_PROJ_3D:
     case TYPE_CONT_ATF_TRAJ:
-        return SEML.cs_em.F_PLOT+"cont_atf_traj_order_"+order_dest_t0_bin;
+    case TYPE_COMP_FOR_JPL:
     case TYPE_CONT_JPL_TRAJ:
-        return SEML.cs_em.F_PLOT+"cont_jpl_order_"+order_dest_t0_bin;
-
     case TYPE_CONT_ATF:
-        return SEML.cs_em.F_PLOT+"cont_atf_order_"+order_dest_t0_txt;
-
+        return plot_folder+fileprefix(type)+order_dest_dt0dH+fileext(type);
     default:
-        cout << "filenameOrbit: unknown type." << endl;
+        cout << "get_filenameCUM_default: unknown type." << endl;
         return "";
     }
 }
 
 /**
- *  \brief Computes a data filename as a string, depending on the ofts_order, sizeOrbit, energy, and type of the data.
+ *  \brief Get filename via a window file dialog, with default name filename_default.
  **/
-string filenameCUM_dH(int ofts_order, int type, int destination, double dH)
+string get_filename_dialog(string filename_default, int mode)
 {
-    string order_t0_bin      = numTostring(ofts_order)+"_dH_"+numTostring(dH)+".bin";
-    string order_dest_t0_bin = numTostring(ofts_order)+"_dest_L"+numTostring(destination)+"_dH_"+numTostring(dH)+".bin";
-    string order_dest_t0_txt = numTostring(ofts_order)+"_dest_L"+numTostring(destination)+"_dH_"+numTostring(dH)+".txt";
-    switch(type)
-    {
-    case TYPE_CU:
-        return SEML.cs_em.F_PLOT+"cu_order_"+order_t0_bin;
-    case TYPE_CU_3D:
-        return SEML.cs_em.F_PLOT+"cu_3d_order_"+order_t0_bin;
-    case TYPE_MAN:
-        return SEML.cs_em.F_PLOT+"intcu_order_"+order_t0_bin;
+#ifdef _MSC_VER
+#pragma warning(disable:4996) /* silences warning about strcpy strcat fopen*/
+#endif
+        string filedef = getmainpath()+filename_default;
+        char const* lFilterPatterns[3] = { "*.txt", "*.text", "*.bin" };
 
-    case TYPE_MAN_PROJ:
-        return SEML.cs_em.F_PLOT+"projcu_order_"+order_dest_t0_bin;
-    case TYPE_CONT_ATF_TRAJ:
-        return SEML.cs_em.F_PLOT+"cont_atf_traj_order_"+order_dest_t0_bin;
-    case TYPE_CONT_JPL_TRAJ:
-        return SEML.cs_em.F_PLOT+"cont_jpl_order_"+order_dest_t0_bin;
+        char const *test;
+        switch(mode)
+        {
+            case ios::out:
+            {
+                test  = tinyfd_saveFileDialog("Save data", filedef.c_str(), 3, lFilterPatterns, NULL);
+                break;
+            }
 
-    case TYPE_CONT_ATF:
-        return SEML.cs_em.F_PLOT+"cont_atf_order_"+order_dest_t0_txt;
+            case ios::in:
+            default:
+            {
+                test  = tinyfd_openFileDialog("Read data", filedef.c_str(), 3, lFilterPatterns, NULL, 0);
+                break;
+            }
+        }
 
-    default:
-        cout << "filenameOrbit: unknown type." << endl;
-        return "";
-    }
+        string filename_output = "";
+        if(test == NULL) filename_output = filename_default;
+        else filename_output = test;
+
+#ifdef _MSC_VER
+#pragma warning(default:4996)
+#endif
+
+return filename_output;
+
 }
 
+/**
+ *  \brief Computes a data filename as a string, depending on the ofts_order, type,
+ *         target, initial time t0, and initial energy delta dH of the data.
+ **/
+string get_filenameCUM(int IO_HANDLING, string plot_folder, string filename_bash,
+                       int ofts_order, int type, int target, double t0, double dH, int mode)
+{
+    string filename_output = "";
+
+    switch(IO_HANDLING)
+    {
+    case IO_DEFAULT:
+    {
+        filename_output = get_filenameCUM_default(plot_folder, OFTS_ORDER, type, target, t0, dH);
+        break;
+    }
+
+    case IO_BASH:
+    {
+        filename_output = plot_folder+filename_bash;
+        break;
+    }
+
+    case IO_DIALOG:
+    {
+        string filename_default = get_filenameCUM_default(plot_folder, OFTS_ORDER, type, target, t0, dH);
+        filename_output = get_filename_dialog(filename_default, mode);
+        break;
+    }
+    }
+
+    return filename_output;
+}
 
 //========================================================================================
 //
@@ -140,12 +317,13 @@ string filenameCUM_dH(int ofts_order, int type, int destination, double dH)
  *  \brief Stores the final_index+1 points trajectory contained in t_traj_n (time vector)
  *         and y_traj_n (state vectors) into a data file of type TYPE_COMP_FOR_JPL.
  **/
-void writeCOMP_txt(double* t_traj_n, double** y_traj_n, int final_index)
+void writeCOMP_txt(double* t_traj_n, double** y_traj_n, int final_index, string filename)
 {
     //====================================================================================
     // Initialize the I/O objects
     //====================================================================================
-    string filename = filenameCUM(OFTS_ORDER, TYPE_COMP_FOR_JPL, SEML.li_SEM);
+    //    string filename = get_filenameCUM(IO_DEFAULT, SEML.cs->F_PLOT, "", OFTS_ORDER,
+    //                                      TYPE_COMP_FOR_JPL, SEML.li_SEM, -1, -1, ios::in);
     fstream filestream;
     filestream.open (filename.c_str(), ios::out);
     filestream << setprecision(15) <<  setiosflags(ios::scientific) << std::showpos;
@@ -174,13 +352,13 @@ void writeCOMP_txt(double* t_traj_n, double** y_traj_n, int final_index)
  *         the data vectors should be initialized accordingly by the user prior to the use
  *         of this routine.
  **/
-int readCOMP_txt(double* t_traj_n, double** y_traj_n, int final_index)
+int readCOMP_txt(double* t_traj_n, double** y_traj_n, int final_index, string filename)
 {
-
     //====================================================================================
     // Initialize the I/O objects
     //====================================================================================
-    string filename = filenameCUM(OFTS_ORDER, TYPE_COMP_FOR_JPL, SEML.li_SEM);
+    //    string filename = get_filenameCUM(IO_DEFAULT, SEML.cs->F_PLOT, "", OFTS_ORDER,
+    //                                      TYPE_COMP_FOR_JPL, SEML.li_SEM, -1, -1, ios::in);
 
     //Check the existence of the file
     if(!fileExists(filename))
@@ -224,12 +402,13 @@ int readCOMP_txt(double* t_traj_n, double** y_traj_n, int final_index)
  *         data file of type TYPE_COMP_FOR_JPL and stores it in t_traj_n (time vector)
  *         and y_traj_n (state vectors).
  **/
-int getLengthCOMP_txt()
+int getLengthCOMP_txt(string filename)
 {
     //====================================================================================
     // Initialize the I/O objects
     //====================================================================================
-    string filename = filenameCUM(OFTS_ORDER, TYPE_COMP_FOR_JPL, SEML.li_SEM);
+    //    string filename = get_filenameCUM(IO_DEFAULT, SEML.cs->F_PLOT, "", OFTS_ORDER,
+    //                                      TYPE_COMP_FOR_JPL, SEML.li_SEM, -1, -1, ios::in);
 
     //Check the existence of the file
     if(!fileExists(filename))
@@ -250,21 +429,14 @@ int getLengthCOMP_txt()
     return final_index;
 }
 
-
 //========================================================================================
 //
 //          I/O (CU/CS/CM)
 //
 //========================================================================================
 int writeCU_bin_dH(double** * yNCE, double** * sNCE, double** dH, double* tGrid,
-                   int s1_grid_size, int t_grid_size, int ofts_order,
-                   int type, int destination, double dHd)
+                   int s1_grid_size, int t_grid_size, string filename)
 {
-    //------------------------------------------------------------------------------------
-    //Filename
-    //------------------------------------------------------------------------------------
-    string filename = filenameCUM_dH(ofts_order, type, destination, dHd);
-
     //------------------------------------------------------------------------------------
     //Open datafile
     //------------------------------------------------------------------------------------
@@ -326,14 +498,8 @@ int writeCU_bin_dH(double** * yNCE, double** * sNCE, double** dH, double* tGrid,
     return FTC_SUCCESS;
 }
 
-int getLenghtCU_bin_dH(int* s1_grid_size,
-                       int* t_grid_size, int ofts_order,
-                       int type, int destination, double dHd)
+int getLenghtCU_bin_dH(int* s1_grid_size, int* t_grid_size, string filename)
 {
-    //------------------------------------------------------------------------------------
-    //Filename
-    //------------------------------------------------------------------------------------
-    string filename = filenameCUM_dH(ofts_order, type, destination, dHd);
 
     //------------------------------------------------------------------------------------
     //Open datafile
@@ -364,14 +530,8 @@ int getLenghtCU_bin_dH(int* s1_grid_size,
 }
 
 int readCU_bin_dH(double** * yNCE, double** * sNCE, double** dH, double* tGrid,
-                  int s1_grid_size, int t_grid_size,
-                  int ofts_order, int type, int destination, double dHd)
+                  int s1_grid_size, int t_grid_size, string filename)
 {
-    //------------------------------------------------------------------------------------
-    //Filename
-    //------------------------------------------------------------------------------------
-    string filename = filenameCUM_dH(ofts_order, type, destination, dHd);
-
     //------------------------------------------------------------------------------------
     //Open datafile
     //------------------------------------------------------------------------------------
@@ -442,7 +602,6 @@ int readCU_bin_dH(double** * yNCE, double** * sNCE, double** dH, double* tGrid,
     return FTC_SUCCESS;
 }
 
-
 //----------------------------------------------------------------------------------------
 // CU
 //----------------------------------------------------------------------------------------
@@ -451,17 +610,11 @@ int readCU_bin_dH(double** * yNCE, double** * sNCE, double** dH, double* tGrid,
  *         The data are of type t0*s1*s3 and of size (tGrid +1)*(gSize+1)*(gSize+1)
  **/
 int writeCU_bin(double**** yNCE, double**** sNCE, double** * dH, double* tGrid,
-                int s1_grid_size, int s3_grid_size, int t_grid_size,
-                int ofts_order, int type, int destination)
+                int s1_grid_size, int s3_grid_size, int t_grid_size, string filename)
 {
-    //---------------------
-    //Filename
-    //---------------------
-    string filename = filenameCUM(ofts_order, type, destination);
-
-    //---------------------
+    //------------------------------------------------------------------------------------
     //Open datafile
-    //---------------------
+    //------------------------------------------------------------------------------------
     fstream filestream;
     filestream.open (filename.c_str(), ios::binary | ios::out);
     if (filestream.is_open())
@@ -534,17 +687,11 @@ int writeCU_bin(double**** yNCE, double**** sNCE, double** * dH, double* tGrid,
  *         The data are of type t0*s1*s3 and of size (tGrid +1)*(gSize+1)*(gSize+1)
  **/
 int readCU_bin(double**** yNCE, double**** sNCE, double** * dH, double* tGrid,
-               int s1_grid_size, int s3_grid_size, int t_grid_size,
-               int ofts_order, int type, int destination)
+               int s1_grid_size, int s3_grid_size, int t_grid_size, string filename)
 {
-    //---------------------
-    //Filename
-    //---------------------
-    string filename = filenameCUM(ofts_order, type, destination);
-
-    //---------------------
+    //------------------------------------------------------------------------------------
     //Open datafile
-    //---------------------
+    //------------------------------------------------------------------------------------
     fstream filestream;
     filestream.open (filename.c_str(), ios::binary | ios::in);
     if (filestream.is_open())
@@ -627,14 +774,8 @@ int readCU_bin(double**** yNCE, double**** sNCE, double** * dH, double* tGrid,
  *         The data are of type t0*s1*s3 and of size (tGrid +1)*(gSize+1)*(gSize+1)
  **/
 int getLenghtCU_bin(int* s1_grid_size, int* s3_grid_size,
-                    int* t_grid_size, int ofts_order,
-                    int type, int destination)
+                    int* t_grid_size, string filename)
 {
-    //------------------------------------------------------------------------------------
-    //Filename
-    //------------------------------------------------------------------------------------
-    string filename = filenameCUM(ofts_order, type, destination);
-
     //------------------------------------------------------------------------------------
     //Open datafile
     //------------------------------------------------------------------------------------
@@ -678,30 +819,24 @@ int getLenghtCU_bin(int* s1_grid_size, int* s3_grid_size,
  *  \brief init the data file of Initial Conditions of a 3D Center-Unstable manifold. Used in compute_grid_CMU_EM_3D.
  *         The data are of type t0*s1*s2*s3*s4 and of size (t_grid_size +1)*(si_grid_size[0]+1)*(si_grid_size[1]+1)*(si_grid_size[2]+1)*(si_grid_size[3]+1)
  **/
-int initCU_bin_3D(int* si_grid_size, int t_grid_size,
-                  int ofts_order, int type, int destination)
+int initCU_bin_3D(int* si_grid_size, int t_grid_size, string filename)
 {
-    //---------------------
-    //Filename
-    //---------------------
-    string filename = filenameCUM(ofts_order, type, destination);
-
-    //----------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Open datafile
-    //----------------------------------------------------------
+    //------------------------------------------------------------------------------------
     fstream filestream(filename.c_str(), ios::binary | ios::out);
     if (filestream.is_open())
     {
         int resi;
-        //---------------------
+        //--------------------------------------------------------------------------------
         //Number of data on the time grid
-        //---------------------
+        //--------------------------------------------------------------------------------
         resi = t_grid_size;
         filestream.write((char*) &resi, sizeof(int));
 
-        //---------------------
+        //--------------------------------------------------------------------------------
         //Number of data on the manifold grid on all four dimensions
-        //---------------------
+        //--------------------------------------------------------------------------------
         for(int i = 0; i < 4; i++)
         {
             resi = si_grid_size[i];
@@ -720,16 +855,11 @@ int initCU_bin_3D(int* si_grid_size, int t_grid_size,
  *         The data are of type t0*s1*s2*s3*s4 and of size (t_grid_size +1)*(si_grid_size[0]+1)*(si_grid_size[1]+1)*(si_grid_size[2]+1)*(si_grid_size[3]+1).
  *         Here, only the time is appended to the data file, so this routine must be used within the intricated loops. See compute_grid_CMU_EM_3D src code for details.
  **/
-int appTimeCU_bin_3D(double* tGrid, int nt, int ofts_order, int type, int destination)
+int appTimeCU_bin_3D(double* tGrid, int nt, string filename)
 {
-    //---------------------
-    //Filename
-    //---------------------
-    string filename = filenameCUM(ofts_order, type, destination);
-
-    //----------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Open datafile
-    //----------------------------------------------------------
+    //------------------------------------------------------------------------------------
     fstream filestream(filename.c_str(), ios::binary | ios::out | ios::app);
     if (filestream.is_open())
     {
@@ -748,17 +878,11 @@ int appTimeCU_bin_3D(double* tGrid, int nt, int ofts_order, int type, int destin
  *         The data are of type t0*s1*s2*s3*s4 and of size (t_grid_size +1)*(si_grid_size[0]+1)*(si_grid_size[1]+1)*(si_grid_size[2]+1)*(si_grid_size[3]+1).
  *         Here, only a single loop on s4 is appended to the data file, so this routine must be used within the intricated loops. See compute_grid_CMU_EM_3D src code for details.
  **/
-int writeCU_bin_3D(double** yNCE, double** sNCE, int* si_grid_size,
-                   int ofts_order, int type, int destination)
+int writeCU_bin_3D(double** yNCE, double** sNCE, int* si_grid_size, string filename)
 {
-    //---------------------
-    //Filename
-    //---------------------
-    string filename = filenameCUM(ofts_order, type, destination);
-
-    //----------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Open datafile
-    //----------------------------------------------------------
+    //------------------------------------------------------------------------------------
     fstream filestream(filename.c_str(), ios::binary | ios::out | ios::app);
     if (filestream.is_open())
     {
@@ -794,16 +918,10 @@ int writeCU_bin_3D(double** yNCE, double** sNCE, int* si_grid_size,
  *  \brief Get the length of the data file the containing the Initial Conditions of a 3D Center-Unstable manifold. Used in compute_grid_CMU_EM_3D.
  *         The data are of type t0*s1*s2*s3*s4 and of size (t_grid_size +1)*(si_grid_size[0]+1)*(si_grid_size[1]+1)*(si_grid_size[2]+1)*(si_grid_size[3]+1).
  **/
-int getLenghtCU_bin_3D(int* si_grid_size, int* t_grid_size,
-                       int ofts_order, int type, int destination)
+int getLenghtCU_bin_3D(int* si_grid_size, int* t_grid_size, string filename)
 {
     //Offset
     int offset = 0;
-
-    //------------------------------------------------------------------------------------
-    //Filename
-    //------------------------------------------------------------------------------------
-    string filename = filenameCUM(ofts_order, type, destination);
 
     //------------------------------------------------------------------------------------
     //Open datafile
@@ -849,16 +967,10 @@ int getLenghtCU_bin_3D(int* si_grid_size, int* t_grid_size,
  *  \brief Read in a data file the time at Initial Conditions of a planar Center-Unstable manifold. Used in int_proj_CMU_EM_on_CM_SEM and intMan
  *         The data are of type t0*s1*s3 and of size (tGrid +1)*(gSize+1)*(gSize+1)
  **/
-int readTCU_bin_3D(int offset, double* tGrid, int nt,
-                   int ofts_order, int type, int destination)
+int readTCU_bin_3D(int offset, double* tGrid, int nt, string filename)
 {
     //Offset
     int offset2 = 0;
-
-    //------------------------------------------------------------------------------------
-    //Filename
-    //------------------------------------------------------------------------------------
-    string filename = filenameCUM(ofts_order, type, destination);
 
     //------------------------------------------------------------------------------------
     //Open datafile
@@ -899,16 +1011,10 @@ int readTCU_bin_3D(int offset, double* tGrid, int nt,
  *  \brief Read in a data file the state at Initial Conditions of a planar Center-Unstable manifold. Used in int_proj_CMU_EM_on_CM_SEM and intMan
  *         The data are of type t0*s1*s3 and of size (tGrid +1)*(gSize+1)*(gSize+1)
  **/
-int readCU_bin_3D(int offset, double** yNCE, double** sNCE, int* si_grid_size,
-                  int ofts_order, int type, int destination)
+int readCU_bin_3D(int offset, double** yNCE, double** sNCE, int* si_grid_size, string filename)
 {
     //Offset
     int offset2 = 0;
-
-    //------------------------------------------------------------------------------------
-    //Filename
-    //------------------------------------------------------------------------------------
-    string filename = filenameCUM(ofts_order, type, destination);
 
     //------------------------------------------------------------------------------------
     //Open datafile
@@ -983,9 +1089,11 @@ void writeIntProjCU_bin(string filename,
         double Hf_NCEM, Hf_NCSEM, Hf_EM, Hf_SEM;
         double Hf_semli_NCEM, Hf_semli_NCSEM, Hf_semli_EM, Hf_semli_SEM;
 
-        double yv_NCEM[6], yv_SEM[6];
         double yv_emli_NCEM[6], yv_semli_NCSEM[6];
+        double yv_IC[6], yv_FC[6];
+        double tv_IC, tv_FC;
         double tv_EM, tv_SEM;
+
 
         //Origins at both ends
         for(int i = 0; i <6; i++)
@@ -1001,21 +1109,21 @@ void writeIntProjCU_bin(string filename,
         res  = projResSt.label;
         filestream.write((char*) &res, sizeof(double));
 
-        // 2. time grid in NCEM units
-        res  = projResSt.init_time_EM;
+        // 2. time grid in IC_COORD units
+        res  = projResSt.init_time;
         filestream.write((char*) &res, sizeof(double));
 
-        // 3-8. initial state in NCEM coordinates
+        // 3-8. initial state in IC_COORD coordinates
         for (int k = 0; k < 6; k++)
         {
-            res = projResSt.init_state_CMU_NCEM[k];
+            res = projResSt.init_state_CMU_NC[k];
             filestream.write((char*) &res, sizeof(double));
         }
 
-        // 9-14. initial state in SEM coordinates
+        // 9-14. initial state in FC_COORD coordinates
         for (int k = 0; k < 6; k++)
         {
-            res = projResSt.init_state_CMU_SEM_o[k];
+            res = projResSt.init_state_CMU_FC_o[k];
             filestream.write((char*) &res, sizeof(double));
         }
 
@@ -1026,40 +1134,40 @@ void writeIntProjCU_bin(string filename,
             filestream.write((char*) &res, sizeof(double));
         }
 
-        // 20. minimum distance of projection
+        // 20. minimum distance of projection, in DP_COORD
         res = projResSt.min_proj_dist_SEM_o;
         filestream.write((char*) &res, sizeof(double));
 
-        // 21. associated dv
-        res = projResSt.dv_at_projection_SEM_o;
+        // 21. associated dv, in FV_COORD
+        res = projResSt.dv_at_projection_FC_o;
         filestream.write((char*) &res, sizeof(double));
 
-        // 22. t_man_SEM
-        res    = projResSt.final_time_SEM_o;
+        // 22. Final time, in FC_COORD
+        res    = projResSt.final_time_FC_o;
         filestream.write((char*) &res, sizeof(double));
 
-        // 23-28. final_state_CMU_SEM state in SE coordinates
+        // 23-28. final_state_CMU_SEM state in FC_COORD coordinates
         for (int k = 0; k < 6; k++)
         {
-            res = projResSt.final_state_CMU_SEM_o[k];
+            res = projResSt.final_state_CMU_FC_o[k];
             filestream.write((char*) &res, sizeof(double));
         }
 
-        // 29-34. projected_state_CMU_SEM state in SE coordinates
+        // 29-34. projected_state_CMU_SEM state in FC_COORD coordinates
         for (int k = 0; k < 6; k++)
         {
-            res = projResSt.projected_state_CMU_SEM_o[k];
+            res = projResSt.projected_state_CMU_FC_o[k];
             filestream.write((char*) &res, sizeof(double));
         }
 
-        // 35-38. projected_state_CMU_RCM state in SE coordinates
+        // 35-38. projected_state_CMU_RCM state in RCM coordinates
         for (int k = 0; k < 4; k++)
         {
             res = projResSt.projected_state_CMU_RCM_o[k];
             filestream.write((char*) &res, sizeof(double));
         }
 
-        //39. Number of crossings of the x = -1 line (clock/counterclockwise)
+        //39. Number of crossings of the x = -1 line (clock/counterclockwise), in NCSEM
         res = projResSt.crossings_NCSEM_o;
         filestream.write((char*) &res, sizeof(double));
 
@@ -1070,18 +1178,21 @@ void writeIntProjCU_bin(string filename,
         //--------------------------------------------------------------------------------
         // Computing the energies before storing
         //--------------------------------------------------------------------------------
-        // States and time
-        tv_EM = projResSt.init_time_EM;
-        state_memcpy(yv_NCEM, projResSt.init_state_CMU_NCEM);
+        // States and time, in IC_COORD
+        tv_IC = projResSt.init_time;
+        state_memcpy(yv_IC, projResSt.init_state_CMU_NC);
+        // States and time, in FC_COORD
+        tv_FC = projResSt.final_time_FC_o;
+        state_memcpy(yv_FC, projResSt.final_state_CMU_FC_o);
+        //Time, in EM and SEM units
+        tv_EM  = qbcp_coc_time(tv_IC, projResSt.IC_COORD, NCEM);
+        tv_SEM = qbcp_coc_time(tv_IC, projResSt.IC_COORD, NCSEM);
 
-        tv_SEM = projResSt.final_time_SEM_o;
-        state_memcpy(yv_SEM, projResSt.final_state_CMU_SEM_o);
-
-        // H0 at IC
-        H0_NCEM  = qbcp_H_complete(tv_EM, yv_NCEM, NCEM, NCEM);
-        H0_NCSEM = qbcp_H_complete(tv_EM, yv_NCEM, NCEM, NCSEM);
-        H0_EM    = qbcp_H_complete(tv_EM, yv_NCEM, NCEM, PEM);
-        H0_SEM   = qbcp_H_complete(tv_EM, yv_NCEM, NCEM, PSEM);
+        // H0 at IC - careful, the state is given in IC_COORD
+        H0_NCEM  = qbcp_H_complete(tv_IC, yv_IC, projResSt.IC_COORD, NCEM);
+        H0_NCSEM = qbcp_H_complete(tv_IC, yv_IC, projResSt.IC_COORD, NCSEM);
+        H0_EM    = qbcp_H_complete(tv_IC, yv_IC, projResSt.IC_COORD, PEM);
+        H0_SEM   = qbcp_H_complete(tv_IC, yv_IC, projResSt.IC_COORD, PSEM);
 
         // H0 at emli
         H0_emli_NCEM  = qbcp_H_complete(tv_EM, yv_emli_NCEM, NCEM, NCEM);
@@ -1089,11 +1200,11 @@ void writeIntProjCU_bin(string filename,
         H0_emli_EM    = qbcp_H_complete(tv_EM, yv_emli_NCEM, NCEM, PEM);
         H0_emli_SEM   = qbcp_H_complete(tv_EM, yv_emli_NCEM, NCEM, PSEM);
 
-        // Hf - careful, the state is given in PSEM
-        Hf_NCEM  = qbcp_H_complete(tv_SEM, yv_SEM, PSEM, NCEM);
-        Hf_NCSEM = qbcp_H_complete(tv_SEM, yv_SEM, PSEM, NCSEM);
-        Hf_EM    = qbcp_H_complete(tv_SEM, yv_SEM, PSEM, PEM);
-        Hf_SEM   = qbcp_H_complete(tv_SEM, yv_SEM, PSEM, PSEM);
+        // Hf - careful, the state is given in FC_COORD
+        Hf_NCEM  = qbcp_H_complete(tv_FC, yv_FC, projResSt.FC_COORD, NCEM);
+        Hf_NCSEM = qbcp_H_complete(tv_FC, yv_FC, projResSt.FC_COORD, NCSEM);
+        Hf_EM    = qbcp_H_complete(tv_FC, yv_FC, projResSt.FC_COORD, PEM);
+        Hf_SEM   = qbcp_H_complete(tv_FC, yv_FC, projResSt.FC_COORD, PSEM);
 
         // Hf at semli - careful, the state is given in NCSEM
         Hf_semli_NCEM  = qbcp_H_complete(tv_SEM, yv_semli_NCSEM, NCSEM, NCEM);
@@ -1188,20 +1299,20 @@ void writeIntProjCUSeed_bin(string filename,
         filestream.write((char*) &res, sizeof(double));
 
         // 2. time grid in NCEM units
-        res  = projResSt.init_time_EM;
+        res  = projResSt.init_time;
         filestream.write((char*) &res, sizeof(double));
 
         // 3-8. initial state in NCEM coordinates
         for (int k = 0; k < 6; k++)
         {
-            res = projResSt.init_state_CMU_NCEM[k];
+            res = projResSt.init_state_CMU_NC[k];
             filestream.write((char*) &res, sizeof(double));
         }
 
         // 9-14. initial state in SEM coordinates
         for (int k = 0; k < 6; k++)
         {
-            res = projResSt.init_state_CMU_SEM_o[k];
+            res = projResSt.init_state_CMU_FC_o[k];
             filestream.write((char*) &res, sizeof(double));
         }
 
@@ -1217,24 +1328,24 @@ void writeIntProjCUSeed_bin(string filename,
         filestream.write((char*) &res, sizeof(double));
 
         // 21. associated dv
-        res = projResSt.dv_at_projection_SEM_o;
+        res = projResSt.dv_at_projection_FC_o;
         filestream.write((char*) &res, sizeof(double));
 
         // 22. t_man_SEM
-        res    = projResSt.final_time_SEM_o;
+        res    = projResSt.final_time_FC_o;
         filestream.write((char*) &res, sizeof(double));
 
         // 23-28. final_state_CMU_SEM state in SE coordinates
         for (int k = 0; k < 6; k++)
         {
-            res = projResSt.final_state_CMU_SEM_o[k];
+            res = projResSt.final_state_CMU_FC_o[k];
             filestream.write((char*) &res, sizeof(double));
         }
 
         // 29-34. projected_state_CMU_SEM state in SE coordinates
         for (int k = 0; k < 6; k++)
         {
-            res = projResSt.projected_state_CMU_SEM_o[k];
+            res = projResSt.projected_state_CMU_FC_o[k];
             filestream.write((char*) &res, sizeof(double));
         }
 
@@ -1257,11 +1368,11 @@ void writeIntProjCUSeed_bin(string filename,
         // Computing the energies before storing
         //--------------------------------------------------------------------------------
         // States and time
-        tv_EM = projResSt.init_time_EM;
-        state_memcpy(yv_NCEM, projResSt.init_state_CMU_NCEM);
+        tv_EM = projResSt.init_time;
+        state_memcpy(yv_NCEM, projResSt.init_state_CMU_NC);
 
-        tv_SEM = projResSt.final_time_SEM_o;
-        state_memcpy(yv_SEM, projResSt.final_state_CMU_SEM_o);
+        tv_SEM = projResSt.final_time_FC_o;
+        state_memcpy(yv_SEM, projResSt.final_state_CMU_FC_o);
 
         // H0 at IC
         H0_NCEM  = qbcp_H_complete(tv_EM, yv_NCEM, NCEM, NCEM);
@@ -1336,7 +1447,7 @@ void writeIntProjCUSeed_bin(string filename,
         // Seeds!
         //--------------------------------------------------------------------------------
         //57. seed_time_EM
-        res  = projResSt.seed_time_EM;
+        res  = projResSt.seed_time;
         filestream.write((char*) &res, sizeof(double));
 
         //58-61. initial seed in RCM coordinates
@@ -1625,12 +1736,12 @@ void writeCONT_txt(int label, string filename, Orbit& orbit_EM, Orbit& orbit_SEM
 /**
  *  \brief Get the length the results of the continuation procedure, in txt file.
  **/
-int getLengthCONT_txt(double t0xT)
+int getLengthCONT_txt(string filename)
 {
     //====================================================================================
     // Initialize the I/O objects
     //====================================================================================
-    string filename  = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF, SEML.li_SEM, t0xT);
+    //string filename  = filenameCUM(SEML.cs->F_PLOT, OFTS_ORDER, TYPE_CONT_ATF, SEML.li_SEM, t0xT);
 
     //Check the existence of the file
     if(!fileExists(filename))
@@ -1681,12 +1792,12 @@ int readCONT_txt(double*  t0_CMU_EM, double*   tf_CMU_EM,
                  double* tethae, double** ye_NCSEM,
                  double* H0_NCEM, double* He_NCEM,
                  double* H0_NCSEM, double* He_NCSEM,
-                 double tr0, int fsize)
+                 int fsize, string filename)
 {
     //====================================================================================
     // Get the size of the file
     //====================================================================================
-    int fsize0 = getLengthCONT_txt(tr0);
+    int fsize0 = getLengthCONT_txt(filename);
     if(fsize0 != fsize)
     {
         cerr << "readCONT_txt. The user-defined file size mismatch the true size." << endl;
@@ -1696,7 +1807,7 @@ int readCONT_txt(double*  t0_CMU_EM, double*   tf_CMU_EM,
     //====================================================================================
     // Initialize the I/O objects
     //====================================================================================
-    string filename  = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF, SEML.li_SEM, tr0);
+    //string filename  = filenameCUM(SEML.cs->F_PLOT, OFTS_ORDER, TYPE_CONT_ATF, SEML.li_SEM, tr0);
     fstream filestream;
     filestream.open (filename.c_str(), ios::in);
 
@@ -1875,7 +1986,8 @@ int writeCONT_bin(RefSt& refSt, string filename_traj, int dcs, int coord_type,
         double*  torb_SEM   = dvector(0, oPlot);
 
 
-        //Reset the unstable direction
+        //Save & Reset the unstable direction
+        double hyp_back = orbit_EM.getSi()[4];
         orbit_EM.setSi(0, 4);
 
         //Set the final time
@@ -1965,7 +2077,7 @@ int writeCONT_bin(RefSt& refSt, string filename_traj, int dcs, int coord_type,
         // 1. The last RCM component (unstable part),
         // 2. The final time.
         //================================================================================
-        orbit_EM.setSi(PROJ_EPSILON, 4);
+        orbit_EM.setSi(hyp_back, 4);
         orbit_EM.setTf(t_traj_n[man_index]/SEML.us_em.ns);
 
         //--------------------------------------------------------------------------------
@@ -2271,7 +2383,9 @@ int writeCONT_bin(RefSt& refSt, string filename_traj, int dcs, int coord_type,
  *   \brief Storing the results of the continuation procedure, in txt file.
  **/
 void writeCONT_txt(string filename, Orbit& orbit_EM, Orbit& orbit_SEM,
-                   double te_NCSEM, double* ye_NCSEM, ProjResClass& projRes, int isFirst,  int k)
+                   double te_NCSEM, double* ye_NCSEM,
+                   ProjResClass& projRes,
+                   int isFirst,  int k)
 {
     //====================================================================================
     // Initialize the I/O objects
@@ -2567,7 +2681,8 @@ int writeCONT_bin(RefSt& refSt, string filename_traj, double** y_traj_n, double*
         double*  torb_SEM   = dvector(0, oPlot);
 
 
-        //Reset the unstable direction
+        //Save & Reset the unstable direction
+        double hyp_back = orbit_EM.getSi()[4];
         orbit_EM.setSi(0, 4);
 
         //Set the final time
@@ -2662,7 +2777,7 @@ int writeCONT_bin(RefSt& refSt, string filename_traj, double** y_traj_n, double*
         // 1. The last RCM component (unstable part),
         // 2. The final time.
         //================================================================================
-        orbit_EM.setSi(PROJ_EPSILON, 4);
+        orbit_EM.setSi(hyp_back, 4);
         orbit_EM.setTf(t_traj_n[man_index]/SEML.us_em.ns);
 
         //--------------------------------------------------------------------------------
@@ -3148,8 +3263,6 @@ bool ProjResClass::push_back_conditional(ProjResClass& inSt, RefSt& refSt)
     {
         kpor = inSt.sortId[kpos];
 
-        cout << "here" << endl;
-
         //--------------------------------------------------------------------------------
         // Limit in the reduced coordinates (s1, s2, s3, s4)
         //--------------------------------------------------------------------------------
@@ -3254,8 +3367,10 @@ void ProjResClass::displayEntry(int k)
     cout << "t0_EM    = "  << t0_CMU_EM[ind]  << endl;
     cout << "tf_EM    = "  << tf_CMU_EM[ind] << endl;
     cout << "pmin_SEM = "  << pmin_dist_SEM[ind] << endl;
-    cout << "s_CM_EM  = (" << s1_CMU_EM[ind] << ", " << s2_CMU_EM[ind] << ", " << s3_CMU_EM[ind] << ", " << s4_CMU_EM[ind] << ")" << endl;
-    cout << "s_CM_SEM = (" << s1_CM_SEM[ind] << ", " << s2_CM_SEM[ind] << ", " << s3_CM_SEM[ind] << ", " << s4_CM_SEM[ind] << ")" << endl;
+    cout << "s_CM_EM  = (" << s1_CMU_EM[ind] << ", " << s2_CMU_EM[ind];
+    cout << ", " << s3_CMU_EM[ind] << ", " << s4_CMU_EM[ind] << ", " << s5_CMU_EM[ind] << ")" << endl;
+    cout << "s_CM_SEM = (" << s1_CM_SEM[ind] << ", " << s2_CM_SEM[ind];
+    cout << ", " << s3_CM_SEM[ind] << ", " << s4_CM_SEM[ind] << ")" << endl;
 }
 
 /**
@@ -3595,7 +3710,7 @@ int ProjResClass::readProjRes_t0(string filename, double t0_des, int typeOfTimeS
 
 
     //====================================================================================
-    //Open and read datafile
+    // Open and read datafile
     //====================================================================================
     ProjResClass readSt;
     readSt.readProjRes(filename);
@@ -3857,7 +3972,7 @@ void ProjResClass::update_ic(double st_EM[5], double st_SEM[5], double t_EM[2],
     st_EM[1] = this->s2_CMU_EM[kpos];
     st_EM[2] = this->s3_CMU_EM[kpos];
     st_EM[3] = this->s4_CMU_EM[kpos];
-    st_EM[4] = PROJ_EPSILON;
+    st_EM[4] = this->s5_CMU_EM[kpos];
     //Time
     t_EM[0]  = this->t0_CMU_EM[kpos];
     t_EM[1]  = this->tf_CMU_EM[kpos];
@@ -3923,7 +4038,7 @@ void ProjResClass::update_ic(double st_EM[5], double st_SEM[5], double t_EM[2],
     st_EM[1] = this->s2_CMU_EM[kpos];
     st_EM[2] = this->s3_CMU_EM[kpos];
     st_EM[3] = this->s4_CMU_EM[kpos];
-    st_EM[4] = PROJ_EPSILON;
+    st_EM[4] = this->s5_CMU_EM[kpos];
     //Time
     t_EM[0]  = this->t0_CMU_EM[kpos];
     t_EM[1]  = this->tf_CMU_EM[kpos];

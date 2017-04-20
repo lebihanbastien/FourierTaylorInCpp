@@ -18,25 +18,25 @@
 #include <gsl/gsl_spline.h>
 
 
-#define TYPE_STROB         -1
-#define TYPE_ORBIT         0
-#define TYPE_CU            1
-#define TYPE_CS            2
-#define TYPE_MAN           3
+#define TYPE_STROB          -1
+#define TYPE_ORBIT           0
+#define TYPE_CU              1
+#define TYPE_CS              2
+//#define TYPE_MAN           3
 //#define TYPE_MAN_SORT_DR   4
 //#define TYPE_MAN_SORT_DH   5
-#define TYPE_MAN_PROJ      6
-#define TYPE_MAN_SORT      7
-#define TYPE_MAN_SORT_IN   8
-#define TYPE_CONT_ATF      9
-#define TYPE_CONT_ATF_TRAJ 10
+#define TYPE_MAN_PROJ        6
+#define TYPE_MAN_SORT        7
+#define TYPE_MAN_SORT_IN     8
+#define TYPE_CONT_ATF        9
+#define TYPE_CONT_ATF_TRAJ  10
 //3D
-#define TYPE_CU_3D         11
-//For JPL
-#define TYPE_COMP_FOR_JPL  12
-#define TYPE_CONT_JPL_TRAJ 13
-
+#define TYPE_CU_3D          11
 #define TYPE_MAN_PROJ_3D    61
+//For JPL
+#define TYPE_COMP_FOR_JPL   12
+#define TYPE_CONT_JPL_TRAJ  13
+//For orbit
 #define TYPE_MAN_PROJ_ORBIT 62
 
 #define GSIZE 50;

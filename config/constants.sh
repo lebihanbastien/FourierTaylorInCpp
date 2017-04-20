@@ -28,20 +28,21 @@ fi
 #-----------------------------------------------------
 # TYPE OF COMPUTATION (COMP_TYPE)
 #-----------------------------------------------------
-export COMP_CM_EML2_TO_CM_SEML=0    	 #EML2 Center Manifold to SEMLi Center Manifold
-export COMP_CM_EML2_TO_CMS_SEML=1   	 #EML2 Center Manifold to SEMLi Center-Stable Manifold
-export COMP_SINGLE_ORBIT=2    		 #Just some example of solutions
-export COMP_CM_EML2_TO_CMS_SEML_READ=3   #Read
-export COMP_VF_TEST=4    		 #Test of the QBCP vector field. Should probably be put in OOFTDA
-export COMP_CM_EML2_TO_CM_SEML_REFINE=5  #EML2 Center Manifold to SEMLi Center Manifold
-export COMP_EPHEMERIDES_TEST=6    	 #Ephemerides test
-export COMP_CM_EML2_TO_CM_SEML_3D=7 	 #EML2 Center Manifold to SEMLi Center Manifold in 3D
-export COMP_VOFTS_TO_VOFTS=8     	 #Store CS/CU into one-dimensionnal series to gain memory
-export COMP_test_INVMAN=9    		 #Test of the new invariant manifold implementation
-export COMP_REF_JPL=10  		 #Refine to JPL ephemerides
-export COMP_CM_EML2_TO_CM_SEML_H=11   #Planar EMLi Center Manifold to SEMLi Center Manifold, at a given energy
-export COMP_ORBIT_EML2_TO_CM_SEML=12   #EMLi Center Manifold to SEMLi Center Manifold, on a given set of orbits
-export COMP_SINGLE_ORBIT_EML2_TO_CM_SEML=13 #EMLi Center Manifold to SEMLi Center Manifold, on a given orbit
+export COMP_CM_EML2_TO_CM_SEML=0    	     #EML2 Center Manifold to SEMLi Center Manifold
+export COMP_CM_EML2_TO_CMS_SEML=1   	     #EML2 Center Manifold to SEMLi Center-Stable Manifold
+export COMP_SINGLE_ORBIT=2    		         #Just some example of solutions
+export COMP_CM_EML2_TO_CMS_SEML_READ=3       #Read
+export COMP_VF_TEST=4    		             #Test of the QBCP vector field. Should probably be put in OOFTDA
+export COMP_CM_EML2_TO_CM_SEML_REFINE=5      #EML2 Center Manifold to SEMLi Center Manifold
+export COMP_EPHEMERIDES_TEST=6    	         #Ephemerides test
+export COMP_CM_EML2_TO_CM_SEML_3D=7 	     #EML2 Center Manifold to SEMLi Center Manifold in 3D
+export COMP_VOFTS_TO_VOFTS=8     	         #Store CS/CU into one-dimensionnal series to gain memory
+export COMP_test_INVMAN=9    		         #Test of the new invariant manifold implementation
+export COMP_REF_JPL=10  		             #Refine to JPL ephemerides
+export COMP_CM_EML2_TO_CM_SEML_H=11          #Planar EMLi Center Manifold to SEMLi Center Manifold, at a given energy
+export COMP_ORBIT_EML2_TO_CM_SEML=12         #EMLi Center Manifold to SEMLi Center Manifold, on a given set of orbits
+export COMP_SINGLE_ORBIT_EML2_TO_CM_SEML=13  #EMLi Center Manifold to SEMLi Center Manifold, on a given orbit
+export COMP_CMU_SEMLi_TO_CM_EMLj=14          #SEMLi Center-Unstable Manifold to EMLj Center Manifold
 
 #-----------------------------------------------------
 # MODEL
@@ -51,6 +52,12 @@ export M_RTBP=0
 export M_QBCP=1
 export M_BCP=2  
 export M_ERTBP=3  
+
+#-----------------------------------------------------
+# Hyperbolic component (default values)
+#-----------------------------------------------------
+export HYP_EPSILON_EML2_DEFAULT=1e-6
+export HYP_EPSILON_SEML2_DEFAULT=1e-6
 
 
 #=====================================================
@@ -101,7 +108,7 @@ export REF_GIVEN_GRID=10	#the time grid has been computed in a previous continua
 
 # Termination condition in the continuation with variable final time (either REF_VAR_TN/REF_VAR_TIME)
 export REF_COND_S5=11    	#the continuation is stopped when s5 = 0 at SEMLi
-export REF_COND_T=12	        #the continuation is stopped when "enough turns are performed at SEMLi
+export REF_COND_T=12	    #the continuation is stopped when "enough turns are performed at SEMLi
 
 #-----------------------------------------------------
 # COORDINATES SYSTEMS
@@ -131,3 +138,10 @@ export VSYNSEM=15
 #-----------------------------------------------------
 export TIME_SELECTION_ABSOLUTE=1
 export TIME_SELECTION_RATIO=0
+
+#-----------------------------------------------------
+# I/O handling
+#-----------------------------------------------------
+export IO_DEFAULT=0
+export IO_BASH=1
+export IO_DIALOG=2

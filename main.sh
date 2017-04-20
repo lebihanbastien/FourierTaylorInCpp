@@ -7,6 +7,13 @@
 source $1
 
 #--------------------------------------------------------------
+# Get the current directory
+#--------------------------------------------------------------
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+DIR=$DIR"/"
+
+
+#--------------------------------------------------------------
 # Function to update unset parameters
 #--------------------------------------------------------------
 function set_param
@@ -49,7 +56,8 @@ echo
 echo "#------------------------------------------#"
 echo "#     FourierTaylorInCpp configuration     #"
 echo "#------------------------------------------#"
-echo "Source file: " "$1"
+echo "Current directory: " "$DIR"
+echo "Source file      : " "$1"
 echo ''
 
 #=====================================================
@@ -94,9 +102,15 @@ else
 		;;
 		$COMP_ORBIT_EML2_TO_CM_SEML) 	 echo 'COMP_TYPE    = COMP_ORBIT_EML2_TO_CM_SEML'
 		;;
+		$COMP_SINGLE_ORBIT_EML2_TO_CM_SEML) echo 'COMP_TYPE    = COMP_SINGLE_ORBIT_EML2_TO_CM_SEML'
+		;;
+		$COMP_CMU_SEMLi_TO_CM_EMLj) 	 echo 'COMP_TYPE    = COMP_CMU_SEMLi_TO_CM_EMLj'
+		;;
 		*)     				             echo "COMP_TYPE    = "$COMP_TYPE". Unknown type."
 	esac
 fi
+
+
 
 #=====================================================
 #  ---- General parameters ----
@@ -152,9 +166,45 @@ echo "OFTS_ORDER 	       =" $OFTS_ORDER
 #-----------------------------------------------------
 echo "ISPAR                  =" $ISPAR
 echo "NUM_THREADS            =" $NUM_THREADS
+
+
+#-----------------------------------------------------
+# Hyperbolic component
+#-----------------------------------------------------
+# At EML2
+if [ -z ${HYP_EPSILON_EML2+x} ]; then
+		set_param "HYP_EPSILON_EML2" $HYP_EPSILON_EML2_DEFAULT
+fi
+echo "HYP_EPSILON_EML2       =" $HYP_EPSILON_EML2
+
+# At SEML2
+if [ -z ${HYP_EPSILON_SEML2+x} ]; then
+		set_param "HYP_EPSILON_SEML2" $HYP_EPSILON_SEML2_DEFAULT
+fi
+echo "HYP_EPSILON_SEML2      =" $HYP_EPSILON_SEML2
 echo ''
 
 
+#-----------------------------------------------------
+# I/O Handling
+#-----------------------------------------------------
+# At EML2
+if [ -z ${IO_HANDLING+x} ]; then
+		set_param "IO_HANDLING" $IO_DEFAULT
+fi
+
+case $IO_HANDLING in
+		$IO_DEFAULT)  echo 'IO_HANDLING  = IO_DEFAULT. Use of the default filenames.'
+		;;
+		$IO_BASH)     echo 'IO_HANDLING  = IO_BASH. Use of the filames contained in the config files'
+		;;
+		$IO_DIALOG)   echo 'IO_HANDLING  = IO_DIALOG. A file dialog window pops up each time a filename is needed.'
+		;;
+		*)     		  echo "IO_HANDLING  = "$IO_HANDLING". Unknown type."
+esac
+echo ''
+
+		
 #=====================================================
 #  ---- Projection parameters ----
 #=====================================================
@@ -204,6 +254,17 @@ if [ -z ${TMIN+x} ]; then
 	YNMAX=0.6     # The maximum norm (in SEM normalized units) for a projection to occur on the CM_NC of SEMLi
 	SNMAX=0.6     # The maximum norm (in RCM normalized units) for a projection to occur on the CM_NC of SEMLi
 	NOD=6         # Number of dimensions on which we compute the norm of the projection error
+	
+	#-----------------------------------------------------
+	# Filenames (used only if IO_HANDLING==$IO_BASH
+	#-----------------------------------------------------
+	if [ -z ${FILE_CU+x} ]; then
+		set_param "FILE_CU" "cu.bin"
+	fi
+	
+	if [ -z ${FILE_PCU+x} ]; then
+		set_param "FILE_PCU" "projcu.bin"
+	fi
 else
 
 	#-----------------------------------------------------
@@ -253,6 +314,22 @@ else
 	echo ''
 	echo "DHD      =" $DHD
 	echo "DT       =" $DT
+	echo ''
+	
+	#-----------------------------------------------------
+	# Filenames (used only if IO_HANDLING==$IO_BASH)
+	#-----------------------------------------------------
+	if [ -z ${FILE_CU+x} ]; then
+		set_param "FILE_CU" "cu.bin"
+	fi
+	
+	if [ -z ${FILE_PCU+x} ]; then
+		set_param "FILE_PCU" "projcu.bin"
+	fi
+	
+	echo "FILE_CU  =" $FILE_CU
+	echo "FILE_PCU =" $FILE_PCU
+	echo ''
 fi
 
 #=====================================================
@@ -357,6 +434,15 @@ if [ -z ${REFST_TYPE+x} ]; then
 	
 	# Type of time selection
 	REFST_TYPE_OF_T_SEL=$TIME_SELECTION_RATIO
+	
+	#-----------------------------------------------------
+	# Filenames (used only if IO_HANDLING==$IO_BASH)
+	#-----------------------------------------------------
+	FILE_PCU="projcu.bin"
+	FILE_CONT="cont_atf.txt"
+	FILE_CONT_TRAJ="cont_atf_traj.bin"
+	FILE_JPL="cont_jpl.bin"
+	
 else
 	#-----------------------------------------------------
 	# Display current set of parameters
@@ -542,12 +628,36 @@ else
 		*) echo "REFST_TYPE_OF_T_SEL   = "$REFST_TYPE_OF_T_SEL". Unknown type."
 	esac
 	
+	#-----------------------------------------------------
+	# Filenames (used only if IO_HANDLING==$IO_BASH)
+	#-----------------------------------------------------
+	if [ -z ${FILE_PCU+x} ]; then
+		set_param "FILE_PCU" "projcu.bin"
+	fi
+	
+	if [ -z ${FILE_CONT+x} ]; then
+		set_param "FILE_CONT" "cont_atf.txt"
+	fi
+	
+	if [ -z ${FILE_CONT_TRAJ+x} ]; then
+		set_param "FILE_CONT_TRAJ" "cont_atf_traj.bin"
+	fi
+	
+	if [ -z ${FILE_JPL+x} ]; then
+		set_param "FILE_JPL" "cont_jpl.bin"
+	fi
+	
+	echo "FILE_PCU              =" $FILE_PCU
+	echo "FILE_CONT             =" $FILE_CONT
+	echo "FILE_CONT_TRAJ        =" $FILE_CONT_TRAJ
+	echo "FILE_JPL              =" $FILE_JPL
+	echo ''
 fi
 
 
-#--------------------------------------------------------------
+#-----------------------------------------------------------------------------------------
 # Go on with the implementation?
-#--------------------------------------------------------------
+#-----------------------------------------------------------------------------------------
 echo "#------------------------------------------#"
 echo ''
 echo -e "Do you want to go on with the computation (y/n)? \c "
@@ -560,14 +670,14 @@ if [ "$ans" == "y" ]; then
 	#-----------------------------------------------------------------------------
 
 	# The general parameters are common to all types of computation
-	COEFFS=($OFTS_ORDER $OFS_ORDER $COMP_TYPE $MODEL $LI_EM $LI_SEM $ISPAR $NUM_THREADS)
+	COEFFS=($OFTS_ORDER $OFS_ORDER $COMP_TYPE $MODEL $LI_EM $LI_SEM $ISPAR $NUM_THREADS $HYP_EPSILON_EML2 $HYP_EPSILON_SEML2 $IO_HANDLING)
 
 	# Then, for each type, we add some parameters
 	case $COMP_TYPE in
-		$COMP_CM_EML2_TO_CM_SEML | $COMP_CM_EML2_TO_CM_SEML_3D | $COMP_CM_EML2_TO_CM_SEML_H | $COMP_ORBIT_EML2_TO_CM_SEML)        
+		$COMP_CM_EML2_TO_CM_SEML | $COMP_CM_EML2_TO_CM_SEML_3D | $COMP_CM_EML2_TO_CM_SEML_H | $COMP_ORBIT_EML2_TO_CM_SEML | $COMP_SINGLE_ORBIT_EML2_TO_CM_SEML | $COMP_CMU_SEMLi_TO_CM_EMLj)        
 			COEFFS=(${COEFFS[*]}  $TMIN $TMAX $TM $TSIZE)
 			COEFFS=(${COEFFS[*]}  ${GLIM_S1[*]} ${GLIM_S2[*]} ${GLIM_S3[*]} ${GLIM_S4[*]} ${GSIZE_SI[*]})
-			COEFFS=(${COEFFS[*]}  $PRIMARY $MSIZE $NSMIN $YNMAX $SNMAX $NOD $DHD $DT)
+			COEFFS=(${COEFFS[*]}  $PRIMARY $MSIZE $NSMIN $YNMAX $SNMAX $NOD $DHD $DT $FILE_CU $FILE_PCU)
 		;;
 		$COMP_CM_EML2_TO_CMS_SEML | $COMP_REF_JPL)
 			COEFFS=(${COEFFS[*]}  $REFST_TYPE $REFST_DIM $REFST_T0_DES)
@@ -588,6 +698,8 @@ if [ "$ans" == "y" ]; then
 			COEFFS=(${COEFFS[*]}  $REFST_TSPAN_EM $REFST_TSPAN_SEM)
 			COEFFS=(${COEFFS[*]}  $REFST_ISSAVED_EM $REFST_ISSAVED_SEM)
 			COEFFS=(${COEFFS[*]}  $REFST_TYPE_OF_T_SEL)
+			
+			COEFFS=(${COEFFS[*]}   $FILE_PCU $FILE_CONT $FILE_CONT_TRAJ $FILE_JPL)
 		;;
 		$COMP_SINGLE_ORBIT)              
 
@@ -610,7 +722,8 @@ if [ "$ans" == "y" ]; then
 		$COMP_test_INVMAN) 		 
 
 		;;
-		*)  echo "COMP_TYPE    = "$COMP_TYPE". Unknown type."
+		*)  echo "COMP_TYPE    = "$COMP_TYPE". Unknown type. Return."
+			exit 0
 	esac
 	 
 

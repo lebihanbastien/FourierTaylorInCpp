@@ -21,9 +21,9 @@
  **/
 void qbcp_coc(double t, const double y0[], double yout[], int inputType, int outputType)
 {
-    //----------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // 1. Do some checks on the inputs
-    //----------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Type of inputs
     if(inputType > ECISEM)
         perror("Unknown inputType");
@@ -1533,13 +1533,13 @@ void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, in
 }
 
 /**
- *  \brief COC: from inputType to outputType, in vector form, for time vectors only.
+ *  \brief COC: from inputType to outputType, in scalar form, for time only.
  **/
-void qbcp_coc_time(double *t0, double *tout, int N, int inputType, int outputType)
+double qbcp_coc_time(const double t0, int inputType, int outputType)
 {
-    //----------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // 1. Do some checks on the inputs
-    //----------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //Type of inputs
     if(inputType > ECISEM)
         perror("Unknown inputType");
@@ -1548,9 +1548,97 @@ void qbcp_coc_time(double *t0, double *tout, int N, int inputType, int outputTyp
     if(outputType > ECISEM)
         perror("Unknown outputType");
 
-    //----------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
     // 2. Define the factor to apply to the time vector
-    //----------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------
+    double tfactor = 1.0;
+    switch(inputType)
+    {
+    case VNCEM:
+    case NCEM:
+    case PEM:
+    case VEM:
+    case INEM:
+        //Time factor
+        switch(outputType)
+        {
+        case VNCEM:
+        case NCEM:
+        case PEM:
+        case VEM:
+        case INEM:
+            //EM to EM units
+            tfactor = 1.0;
+            break;
+        case VNCSEM:
+        case NCSEM:
+        case PSEM:
+        case VSEM:
+        case INSEM:
+        case ECISEM:
+            //EM to SEM units
+            tfactor = SEML.us_em.ns;
+            break;
+        }
+        break;
+
+    case VNCSEM:
+    case NCSEM:
+    case PSEM:
+    case VSEM:
+    case INSEM:
+    case ECISEM:
+        //Time factor
+        switch(outputType)
+        {
+        case VNCEM:
+        case NCEM:
+        case PEM:
+        case VEM:
+        case INEM:
+            //SEM to EM units
+            tfactor = 1.0/SEML.us_em.ns;
+            break;
+        case VNCSEM:
+        case NCSEM:
+        case PSEM:
+        case VSEM:
+        case INSEM:
+        case ECISEM:
+            //SEM to SEM units
+            tfactor = 1.0;
+            break;
+        }
+        break;
+    }
+
+
+    //------------------------------------------------------------------------------------
+    // 3. Updating output
+    //------------------------------------------------------------------------------------
+    return t0*tfactor;
+}
+
+
+/**
+ *  \brief COC: from inputType to outputType, in vector form, for time vectors only.
+ **/
+void qbcp_coc_time(double *t0, double *tout, int N, int inputType, int outputType)
+{
+    //------------------------------------------------------------------------------------
+    // 1. Do some checks on the inputs
+    //------------------------------------------------------------------------------------
+    //Type of inputs
+    if(inputType > ECISEM)
+        perror("Unknown inputType");
+
+    //Type of outputs
+    if(outputType > ECISEM)
+        perror("Unknown outputType");
+
+    //------------------------------------------------------------------------------------
+    // 2. Define the factor to apply to the time vector
+    //------------------------------------------------------------------------------------
     double tfactor = 1.0;
     switch(inputType)
     {

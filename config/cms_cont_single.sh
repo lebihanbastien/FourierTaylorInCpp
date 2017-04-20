@@ -59,6 +59,11 @@ ISPAR=0
 #-----------------------------------------------------
 ISNOHUP=0
 
+#-----------------------------------------------------
+# I/O Handling
+#-----------------------------------------------------
+IO_HANDLING=$IO_BASH
+
 #=====================================================
 #  ---- Refinement parameters ----
 #=====================================================
@@ -83,6 +88,9 @@ REFST_TOF_LIM=(-1 -1)
 
 # Values for crossings
 REFST_CROSSINGS=-1
+
+# Maximum projection distance allowed during subselection
+REFST_PMAX_DIST_SEM=1.0
 
 # Number of steps in the continuation procedure
 REFST_CONT_STEP_MAX=+450;        # with fixed times
@@ -113,6 +121,12 @@ REFST_ISFROMSERVER=0		 # does the raw data comes from server files?
 
 # Maximum angle around SEMLi if REF_COND_T is used (in degrees)
 REFST_THETAMAX=90                # should be a multiple of 90°
+
+# Filenames (used only if IO_HANDLING==$IO_BASH)
+FILE_PCU="projcu_order_16_dest_L2_t0_0.995.bin"
+FILE_CONT="cont_atf.txt"
+FILE_CONT_TRAJ="cont_atf_traj.bin"
+FILE_JPL="cont_jpl.bin"
 
 #-----------------------------------------------------
 # Parameters that are stable

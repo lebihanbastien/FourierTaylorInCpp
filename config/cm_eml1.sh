@@ -60,6 +60,11 @@ ISPAR=1
 #-----------------------------------------------------
 ISNOHUP=0
 
+#-----------------------------------------------------
+# I/O Handling
+#-----------------------------------------------------
+IO_HANDLING=$IO_DIALOG
+
 #=====================================================
 #  ---- Projection parameters ----
 #=====================================================
@@ -79,11 +84,19 @@ GLIM_S3=(-3 +3)
 GLIM_S4=(+0 +1)
 GSIZE_SI=(+50 +5 +50 +5)
 
-# Primary family
+# Primary family - keep in mind that the first minimum rule is used now for the primary!
 PRIMARY=0
 
 # Fixed delta of energy (-1 if not used)
 DHD=-1
+
+# Hyperbolic components
+HYP_EPSILON_EML2=1e-6	# Hyperbolic component at eml1,2
+HYP_EPSILON_SEML2=1e-6	# Hyperbolic component at seml2
+
+# Filenames (used only if IO_HANDLING==$IO_BASH)
+FILE_CU="cu.bin"
+FILE_PCU="projcu.bin"
 
 #-----------------------------------------------------
 # Parameters that are stable

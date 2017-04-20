@@ -64,6 +64,11 @@ ISPAR=0
 #-----------------------------------------------------
 ISNOHUP=0
 
+#-----------------------------------------------------
+# I/O Handling
+#-----------------------------------------------------
+IO_HANDLING=$IO_DIALOG
+
 #=====================================================
 #  ---- Refinement parameters ----
 #=====================================================
@@ -115,6 +120,12 @@ REFST_ISFROMSERVER=1		 # does the raw data comes from server files?
 
 # Maximum angle around SEMLi if REF_COND_T is used (in degrees)
 REFST_THETAMAX=180               # should be a multiple of 90°
+
+# Filenames (used only if IO_HANDLING==$IO_BASH)
+FILE_PCU="projcu.bin"
+FILE_CONT="Serv/cont_atf_order_20_dest_L2_t0_0.995_fam1.txt"
+FILE_CONT_TRAJ="cont_atf_traj.bin"
+FILE_JPL="cont_jpl.bin"
 
 #-----------------------------------------------------
 # Parameters that are stable

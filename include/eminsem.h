@@ -56,6 +56,11 @@ void qbcp_coc_vec(double **y0, double *t0, double **yout, int N, int inputType, 
 void qbcp_coc_fwrk(double t, const double y0[], double yout[], int inputType, int outputType);
 
 /**
+ *  \brief COC: from inputType to outputType, in scalar form, for time only.
+ **/
+double qbcp_coc_time(const double t0, int inputType, int outputType);
+
+/**
  *  \brief COC: from inputType to outputType, in vector form, for time vectors only.
  **/
 void qbcp_coc_time(double *t0, double *tout, int N, int inputType, int outputType);

@@ -3,7 +3,440 @@
 
 //========================================================================================
 //
-//          Computation of the CMU about EML2
+//          Computation of the CMU about SEMLi
+//
+//========================================================================================
+/**
+ *  \brief Computes initial conditions in the 3D Center-Unstable Manifold about SEMLi,
+ *         in the QBCP model. The initial conditions (IC) are computed in a 5-dimensional
+ *         box: one dimension for the starting time, four dimensions for the
+ *         parameterization of the Center Manifold (s1 to s4 coordinates). The RCM
+ *         coordinate s5 along the unstable direction is fixed to dist_to_cm.
+ *
+ *  \param dist_to_cm:      the value in RCM coordinates on the unstable direction s5.
+ *  \param projSt.TLIM:     the min/max starting time (in SEM units) in the IC box.
+ *  \param projSt.TSIZE:    the number of points on the time grid in the IC box.
+ *  \param projSt.GLIM_SI:  the min/max of s1, s2, s3, s4 values (in RCM coordinates)
+ *                          in the IC box.
+ *  \param projSt.GSIZE_SI: the number of points on the  s1, s2, s3, s4 values  grids
+ *                          in the IC box.
+ *  \param projSt.ISPAR;    if TRUE, the computation is parallelized.
+ *
+ *
+ * The output data are saved in a binary file of the form:
+ *                   "plot/QBCP/SEM/L2/cu_3d_order_16.bin"
+ **/
+int compute_grid_CMU_SEM_3D(double dist_to_cm, ProjSt& projSt)
+{
+    //====================================================================================
+    // Retrieve the parameters in the projection structure
+    //====================================================================================
+    bool isPar = projSt.ISPAR;
+
+    //====================================================================================
+    // Splash screen
+    //====================================================================================
+    // Update the filename of type TYPE_CU_3D
+    string filename_output = projSt.get_and_update_filename(projSt.FILE_CU, TYPE_CU_3D, ios::out);
+
+    cout << resetiosflags(ios::scientific) << setprecision(15);
+    cout << "===================================================================" << endl;
+    cout << "       Computation of center-unstable IC at SEMLi                  " << endl;
+    cout << "===================================================================" << endl;
+    cout << " The computation domain is the following:                          " << endl;
+    cout << " - OFTS_ORDER = " << OFTS_ORDER << endl;
+    cout << "  - " << projSt.GSIZE_SI[0]+1  << " value(s) of s1 in [" << projSt.GLIM_SI[0][0];
+    cout << ", " << projSt.GLIM_SI[0][1] << "]" << endl;
+    cout << "  - " << projSt.GSIZE_SI[1]+1  << " value(s) of s2 in [" << projSt.GLIM_SI[1][0];
+    cout << ", " << projSt.GLIM_SI[1][1] << "]" << endl;
+    cout << "  - " << projSt.GSIZE_SI[2]+1  << " value(s) of s3 in [" << projSt.GLIM_SI[2][0];
+    cout << ", " << projSt.GLIM_SI[2][1] << "]" << endl;
+    cout << "  - " << projSt.GSIZE_SI[3]+1  << " value(s) of s4 in [" << projSt.GLIM_SI[3][0];
+    cout << ", " << projSt.GLIM_SI[3][1] << "]" << endl;
+    cout << "  - " << projSt.TSIZE+1  << " value(s) of t in [" << projSt.TLIM[0]/SEML.us->T;
+    cout << ", " << projSt.TLIM[1]/SEML.us->T << "] x T" << endl;
+    cout << " The data will be stored in " << filename_output << endl;
+    cout << setiosflags(ios::scientific) << setprecision(15);
+    cout << "===================================================================" << endl;
+
+    //====================================================================================
+    // Initialization
+    //====================================================================================
+    //------------------------------------------------------------------------------------
+    //Building the working grids
+    //------------------------------------------------------------------------------------
+    double** grid_si_CMU_RCM = (double**) calloc(4, sizeof(double*));
+    for(int i = 0; i <4; i++)
+    {
+        grid_si_CMU_RCM[i] = (double*) calloc(projSt.GSIZE_SI[i]+1, sizeof(double));
+        init_grid(grid_si_CMU_RCM[i], projSt.GLIM_SI[i][0], projSt.GLIM_SI[i][1], projSt.GSIZE_SI[i]);
+    }
+
+    cout << " - The detailed values of s2 are:                                   " << endl;
+    for(int i = 0; i < projSt.GSIZE_SI[1]; i++) cout << grid_si_CMU_RCM[1][i] << ", ";
+    cout << grid_si_CMU_RCM[1][projSt.GSIZE_SI[1]]  << endl;
+    cout << "===================================================================" << endl;
+    pressEnter(true);
+
+
+    //------------------------------------------------------------------------------------
+    //Building the time grid
+    //------------------------------------------------------------------------------------
+    double* grid_t_SEM = dvector(0,  projSt.TSIZE);
+    init_grid(grid_t_SEM, projSt.TLIM[0], projSt.TLIM[1], projSt.TSIZE);
+
+    cout << " - The detailed values of t are:                                   " << endl;
+    for(int i = 0; i < projSt.TSIZE; i++) cout << grid_t_SEM[i]/SEML.us->T << ", ";
+    cout << grid_t_SEM[projSt.TSIZE]/SEML.us->T  << endl;
+    cout << "===================================================================" << endl;
+    pressEnter(true);
+
+    //------------------------------------------------------------------------------------
+    //Number of elements
+    //------------------------------------------------------------------------------------
+    int noe = (1+projSt.GSIZE_SI[0])*(1+projSt.GSIZE_SI[1])*(1+projSt.GSIZE_SI[2])*(1+projSt.GSIZE_SI[3])*(1+projSt.TSIZE);
+    int iter = 1;
+
+    //------------------------------------------------------------------------------------
+    // Data structures
+    //------------------------------------------------------------------------------------
+    double** init_state_CMU_NCSEM = dmatrix(0, 5, 0, projSt.GSIZE_SI[2]);
+    double** init_state_CMU_RCM   = dmatrix(0, 4, 0, projSt.GSIZE_SI[2]);
+
+    //====================================================================================
+    // Get the invariant manifold at EML2
+    //====================================================================================
+    Invman invman(OFTS_ORDER, OFS_ORDER, *SEML.cs);
+
+    //====================================================================================
+    // Check that the invman is an unstable-manifold
+    //====================================================================================
+    if(invman.getManType() != MAN_CENTER_U)
+    {
+        cout << "compute_grid_CMU_SEM_3D. The invariant manifold must be of center-unstable type. return." << endl;
+        return FTC_FAILURE;
+    }
+
+    //------------------------------------------------------------------------------------
+    // Reset the data file
+    //------------------------------------------------------------------------------------
+    initCU_bin_3D(projSt.GSIZE_SI, projSt.TSIZE, filename_output);
+
+    //====================================================================================
+    // Loop on all elements.
+    //
+    // Note that openMP is only used on the inner loop, since
+    // it is useless to use on nested loops.
+    //====================================================================================
+    COMPLETION = 0;
+    for(int kt = 0; kt <= projSt.TSIZE; kt++)
+    {
+        //--------------------------------------------------------------------------------
+        //Append the time in data file
+        //--------------------------------------------------------------------------------
+        appTimeCU_bin_3D(grid_t_SEM, kt, filename_output);
+
+
+        for(int ks2 = 0; ks2 <= projSt.GSIZE_SI[1]; ks2++)
+        {
+            for(int ks4 = 0; ks4 <= projSt.GSIZE_SI[3]; ks4++)
+            {
+                for(int ks1 = 0; ks1 <= projSt.GSIZE_SI[0]; ks1++)
+                {
+                    #pragma omp parallel for if(isPar)  shared(iter)
+                    for(int ks3 = 0; ks3 <= projSt.GSIZE_SI[2]; ks3++)
+                    {
+                        Ofsc ofs(OFS_ORDER);
+                        double* yvu = dvector(0,5);
+                        double* sti = dvector(0,4);
+
+
+                        //----------------------------------------------------------------
+                        // Initialization on the center-unstable manifold
+                        //----------------------------------------------------------------
+                        //Init sti
+                        sti[0] = grid_si_CMU_RCM[0][ks1];
+                        sti[1] = grid_si_CMU_RCM[1][ks2];
+                        sti[2] = grid_si_CMU_RCM[2][ks3];
+                        sti[3] = grid_si_CMU_RCM[3][ks4];
+                        sti[4] = dist_to_cm;
+
+
+                        //----------------------------------------------------------------
+                        //Equivalent state
+                        //----------------------------------------------------------------
+                        invman.evalRCMtoNC(sti, grid_t_SEM[kt], yvu, OFTS_ORDER, OFS_ORDER);
+
+                        //----------------------------------------------------------------
+                        //Save
+                        //----------------------------------------------------------------
+                        #pragma omp critical
+                        {
+
+                            for(int i = 0; i < 6; i++) init_state_CMU_NCSEM[i][ks3] = yvu[i];
+                            for(int i = 0; i < 5; i++) init_state_CMU_RCM[i][ks3] = sti[i];
+                            //Display
+                            displayCompletion("compute_grid_CMU_SEM", (double) iter++/noe*100);
+                        }
+
+                        free_dvector(yvu, 0, 5);
+                        free_dvector(sti, 0, 4);
+
+                    }
+
+                    //--------------------------------------------------------------------
+                    //Store values
+                    //--------------------------------------------------------------------
+                    writeCU_bin_3D(init_state_CMU_NCSEM, init_state_CMU_RCM,
+                                   projSt.GSIZE_SI, filename_output);
+                }
+            }
+        }
+    }
+
+    //------------------------------------------------------------------------------------
+    //Free
+    //------------------------------------------------------------------------------------
+    free_dmatrix(init_state_CMU_NCSEM, 0, 5, 0, projSt.GSIZE_SI[2]);
+    free_dmatrix(init_state_CMU_RCM,   0, 4, 0, projSt.GSIZE_SI[2]);
+
+    return FTC_SUCCESS;
+}
+
+//========================================================================================
+//
+//         Projection on the CM/CMS/CMU of EMLi
+//
+//========================================================================================
+/**
+ *  \brief Integrates the central-unstable legs from a discrete set of unstable directions
+ *         obtained using the routine compute_grid_CMU_EM. Then, each point on the
+ *         integration grid is projected on the Center Manifold CM_EM_NC about EMLi.
+ *         The best solution (minimum distance of projection) is stored.
+ *
+ *  \param projSt.TM:          the maximum integration time on each leg, in SEM units.
+ *
+ *  \param projSt.MSIZE:       the number of points on each manifold leg.
+ *
+ *  \param projSt.NOD:         the number of dimensions on which the distance of
+ *                             projection is computed (usually either 3 (the physical
+ *                             distance) or 6 (the whole phase space)).
+ *
+ *  \param projSt.ISPAR:       if TRUE, the computation is parallelized.
+ *
+ *  \param projSt.YNMAX:       the maximum norm in NCEM coordinates for which a given
+ *                             state on the integration grid is projected on CM_EM_NC
+ *                             More precisely: for a given state y along the manifold leg,
+ *                             if norm(y, 3) < projSt.YNMAX, the state is projected.
+ *                             Otherwise, it is considered too far away from EMLi to be
+ *                             a good candidate for projection.
+ *
+ *  \param projSt.SNMAX:       the maximum norm in RCM EM coordinates for which a given
+ *                             projection state on the CM of EMLi (CM_SEM_NC) is
+ *                             computed back in NCSEM coordinates. More precisely, for a
+ *                             given state y in NCSEM coordinates, the result of the
+ *                             projection on CM_SEM_NC gives a state sproj in RCM SEM
+ *                             coordinates.
+ *                             if norm(sproj, 4) < projSt.SNMAX, the computation
+ *                             yproj = CM_EM_NC(sproj, t) is performed. Otherwise, the
+ *                             state sproj is considered too far away from the RCM origin
+ *                             to be a good candidate - it is out of the domain of
+ *                             practical convergence of CM_SEM_NC.
+ *
+ * The output data are saved in a binary file of the form:
+ *          "plot/QBCP/SEM/L2/projcu_3d_order_16.bin".
+ **/
+int int_proj_CMU_SEM_on_CM_EM_3D(ProjSt& projSt)
+{
+    //====================================================================================
+    // Retrieve the parameters in the projection structure
+    //====================================================================================
+    bool isPar = projSt.ISPAR;
+
+    //====================================================================================
+    // Filenames
+    //====================================================================================
+    // Get the filename from the latest data of type TYPE_CU_3D
+    string filename_input = projSt.get_filename(TYPE_CU_3D, ios::in);
+    // Get the filename for the output
+    string filename_output = projSt.get_and_update_filename(projSt.FILE_PCU, TYPE_MAN_PROJ_3D, ios::out);
+
+
+    //====================================================================================
+    // 1. Get initial condition in the center-unstable manifold from a data file
+    //====================================================================================
+    //Read data size
+    int t_grid_size, si_grid_size[4], offset;
+    offset = getLenghtCU_bin_3D(si_grid_size, &t_grid_size, filename_input);
+
+    if(offset < 0)
+    {
+        cout << "int_proj_CMU_SEM_on_CM_EM_3D. Impossible to get length of the data file." << endl;
+        return FTC_FAILURE;
+    }
+
+
+    //====================================================================================
+    // Splash screen
+    //====================================================================================
+    cout << resetiosflags(ios::scientific) << setprecision(15);
+
+    //------------------------------------------------------------------------------------
+    //To store all data
+    //------------------------------------------------------------------------------------
+    double** init_state_CMU_NCSEM = dmatrix(0, 5, 0, si_grid_size[2]);
+    double** init_state_CMU_RCM   = dmatrix(0, 4, 0, si_grid_size[2]);
+    double* init_time_grid_SEM    = dvector(0, t_grid_size);
+
+    //------------------------------------------------------------------------------------
+    //Number of elements
+    //------------------------------------------------------------------------------------
+    int noe = (1+si_grid_size[0])*(1+si_grid_size[1])*(1+si_grid_size[2])*(1+si_grid_size[3])*(1+t_grid_size);
+
+
+    //====================================================================================
+    // 2.2. Initialize tools for the projection phase. Namely the center manifold @EML
+    //====================================================================================
+    //First, check that the type of manifold provided is good:
+    if(SEML_EM.cs->manType != MAN_CENTER)
+    {
+        cout << "int_proj_CMU_SEM_on_CM_EM_3D. The invariant manifold at EMLj ";
+        cout << "must be of center type. return." << endl;
+        return FTC_FAILURE;
+    }
+    Invman invman_EM(OFTS_ORDER, OFS_ORDER, *SEML_EM.cs);
+
+
+    //====================================================================================
+    // 2.3. Misc initialization. Require better presentation?
+    //====================================================================================
+    //------------------------------------------------------------------------------------
+    //Notable points in SEM system
+    //------------------------------------------------------------------------------------
+    double** semP = dmatrix(0, 6, 0, 2);
+    semPoints(0.0, semP);
+
+    //------------------------------------------------------------------------------------
+    // projection by default is arbitrary big
+    //------------------------------------------------------------------------------------
+    double ePdef = 1e5;
+
+    //====================================================================================
+    // 2.4. Reset the data file (projection)
+    //====================================================================================
+    //Open whitout append datafile and therefore erase its content.
+    fstream filestream;
+    filestream.open (filename_output.c_str(), ios::binary | ios::out);
+    filestream.close();
+
+
+    //====================================================================================
+    // Loop on all elements.
+    //
+    // Note that openMP is only used on the inner loop, since
+    // it is useless to use on nested loops.
+    //====================================================================================
+    COMPLETION = 0;
+    int index  = 0;
+    for(int kt = 0; kt <= t_grid_size; kt++)
+    {
+        //--------------------------------------------------------------------------------
+        //Read time from file
+        //--------------------------------------------------------------------------------
+        offset = readTCU_bin_3D(offset, init_time_grid_SEM, kt, filename_input);
+
+        if(offset < 0)
+        {
+            cout << "int_proj_CMU_SEM_on_CM_EM_3D. Impossible to read the data file." << endl;
+            return FTC_FAILURE;
+        }
+
+        for(int ks2 = 0; ks2 <= si_grid_size[1]; ks2++)
+        {
+            for(int ks4 = 0; ks4 <= si_grid_size[3]; ks4++)
+            {
+                for(int ks1 = 0; ks1 <= si_grid_size[0]; ks1++)
+                {
+                    //--------------------------------------------------------------------
+                    //Read data from file
+                    //--------------------------------------------------------------------
+                    offset = readCU_bin_3D(offset, init_state_CMU_NCSEM,
+                                           init_state_CMU_RCM, si_grid_size, filename_input);
+                    if(offset < 0)
+                    {
+                        cout << "int_proj_CMU_SEM_on_CM_EM_3D. Impossible to read the data file." << endl;
+                        return FTC_FAILURE;
+                    }
+
+                    //--------------------------------------------------------------------
+                    //Most inner loop is parallelized
+                    //--------------------------------------------------------------------
+                    #pragma omp parallel for if(isPar)  shared(index)
+                    for(int ks3 = 0; ks3 <= si_grid_size[2]; ks3++)
+                    {
+
+                        //----------------------------------------------------------------
+                        //Inputs
+                        //----------------------------------------------------------------
+                        ProjResSt projResSt(NCSEM);
+
+                        //----------------------------------------------------------------
+                        //Initial conditions
+                        //----------------------------------------------------------------
+                        // Init the time in SEM coordinates
+                        projResSt.init_time  = init_time_grid_SEM[kt];
+                        // Init the state in NCSEM coordinates
+                        for(int i = 0; i < 6; i++) projResSt.init_state_CMU_NC[i] = init_state_CMU_NCSEM[i][ks3];
+                        // Init the state in RCM coordinates
+                        for(int i = 0; i < 5; i++) projResSt.init_state_CMU_RCM[i] = init_state_CMU_RCM[i][ks3];
+                        //Label
+                        projResSt.label = 0;
+
+                        //----------------------------------------------------------------
+                        //Projection on center manifold at EMLj
+                        //----------------------------------------------------------------
+                        proj_subroutine(projResSt, invman_EM, projSt);
+
+                        //----------------------------------------------------------------
+                        // Save outputs
+                        //----------------------------------------------------------------
+                        if(projResSt.min_proj_dist_SEM_o < ePdef)
+                        {
+                            //Save
+                            #pragma omp critical
+                            {
+                                writeIntProjCU_bin(filename_output, projResSt);
+                            }
+                        }
+
+                        //----------------------------------------------------------------
+                        //Display completion
+                        //----------------------------------------------------------------
+                        #pragma omp critical
+                        {
+                            displayCompletion("int_proj_CMU_SEM_on_CM_EM_3D", 100.0*index++/noe);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+    //------------------------------------------------------------------------------------
+    //Free all data
+    //------------------------------------------------------------------------------------
+    free_dmatrix(init_state_CMU_NCSEM, 0, 5, 0, si_grid_size[2]);
+    free_dmatrix(init_state_CMU_RCM, 0, 4, 0, si_grid_size[2]);
+    free_dvector(init_time_grid_SEM, 0, t_grid_size);
+
+
+    return FTC_SUCCESS;
+}
+
+//========================================================================================
+//
+//          Computation of the CMU about EMLi
 //
 //========================================================================================
 /**
@@ -36,7 +469,9 @@ int compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt& projSt)
     //====================================================================================
     // Splash screen
     //====================================================================================
-    string filename = filenameCUM(OFTS_ORDER, TYPE_CU_3D, SEML.li_SEM);
+    // Update the filename of type TYPE_CU_3D
+    string filename_output = projSt.get_and_update_filename(projSt.FILE_CU, TYPE_CU_3D, ios::out);
+
     cout << resetiosflags(ios::scientific) << setprecision(15);
     cout << "===================================================================" << endl;
     cout << "       Computation of center-unstable 3D IC at EML2            " << endl;
@@ -53,7 +488,7 @@ int compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt& projSt)
     cout << ", " << projSt.GLIM_SI[3][1] << "]" << endl;
     cout << "  - " << projSt.TSIZE+1  << " value(s) of t in [" << projSt.TLIM[0]/SEML.us->T;
     cout << ", " << projSt.TLIM[1]/SEML.us->T << "] x T" << endl;
-    cout << " The data will be stored in " << filename << endl;
+    cout << " The data will be stored in " << filename_output << endl;
     cout << setiosflags(ios::scientific) << setprecision(15);
     cout << "===================================================================" << endl;
 
@@ -118,7 +553,7 @@ int compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt& projSt)
     //------------------------------------------------------------------------------------
     // Reset the data file
     //------------------------------------------------------------------------------------
-    initCU_bin_3D(projSt.GSIZE_SI, projSt.TSIZE, OFTS_ORDER, TYPE_CU_3D, SEML.li_SEM);
+    initCU_bin_3D(projSt.GSIZE_SI, projSt.TSIZE, filename_output);
 
     //====================================================================================
     // Loop on all elements.
@@ -132,7 +567,7 @@ int compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt& projSt)
         //----------------------
         //Append the time in data file
         //----------------------
-        appTimeCU_bin_3D(grid_t_EM, kt, OFTS_ORDER, TYPE_CU_3D, SEML.li_SEM);
+        appTimeCU_bin_3D(grid_t_EM, kt, filename_output);
 
 
         for(int ks2 = 0; ks2 <= projSt.GSIZE_SI[1]; ks2++)
@@ -185,8 +620,8 @@ int compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt& projSt)
                     //--------------------------------------------------------------------
                     //Store values
                     //--------------------------------------------------------------------
-                    writeCU_bin_3D(init_state_CMU_NCEM, init_state_CMU_RCM, projSt.GSIZE_SI,
-                                   OFTS_ORDER, TYPE_CU_3D, SEML.li_SEM);
+                    writeCU_bin_3D(init_state_CMU_NCEM, init_state_CMU_RCM,
+                                   projSt.GSIZE_SI, filename_output);
                 }
             }
         }
@@ -234,9 +669,10 @@ int compute_grid_CMU_EM(double dist_to_cm, ProjSt& projSt)
     //====================================================================================
     // Splash screen
     //====================================================================================
-    string filename = filenameCUM(OFTS_ORDER, TYPE_CU, SEML.li_SEM);
-    cout << resetiosflags(ios::scientific) << setprecision(15);
+    // Update the filename of type TYPE_CU
+    string filename_output = projSt.get_and_update_filename(projSt.FILE_CU, TYPE_CU, ios::out);
 
+    cout << resetiosflags(ios::scientific) << setprecision(15);
     cout << "===================================================================" << endl;
     cout << "       Computation of center-unstable planar IC at EML2            " << endl;
     cout << "===================================================================" << endl;
@@ -248,7 +684,7 @@ int compute_grid_CMU_EM(double dist_to_cm, ProjSt& projSt)
     cout << ", " << projSt.GLIM_SI[2][1] << "]" << endl;
     cout << "  - " << projSt.TSIZE+1  << " value(s) of t in [" << projSt.TLIM[0]/SEML.us_em.T;
     cout << ", " << projSt.TLIM[1]/SEML.us_em.T << "] x T" << endl;
-    cout << " The data will be stored in " << filename << endl;
+    cout << " The data will be stored in " << filename_output << endl;
     cout << setiosflags(ios::scientific) << setprecision(15);
     cout << "===================================================================" << endl;
 
@@ -412,8 +848,7 @@ int compute_grid_CMU_EM(double dist_to_cm, ProjSt& projSt)
     //Store values
     //------------------------------------------------------------------------------------
     writeCU_bin(init_state_CMU_NCEM, init_state_CMU_RCM, init_dH_valid, grid_t_EM,
-                projSt.GSIZE_SI[0], projSt.GSIZE_SI[2], projSt.TSIZE, OFTS_ORDER,
-                TYPE_CU, SEML.li_SEM);
+                projSt.GSIZE_SI[0], projSt.GSIZE_SI[2], projSt.TSIZE, filename_output);
 
     //------------------------------------------------------------------------------------
     //Free
@@ -464,9 +899,10 @@ int compute_grid_CMU_EM_dH(double dist_to_cm, ProjSt& projSt)
     //====================================================================================
     // Splash screen
     //====================================================================================
-    string filename = filenameCUM_dH(OFTS_ORDER, TYPE_CU, SEML.li_SEM, projSt.dHd);
-    cout << resetiosflags(ios::scientific) << setprecision(15);
+    // Update the filename of type TYPE_CU
+    string filename_output = projSt.get_and_update_filename(projSt.FILE_CU, TYPE_CU, ios::out);
 
+    cout << resetiosflags(ios::scientific) << setprecision(15);
     cout << "===================================================================" << endl;
     cout << "       Computation of center-unstable planar IC at EML2            " << endl;
     cout << "===================================================================" << endl;
@@ -476,7 +912,7 @@ int compute_grid_CMU_EM_dH(double dist_to_cm, ProjSt& projSt)
     cout << ", " << projSt.GLIM_SI[0][1] << "]" << endl;
     cout << "  - " << projSt.TSIZE+1  << " value(s) of t in [" << projSt.TLIM[0]/SEML.us_em.T;
     cout << ", " << projSt.TLIM[1]/SEML.us_em.T << "] x T" << endl;
-    cout << " The data will be stored in " << filename << endl;
+    cout << " The data will be stored in " << filename_output << endl;
     cout << setiosflags(ios::scientific) << setprecision(15);
     cout << "===================================================================" << endl;
 
@@ -638,8 +1074,7 @@ int compute_grid_CMU_EM_dH(double dist_to_cm, ProjSt& projSt)
     //Store values
     //------------------------------------------------------------------------------------
     writeCU_bin_dH(init_state_CMU_NCEM, init_state_CMU_RCM, init_dH_valid, grid_t_EM,
-                   projSt.GSIZE_SI[0], projSt.TSIZE,
-                   OFTS_ORDER, TYPE_CU, SEML.li_SEM, projSt.dHd);
+                   projSt.GSIZE_SI[0], projSt.TSIZE, filename_output);
 
     //------------------------------------------------------------------------------------
     //Free
@@ -666,10 +1101,288 @@ int compute_grid_CMU_EM_dH(double dist_to_cm, ProjSt& projSt)
  *
  *          - It integrates the initial state at emli, stored in projResSt
  *          - It compute the minimum and the argminimum distance of projection along the
+ *            corresponding trajectory, targeting the center manifold invman_target
+ *          - The information relative to this min/argmin are stored in projResSt.
+ *
+ *         The coordinates within which the results are saved are encoded in ProjResSt.
+ **/
+int proj_subroutine(ProjResSt& projResSt, Invman& invman_target, ProjSt& projSt)
+{
+    //====================================================================================
+    // 1. Local variables
+    //====================================================================================
+    //------------------------------------------------------------------------------------
+    // State and time vectors, at initialization, in IC_COORD
+    //------------------------------------------------------------------------------------
+    double** y_man_PR = dmatrix(0, 5, 0, projSt.MSIZE);
+    double* t_man_PR  = dvector(0, projSt.MSIZE);
+
+    //------------------------------------------------------------------------------------
+    // projection by default is arbitrary big
+    //------------------------------------------------------------------------------------
+    double ePdef = 1e5;
+
+    //------------------------------------------------------------------------------------
+    // Inner variables
+    //------------------------------------------------------------------------------------
+    // Variables in IC_COORD coordinates
+    double yv_IC[6], tv_IC, tf_IC;
+
+    // Variables in PR_COORD (projection) coordinates
+    double yvproj_PR[6], sproj[4], y_man_norm_PR = 0.0;
+    double yv_PR[6], tv_PR;
+
+    // Variables in FC_COORD & FV_COORD coordinates
+    double yv_FC[6], yvproj_FC[6], yv_FV[6], yvproj_FV[6];
+    double dv_at_projection_FV = 0.0;
+
+    // Variables for the distance of projection, in DP_COORD
+    double yv_DP[6], yvproj_DP[6];
+    double proj_dist_DP, min_proj_dist_DP = ePdef;
+
+    // Variables with their own, fixed, coordinate system
+    double crossings_NCSEM = 0.0, crossings_lunar = 0.0;
+    int collision_NCEM = 0;
+
+    //Temp variables
+    int kmin = 0;
+    Ofsc ofs(OFS_ORDER);
+
+    //====================================================================================
+    // 2. Integration of the manifold leg
+    //====================================================================================
+    //Initial conditions
+    tv_IC  = projResSt.init_time;
+    for(int i = 0; i < 6; i++) yv_IC[i] = projResSt.init_state_CMU_NC[i];
+
+    // Integration on projSt.MSIZE+1 fixed grid, from IC_COORD to PR_COORD coordinates
+    // Note that the integration framework is always I_NCEM, hence collision_NCEM always
+    // makes sense
+    OdeEvent odeEvent(false, false);
+    int status = ode78(y_man_PR, t_man_PR, &odeEvent, tv_IC, tv_IC+projSt.TM, yv_IC, 6, projSt.MSIZE, I_NCEM, projResSt.IC_COORD, projResSt.PR_COORD);
+
+    //====================================================================================
+    // 3. Projection on the center manifold of EMLi.
+    // No use of SEML_SEM or SEML after this point!
+    // We need first to check that the integration went well
+    //====================================================================================
+    //------------------------------------------------------------------------------------
+    // We need first to check that the integration went well
+    //------------------------------------------------------------------------------------
+    if(status)
+    {
+        // If status != 0, something went wrong during the integration
+        // in ode78 and we use the maximum value ePdef (the solution
+        // is basically discarded)
+        proj_dist_DP = ePdef;
+    }
+    else
+    {
+
+        //--------------------------------------------------------------------------------
+        //Loop on trajectory
+        //--------------------------------------------------------------------------------
+        for(int kman = 0; kman <= projSt.MSIZE; kman++)
+        {
+            //Current state
+            for(int i = 0; i < 6; i++) yv_PR[i] = y_man_PR[i][kman];
+            tv_PR = t_man_PR[kman];
+
+            //Current distance from EMLi in PR_COORD coordinates
+            y_man_norm_PR = 0.0;
+            for(int i = 0; i < 2; i++) y_man_norm_PR += yv_PR[i]*yv_PR[i];
+            y_man_norm_PR = sqrt(y_man_norm_PR);
+
+            //cout << "y_man_norm_PR = " << y_man_norm_PR << endl;
+
+            //----------------------------------------------------------------------------
+            //Check n°1: the current state is close enough to EMLi
+            //----------------------------------------------------------------------------
+            if(y_man_norm_PR < projSt.YNMAX)
+            {
+                // Projection on the center manifold
+                invman_target.NCprojCCMtoCM(yv_PR, tv_PR, sproj);
+
+                //cout << "s_man_norm_RCM = " << ENorm(sproj, 4) << endl;
+                //------------------------------------------------------------------------
+                //Check n°2: the projection is close enough to EMLi
+                //------------------------------------------------------------------------
+                if(ENorm(sproj, 4)< projSt.SNMAX)
+                {
+                    //yvproj_PR = W(sproj, tv)
+                    invman_target.evalRCMtoNC(sproj, tv_PR, yvproj_PR, OFTS_ORDER, OFS_ORDER);
+
+                    //Distance of projection in DP_COORD coordinates
+                    qbcp_coc(tv_PR, yv_PR,     yv_DP,     projResSt.PR_COORD, projResSt.DP_COORD);
+                    qbcp_coc(tv_PR, yvproj_PR, yvproj_DP, projResSt.PR_COORD, projResSt.DP_COORD);
+
+                    proj_dist_DP = 0.0;
+                    for(int i = 0; i < projSt.NOD; i++) proj_dist_DP += (yvproj_DP[i] - yv_DP[i])*(yvproj_DP[i] - yv_DP[i]);
+                    proj_dist_DP = sqrt(proj_dist_DP);
+
+                    //cout << "proj_dist_DP = " << proj_dist_DP << endl;
+                }
+                else proj_dist_DP = ePdef;
+            }
+            else proj_dist_DP = ePdef;
+
+            //----------------------------------------------------------------------------
+            //Update distance min if necessary
+            //----------------------------------------------------------------------------
+            if(proj_dist_DP < min_proj_dist_DP)
+            {
+                //Distance of projection
+                min_proj_dist_DP = proj_dist_DP;
+
+                //Indix (argmin)
+                kmin = kman;
+
+                //In FC coordinates
+                qbcp_coc(tv_PR, yv_PR,     yv_FC,     projResSt.PR_COORD, projResSt.FC_COORD);
+                qbcp_coc(tv_PR, yvproj_PR, yvproj_FC, projResSt.PR_COORD, projResSt.FC_COORD);
+
+                //In FC coordinates, with velocity
+                qbcp_coc(tv_PR, yv_PR,     yv_FV,     projResSt.PR_COORD, projResSt.FV_COORD);
+                qbcp_coc(tv_PR, yvproj_PR, yvproj_FV, projResSt.PR_COORD, projResSt.FV_COORD);
+
+                // Saving states
+                for(int i = 0; i < 6; i++) projResSt.final_state_CMU_FC_o[i]     = yv_FC[i];
+                for(int i = 0; i < 6; i++) projResSt.projected_state_CMU_FC_o[i] = yvproj_FC[i];
+                for(int i = 0; i < 4; i++) projResSt.projected_state_CMU_RCM_o[i]  = sproj[i];
+
+                //Associated DV
+                dv_at_projection_FV = 0.0;
+                for(int i = 3; i < 6; i++) dv_at_projection_FV += (yv_FV[i] - yvproj_FV[i])*(yv_FV[i] - yvproj_FV[i]);
+                dv_at_projection_FV = sqrt(dv_at_projection_FV);
+
+            }else if(proj_dist_DP > min_proj_dist_DP && projSt.PRIMARY)
+            {
+                // If we only look for the primary family, we can stop at the first
+                // minimum without any risk of losing good solutions. If
+                // proj_dist_DP > min_proj_dist_DP, we know that we have passed the
+                // first minimum, and we can break the loop.
+                break;
+            }
+
+        }
+
+        //--------------------------------------------------------------------------------
+        // We check if we have the primary family, if necessary
+        // To do so, we check that we have made two clockwise/counterclockwise
+        //  crossings of x = -1.
+        //
+        // To do a clockwise turn:
+        //  1. x1 > 0 -> x2 < 0 && y1 > 0
+        //  2. x1 < 0 -> x2 > 0 && y1 < 0
+        //
+        // To do a counterclockwise turn:
+        //  1. x1 > 0 -> x2 < 0 && y1 < 0
+        //  2. x1 < 0 -> x2 > 0 && y1 > 0
+        //--------------------------------------------------------------------------------
+        if(min_proj_dist_DP < ePdef)
+        {
+            // Init temporary objects
+            OdeEvent odeEvent_purge(true, false);
+            double** y_purge = dmatrix(0, 5, 0, 2);
+            double* t_purge  = dvector(0, 2);
+
+            // Initial condition in IC_COORD coordinates
+            tv_IC  = projResSt.init_time;
+            for(int i = 0; i < 6; i++) yv_IC[i] = projResSt.init_state_CMU_NC[i];
+
+            // Compute the event using ode78 on [tv_IC, tf_IC]
+            // Note that the integration framework is always I_NCSEM, so that
+            // crossings_NCSEM always makes sense
+            qbcp_coc_time(&t_man_PR[kmin], &tf_IC, 0, projResSt.PR_COORD, projResSt.IC_COORD);
+            ode78(y_purge, t_purge, &odeEvent_purge, tv_IC, tf_IC, yv_IC, 6, 2, I_NCSEM, projResSt.IC_COORD, NCSEM);
+
+            // Save value in crossings_NCSEM
+            crossings_NCSEM = odeEvent_purge.crossings;
+
+            // Save value in crossings_lunar
+            crossings_lunar = odeEvent_purge.crossings_moon;
+
+            // Free temporary objects
+            free_dmatrix(y_purge, 0, 5, 0, 2);
+            free_dvector(t_purge, 0, 2);
+        }
+
+        //--------------------------------------------------------------------------------
+        //We check for collisions
+        //--------------------------------------------------------------------------------
+        if(odeEvent.coll)
+        {
+            collision_NCEM = odeEvent.coll;
+        }
+
+        //--------------------------------------------------------------------------------
+        //If we save ONLY the primary family
+        //--------------------------------------------------------------------------------
+        if(projSt.PRIMARY)
+        {
+            if(collision_NCEM != 0 || crossings_NCSEM != 2.0) min_proj_dist_DP = ePdef;
+        }
+
+        //--------------------------------------------------------------------------------
+        //If we save ONLY the primary family
+        //--------------------------------------------------------------------------------
+        if(crossings_lunar > 0)
+        {
+            //cout << "There has been " << crossings_lunar << "crossings of the lunar orbits" << endl;
+        }
+    }
+
+
+    //====================================================================================
+    // 3.3. Save outputs
+    //====================================================================================
+    //Initial position in FC_COORD coordinates
+    for(int i = 0; i < 6; i++) yv_PR[i] = y_man_PR[i][0];
+    qbcp_coc(t_man_PR[0], yv_PR, yv_FC, projResSt.PR_COORD, projResSt.FC_COORD);
+    for(int i = 0; i < 6; i++) projResSt.init_state_CMU_FC_o[i] = yv_FC[i];
+
+    //Minimum projection distance
+    projResSt.min_proj_dist_SEM_o    = min_proj_dist_DP;
+
+    //DV at projection
+    projResSt.dv_at_projection_FC_o  = dv_at_projection_FV;
+
+    //Crossings
+    projResSt.crossings_NCSEM_o      = crossings_NCSEM;
+
+    //Collisions
+    projResSt.collision_NCEM_o       = collision_NCEM;
+
+    //Final time
+    projResSt.final_time_FC_o        = t_man_PR[kmin];
+
+
+    //====================================================================================
+    //Free
+    //====================================================================================
+    free_dmatrix(y_man_PR, 0, 5, 0, projSt.MSIZE);
+    free_dvector(t_man_PR, 0, projSt.MSIZE);
+
+
+    return GSL_SUCCESS;
+}
+
+/**
+ *  \brief Projection subroutine, used in all the subsequent routines in this section.
+ *         All outputs in projResSt are updated
+ *         (see the declaration of this structure for details).
+ *
+ *         This routine performs the following steps:
+ *
+ *          - It integrates the initial state at emli, stored in projResSt
+ *          - It compute the minimum and the argminimum distance of projection along the
  *            corresponding trajectory, targeting the center manifold invman_SEM
  *          - The information relative to this min/argmin are stored in projResSt.
+ *
+ *
+ *         Note: this routine is the old version from the EML to SEML case.
  **/
-int proj_subroutine(ProjResSt& projResSt, Invman& invman_SEM, ProjSt& projSt)
+int proj_subroutine_old_from_EML(ProjResSt& projResSt, Invman& invman_SEM, ProjSt& projSt)
 {
     //====================================================================================
     // 1. Local variables
@@ -691,7 +1404,7 @@ int proj_subroutine(ProjResSt& projResSt, Invman& invman_SEM, ProjSt& projSt)
     double yvproj_NCSEM[6], sproj[4], yv_SEM[6], yvproj_SEM[6], yv_VSEM[6], yvproj_VSEM[6];
     double proj_dist_SEM, min_proj_dist_SEM = ePdef;
     double dv_at_projection_SEM = 0.0, y_man_norm_NCSEM = 0.0;
-    double crossings_NCSEM = 0.0;
+    double crossings_NCSEM = 0.0, crossings_lunar = 0.0;
     int collision_NCEM = 0;
     int kmin = 0;
     Ofsc ofs(OFS_ORDER);
@@ -701,8 +1414,8 @@ int proj_subroutine(ProjResSt& projResSt, Invman& invman_SEM, ProjSt& projSt)
     //====================================================================================
     //Initial conditions
     double yv[6], tv;
-    tv  = projResSt.init_time_EM;
-    for(int i = 0; i < 6; i++) yv[i] = projResSt.init_state_CMU_NCEM[i];
+    tv  = projResSt.init_time;
+    for(int i = 0; i < 6; i++) yv[i] = projResSt.init_state_CMU_NC[i];
 
     //Integration on projSt.MSIZE+1 fixed grid
     OdeEvent odeEvent(false, false);
@@ -785,14 +1498,21 @@ int proj_subroutine(ProjResSt& projResSt, Invman& invman_SEM, ProjSt& projSt)
                 kmin = kman;
 
                 // Misc states
-                for(int i = 0; i < 6; i++) projResSt.final_state_CMU_SEM_o[i]     = yv_VSEM[i];
-                for(int i = 0; i < 6; i++) projResSt.projected_state_CMU_SEM_o[i] = yvproj_VSEM[i];
-                for(int i = 0; i < 4; i++) projResSt.projected_state_CMU_RCM_o[i] = sproj[i];
+                for(int i = 0; i < 6; i++) projResSt.final_state_CMU_FC_o[i]     = yv_SEM[i];
+                for(int i = 0; i < 6; i++) projResSt.projected_state_CMU_FC_o[i] = yvproj_SEM[i];
+                for(int i = 0; i < 4; i++) projResSt.projected_state_CMU_RCM_o[i]  = sproj[i];
 
                 //Associated DV
                 dv_at_projection_SEM = 0.0;
                 for(int i = 3; i < 6; i++) dv_at_projection_SEM += (yvproj_VSEM[i] - yv_VSEM[i])*(yvproj_VSEM[i] - yv_VSEM[i]);
                 dv_at_projection_SEM = sqrt(dv_at_projection_SEM);
+            }else if(proj_dist_SEM > min_proj_dist_SEM && projSt.PRIMARY)
+            {
+                // If we only look for the primary family, we can stop at the first
+                // minimum without any risk of losing good solutions. If
+                // proj_dist_SEM > min_proj_dist_SEM, we know that we have passed the
+                // first minimum, and we can break the loop.
+                break;
             }
 
         }
@@ -818,14 +1538,17 @@ int proj_subroutine(ProjResSt& projResSt, Invman& invman_SEM, ProjSt& projSt)
             double* t_purge  = dvector(0, 2);
 
             // Initial condition in NCEM coordinates
-            tv  = projResSt.init_time_EM;
-            for(int i = 0; i < 6; i++) yv[i] = projResSt.init_state_CMU_NCEM[i];
+            tv  = projResSt.init_time;
+            for(int i = 0; i < 6; i++) yv[i] = projResSt.init_state_CMU_NC[i];
 
             // Compute the event using ode78 on [tv, t_man_EM[kmin]]
             ode78(y_purge, t_purge, &odeEvent_purge, tv, t_man_SEM[kmin]/SEML.us_em.ns, yv, 6, 2, I_NCSEM, NCEM, NCSEM);
 
             // Save value in crossings_NCSEM
             crossings_NCSEM = odeEvent_purge.crossings;
+
+            // Save value in crossings_lunar
+            crossings_lunar = odeEvent_purge.crossings_moon;
 
             // Free temporary objects
             free_dmatrix(y_purge, 0, 5, 0, 2);
@@ -847,6 +1570,14 @@ int proj_subroutine(ProjResSt& projResSt, Invman& invman_SEM, ProjSt& projSt)
         {
             if(collision_NCEM != 0 || crossings_NCSEM != 2.0) min_proj_dist_SEM = ePdef;
         }
+
+        //--------------------------------------------------------------------------------
+        //If we save ONLY the primary family
+        //--------------------------------------------------------------------------------
+        if(crossings_lunar > 0)
+        {
+            //cout << "There has been " << crossings_lunar << "crossings of the lunar orbits" << endl;
+        }
     }
 
 
@@ -856,22 +1587,22 @@ int proj_subroutine(ProjResSt& projResSt, Invman& invman_SEM, ProjSt& projSt)
     //Initial position in SEM coordinates
     for(int i = 0; i < 6; i++) yv[i] = y_man_NCSEM[i][0];
     NCSEMmtoSEMm(t_man_SEM[0], yv, yv_SEM, &SEML_SEM);
-    for(int i = 0; i < 6; i++) projResSt.init_state_CMU_SEM_o[i] = yv_SEM[i];
+    for(int i = 0; i < 6; i++) projResSt.init_state_CMU_FC_o[i] = yv_SEM[i];
 
     //Minimum projection distance
-    projResSt.min_proj_dist_SEM_o    = min_proj_dist_SEM;
+    projResSt.min_proj_dist_SEM_o     = min_proj_dist_SEM;
 
     //DV at projection
-    projResSt.dv_at_projection_SEM_o = dv_at_projection_SEM;
+    projResSt.dv_at_projection_FC_o = dv_at_projection_SEM;
 
     //Crossings
-    projResSt.crossings_NCSEM_o      = crossings_NCSEM;
+    projResSt.crossings_NCSEM_o       = crossings_NCSEM;
 
     //Collisions
-    projResSt.collision_NCEM_o       = collision_NCEM;
+    projResSt.collision_NCEM_o        = collision_NCEM;
 
     //Final time
-    projResSt.final_time_SEM_o       = t_man_SEM[kmin];
+    projResSt.final_time_FC_o       = t_man_SEM[kmin];
 
 
     //====================================================================================
@@ -930,14 +1661,19 @@ int int_proj_CMU_EM_on_CM_SEM_3D(ProjSt& projSt)
     bool isPar = projSt.ISPAR;
 
     //====================================================================================
+    // Filenames
+    //====================================================================================
+    // Get the filename from the latest data of type TYPE_CU_3D
+    string filename_input = projSt.get_filename(TYPE_CU_3D, ios::in);
+    // Get the filename for the output
+    string filename_output = projSt.get_and_update_filename(projSt.FILE_PCU, TYPE_MAN_PROJ_3D, ios::out);
+
+    //====================================================================================
     // 1. Get initial condition in the center-unstable manifold from a data file
     //====================================================================================
-    //----------------------------------------------------------
     //Read data size
-    //----------------------------------------------------------
     int t_grid_size, si_grid_size[4], offset;
-    offset = getLenghtCU_bin_3D(si_grid_size, &t_grid_size,
-                                OFTS_ORDER, TYPE_CU_3D, SEML.li_SEM);
+    offset = getLenghtCU_bin_3D(si_grid_size, &t_grid_size, filename_input);
 
     if(offset < 0)
     {
@@ -945,16 +1681,14 @@ int int_proj_CMU_EM_on_CM_SEM_3D(ProjSt& projSt)
         return FTC_FAILURE;
     }
 
-
     //====================================================================================
-    // Splash screen
+    // Init
     //====================================================================================
-    string filename = filenameCUM(OFTS_ORDER, TYPE_CU, SEML.li_SEM);
     cout << resetiosflags(ios::scientific) << setprecision(15);
 
-    //----------------------------------------------------------
+    //------------------------------------------------------------------------------------
     //To store all data
-    //----------------------------------------------------------
+    //------------------------------------------------------------------------------------
     double** init_state_CMU_NCEM = dmatrix(0, 5, 0, si_grid_size[2]);
     double** init_state_CMU_RCM  = dmatrix(0, 4, 0, si_grid_size[2]);
     double* init_time_grid_EM    = dvector(0, t_grid_size);
@@ -995,11 +1729,9 @@ int int_proj_CMU_EM_on_CM_SEM_3D(ProjSt& projSt)
     //====================================================================================
     // 2.4. Reset the data file (projection)
     //====================================================================================
-    //Filename
-    filename = filenameCUM(OFTS_ORDER, TYPE_MAN_PROJ_3D, SEML.li_SEM);
     //Open whitout append datafile and therefore erase its content.
     fstream filestream;
-    filestream.open (filename.c_str(), ios::binary | ios::out);
+    filestream.open (filename_output.c_str(), ios::binary | ios::out);
     filestream.close();
 
 
@@ -1016,8 +1748,7 @@ int int_proj_CMU_EM_on_CM_SEM_3D(ProjSt& projSt)
         //--------------------------------------------------------------------------------
         //Read time from file
         //--------------------------------------------------------------------------------
-        offset = readTCU_bin_3D(offset, init_time_grid_EM, kt,
-                                OFTS_ORDER, TYPE_CU_3D, SEML.li_SEM);
+        offset = readTCU_bin_3D(offset, init_time_grid_EM, kt, filename_input);
 
         if(offset < 0)
         {
@@ -1035,8 +1766,8 @@ int int_proj_CMU_EM_on_CM_SEM_3D(ProjSt& projSt)
                     //Read data from file
                     //--------------------------------------------------------------------
                     offset = readCU_bin_3D(offset, init_state_CMU_NCEM,
-                                           init_state_CMU_RCM, si_grid_size, OFTS_ORDER,
-                                           TYPE_CU_3D, SEML.li_SEM);
+                                           init_state_CMU_RCM, si_grid_size,
+                                           filename_input);
                     if(offset < 0)
                     {
                         cout << "int_proj_CMU_EM_on_CM_SEM_3D. Impossible to read the data file." << endl;
@@ -1053,15 +1784,15 @@ int int_proj_CMU_EM_on_CM_SEM_3D(ProjSt& projSt)
                         //----------------------------------------------------------------
                         //Inputs
                         //----------------------------------------------------------------
-                        ProjResSt projResSt;
+                        ProjResSt projResSt(NCEM);
 
                         //----------------------------------------------------------------
                         //Initial conditions
                         //----------------------------------------------------------------
                         // Init the time in EM coordinates
-                        projResSt.init_time_EM  = init_time_grid_EM[kt];
+                        projResSt.init_time  = init_time_grid_EM[kt];
                         // Init the state in NCEM coordinates
-                        for(int i = 0; i < 6; i++) projResSt.init_state_CMU_NCEM[i] = init_state_CMU_NCEM[i][ks3];
+                        for(int i = 0; i < 6; i++) projResSt.init_state_CMU_NC[i] = init_state_CMU_NCEM[i][ks3];
                         // Init the state in RCM coordinates
                         for(int i = 0; i < 5; i++) projResSt.init_state_CMU_RCM[i] = init_state_CMU_RCM[i][ks3];
                         //Label
@@ -1080,7 +1811,7 @@ int int_proj_CMU_EM_on_CM_SEM_3D(ProjSt& projSt)
                             //Save
                             #pragma omp critical
                             {
-                                writeIntProjCU_bin(filename, projResSt);
+                                writeIntProjCU_bin(filename_output, projResSt);
                             }
                         }
 
@@ -1091,15 +1822,6 @@ int int_proj_CMU_EM_on_CM_SEM_3D(ProjSt& projSt)
                         {
                             displayCompletion("int_proj_CMU_EM_on_CM_SEM_3D", 100.0*index++/noe);
                         }
-
-                        //----------------------------------------------------------------
-                        //Free
-                        //----------------------------------------------------------------
-                        //free_dmatrix(y_man_NCEM, 0, 5, 0, projSt.MSIZE);
-                        //free_dmatrix(y_man_NCSEM, 0, 5, 0, projSt.MSIZE);
-                        //free_dvector(t_man_EM, 0, projSt.MSIZE);
-                        //free_dvector(t_man_SEM, 0, projSt.MSIZE);
-
 
                     }
                 }
@@ -1151,13 +1873,21 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt& projSt)
     bool isPar = projSt.ISPAR;
 
     //====================================================================================
+    // Filenames
+    //====================================================================================
+    // Get the filename from the latest data of type TYPE_CU
+    string filename_input = projSt.get_filename(TYPE_CU, ios::in);
+    // Get the filename for the output
+    string filename_output = projSt.get_and_update_filename(projSt.FILE_PCU, TYPE_MAN_PROJ, ios::out);
+
+    //====================================================================================
     // 1. Get initial condition in the center-unstable manifold from a data file
     //====================================================================================
     //------------------------------------------------------------------------------------
     //Read data size
     //------------------------------------------------------------------------------------
     int t_grid_size, s1_grid_size, s3_grid_size;
-    int status = getLenghtCU_bin(&s1_grid_size, &s3_grid_size, &t_grid_size, OFTS_ORDER, TYPE_CU, SEML.li_SEM);
+    int status = getLenghtCU_bin(&s1_grid_size, &s3_grid_size, &t_grid_size, filename_input);
 
     if(status != FTC_SUCCESS)
     {
@@ -1170,14 +1900,15 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt& projSt)
     //------------------------------------------------------------------------------------
     double**** init_state_CMU_NCEM = d4tensor(0, 5, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
     double**** init_state_CMU_RCM  = d4tensor(0, 4, 0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
-    double** *  init_dH_valid       = d3tensor(0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
+    double** *  init_dH_valid      = d3tensor(0, t_grid_size, 0, s1_grid_size, 0, s3_grid_size);
     double* init_time_grid_EM      = dvector(0, t_grid_size);
 
     //------------------------------------------------------------------------------------
     //Read data from file
     //------------------------------------------------------------------------------------
-    status = readCU_bin(init_state_CMU_NCEM, init_state_CMU_RCM, init_dH_valid, init_time_grid_EM,
-                        s1_grid_size, s3_grid_size, t_grid_size, OFTS_ORDER, TYPE_CU, SEML.li_SEM);
+    status = readCU_bin(init_state_CMU_NCEM, init_state_CMU_RCM, init_dH_valid,
+                        init_time_grid_EM, s1_grid_size, s3_grid_size, t_grid_size,
+                        filename_input);
 
     if(status != FTC_SUCCESS)
     {
@@ -1188,7 +1919,6 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt& projSt)
     //====================================================================================
     // Splash screen
     //====================================================================================
-    string filename = filenameCUM(OFTS_ORDER, TYPE_MAN_PROJ, SEML.li_SEM);
     cout << "===================================================================" << endl;
     cout << "              Computation of the connections between:              " << endl;
     cout << "===================================================================" << endl;
@@ -1197,7 +1927,8 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt& projSt)
     cout << "  - " << s1_grid_size+1  << " value(s) of s1" << endl;
     cout << "  - " << s3_grid_size+1  << " value(s) of s3" << endl;
     cout << "  - " << t_grid_size+1   << " value(s) of t"  << endl;
-    cout << " The data will be stored in " << filename << endl;
+    cout << " The CMU data are taken from " << filename_input << endl;
+    cout << " The projection data will be stored in " << filename_output << endl;
     cout << setiosflags(ios::scientific) << setprecision(15);
     cout << "===================================================================" << endl;
 
@@ -1233,11 +1964,9 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt& projSt)
     //====================================================================================
     // 2.4. Reset the data file (projection)
     //====================================================================================
-    //Filename
-    filename = filenameCUM(OFTS_ORDER, TYPE_MAN_PROJ, SEML.li_SEM);
     //Open whitout append datafile and therefore erase its content.
     fstream filestream;
-    filestream.open (filename.c_str(), ios::binary | ios::out);
+    filestream.open (filename_output.c_str(), ios::binary | ios::out);
     filestream.close();
 
     //====================================================================================
@@ -1261,15 +1990,15 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt& projSt)
                     //--------------------------------------------------------------------
                     //Inputs
                     //--------------------------------------------------------------------
-                    ProjResSt projResSt;
+                    ProjResSt projResSt(NCEM);
 
                     //--------------------------------------------------------------------
                     //Initial conditions
                     //--------------------------------------------------------------------
                     // Init the time in EM coordinates
-                    projResSt.init_time_EM  = init_time_grid_EM[kt];
+                    projResSt.init_time  = init_time_grid_EM[kt];
                     // Init the state in NCEM coordinates
-                    for(int i = 0; i < 6; i++) projResSt.init_state_CMU_NCEM[i] = init_state_CMU_NCEM[i][kt][ks1][ks3];
+                    for(int i = 0; i < 6; i++) projResSt.init_state_CMU_NC[i] = init_state_CMU_NCEM[i][kt][ks1][ks3];
                     // Init the state in RCM coordinates
                     for(int i = 0; i < 5; i++) projResSt.init_state_CMU_RCM[i] = init_state_CMU_RCM[i][kt][ks1][ks3];
                     //Label
@@ -1288,7 +2017,7 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt& projSt)
                         //Save
                         #pragma omp critical
                         {
-                            writeIntProjCU_bin(filename, projResSt);
+                            writeIntProjCU_bin(filename_output, projResSt);
                         }
                     }
                 }
@@ -1361,13 +2090,21 @@ int int_proj_CMU_EM_on_CM_SEM_dH(ProjSt& projSt)
     bool isPar = projSt.ISPAR;
 
     //====================================================================================
+    // Filenames
+    //====================================================================================
+    // Get the filename from the latest data of type TYPE_CU
+    string filename_input = projSt.get_filename(TYPE_CU, ios::in);
+    // Get the filename for the output
+    string filename_output = projSt.get_and_update_filename(projSt.FILE_PCU, TYPE_MAN_PROJ, ios::out);
+
+    //====================================================================================
     // 1. Get initial condition in the center-unstable manifold from a data file
     //====================================================================================
     //------------------------------------------------------------------------------------
     //Read data size
     //------------------------------------------------------------------------------------
     int t_grid_size, s1_grid_size;
-    int status = getLenghtCU_bin_dH(&s1_grid_size, &t_grid_size, OFTS_ORDER, TYPE_CU, SEML.li_SEM, projSt.dHd);
+    int status = getLenghtCU_bin_dH(&s1_grid_size, &t_grid_size, filename_input);
 
     if(status != FTC_SUCCESS)
     {
@@ -1386,8 +2123,8 @@ int int_proj_CMU_EM_on_CM_SEM_dH(ProjSt& projSt)
     //------------------------------------------------------------------------------------
     //Read data from file
     //------------------------------------------------------------------------------------
-    status = readCU_bin_dH(init_state_CMU_NCEM, init_state_CMU_RCM, init_dH_valid, init_time_grid_EM,
-                           s1_grid_size, t_grid_size, OFTS_ORDER, TYPE_CU, SEML.li_SEM, projSt.dHd);
+    status = readCU_bin_dH(init_state_CMU_NCEM, init_state_CMU_RCM, init_dH_valid,
+                           init_time_grid_EM, s1_grid_size, t_grid_size, filename_input);
 
     if(status != FTC_SUCCESS)
     {
@@ -1398,7 +2135,6 @@ int int_proj_CMU_EM_on_CM_SEM_dH(ProjSt& projSt)
     //====================================================================================
     // Splash screen
     //====================================================================================
-    string filename = filenameCUM_dH(OFTS_ORDER, TYPE_MAN_PROJ, SEML.li_SEM, projSt.dHd);
     cout << "===================================================================" << endl;
     cout << "              Computation of the connections between:              " << endl;
     cout << "===================================================================" << endl;
@@ -1406,7 +2142,7 @@ int int_proj_CMU_EM_on_CM_SEM_dH(ProjSt& projSt)
     cout << " - OFTS_ORDER = " << OFTS_ORDER << endl;
     cout << "  - " << s1_grid_size+1  << " value(s) of s1" << endl;
     cout << "  - " << t_grid_size+1   << " value(s) of t"  << endl;
-    cout << " The data will be stored in " << filename << endl;
+    cout << " The data will be stored in " << filename_output << endl;
     cout << setiosflags(ios::scientific) << setprecision(15);
     cout << "===================================================================" << endl;
 
@@ -1441,11 +2177,9 @@ int int_proj_CMU_EM_on_CM_SEM_dH(ProjSt& projSt)
     //====================================================================================
     // 2.4. Reset the data file (projection)
     //====================================================================================
-    //Filename
-    filename = filenameCUM(OFTS_ORDER, TYPE_MAN_PROJ, SEML.li_SEM);
     //Open whitout append datafile and therefore erase its content.
     fstream filestream;
-    filestream.open (filename.c_str(), ios::binary | ios::out);
+    filestream.open (filename_output.c_str(), ios::binary | ios::out);
     filestream.close();
 
     //====================================================================================
@@ -1467,15 +2201,15 @@ int int_proj_CMU_EM_on_CM_SEM_dH(ProjSt& projSt)
                 //------------------------------------------------------------------------
                 //Inputs
                 //------------------------------------------------------------------------
-                ProjResSt projResSt;
+                ProjResSt projResSt(NCEM);
 
                 //------------------------------------------------------------------------
                 //Initial conditions
                 //------------------------------------------------------------------------
                 // Init the time in EM coordinates
-                projResSt.init_time_EM  = init_time_grid_EM[kt];
+                projResSt.init_time  = init_time_grid_EM[kt];
                 // Init the state in NCEM coordinates
-                for(int i = 0; i < 6; i++) projResSt.init_state_CMU_NCEM[i] = init_state_CMU_NCEM[i][kt][ks1];
+                for(int i = 0; i < 6; i++) projResSt.init_state_CMU_NC[i] = init_state_CMU_NCEM[i][kt][ks1];
                 // Init the state in RCM coordinates
                 for(int i = 0; i < 5; i++) projResSt.init_state_CMU_RCM[i] = init_state_CMU_RCM[i][kt][ks1];
                 //Label
@@ -1494,7 +2228,7 @@ int int_proj_CMU_EM_on_CM_SEM_dH(ProjSt& projSt)
                     //Save
                     #pragma omp critical
                     {
-                        writeIntProjCU_bin(filename, projResSt);
+                        writeIntProjCU_bin(filename_output, projResSt);
                     }
                 }
             }
@@ -1600,9 +2334,13 @@ int int_proj_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
     st0[4] = 0.0;
 
     //====================================================================================
+    // Filename
+    //====================================================================================
+    string filename_output = projSt.get_and_update_filename(projSt.FILE_PCU, TYPE_MAN_PROJ_ORBIT, ios::out);
+
+    //====================================================================================
     // Splash screen
     //====================================================================================
-    string filename = filenameCUM(OFTS_ORDER, TYPE_MAN_PROJ_ORBIT, SEML.li_SEM);
     cout << resetiosflags(ios::scientific) << setprecision(4);
     cout << "===================================================================" << endl;
     cout << "              Computation of the connections of a single orbit:    " << endl;
@@ -1615,7 +2353,7 @@ int int_proj_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
     cout << " - " << projSt.GSIZE_SI[0]+1  << " values of s1/s3"                           ;
     cout << " in ["  << projSt.GLIM_SI[0][0]                                             ;
     cout << ", " << projSt.GLIM_SI[0][1]  << "]"                                  << endl;
-    cout << " The data will be stored in " << filename                            << endl;
+    cout << " The data will be stored in " << filename_output                     << endl;
     cout << "===================================================================" << endl;
 
     //------------------------------------------------------------------------------------
@@ -1677,7 +2415,7 @@ int int_proj_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
     //====================================================================================
     //Open whitout append datafile and therefore erase its content.
     fstream filestream;
-    filestream.open (filename.c_str(), ios::binary | ios::out);
+    filestream.open (filename_output.c_str(), ios::binary | ios::out);
     filestream.close();
 
     //====================================================================================
@@ -1746,7 +2484,7 @@ int int_proj_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
             orbit.NCprojCCMtoCM(z0, t0, stp);
             stp[4] =  0.0;
 
-            cmu_grid_orbit_on_one_period(orbit, tNCE, yNCE, sRCM, stp, t0, Tp, N, isPar);
+            cmu_grid_orbit_on_one_period(orbit, tNCE, yNCE, sRCM, stp, t0, Tp, N, isPar, projSt.hyp_epsilon_eml2);
 
             //----------------------------------------------------------------------------
             //Once the unstable directions are obtained, we propagate & project
@@ -1757,13 +2495,13 @@ int int_proj_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
                 //------------------------------------------------------------------------
                 //Inputs
                 //------------------------------------------------------------------------
-                ProjResSt projResSt;
+                ProjResSt projResSt(NCEM);
 
                 //------------------------------------------------------------------------
                 //Seeds
                 //------------------------------------------------------------------------
                 //Init time (global)
-                projResSt.seed_time_EM = t0;
+                projResSt.seed_time = t0;
                 //RCM state (seed)
                 for(int i = 0; i < 4; i++) projResSt.seed_state_CMU_RCM[i] = st0[i];
 
@@ -1771,9 +2509,9 @@ int int_proj_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
                 //Initial conditions
                 //------------------------------------------------------------------------
                 // Init the time in EM coordinates
-                projResSt.init_time_EM  = tNCE[ks];
+                projResSt.init_time  = tNCE[ks];
                 // Init the state in NCEM coordinates
-                for(int i = 0; i < 6; i++) projResSt.init_state_CMU_NCEM[i] = yNCE[i][ks];
+                for(int i = 0; i < 6; i++) projResSt.init_state_CMU_NC[i] = yNCE[i][ks];
                 // Init the state in RCM coordinates
                 for(int i = 0; i < 5; i++) projResSt.init_state_CMU_RCM[i] = sRCM[i][ks];
                 //Label
@@ -1792,7 +2530,7 @@ int int_proj_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
                 //Save
                 #pragma omp critical
                 {
-                    writeIntProjCUSeed_bin(filename, projResSt);
+                    writeIntProjCUSeed_bin(filename_output, projResSt);
                 }
                 //}
 
@@ -1891,9 +2629,13 @@ int int_proj_SINGLE_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
     st0[4] = 0.0;
 
     //====================================================================================
+    // Filename
+    //====================================================================================
+    string filename_output = projSt.get_and_update_filename(projSt.FILE_PCU, TYPE_MAN_PROJ_ORBIT, ios::out);
+
+    //====================================================================================
     // Splash screen
     //====================================================================================
-    string filename = filenameCUM(OFTS_ORDER, TYPE_MAN_PROJ_ORBIT, SEML.li_SEM);
     cout << resetiosflags(ios::scientific) << setprecision(4);
     cout << "===================================================================" << endl;
     cout << "              Computation of the connections of a single orbit:    " << endl;
@@ -1905,7 +2647,7 @@ int int_proj_SINGLE_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
     cout << ", " << projSt.TLIM[1]/SEML.us_em.T  << "]"                           << endl;
     cout << " - The initial condition in RCM coordinates are " << endl;
     cout << " (" << st0[0]<<", "<<st0[1] << ", " <<st0[2]<< ", " <<st0[3]<< ")"   << endl;
-    cout << " The data will be stored in " << filename                            << endl;
+    cout << " The data will be stored in " << filename_output                     << endl;
     cout << "===================================================================" << endl;
 
     //------------------------------------------------------------------------------------
@@ -1954,7 +2696,7 @@ int int_proj_SINGLE_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
     //====================================================================================
     //Open whitout append datafile and therefore erase its content.
     fstream filestream;
-    filestream.open (filename.c_str(), ios::binary | ios::out);
+    filestream.open (filename_output.c_str(), ios::binary | ios::out);
     filestream.close();
 
     //====================================================================================
@@ -2013,7 +2755,7 @@ int int_proj_SINGLE_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
         orbit.NCprojCCMtoCM(z0, t0, stp);
         stp[4] =  0.0;
 
-        cmu_grid_orbit_on_one_period(orbit, tNCE, yNCE, sRCM, stp, t0, Tp, N, isPar);
+        cmu_grid_orbit_on_one_period(orbit, tNCE, yNCE, sRCM, stp, t0, Tp, N, isPar, projSt.hyp_epsilon_eml2);
 
         //--------------------------------------------------------------------------------
         //Once the unstable directions are obtained, we propagate & project
@@ -2024,13 +2766,13 @@ int int_proj_SINGLE_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
             //----------------------------------------------------------------------------
             //Inputs
             //----------------------------------------------------------------------------
-            ProjResSt projResSt;
+            ProjResSt projResSt(NCEM);
 
             //----------------------------------------------------------------------------
             //Seeds
             //----------------------------------------------------------------------------
             //Init time (global)
-            projResSt.seed_time_EM = t0;
+            projResSt.seed_time = t0;
             //RCM state (seed)
             for(int i = 0; i < 4; i++) projResSt.seed_state_CMU_RCM[i] = st0[i];
 
@@ -2038,9 +2780,9 @@ int int_proj_SINGLE_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
             //Initial conditions
             //----------------------------------------------------------------------------
             // Init the time in EM coordinates
-            projResSt.init_time_EM  = tNCE[ks];
+            projResSt.init_time  = tNCE[ks];
             // Init the state in NCEM coordinates
-            for(int i = 0; i < 6; i++) projResSt.init_state_CMU_NCEM[i] = yNCE[i][ks];
+            for(int i = 0; i < 6; i++) projResSt.init_state_CMU_NC[i] = yNCE[i][ks];
             // Init the state in RCM coordinates
             for(int i = 0; i < 5; i++) projResSt.init_state_CMU_RCM[i] = sRCM[i][ks];
             //Label
@@ -2059,7 +2801,7 @@ int int_proj_SINGLE_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
             //Save
             #pragma omp critical
             {
-                writeIntProjCUSeed_bin(filename, projResSt);
+                writeIntProjCUSeed_bin(filename_output, projResSt);
             }
             //}
 
@@ -2106,7 +2848,7 @@ int int_proj_SINGLE_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
  *         If isPar == true, the computation and storage of sRCM is made parallel
  *         (but careful with that, may not work with higher parallelized loops).
  **/
-int cmu_grid_strob(double* tNCE, double** yNCE, double** sRCM, double st0[], double t0, int N, int isPar)
+int cmu_grid_strob(double* tNCE, double** yNCE, double** sRCM, double st0[], double t0, int N, int isPar, double hyp_epsilon)
 {
     //====================================================================================
     // Initialization
@@ -2175,7 +2917,7 @@ int cmu_grid_strob(double* tNCE, double** yNCE, double** sRCM, double st0[], dou
         sti[1] = sRCM[1][k];
         sti[2] = sRCM[2][k];
         sti[3] = sRCM[3][k];
-        sti[4] = PROJ_EPSILON;
+        sti[4] = hyp_epsilon;
 
 
         //--------------------------------------------------------------------------------
@@ -2224,7 +2966,7 @@ int cmu_grid_strob(double* tNCE, double** yNCE, double** sRCM, double st0[], dou
  *         If isPar == true, the computation and storage of sRCM is made parallel
  *         (but careful with that, may not work with higher parallelized loops).
  **/
-int cmu_grid_orbit(double* tNCE, double** yNCE, double** sRCM, double st0[], double t0, int N, int NPeriods,  int isPar)
+int cmu_grid_orbit(double* tNCE, double** yNCE, double** sRCM, double st0[], double t0, int N, int NPeriods,  int isPar, double hyp_epsilon)
 {
     //====================================================================================
     // Initialization
@@ -2293,7 +3035,7 @@ int cmu_grid_orbit(double* tNCE, double** yNCE, double** sRCM, double st0[], dou
         sti[1] = sRCM[1][k];
         sti[2] = sRCM[2][k];
         sti[3] = sRCM[3][k];
-        sti[4] = PROJ_EPSILON;
+        sti[4] = hyp_epsilon;
 
 
         //--------------------------------------------------------------------------------
@@ -2432,7 +3174,7 @@ int cmu_orbit_estimate_period(const double st0[], double t0, double* T, int* N, 
  *         If isPar == true, the computation and storage of sRCM is made parallel
  *         (but careful with that, may not work with higher parallelized loops).
  **/
-int cmu_grid_orbit_on_one_period(Orbit& orbit, double* tNCE, double** yNCE, double** sRCM, const double st0[], double t0, double T, int N, int isPar)
+int cmu_grid_orbit_on_one_period(Orbit& orbit, double* tNCE, double** yNCE, double** sRCM, const double st0[], double t0, double T, int N, int isPar, double hyp_epsilon)
 {
     //====================================================================================
     //Orbit IC
@@ -2471,7 +3213,7 @@ int cmu_grid_orbit_on_one_period(Orbit& orbit, double* tNCE, double** yNCE, doub
         sti[1] = sRCM[1][k];
         sti[2] = sRCM[2][k];
         sti[3] = sRCM[3][k];
-        sti[4] = PROJ_EPSILON;
+        sti[4] = hyp_epsilon;
 
 
         //--------------------------------------------------------------------------------
@@ -2531,13 +3273,13 @@ int refemlisemli(RefSt& refSt)
     //====================================================================================
     string fname = "refemlisemli";
     cout << "===================================================================" << endl;
-    cout << "   refemlisemli. Refinement of EMLi-SEMLi arc                      " << endl;
+    cout << "   refemlisemli. Refinement of EMLi-SEMLj arc                      " << endl;
     cout << "===================================================================" << endl;
 
     //====================================================================================
     // 1. Get the default coordinates system from the coord_type
     //====================================================================================
-    int coord_type = refSt.coord_type;
+    int coord_type    = refSt.coord_type;
     int man_grid_size = refSt.gridSize;
     int dcs  = default_coordinate_system(coord_type);
     int status = 0;
@@ -2600,7 +3342,7 @@ int refemlisemli(RefSt& refSt)
     cout <<  pmin_dist_SEM_out  << " in SEMSU coord."                             << endl;
     cout << " 2. Initial conditions at EML2 (RCM):                              " << endl;
     cout << " s0 = (" << st_EM[0] << ", " << st_EM[1] << ", ";
-    cout              << st_EM[2] << ", " << st_EM[3] << ")"                      << endl;
+    cout              << st_EM[2] << ", " << st_EM[3] << ", " << st_EM[4] << ")"  << endl;
     cout << " 3. Final conditions at SEML2 (RCM):                               " << endl;
     cout << " qf = (" << st_SEM[0] << ", " << st_SEM[1] << ", ";
     cout              << st_SEM[2] << ", " << st_SEM[3] << ")"                    << endl;
@@ -3036,8 +3778,8 @@ int sorefemlisemli(RefSt& refSt)
     gnuplot_ctrl* h2;
     h2 = gnuplot_init(refSt.isPlotted);
 
-    string filename      = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF, SEML.li);
-    string filename_traj = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF_TRAJ, SEML.li);
+    string filename      = refSt.get_and_update_filename(refSt.FILE_CONT, TYPE_CONT_ATF, ios::out);           //filenameCUM(SEML.cs->F_PLOT, OFTS_ORDER, TYPE_CONT_ATF, SEML.li);
+    string filename_traj = refSt.get_and_update_filename(refSt.FILE_CONT_TRAJ, TYPE_CONT_ATF_TRAJ, ios::out); //filenameCUM(SEML.cs->F_PLOT, OFTS_ORDER, TYPE_CONT_ATF_TRAJ, SEML.li);
 
     //------------------------------------------------------------------------------------
     // Storage of the type
@@ -3339,14 +4081,18 @@ int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* 
     //====================================================================================
     // Save first entry if the continuation process is on
     //====================================================================================
-    string filename      = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF, SEML.li_SEM, orbit_EM.getT0xT());
-    string filename_traj = filenameCUM(OFTS_ORDER, TYPE_CONT_ATF_TRAJ,
-                                       SEML.li_SEM, orbit_EM.getT0xT());
+    string filename = "", filename_traj = "";
 
     if(refSt.isSaved && refSt.isCont())
     {
+        filename      = refSt.get_and_update_filename(refSt.FILE_CONT, TYPE_CONT_ATF, ios::out);
+        filename_traj = refSt.get_and_update_filename(refSt.FILE_CONT_TRAJ, TYPE_CONT_ATF_TRAJ, ios::out);
+
         cout << "-----------------------------------------------------------"  << endl;
-        cout << fname << ". Save first entry in " << filename_traj             << endl;
+        cout << fname << ". First refinement was a success.                 "  << endl;
+        cout << " We can save the first entry in txt and binary files:      "  << endl;
+        cout << "-" << filename                                                << endl;
+        cout << "-" << filename_traj                                           << endl;
         cout << "-----------------------------------------------------------"  << endl;
 
         // Main parameters
@@ -3486,6 +4232,10 @@ int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* 
             //============================================================================
             if(refSt.isSaved && status == GSL_SUCCESS)
             {
+                //Update the filenames, if necessary
+                if(filename.empty())      filename      = refSt.get_and_update_filename(refSt.FILE_CONT, TYPE_CONT_ATF, ios::out);
+                if(filename_traj.empty()) filename_traj = refSt.get_and_update_filename(refSt.FILE_CONT_TRAJ, TYPE_CONT_ATF_TRAJ, ios::out);
+
                 // Main parameters
                 writeCONT_txt(kn, filename, orbit_EM, orbit_SEM, te, ye, false);
 
@@ -3781,6 +4531,18 @@ int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* 
     //====================================================================================
     if(refSt.type == REF_CONT)
     {
+        cout << "-----------------------------------------------------------"  << endl;
+        cout << fname << ".Since REF_CONT is used, the final orbit is saved."  << endl;
+        cout << " In txt and binary files:                                  "  << endl;
+
+        //Update the filenames, if necessary
+        if(filename.empty())      filename      = refSt.get_and_update_filename(refSt.FILE_CONT, TYPE_CONT_ATF, ios::out);
+        if(filename_traj.empty()) filename_traj = refSt.get_and_update_filename(refSt.FILE_CONT_TRAJ, TYPE_CONT_ATF_TRAJ, ios::out);
+
+        cout << "-" << filename                                                << endl;
+        cout << "-" << filename_traj                                           << endl;
+        cout << "-----------------------------------------------------------"  << endl;
+
         // If !refSt.isSaved, this is the first solution to be solved, hence label = 0
         double label = (refSt.isSaved)? kn+1:0;
 
@@ -3885,7 +4647,7 @@ int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* 
         // 1. The last RCM component (unstable part),
         // 2. The final time.
         //================================================================================
-        orbit_EM.setSi(PROJ_EPSILON, 4);
+        //orbit_EM.setSi(PROJ_EPSILON, 4);
         orbit_EM.setTf(t_traj_n[man_index]/SEML.us_em.ns);
 
         //--------------------------------------------------------------------------------
@@ -4020,13 +4782,13 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
         {
             if(SEML.li_EM == 2)
             {
-                if(SEML.li_SEM == 2) filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_dest_L2_tspan_";
-                else filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_dest_L1_tspan_";
+                if(SEML.li_SEM == 2) filename = SEML.cs->F_PLOT+"Serv/projcu_order_20_dest_L2_tspan_";
+                else filename = SEML.cs->F_PLOT+"Serv/projcu_order_20_dest_L1_tspan_";
 
                 if(refSt.crossings > 0)
                 {
                     filename += "0T_T_crossings.bin";
-                    //filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_dest_L2_t0_0065T.bin";
+                    //filename = SEML.cs->F_PLOT+"Serv/projcu_order_20_dest_L2_t0_0065T.bin";
                 }
                 else
                 {
@@ -4048,12 +4810,12 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
                     }
                 }
 
-                //filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_t0_099T.bin";
+                //filename = SEML.cs->F_PLOT+"Serv/projcu_order_20_t0_099T.bin";
             }
             else
             {
-                if(SEML.li_SEM == 2) filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_dest_L2_t0_0.bin";
-                else filename = SEML.cs_em.F_PLOT+"Serv/projcu_order_20_dest_L1.bin";
+                if(SEML.li_SEM == 2) filename = SEML.cs->F_PLOT+"Serv/projcu_order_20_dest_L2_t0_0.bin";
+                else filename = SEML.cs->F_PLOT+"Serv/projcu_order_20_dest_L1.bin";
             }
 
             break;
@@ -4063,8 +4825,8 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
         case REF_MIXED:
         {
 
-            if(SEML.li_SEM == 2) filename = SEML.cs_em.F_PLOT+"Serv/projcu_3d_order_20_dest_L2_t0_0995T.bin";
-            else filename = SEML.cs_em.F_PLOT+"Serv/projcu_3d_order_20_dest_L1_t0_0995T.bin";
+            if(SEML.li_SEM == 2) filename = SEML.cs->F_PLOT+"Serv/projcu_3d_order_20_dest_L2_t0_0995T.bin";
+            else filename = SEML.cs->F_PLOT+"Serv/projcu_3d_order_20_dest_L1_t0_0995T.bin";
 
             break;
         }
@@ -4074,8 +4836,6 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
 
         cout << "selectemlisemli. The data will be retrieved from the server-computed file named:" << endl;
         cout << filename << endl;
-
-
 
         //Read data file
         sortSt.readProjRes_t0(filename, refSt.t0_des, refSt.typeOfTimeSelection);
@@ -4095,7 +4855,7 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
             break;
         }
 
-        filename = filenameCUM(OFTS_ORDER, type, SEML.li_SEM);
+        filename = refSt.get_and_update_filename(refSt.FILE_PCU, type, ios::in); //filenameCUM(SEML.cs->F_PLOT, OFTS_ORDER, type, SEML.li_SEM);
 
         //Read data file
         sortSt.readProjRes_t0(filename, refSt.t0_des, refSt.typeOfTimeSelection);
@@ -4107,106 +4867,6 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
     // Select the subselection
     //====================================================================================
     bool flag = subSt.push_back_conditional(sortSt, refSt);
-    /*
-    double s1_CMU_EM_MIN, s1_CMU_EM_MAX;
-    double s3_CMU_EM_MIN, s3_CMU_EM_MAX;
-    double s2_CMU_EM_MIN, s2_CMU_EM_MAX;
-    double s4_CMU_EM_MIN, s4_CMU_EM_MAX;
-    double tof_MIN, tof_MAX;
-
-    if(refSt.isLimUD)
-    {
-        cout << "-------------------------------------------------------" << endl;
-        cout << "   selectemlisemli. User-defined interval of research  " << endl;
-        cout << "-------------------------------------------------------" << endl;
-        cout << "Enter a value for s1_CMU_EM_MIN: ";
-        cin >> s1_CMU_EM_MIN;
-        cout << "Enter a value for s1_CMU_EM_MAX: ";
-        cin >> s1_CMU_EM_MAX;
-        cout << "Enter a value for s3_CMU_EM_MIN: ";
-        cin >> s3_CMU_EM_MIN;
-        cout << "Enter a value for s3_CMU_EM_MAX: ";
-        cin >> s3_CMU_EM_MAX;
-
-        cout << "Enter a value for tof_MIN (% of T, -1 if no use): ";
-        cin >> tof_MIN;
-        tof_MIN *= SEML.us->T;
-        cout << "Enter a value for tof_MAX (% of T, -1 if no use): ";
-        cin >> tof_MAX;
-        tof_MAX *= SEML.us->T;
-    }
-    else
-    {
-        s1_CMU_EM_MIN = refSt.si_CMU_EM_MIN[0];
-        s1_CMU_EM_MAX = refSt.si_CMU_EM_MAX[0];
-        s3_CMU_EM_MIN = refSt.si_CMU_EM_MIN[2];
-        s3_CMU_EM_MAX = refSt.si_CMU_EM_MAX[2];
-        tof_MIN = refSt.tof_MIN;
-        tof_MAX = refSt.tof_MAX;
-    }
-
-    s2_CMU_EM_MIN = refSt.si_CMU_EM_MIN[1];
-    s2_CMU_EM_MAX = refSt.si_CMU_EM_MAX[1];
-    s4_CMU_EM_MIN = refSt.si_CMU_EM_MIN[3];
-    s4_CMU_EM_MAX = refSt.si_CMU_EM_MAX[3];
-
-
-
-    //------------------------------------------------------------------------------------
-    // Subselection
-    //------------------------------------------------------------------------------------
-    int kpor  = 0;
-    bool cst  = 0;
-    bool flag = 0;
-    for(int kpos = 0; kpos < (int) sortSt.size(); kpos++)
-    {
-        kpor = sortSt.sortId[kpos];
-
-        //--------------------------------------------------------------------------------
-        // Limit in the reduced coordinates (s1, s2, s3, s4)
-        //--------------------------------------------------------------------------------
-        cst  = (sortSt.s1_CMU_EM[kpor] >= s1_CMU_EM_MIN) & (sortSt.s1_CMU_EM[kpor] <= s1_CMU_EM_MAX);
-        cst  = cst & (sortSt.s3_CMU_EM[kpor] >= s3_CMU_EM_MIN) & (sortSt.s3_CMU_EM[kpor] <= s3_CMU_EM_MAX);
-
-        if(refSt.is3D())
-        {
-            cst  = cst & (sortSt.s2_CMU_EM[kpor] >= s2_CMU_EM_MIN) & (sortSt.s2_CMU_EM[kpor] <= s2_CMU_EM_MAX);
-            cst  = cst & (sortSt.s4_CMU_EM[kpor] >= s4_CMU_EM_MIN) & (sortSt.s4_CMU_EM[kpor] <= s4_CMU_EM_MAX);
-        }
-
-        //--------------------------------------------------------------------------------
-        // Limits in the time of flight (TOF) if necessary
-        //--------------------------------------------------------------------------------
-        if(tof_MIN > 0) cst = cst & ( (sortSt.tf_CMU_EM[kpor] - sortSt.t0_CMU_EM[kpor]) > tof_MIN );
-        if(tof_MAX > 0) cst = cst & ( (sortSt.tf_CMU_EM[kpor] - sortSt.t0_CMU_EM[kpor]) < tof_MAX );
-
-        //--------------------------------------------------------------------------------
-        // Limits in the crossings if necessary
-        //--------------------------------------------------------------------------------
-        if(refSt.crossings > 0)
-        {
-            cst = cst & (sortSt.crossings_NCSEM[kpor] == refSt.crossings);
-        }
-
-        if(cst)
-        {
-            flag = 1;
-            subSt.t0_CMU_EM.push_back(sortSt.t0_CMU_EM[kpor]);
-            subSt.tf_CMU_EM.push_back(sortSt.tf_CMU_EM[kpor]);
-            subSt.s1_CMU_EM.push_back(sortSt.s1_CMU_EM[kpor]);
-            subSt.s2_CMU_EM.push_back(sortSt.s2_CMU_EM[kpor]);
-            subSt.s3_CMU_EM.push_back(sortSt.s3_CMU_EM[kpor]);
-            subSt.s4_CMU_EM.push_back(sortSt.s4_CMU_EM[kpor]);
-            subSt.s5_CMU_EM.push_back(sortSt.s5_CMU_EM[kpor]);
-            subSt.s1_CM_SEM.push_back(sortSt.s1_CM_SEM[kpor]);
-            subSt.s2_CM_SEM.push_back(sortSt.s2_CM_SEM[kpor]);
-            subSt.s3_CM_SEM.push_back(sortSt.s3_CM_SEM[kpor]);
-            subSt.s4_CM_SEM.push_back(sortSt.s4_CM_SEM[kpor]);
-            subSt.pmin_dist_SEM.push_back(sortSt.pmin_dist_SEM[kpor]);
-        }
-    }
-
-    */
 
     //====================================================================================
     // If there at least one solution that satisfies all the criteria
@@ -4222,41 +4882,6 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
         // 5. The best solution in the subselection will serve as the first guess.
         //================================================================================
         subSt.update_ic(st_EM, st_SEM, t_EM, t0_SEM, pmin_dist_SEM_out, 0);
-
-        /*
-        int kpos = subSt.sortId[0];
-
-        //================================================================================
-        // 6. Initialize local variables: EM
-        //================================================================================
-        //RCM coordinates
-        st_EM[0] = subSt.s1_CMU_EM[kpos];
-        st_EM[1] = subSt.s2_CMU_EM[kpos];
-        st_EM[2] = subSt.s3_CMU_EM[kpos];
-        st_EM[3] = subSt.s4_CMU_EM[kpos];
-        st_EM[4] = PROJ_EPSILON;
-        //Time
-        t_EM[0]  = subSt.t0_CMU_EM[kpos];
-        t_EM[1]  = subSt.tf_CMU_EM[kpos];
-
-
-        //================================================================================
-        // 7. Initialize local variables: SEM
-        //================================================================================
-        //RCM coordinates
-        st_SEM[0] = subSt.s1_CM_SEM[kpos];
-        st_SEM[1] = subSt.s2_CM_SEM[kpos];
-        st_SEM[2] = subSt.s3_CM_SEM[kpos];
-        st_SEM[3] = subSt.s4_CM_SEM[kpos];
-        st_SEM[4] = 0.0;
-        //Initial time in SEM units
-        *t0_SEM = subSt.tf_CMU_EM[kpos]*SEML.us_em.ns;
-
-        //Minimum projection distance
-        *pmin_dist_SEM_out = subSt.pmin_dist_SEM[kpos];
-        */
-
-
         return FTC_SUCCESS;
     }
     else
@@ -4312,7 +4937,7 @@ int soselectemlisemli(RefSt& refSt, ProjResClass& subSt)
             break;
         }
 
-        filename = filenameCUM(OFTS_ORDER, type, SEML.li_SEM);
+        filename = refSt.get_and_update_filename(refSt.FILE_PCU, type, ios::in); //filenameCUM(SEML.cs->F_PLOT, OFTS_ORDER, type, SEML.li_SEM);
 
         //Read data file
         readSt.readProjRes(filename);
@@ -4332,7 +4957,7 @@ int soselectemlisemli(RefSt& refSt, ProjResClass& subSt)
             break;
         }
 
-        filename = filenameCUM(OFTS_ORDER, type, SEML.li_SEM);
+        filename = refSt.get_and_update_filename(refSt.FILE_PCU, type, ios::in); //filenameCUM(SEML.cs->F_PLOT, OFTS_ORDER, type, SEML.li_SEM);
 
         //Read data file
         readSt.readProjRes(filename);
@@ -4524,8 +5149,9 @@ int iccompemlisemli(double** y_traj, double* t_traj,
     //====================================================================================
     cout << fname << ". Compute the initial orbit..."  << endl;
     //------------------------------------------------------------------------------------
-    //For the computation of the initial orbit, we kill the unstable part.
+    //For the computation of the initial orbit, we save & kill the unstable part.
     //------------------------------------------------------------------------------------
+    double hyp_epsilon = orbit_EM.getSi()[4];
     orbit_EM.setSi(0.0, 4);
 
     //------------------------------------------------------------------------------------
@@ -4593,7 +5219,7 @@ int iccompemlisemli(double** y_traj, double* t_traj,
     //------------------------------------------------------------------------------------
     //For the computation of the initial orbit, we update the unstable part.
     //------------------------------------------------------------------------------------
-    orbit_EM.setSi(PROJ_EPSILON, 4);
+    orbit_EM.setSi(hyp_epsilon, 4);
 
     //------------------------------------------------------------------------------------
     // Update the initial state in the orbit, with the RCM coordinates
@@ -5004,7 +5630,8 @@ int reffromcontemlisemli(RefSt& refSt)
     string fname = "reffromcontemlisemli";
 
     // Get size of the data file
-    int fsize = getLengthCONT_txt(refSt.t0xT_des);
+    string filename = refSt.get_and_update_filename(refSt.FILE_CONT, TYPE_CONT_ATF, ios::in);
+    int fsize = getLengthCONT_txt(filename);
 
     // Init the vectors
     double* t0_CMU_EM     = dvector(0, fsize-1);
@@ -5025,7 +5652,7 @@ int reffromcontemlisemli(RefSt& refSt)
     //====================================================================================
     status = readCONT_txt(t0_CMU_EM, tf_CMU_EM, si_CMU_EM, si_CMS_SEM,
                           z0_CMU_NCEM, z0_CMS_NCSEM, thetae, ze_NCSEM, H0_NCEM, He_NCEM,
-                          H0_NCSEM, He_NCSEM, refSt.t0xT_des, fsize);
+                          H0_NCSEM, He_NCSEM, fsize, filename);
 
     if(status)
     {
@@ -5297,10 +5924,11 @@ int comprefemlisemli3d(int grid_freq_days[3], int coord_type,
     //====================================================================================
     // 6. Store the data, in sys units
     //====================================================================================
-    cout << fname << ". Storing the refined solution in system units "  << endl;
-    cout << " The solution will be stored in " << filenameCUM(OFTS_ORDER, TYPE_COMP_FOR_JPL, SEML.li_SEM) << endl;
+    string filename = refSt.get_and_update_filename(refSt.FILE_JPL, TYPE_COMP_FOR_JPL, ios::out);
+    cout << fname << ". Storing the refined solution in system units "     << endl;
+    cout << " The solution will be stored in " << filename                 << endl;
     cout << "-----------------------------------------------------------"  << endl;
-    writeCOMP_txt(t_traj_n, y_traj_n, final_index);
+    writeCOMP_txt(t_traj_n, y_traj_n, final_index, filename);
 
 
     //====================================================================================
@@ -5308,7 +5936,7 @@ int comprefemlisemli3d(int grid_freq_days[3], int coord_type,
     //====================================================================================
     if(refSt.isJPL)
     {
-        status = jplref3d(coord_type, refSt, label, isFirst);
+        status = jplref3d(coord_type, refSt, label, isFirst, filename);
 
         //--------------------------------------------------------------------------------
         // If something went bad, an error is returned
@@ -5362,7 +5990,7 @@ int comprefemlisemli3d(int grid_freq_days[3], int coord_type,
 /**
  *  \brief Refine a given output of comprefemlisemli3d into JPL ephemerides.
  **/
-int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst)
+int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst, string filename_in)
 {
     //====================================================================================
     // 1. Read the data, in sys units
@@ -5374,7 +6002,7 @@ int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst)
     //------------------------------------------------------------------------------------
     //Local variables to store the refined trajectory
     //------------------------------------------------------------------------------------
-    int final_index = getLengthCOMP_txt();
+    int final_index = getLengthCOMP_txt(filename_in);
 
     if(final_index == FTC_ENOENT)
     {
@@ -5388,7 +6016,7 @@ int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst)
     //------------------------------------------------------------------------------------
     //Read the data stored in a data file
     //------------------------------------------------------------------------------------
-    status = readCOMP_txt(t_traj_n, y_traj_n, final_index);
+    status = readCOMP_txt(t_traj_n, y_traj_n, final_index, filename_in);
 
     if(status != FTC_SUCCESS)
     {
@@ -5426,7 +6054,7 @@ int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst)
     int fwrk = default_framework(coord_type);
 
     //Filename for saving
-    string filename = filenameCUM(OFTS_ORDER, TYPE_CONT_JPL_TRAJ, SEML.li_SEM, refSt.t0xT_des);
+    string filename = refSt.get_and_update_filename(refSt.FILE_JPL, TYPE_CONT_JPL_TRAJ, ios::out);
 
     //====================================================================================
     // 3. Init the gnuplot
@@ -5769,7 +6397,7 @@ int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst)
  *  \brief Refine a given output of comprefemlisemli3d into Inertial Coordinates, then into
  *         JPL coordinates.
  **/
-int comptojplref3d(int coord_type, RefSt& refSt)
+int comptojplref3d(int coord_type, RefSt& refSt, string filename_in)
 {
     //====================================================================================
     // 1. Read the data, in coord_type units
@@ -5781,7 +6409,7 @@ int comptojplref3d(int coord_type, RefSt& refSt)
     //------------------------------------------------------------------------------------
     //Local variables to store the refined trajectory
     //------------------------------------------------------------------------------------
-    int final_index = getLengthCOMP_txt();
+    int final_index = getLengthCOMP_txt(filename_in);
 
     if(final_index == FTC_ENOENT)
     {
@@ -5795,7 +6423,7 @@ int comptojplref3d(int coord_type, RefSt& refSt)
     //------------------------------------------------------------------------------------
     //Read the data stored in a data file
     //------------------------------------------------------------------------------------
-    status = readCOMP_txt(t_traj_n, y_traj_n, final_index);
+    status = readCOMP_txt(t_traj_n, y_traj_n, final_index, filename_in);
 
     if(status != FTC_SUCCESS)
     {
@@ -7896,7 +8524,7 @@ int compref3d_test_eml_synjpl(int man_grid_size_t,
 /**
  *  \brief Computes only a EML2-SEMLi connection and test a JPL refinement, in synodical coordinates
  **/
-int compref3d_test_eml2seml_synjpl(int coord_type)
+int compref3d_test_eml2seml_synjpl(int coord_type, string filename_in)
 {
     //====================================================================================
     // 1. Read the data, in sys units
@@ -7907,7 +8535,7 @@ int compref3d_test_eml2seml_synjpl(int coord_type)
     //------------------------------------------------------------------------------------
     //Local variables to store the refined trajectory
     //------------------------------------------------------------------------------------
-    int final_index = getLengthCOMP_txt();
+    int final_index = getLengthCOMP_txt(filename_in);
 
     if(final_index == FTC_ENOENT)
     {
@@ -7921,7 +8549,7 @@ int compref3d_test_eml2seml_synjpl(int coord_type)
     //------------------------------------------------------------------------------------
     //Read the data stored in a data file
     //------------------------------------------------------------------------------------
-    int status = readCOMP_txt(t_traj_n, y_traj_n, final_index);
+    int status = readCOMP_txt(t_traj_n, y_traj_n, final_index, filename_in);
 
     if(status != FTC_SUCCESS)
     {

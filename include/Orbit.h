@@ -6,6 +6,7 @@
 #include "single_orbit.h"
 #include "multshoot.h"
 
+#include "gsl/gsl_statistics_double.h"
 
 
 class Orbit

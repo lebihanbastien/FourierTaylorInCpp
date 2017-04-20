@@ -13,6 +13,7 @@
 
 #include "single_orbit.h"
 #include "Orbit.h"
+#include "tinyfiledialogs.h"
 
 //For selection of the times
 #define TIME_SELECTION_ABSOLUTE 1
@@ -49,7 +50,60 @@
 #define REF_COND_S5    11
 #define REF_COND_T     12
 
+//----------------------------------------------------------------------------------------
+//I/O handling
+//----------------------------------------------------------------------------------------
+#define IO_DEFAULT 0
+#define IO_BASH    1
+#define IO_DIALOG  2
+
 using namespace std;
+
+
+//========================================================================================
+//
+//          I/O (filename routines)
+//
+//========================================================================================
+/**
+ *  \brief Prefix for the data filenames.
+ **/
+string fileprefix(int type);
+
+/**
+ *  \brief Extension for the data filenames.
+ **/
+string fileext(int type);
+
+///**
+// *  \brief Computes a data filename as a string, depending on the ofts_order, type,
+// *         and target of the data.
+// **/
+//string filenameCUM(string plot_folder, int ofts_order, int type, int target);
+//
+///**
+// *  \brief Computes a data filename as a string, depending on the ofts_order, type,
+// *         target, and initial time t0 of the data.
+// **/
+//string filenameCUM(string plot_folder, int ofts_order, int type, int target, double t0);
+//
+///**
+// *  \brief Computes a data filename as a string, depending on the ofts_order, type,
+// *         target, and initial energy delta dH of the data.
+// **/
+//string filenameCUM_dH(string plot_folder, int ofts_order, int type, int target, double dH);
+
+/**
+ *  \brief Get filename via a window file dialog, with default name filename_default.
+ **/
+string get_filename_dialog(string filename_default);
+
+/**
+ *  \brief Computes a data filename as a string, depending on the ofts_order, type,
+ *         target, initial time t0, and initial energy delta dH of the data.
+ **/
+string get_filenameCUM(int IO_HANDLING, string plot_folder, string filename_bash,
+                       int ofts_order, int type, int target, double t0, double dH, int mode);
 
 
 //========================================================================================
@@ -62,6 +116,27 @@ using namespace std;
 typedef struct RefSt RefSt;
 struct RefSt
 {
+    //------------------------------------------------------------------------------------
+    // ... filename handling is private
+    //------------------------------------------------------------------------------------
+    private:
+
+    //filename for the data file output of routines such as compute_grid_CMU_EM_3D/int_proj_CMU_EM_on_CM_SEM_3D
+    string filename_output;
+
+    //------------------------------------------------------------------------------------
+    // Most of the structure is public to ease use...
+    //------------------------------------------------------------------------------------
+    public:
+
+    //------------------------------------------------------------------------------------
+    // General parameters
+    //------------------------------------------------------------------------------------
+    int    OFTS_ORDER, LI_EM, LI_SEM, LI_START, LI_TARGET;
+    int    IO_HANDLING;
+    string plot_folder;
+    string FILE_PCU, FILE_CONT, FILE_CONT_TRAJ, FILE_JPL;
+
     //------------------------------------------------------------------------------------
     // Parameters that change often
     //------------------------------------------------------------------------------------
@@ -185,11 +260,27 @@ struct RefSt
     //Constructor
     //------------------------------------------------------------------------------------
     //RefSt():pmax_dist_SEM(1e-3) {};
-    RefSt():isCollisionOn(1), pmax_dist_SEM(1e5), last_error(0.0), inner_prec(5e-8)
+    RefSt(int OFTS_ORDER_, int LI_EM_, int LI_SEM_,
+          int LI_START_, int LI_TARGET_, int IO_HANDLING_, string plot_folder_):
+          OFTS_ORDER(OFTS_ORDER_), LI_EM(LI_EM_), LI_SEM(LI_SEM_),
+          LI_START(LI_START_), LI_TARGET(LI_TARGET_), IO_HANDLING(IO_HANDLING_),
+          plot_folder(plot_folder_),
+          isCollisionOn(1), pmax_dist_SEM(1e5), last_error(0.0), inner_prec(5e-8)
     {
         for(int i = 0; i <4; i++) si_SEED_EM_MIN[i] = -50;
         for(int i = 0; i <4; i++) si_SEED_EM_MAX[i] = +50;
     };
+
+    /**
+     *  \brief Update the filename and return it.
+     **/
+    string get_and_update_filename(string filename_bash, int type, int mode)
+    {
+        this->filename_output = get_filenameCUM(this->IO_HANDLING, this->plot_folder,
+                                                filename_bash, this->OFTS_ORDER, type,
+                                                this->LI_TARGET, t0xT_des, -1, mode);
+        return this->filename_output;
+    }
 };
 
 //========================================================================================
@@ -202,23 +293,139 @@ struct RefSt
 typedef struct ProjResSt ProjResSt;
 struct ProjResSt
 {
-    //Inputs
-    double init_time_EM, init_state_CMU_NCEM[6], init_state_CMU_RCM[5];
+    //------------------------------------------------------------------------------------
+    // Coordinate systems:
+    //
+    //  IC_COORD: Initial conditions are saved in IC_COORD coordinates
+    //  PR_COORD: Projection is made in PR_COORD coordinates
+    //  FC_COORD: Final conditions are saved in FC_COORD & FV_COORD coordinates
+    //  FV_COORD: Final conditions are saved in FC_COORD & FV_COORD coordinates
+    //  DP_COORD: The distance of projection is saved in PSEM coordinates,
+    //            hence DP_COORD is always equal to PSEM, for now
+    //------------------------------------------------------------------------------------
+    int IC_COORD, PR_COORD, FC_COORD, FV_COORD, DP_COORD;
+
+    //------------------------------------------------------------------------------------
+    //Inputs, in IC_COORD
+    //------------------------------------------------------------------------------------
+    double init_time, init_state_CMU_NC[6], init_state_CMU_RCM[5];
     int label;
 
+    //------------------------------------------------------------------------------------
     //Seeds
-    double seed_time_EM;
+    //------------------------------------------------------------------------------------
+    double seed_time;
     double seed_state_CMU_RCM[4];
 
-    //Outputs
-    double init_state_CMU_SEM_o[6], final_state_CMU_SEM_o[6];
-    double projected_state_CMU_SEM_o[6], projected_state_CMU_RCM_o[4];
-    double min_proj_dist_SEM_o, dv_at_projection_SEM_o;
-    double final_time_SEM_o;
+    //------------------------------------------------------------------------------------
+    //Outputs, in complementary system coordinates: FC_COORD & FV_COORD
+    //------------------------------------------------------------------------------------
+    double init_state_CMU_FC_o[6], final_state_CMU_FC_o[6];
+    double projected_state_CMU_FC_o[6], projected_state_CMU_RCM_o[4];
+    double dv_at_projection_FC_o;
+    double final_time_FC_o;
+
+    //------------------------------------------------------------------------------------
+    // Objects that remain always in fixed coordinates
+    //------------------------------------------------------------------------------------
+    double min_proj_dist_SEM_o;
     double crossings_NCSEM_o;
     int collision_NCEM_o;
 
+    //------------------------------------------------------------------------------------
+    //Constructor, wrt NC_COORD
+    //------------------------------------------------------------------------------------
+    ProjResSt(int NC_COORD):DP_COORD(PSEM)
+    {
+        switch(NC_COORD)
+        {
+        case NCSEM:
+        {
+            // From SEML to EML
+            IC_COORD = NCSEM;
+            PR_COORD =  NCEM;
+            FC_COORD =   PEM;
+            FV_COORD =   VEM;
+            break;
+        }
+
+        case NCEM:
+        {
+            // From EML to SEML
+            IC_COORD =  NCEM;
+            PR_COORD = NCSEM;
+            FC_COORD =  PSEM;
+            FV_COORD =  VSEM;
+            break;
+        }
+
+        default:
+        {
+            cout << "ProjResSt. NC_COORD must be NCSEM or NCEM." << endl;
+            break;
+        }
+
+        }
+    };
+
+    // Display
+    void displayProjResSt()
+    {
+        cout << "----------------------------" << endl;
+        cout << "ProjResSt = "                 << endl;
+        cout << "----------------------------" << endl;
+        cout << "label     = " << label        << endl;
+        cout << "init_time = " << init_time    << endl;
+
+        cout << "init_state_CMU_NC = "         << endl;
+        vector_printf_prec(init_state_CMU_NC, 6);
+
+        cout << "init_state_CMU_RCM = "         << endl;
+        vector_printf_prec(init_state_CMU_RCM, 5);
+
+        cout << "seed_time = " << seed_time     << endl;
+        cout << "seed_state_CMU_RCM = "         << endl;
+        vector_printf_prec(seed_state_CMU_RCM, 4);
+
+        cout << "init_state_CMU_FC_o = "         << endl;
+        vector_printf_prec(init_state_CMU_FC_o, 6);
+
+        cout << "final_state_CMU_FC_o = "         << endl;
+        vector_printf_prec(final_state_CMU_FC_o, 6);
+
+        cout << "projected_state_CMU_FC_o = "         << endl;
+        vector_printf_prec(projected_state_CMU_FC_o, 6);
+
+        cout << "projected_state_CMU_RCM_o = "         << endl;
+        vector_printf_prec(projected_state_CMU_RCM_o, 4);
+
+        cout << "dv_at_projection_FC_o = " << dv_at_projection_FC_o  << endl;
+        cout << "final_time_FC_o       = " << final_time_FC_o        << endl;
+
+        cout << "min_proj_dist_SEM_o = " << min_proj_dist_SEM_o    << endl;
+        cout << "crossings_NCSEM_o  = " << crossings_NCSEM_o    << endl;
+        cout << "collision_NCEM_o   = "  << collision_NCEM_o    << endl;
+    }
+
 };
+
+//========================================================================================
+// To get current path
+//========================================================================================
+#include <limits.h>
+#include <unistd.h>
+
+/**
+ *  \brief Return the path of the program that is currently running
+ **/
+string getexepath();
+
+/**
+ *  \brief Return the path of the main folder from with the program is currently running.
+ *         It is assumed that the binaries are stored in "main/bin/", so that we can
+ *         retrieve "main/" by cutting the result of getexepath() before the string "bin/"
+ **/
+string getmainpath();
 
 //========================================================================================
 // Subroutines to manipulate vectors and datafiles
@@ -321,6 +528,7 @@ private:
     //Sort vector
     vector<size_t> sortId;
 
+
     //Size
     int csize;
 
@@ -421,25 +629,7 @@ public:
 };
 
 
-//========================================================================================
-//
-//          I/O (filename routines)
-//
-//========================================================================================
-/**
- *  \brief Computes a data filename as a string, depending on the ofts_order, sizeOrbit, and type of the data.
- **/
-string filenameCUM(int ofts_order, int type, int destination);
 
-/**
- *  \brief Computes a data filename as a string, depending on the ofts_order, sizeOrbit, and type of the data.
- **/
-string filenameCUM(int ofts_order, int type, int destination, double t0);
-
-/**
- *  \brief Computes a data filename as a string, depending on the ofts_order, sizeOrbit, energy, and type of the data.
- **/
-string filenameCUM_dH(int ofts_order, int type, int destination, double dH);
 
 //========================================================================================
 //
@@ -450,7 +640,7 @@ string filenameCUM_dH(int ofts_order, int type, int destination, double dH);
  *  \brief Stores the final_index+1 points trajectory contained in t_traj_n (time vector)
  *         and y_traj_n (state vectors) into a data file of type TYPE_COMP_FOR_JPL.
  **/
-void writeCOMP_txt(double* t_traj_n, double** y_traj_n, int final_index);
+void writeCOMP_txt(double* t_traj_n, double** y_traj_n, int final_index, string filename);
 
 /**
  *  \brief Reads the final_index+1 points trajectory contained in a data file of type
@@ -459,14 +649,14 @@ void writeCOMP_txt(double* t_traj_n, double** y_traj_n, int final_index);
  *         the data vectors should be initialized accordingly by the user prior to the use
  *         of this routine.
  **/
-int readCOMP_txt(double* t_traj_n, double** y_traj_n, int final_index);
+int readCOMP_txt(double* t_traj_n, double** y_traj_n, int final_index, string filename);
 
 /**
  *  \brief Get the length of the final_index+1 points trajectory contained in a
  *         data file of type TYPE_COMP_FOR_JPL and stores it in t_traj_n (time vector)
  *         and y_traj_n (state vectors).
  **/
-int getLengthCOMP_txt();
+int getLengthCOMP_txt(string filename);
 
 //========================================================================================
 //
@@ -478,16 +668,14 @@ int getLengthCOMP_txt();
  *         The data are of type t0*s1and of size (tGrid +1)*(gSize+1)
  **/
 int writeCU_bin_dH(double** * yNCE, double** * sNCE, double** dH, double* tGrid,
-                   int s1_grid_size, int t_grid_size, int ofts_order,
-                   int type, int destination, double dHd);
+                   int s1_grid_size, int t_grid_size, string filename);
 
 /**
  *  \brief Get the length of the data file the containing the Initial
  *         Conditions of a planar Center-Unstable manifold. Used in int_proj_CMU_EM_on_CM_SEM and intMan
  *         The data are of type t0*s1 and of size (tGrid +1)*(gSize+1)
  **/
-int getLenghtCU_bin_dH(int* s1_grid_size, int* t_grid_size, int ofts_order,
-                       int type, int destination, double dHd);
+int getLenghtCU_bin_dH(int* s1_grid_size, int* t_grid_size, string filename);
 
 /**
  *  \brief Read in a data file the containing the Initial
@@ -495,8 +683,7 @@ int getLenghtCU_bin_dH(int* s1_grid_size, int* t_grid_size, int ofts_order,
  *         The data are of type t0*s1 and of size (tGrid +1)*(gSize+1)
  **/
 int readCU_bin_dH(double** * yNCE, double** * sNCE, double** dH, double* tGrid,
-                  int s1_grid_size, int t_grid_size,
-                  int ofts_order, int type, int destination, double dHd);
+                  int s1_grid_size, int t_grid_size, string filename);
 
 //----------------------------------------------------------------------------------------
 // CU
@@ -506,15 +693,13 @@ int readCU_bin_dH(double** * yNCE, double** * sNCE, double** dH, double* tGrid,
  *         The data are of type t0*s1*s3 and of size (tGrid +1)*(gSize+1)*(gSize+1)
  **/
 int writeCU_bin(double**** yNCE, double**** sNCE, double** * dH, double* tGrid,
-                int s1_grid_size, int s3_grid_size, int t_grid_size,
-                int ofts_order, int type, int destination);
+                int s1_grid_size, int s3_grid_size, int t_grid_size, string filename);
 /**
  *  \brief Read in a data file the containing the Initial Conditions of a planar Center-Unstable manifold. Used in int_proj_CMU_EM_on_CM_SEM and intMan
  *         The data are of type t0*s1*s3 and of size (tGrid +1)*(gSize+1)*(gSize+1)
  **/
 int readCU_bin(double**** yNCE, double**** sNCE, double** * dH, double* tGrid,
-               int s1_grid_size, int s3_grid_size, int t_grid_size,
-               int ofts_order, int type, int destination);
+               int s1_grid_size, int s3_grid_size, int t_grid_size, string filename);
 
 /**
  *  \brief Get the length of the data file the containing the Initial
@@ -522,8 +707,7 @@ int readCU_bin(double**** yNCE, double**** sNCE, double** * dH, double* tGrid,
  *         The data are of type t0*s1*s3 and of size (tGrid +1)*(gSize+1)*(gSize+1)
  **/
 int getLenghtCU_bin(int* s1_grid_size, int* s3_grid_size,
-                    int* t_grid_size, int ofts_order,
-                    int type, int destination);
+                    int* t_grid_size, string filename);
 
 
 
@@ -535,43 +719,39 @@ int getLenghtCU_bin(int* s1_grid_size, int* s3_grid_size,
  *  \brief init the data file of Initial Conditions of a 3D Center-Unstable manifold. Used in compute_grid_CMU_EM_3D.
  *         The data are of type t0*s1*s2*s3*s4 and of size (t_grid_size +1)*(si_grid_size[0]+1)*(si_grid_size[1]+1)*(si_grid_size[2]+1)*(si_grid_size[3]+1)
  **/
-int initCU_bin_3D(int* si_grid_size, int t_grid_size,
-                  int ofts_order, int type, int destination);
+int initCU_bin_3D(int* si_grid_size, int t_grid_size, string filename);
+
 /**
  *  \brief Write the current time in the data file of Initial Conditions of a 3D Center-Unstable manifold. Used in compute_grid_CMU_EM_3D.
  *         The data are of type t0*s1*s2*s3*s4 and of size (t_grid_size +1)*(si_grid_size[0]+1)*(si_grid_size[1]+1)*(si_grid_size[2]+1)*(si_grid_size[3]+1).
  *         Here, only the time is appended to the data file, so this routine must be used within the intricated loops. See compute_grid_CMU_EM_3D src code for details.
  **/
-int appTimeCU_bin_3D(double* tGrid, int nt, int ofts_order, int type, int destination);
+int appTimeCU_bin_3D(double* tGrid, int nt, string filename);
 
 /**
  *  \brief Write the current state in the data file of Initial Conditions of a 3D Center-Unstable manifold. Used in compute_grid_CMU_EM_3D.
  *         The data are of type t0*s1*s2*s3*s4 and of size (t_grid_size +1)*(si_grid_size[0]+1)*(si_grid_size[1]+1)*(si_grid_size[2]+1)*(si_grid_size[3]+1).
  *         Here, only a single loop on s4 is appended to the data file, so this routine must be used within the intricated loops. See compute_grid_CMU_EM_3D src code for details.
  **/
-int writeCU_bin_3D(double** yNCE, double** sNCE, int* si_grid_size,
-                   int ofts_order, int type, int destination);
+int writeCU_bin_3D(double** yNCE, double** sNCE, int* si_grid_size, string filename);
 
 /**
  *  \brief Get the length of the data file the containing the Initial Conditions of a 3D Center-Unstable manifold. Used in compute_grid_CMU_EM_3D.
  *         The data are of type t0*s1*s2*s3*s4 and of size (t_grid_size +1)*(si_grid_size[0]+1)*(si_grid_size[1]+1)*(si_grid_size[2]+1)*(si_grid_size[3]+1).
  **/
-int getLenghtCU_bin_3D(int* si_grid_size, int* t_grid_size,
-                       int ofts_order, int type, int destination);
+int getLenghtCU_bin_3D(int* si_grid_size, int* t_grid_size, string filename);
 
 /**
  *  \brief Read in a data file the time at Initial Conditions of a planar Center-Unstable manifold. Used in int_proj_CMU_EM_on_CM_SEM and intMan
  *         The data are of type t0*s1*s3 and of size (tGrid +1)*(gSize+1)*(gSize+1)
  **/
-int readTCU_bin_3D(int offset, double* tGrid, int nt,
-                   int ofts_order, int type, int destination);
+int readTCU_bin_3D(int offset, double* tGrid, int nt, string filename);
 
 /**
  *  \brief Read in a data file the state at Initial Conditions of a planar Center-Unstable manifold. Used in int_proj_CMU_EM_on_CM_SEM and intMan
  *         The data are of type t0*s1*s3 and of size (tGrid +1)*(gSize+1)*(gSize+1)
  **/
-int readCU_bin_3D(int offset, double** yNCE, double** sNCE, int* si_grid_size,
-                  int ofts_order, int type, int destination);
+int readCU_bin_3D(int offset, double** yNCE, double** sNCE, int* si_grid_size, string filename);
 
 //----------------------------------------------------------------------------------------
 // Int CU

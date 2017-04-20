@@ -59,6 +59,10 @@ ISPAR=1
 # NOHUP condition
 #-----------------------------------------------------
 ISNOHUP=0
+#-----------------------------------------------------
+# I/O Handling
+#-----------------------------------------------------
+IO_HANDLING=$IO_DIALOG
 
 #=====================================================
 #  ---- Projection parameters ----
@@ -88,6 +92,14 @@ DHD=-1
 # Time frequency, in %T
 DT=0.001
 	
+# Hyperbolic components
+HYP_EPSILON_EML2=1e-5	# Hyperbolic component at eml2
+HYP_EPSILON_SEML2=1e-6	# Hyperbolic component at seml2
+
+# Filenames (used only if IO_HANDLING==$IO_BASH)
+FILE_CU="cu_orbit.bin"
+FILE_PCU="projcu_orbit.bin"
+
 #-----------------------------------------------------
 # Parameters that are stable
 #-----------------------------------------------------
@@ -97,3 +109,5 @@ NSMIN=20      # Number of sorted solutions
 YNMAX=0.6     # The maximum norm (in SEM normalized units) for a projection to occur on the CM_NC of SEMLi
 SNMAX=0.6     # The maximum norm (in RCM normalized units) for a projection to occur on the CM_NC of SEMLi
 NOD=6         # Number of dimensions on which we compute the norm of the projection error
+
+
