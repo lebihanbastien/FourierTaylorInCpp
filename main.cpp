@@ -94,7 +94,7 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         // Type of computation
         //--------------------------------------------------------------------------------
-        COMP_TYPE   = COMP_CM_EML2_TO_CM_SEML_3D;
+        COMP_TYPE   = COMP_REF_JPL;
 
         //--------------------------------------------------------------------------------
         // Model and libration points
@@ -341,19 +341,19 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         //Time grid: min, max and number of points on the grid
         //--------------------------------------------------------------------------------
-        projSt.RMIN  = 0.99;
-        projSt.RMAX  = 1.0;
+        projSt.RMIN  = 0.0;
+        projSt.RMAX  = 0.5;
         projSt.TMIN  = projSt.RMIN*SEML.us->T;
         projSt.TMAX  = projSt.RMAX*SEML.us->T;
 
-        projSt.TSIZE    = 0;
+        projSt.TSIZE    = 5;
         projSt.TLIM[0]  = projSt.TMIN;
         projSt.TLIM[1]  = projSt.TMAX;
 
         //--------------------------------------------------------------------------------
         // Configuration (s1, s2, s3, s4) grid
         //--------------------------------------------------------------------------------
-        projSt.GLIM_SI[0][0] = -30;
+        projSt.GLIM_SI[0][0] = 10;
         projSt.GLIM_SI[0][1] = +30;
 
         projSt.GLIM_SI[1][0] = +0;
@@ -365,7 +365,7 @@ int main(int argc, char** argv)
         projSt.GLIM_SI[3][0] = +0;
         projSt.GLIM_SI[3][1] = +0;
 
-        projSt.GSIZE_SI[0]   = 50;
+        projSt.GSIZE_SI[0]   = 0;
         projSt.GSIZE_SI[1]   = 0;
         projSt.GSIZE_SI[2]   = 50;
         projSt.GSIZE_SI[3]   = 0;
@@ -531,7 +531,8 @@ int main(int argc, char** argv)
         refSt.FILE_PCU       ="projcu_order_16_dest_L2_t0_0.995.bin";
         refSt.FILE_CONT      ="cont_atf.txt";
         refSt.FILE_CONT_TRAJ ="cont_atf_traj.bin";
-        refSt.FILE_JPL       ="cont_jpl.bin";
+        refSt.FILE_JPL_BIN   ="cont_jpl.bin";
+        refSt.FILE_JPL_TXT   ="cont_jpl.txt";
 
     }
     else  //arguments were passed
@@ -731,8 +732,8 @@ int main(int argc, char** argv)
             refSt.sf_seml2 = atof(argv[index++]);       // orbit at SEML2
 
             // Integration window for each orbit
-            refSt.tspan_EM      = atof(argv[index++])*SEML.us->T;
-            refSt.tspan_SEM     = atof(argv[index++])*SEML.us->T;
+            refSt.tspan_EM      = atof(argv[index++])*SEML.us_em.T;
+            refSt.tspan_SEM     = atof(argv[index++])*SEML.us_sem.T;
 
             // Storing the orbits at each step?
             refSt.isSaved_EM    = atoi(argv[index++]);  //0: don't save, 1: save using projection method
@@ -748,7 +749,8 @@ int main(int argc, char** argv)
             refSt.FILE_PCU       = argv[index++];
             refSt.FILE_CONT      = argv[index++];
             refSt.FILE_CONT_TRAJ = argv[index++];
-            refSt.FILE_JPL       = argv[index++];
+            refSt.FILE_JPL_BIN   = argv[index++];
+            refSt.FILE_JPL_TXT   = "cont_jpl_temp.txt";
             break;
         }
 

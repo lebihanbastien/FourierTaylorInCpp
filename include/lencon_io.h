@@ -135,7 +135,7 @@ struct RefSt
     int    OFTS_ORDER, LI_EM, LI_SEM, LI_START, LI_TARGET;
     int    IO_HANDLING;
     string plot_folder;
-    string FILE_PCU, FILE_CONT, FILE_CONT_TRAJ, FILE_JPL;
+    string FILE_PCU, FILE_CONT, FILE_CONT_TRAJ, FILE_JPL_TXT, FILE_JPL_BIN;
 
     //------------------------------------------------------------------------------------
     // Parameters that change often

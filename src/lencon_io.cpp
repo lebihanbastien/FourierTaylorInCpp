@@ -1633,23 +1633,23 @@ void writeCONT_txt(int label, string filename, Orbit& orbit_EM, Orbit& orbit_SEM
     //------------------------------------------------------------------------------------
     // Store from 1 to 8
     //------------------------------------------------------------------------------------
-    //0. label
+    //1. label
     filestream << label << "  ";
-    //1. t0 in EM units
+    //2. t0 in EM units
     filestream << orbit_EM.getT0() << "  ";
-    //2. s0 in RCM coordinates
-    for(int i = 0; i <5; i++) filestream << orbit_EM.getSi()[i]  << "  ";
-    //3. tf in EM units
+    //3-7. s0 in RCM coordinates
+    for(int i = 0; i < 5; i++) filestream << orbit_EM.getSi()[i]  << "  ";
+    //8. tf in EM units
     filestream << orbit_EM.getTf() << "  ";
-    //4. sf in RCM coordinates
+    //9-13. sf in RCM coordinates
     for(int i = 0; i <5; i++) filestream << orbit_SEM.getSi()[i] << "  ";
-    //5. z0 in NCEM coordinates
+    //14-19. z0 in NCEM coordinates
     for(int i = 0; i <6; i++) filestream << orbit_EM.getZ0()[i]  << "  ";
-    //6. zf in NCSEM coordinates
+    //20-25. zf in NCSEM coordinates
     for(int i = 0; i <6; i++) filestream << orbit_SEM.getZ0()[i] << "  ";
-    //7. thetae_NCSEM
+    //26. thetae_NCSEM
     filestream << te_NCSEM* SEML.us_sem.n << "  ";
-    //8. ze in NCSEM coordinates
+    //27-32. ze in NCSEM coordinates
     for(int i = 0; i <6; i++) filestream << ye_NCSEM[i] << "  ";
 
 
@@ -1708,25 +1708,25 @@ void writeCONT_txt(int label, string filename, Orbit& orbit_EM, Orbit& orbit_SEM
     //------------------------------------------------------------------------------------
     // Storing Energies
     //------------------------------------------------------------------------------------
-    filestream << H0_NCEM  << "  ";
-    filestream << H0_NCSEM << "  ";
-    filestream << H0_EM    << "  ";
-    filestream << H0_SEM   << "  ";
+    filestream << H0_NCEM  << "  "; //33
+    filestream << H0_NCSEM << "  "; //34
+    filestream << H0_EM    << "  "; //35
+    filestream << H0_SEM   << "  "; //36
 
-    filestream << H0_emli_NCEM  << "  ";
-    filestream << H0_emli_NCSEM << "  ";
-    filestream << H0_emli_EM    << "  ";
-    filestream << H0_emli_SEM   << "  ";
+    filestream << H0_emli_NCEM  << "  "; //37
+    filestream << H0_emli_NCSEM << "  "; //38
+    filestream << H0_emli_EM    << "  "; //39
+    filestream << H0_emli_SEM   << "  "; //40
 
-    filestream << Hf_NCEM  << "  ";
-    filestream << Hf_NCSEM << "  ";
-    filestream << Hf_EM    << "  ";
-    filestream << Hf_SEM   << "  ";
+    filestream << Hf_NCEM  << "  "; //41
+    filestream << Hf_NCSEM << "  "; //42
+    filestream << Hf_EM    << "  "; //43
+    filestream << Hf_SEM   << "  "; //44
 
-    filestream << Hf_semli_NCEM  << "  ";
-    filestream << Hf_semli_NCSEM << "  ";
-    filestream << Hf_semli_EM    << "  ";
-    filestream << Hf_semli_SEM   << "  ";
+    filestream << Hf_semli_NCEM  << "  "; //45
+    filestream << Hf_semli_NCSEM << "  "; //46
+    filestream << Hf_semli_EM    << "  "; //47
+    filestream << Hf_semli_SEM   << "  "; //48
 
     filestream << endl;
 
@@ -1783,6 +1783,7 @@ int getLengthCONT_txt(string filename)
     return fsize-1;
 }
 
+
 /**
  *  \brief Reads the results of the continuation procedure, in txt file.
  **/
@@ -1821,41 +1822,201 @@ int readCONT_txt(double*  t0_CMU_EM, double*   tf_CMU_EM,
     }
 
     //====================================================================================
-    // First value is discarded: these are the column titles
+    // First value: these are the column titles.
+    //  We can then compute the number of columns.
     //====================================================================================
-    string ct;
+    string ct, s;
     getline(filestream,  ct);
+    istringstream iss(ct);
+
+    int ncolumns = 0;
+    while ( getline( iss, s, ' ' ) ) {
+        if(s.size() > 0)
+        {
+            ncolumns++;
+            //printf( "`%s', %d, \n", s.c_str(), ncolumns );
+        }
+    }
 
     //====================================================================================
     // Read the data on each line and close
     //====================================================================================
-    for(int k = 0; k < fsize; k++)
+    switch(ncolumns)
     {
-        //1. t0 in EM units
-        filestream >> t0_CMU_EM[k];
-        //2. s0 in RCM coordinates
-        for(int i = 0; i <5; i++) filestream >> si_CMU_EM[i][k];
-        //3. tf in EM units
-        filestream >> tf_CMU_EM[k];
-        //4. sf in RCM coordinates
-        for(int i = 0; i <5; i++) filestream >> si_CMS_SEM[i][k];
-        //5. z0 in NCEM coordinates
-        for(int i = 0; i <6; i++) filestream >> z0_CMU_NCEM[i][k];
-        //6. zf in NCEM coordinates
-        for(int i = 0; i <6; i++) filestream >> z0_CMS_NCSEM[i][k];
-        //7. tethae
-        filestream >> tethae[k];
-        //8. ze in NCSEM coordinates
-        for(int i = 0; i <6; i++) filestream >> ye_NCSEM[i][k];
-        // 9.  Initial energy in NCEM coordinates
-        filestream >> H0_NCEM[k];
-        // 10. Final energy in NCEM coordinates
-        filestream >> He_NCEM[k];
-        // 11. Initial energy in NCSEM coordinates
-        filestream >> H0_NCSEM[k];
-        // 12. Final energy in NCSEM coordinates
-        filestream >> He_NCSEM[k];
+        case 35:
+        {
+
+        for(int k = 0; k < fsize; k++)
+        {
+            //1. t0 in EM units
+            filestream >> t0_CMU_EM[k];
+            //2-6. s0 in RCM coordinates
+            for(int i = 0; i <5; i++) filestream >> si_CMU_EM[i][k];
+            //7. tf in EM units
+            filestream >> tf_CMU_EM[k];
+            //8-12. sf in RCM coordinates
+            for(int i = 0; i <5; i++) filestream >> si_CMS_SEM[i][k];
+            //13-18. z0 in NCEM coordinates
+            for(int i = 0; i <6; i++) filestream >> z0_CMU_NCEM[i][k];
+            //19-24. zf in NCEM coordinates
+            for(int i = 0; i <6; i++) filestream >> z0_CMS_NCSEM[i][k];
+            //25. tethae
+            filestream >> tethae[k];
+            //26-31. ze in NCSEM coordinates
+            for(int i = 0; i <6; i++) filestream >> ye_NCSEM[i][k];
+            // 32.  Initial energy in NCEM coordinates
+            filestream >> H0_NCEM[k];
+            // 33. Final energy in NCEM coordinates
+            filestream >> He_NCEM[k];
+            // 34. Initial energy in NCSEM coordinates
+            filestream >> H0_NCSEM[k];
+            // 35. Final energy in NCSEM coordinates
+            filestream >> He_NCSEM[k];
+        }
+
+        break;
+
+        }
+        case 48:
+        {
+        for(int k = 0; k < fsize; k++)
+        {
+            //1. Label
+            filestream >> s;
+
+            //2. t0 in EM units
+            filestream >> t0_CMU_EM[k];
+            //3-7. s0 in RCM coordinates
+            for(int i = 0; i <5; i++) filestream >> si_CMU_EM[i][k];
+
+            //8. tf in EM units
+            filestream >> tf_CMU_EM[k];
+            //9-13. sf in RCM coordinates
+            for(int i = 0; i <5; i++) filestream >> si_CMS_SEM[i][k];
+
+            //14-19. z0 in NCEM coordinates
+            for(int i = 0; i <6; i++) filestream >> z0_CMU_NCEM[i][k];
+
+            //20-25. zf in NCEM coordinates
+            for(int i = 0; i <6; i++) filestream >> z0_CMS_NCSEM[i][k];
+
+            //26. tethae
+            filestream >> tethae[k];
+            //27-32. ze in NCSEM coordinates
+            for(int i = 0; i <6; i++) filestream >> ye_NCSEM[i][k];
+
+            // 33.  Initial energy in NCEM coordinates
+            filestream >> H0_NCEM[k];
+            // 34. Initial energy in NCSEM coordinates
+            filestream >> H0_NCSEM[k];
+            // 35. Initial energy in EM coordinates
+            filestream >> s;
+            // 36. Initial energy in SEM coordinates
+            filestream >> s;
+
+            // 37-40: energy of emli in NCEM, NCSEM, EM, and SEM coordinates
+            filestream >> s;
+            filestream >> s;
+            filestream >> s;
+            filestream >> s;
+
+            // 41. Final energy in NCEM coordinates
+            filestream >> He_NCEM[k];
+            // 42. Final energy in NCSEM coordinates
+            filestream >> He_NCSEM[k];
+            // 43. Final energy in EM coordinates
+            filestream >> s;
+            // 44. Final energy in SEM coordinates
+            filestream >> s;
+
+            // 45-48: energy of emli in NCEM, NCSEM, EM, and SEM coordinates
+            filestream >> s;
+            filestream >> s;
+            filestream >> s;
+            filestream >> s;
+        }
+
+        break;
+
+
+        }
+
+        case 53:
+        {
+        for(int k = 0; k < fsize; k++)
+        {
+            //1. Label
+            filestream >> s;
+
+            //2. t0 in EM units
+            filestream >> t0_CMU_EM[k];
+            //3-7. s0 in RCM coordinates
+            for(int i = 0; i <5; i++) filestream >> si_CMU_EM[i][k];
+
+            //8. t0_seed in EM units
+            filestream >> s;
+            //9-12. s0_seed in RCM coordinates
+            for(int i = 0; i <4; i++) filestream >> s;
+
+            //13. tf in EM units
+            filestream >> tf_CMU_EM[k];
+            //14-18. sf in RCM coordinates
+            for(int i = 0; i <5; i++) filestream >> si_CMS_SEM[i][k];
+
+            //19-24. z0 in NCEM coordinates
+            for(int i = 0; i <6; i++) filestream >> z0_CMU_NCEM[i][k];
+
+            //25-30. zf in NCEM coordinates
+            for(int i = 0; i <6; i++) filestream >> z0_CMS_NCSEM[i][k];
+
+            //31. tethae
+            filestream >> tethae[k];
+            //32-37. ze in NCSEM coordinates
+            for(int i = 0; i <6; i++) filestream >> ye_NCSEM[i][k];
+
+            // 38.  Initial energy in NCEM coordinates
+            filestream >> H0_NCEM[k];
+            // 39. Initial energy in NCSEM coordinates
+            filestream >> H0_NCSEM[k];
+            // 40. Initial energy in EM coordinates
+            filestream >> s;
+            // 41. Initial energy in SEM coordinates
+            filestream >> s;
+
+            // 42-45: energy of emli in NCEM, NCSEM, EM, and SEM coordinates
+            filestream >> s;
+            filestream >> s;
+            filestream >> s;
+            filestream >> s;
+
+            // 46. Final energy in NCEM coordinates
+            filestream >> He_NCEM[k];
+            // 47. Final energy in NCSEM coordinates
+            filestream >> He_NCSEM[k];
+            // 48. Final energy in EM coordinates
+            filestream >> s;
+            // 49. Final energy in SEM coordinates
+            filestream >> s;
+
+            // 50-53: energy of emli in NCEM, NCSEM, EM, and SEM coordinates
+            filestream >> s;
+            filestream >> s;
+            filestream >> s;
+            filestream >> s;
+        }
+
+        break;
+        }
+
+
+        default:
+        {
+            cout << "Error in readCONT_txt: unknown number of columns." << endl;
+            return FTC_FAILURE;
+        }
+
     }
+
 
     filestream.close();
 
@@ -2434,27 +2595,27 @@ void writeCONT_txt(string filename, Orbit& orbit_EM, Orbit& orbit_SEM,
     //------------------------------------------------------------------------------------
     // Store from 1 to 8
     //------------------------------------------------------------------------------------
-    //0. label
+    //1. label
     filestream << label << "  ";
-    //1. t0 in EM units
+    //2. t0 in EM units
     filestream << orbit_EM.getT0() << "  ";
-    //2. s0 in RCM coordinates
+    //3-7. s0 in RCM coordinates
     for(int i = 0; i <5; i++) filestream << orbit_EM.getSi()[i]  << "  ";
-    //3. t0_seed in EM units
+    //8. t0_seed in EM units
     filestream << t_EM_seed << "  ";
-    //4. s0_seed in RCM coordinates
+    //9-12. s0_seed in RCM coordinates
     for(int i = 0; i < 4; i++) filestream << st_EM_seed[i]  << "  ";
-    //5. tf in EM units
+    //13. tf in EM units
     filestream << orbit_EM.getTf() << "  ";
-    //4. sf in RCM coordinates
+    //14-18. sf in RCM coordinates
     for(int i = 0; i <5; i++) filestream << orbit_SEM.getSi()[i] << "  ";
-    //6. z0 in NCEM coordinates
+    //19-24. z0 in NCEM coordinates
     for(int i = 0; i <6; i++) filestream << orbit_EM.getZ0()[i]  << "  ";
-    //7. zf in NCSEM coordinates
+    //25-30. zf in NCSEM coordinates
     for(int i = 0; i <6; i++) filestream << orbit_SEM.getZ0()[i] << "  ";
-    //8. thetae_NCSEM
+    //31. thetae_NCSEM
     filestream << te_NCSEM* SEML.us_sem.n << "  ";
-    //9. ze in NCSEM coordinates
+    //32-37. ze in NCSEM coordinates
     for(int i = 0; i <6; i++) filestream << ye_NCSEM[i] << "  ";
 
 
@@ -2513,25 +2674,25 @@ void writeCONT_txt(string filename, Orbit& orbit_EM, Orbit& orbit_SEM,
     //------------------------------------------------------------------------------------
     // Storing Energies
     //------------------------------------------------------------------------------------
-    filestream << H0_NCEM  << "  ";
-    filestream << H0_NCSEM << "  ";
-    filestream << H0_EM    << "  ";
-    filestream << H0_SEM   << "  ";
+    filestream << H0_NCEM  << "  "; //38
+    filestream << H0_NCSEM << "  "; //39
+    filestream << H0_EM    << "  "; //40
+    filestream << H0_SEM   << "  "; //41
 
-    filestream << H0_emli_NCEM  << "  ";
-    filestream << H0_emli_NCSEM << "  ";
-    filestream << H0_emli_EM    << "  ";
-    filestream << H0_emli_SEM   << "  ";
+    filestream << H0_emli_NCEM  << "  "; //42
+    filestream << H0_emli_NCSEM << "  "; //43
+    filestream << H0_emli_EM    << "  "; //44
+    filestream << H0_emli_SEM   << "  "; //45
 
-    filestream << Hf_NCEM  << "  ";
-    filestream << Hf_NCSEM << "  ";
-    filestream << Hf_EM    << "  ";
-    filestream << Hf_SEM   << "  ";
+    filestream << Hf_NCEM  << "  "; //46
+    filestream << Hf_NCSEM << "  "; //47
+    filestream << Hf_EM    << "  "; //48
+    filestream << Hf_SEM   << "  "; //49
 
-    filestream << Hf_semli_NCEM  << "  ";
-    filestream << Hf_semli_NCSEM << "  ";
-    filestream << Hf_semli_EM    << "  ";
-    filestream << Hf_semli_SEM   << "  ";
+    filestream << Hf_semli_NCEM  << "  "; //50
+    filestream << Hf_semli_NCSEM << "  "; //51
+    filestream << Hf_semli_EM    << "  "; //52
+    filestream << Hf_semli_SEM   << "  "; //53
 
     filestream << endl;
 

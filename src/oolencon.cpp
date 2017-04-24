@@ -5924,7 +5924,7 @@ int comprefemlisemli3d(int grid_freq_days[3], int coord_type,
     //====================================================================================
     // 6. Store the data, in sys units
     //====================================================================================
-    string filename = refSt.get_and_update_filename(refSt.FILE_JPL, TYPE_COMP_FOR_JPL, ios::out);
+    string filename = refSt.get_and_update_filename(refSt.FILE_JPL_TXT, TYPE_COMP_FOR_JPL, ios::out);
     cout << fname << ". Storing the refined solution in system units "     << endl;
     cout << " The solution will be stored in " << filename                 << endl;
     cout << "-----------------------------------------------------------"  << endl;
@@ -6054,7 +6054,7 @@ int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst, string filena
     int fwrk = default_framework(coord_type);
 
     //Filename for saving
-    string filename = refSt.get_and_update_filename(refSt.FILE_JPL, TYPE_CONT_JPL_TRAJ, ios::out);
+    string filename = refSt.get_and_update_filename(refSt.FILE_JPL_BIN, TYPE_CONT_JPL_TRAJ, ios::out);
 
     //====================================================================================
     // 3. Init the gnuplot
