@@ -5731,6 +5731,11 @@ int reffromcontemlisemli(RefSt& refSt)
         orbit_SEM.update_ic(st_SEM, t0_SEM);
 
         //--------------------------------------------------------------------------------
+        // The max projection error is greatly widen, in order to accept bigger orbits
+        //--------------------------------------------------------------------------------
+        orbit_SEM.setEPmaxx(1e-1);
+
+        //--------------------------------------------------------------------------------
         // We can advance to REF_COMP for the rest of the computation
         //--------------------------------------------------------------------------------
         refSt.type = REF_COMP;
@@ -5740,7 +5745,7 @@ int reffromcontemlisemli(RefSt& refSt)
         if(status)
         {
             cerr << fname << ". Error during the continuation procedure on the whole trajectory. ref_errno = " << ref_strerror(status) << endl;
-            return FTC_FAILURE;
+            //return FTC_FAILURE;
         }
 
         if(isFirst) isFirst = 0;
@@ -5896,8 +5901,7 @@ int comprefemlisemli3d(int grid_freq_days[3], int coord_type,
     pressEnter(refSt.isFlagOn);
 
     int isPlotted   = 0;
-    status = multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, h2, refSt.isPar);
-    //status =multiple_shooting_direct_variable_time(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, isTimeFixed, h2);
+    status = multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, PREC_GSM, isPlotted, h2, 0);
 
     //------------------------------------------------------------------------------------
     // If something went bad, an error is returned
@@ -6328,11 +6332,18 @@ int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst, string filena
     // 6.5 Differential correction
     //====================================================================================
     pressEnter(refSt.isFlagOn);
-    cout << fname << ". Refine trajectory in JPL ephemerides..." << endl;
-    //status  = multiple_shooting_direct_variable_time(y_traj_jpl, t_traj_jpl, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, coord_int,  5e-10, true, h4, 0);
-    status  = multiple_shooting_direct(y_traj_jpl, t_traj_jpl, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, coord_int, true, h4, 0);
-    //Plot
-    gnuplot_plot_X(refSt.isPlotted, h4, y_traj_jpl_n, final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
+    cout << fname << ". Refine trajectory in JPL ephemerides, with fixed times..." << endl;
+    status  = multiple_shooting_direct(y_traj_jpl, t_traj_jpl, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, coord_int, PREC_GSM, true, h4, 1);
+
+    //------------------------------------------------------------------------------------
+    // If something went bad, we try the same but with variable times
+    //------------------------------------------------------------------------------------
+    if(status)
+    {
+        cout << fname << ". Refine trajectory in JPL ephemerides, with variables times..." << endl;
+        status  = multiple_shooting_direct_variable_time(y_traj_jpl, t_traj_jpl, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, coord_int,  PREC_GSM, true, h4, 1);
+
+    }
 
     //------------------------------------------------------------------------------------
     // If something went bad, an error is returned
@@ -6343,6 +6354,11 @@ int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst, string filena
         cerr << " ref_errno = " << ref_strerror(status) << endl;
         return FTC_FAILURE;
     }
+
+    //------------------------------------------------------------------------------------
+    //Plot
+    //------------------------------------------------------------------------------------
+    gnuplot_plot_X(refSt.isPlotted, h4, y_traj_jpl_n, final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
 
 
     //====================================================================================
@@ -6556,7 +6572,7 @@ int comptojplref3d(int coord_type, RefSt& refSt, string filename_in)
     //pressEnter(refSt.isFlagOn);
     cout << fname << ". Refine trajectory in JPL ephemerides..." << endl;
     //DiffCorr
-    status  = multiple_shooting_direct(y_traj_ecisem, t_traj_ecisem, y_traj_ecisem, t_traj_ecisem, 42, final_index, coord_int, true, h4, 0);
+    status  = multiple_shooting_direct(y_traj_ecisem, t_traj_ecisem, y_traj_ecisem, t_traj_ecisem, 42, final_index, coord_int, PREC_GSM, true, h4, 0);
     //Plot
     gnuplot_plot_X(refSt.isPlotted, h4, y_traj_ecisem, final_index+1, (char*) "Final trajectory", "lines", "2", "2", color);
 
@@ -7765,8 +7781,7 @@ int compref3d_test_seml_synjpl(int man_grid_size_t,
     pressEnter(refSt.isFlagOn);
 
     int isPlotted   = 0;
-    multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, h2, refSt.isPar);
-    //multiple_shooting_direct_variable_time(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, isTimeFixed, h2);
+    multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, PREC_GSM, isPlotted, h2, 0);
 
     //------------------------------------------------------------------------------------
     // Final trajectory, on a grid
@@ -7928,7 +7943,7 @@ int compref3d_test_seml_synjpl(int man_grid_size_t,
         cout << fname << ". Refine trajectory in JPL ephemerides..." << endl;
 
         isPlotted   = 1;
-        multiple_shooting_direct(y_traj_syn, t_traj_syn, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, eph_coord(coord_type), isPlotted, h4, 0);
+        multiple_shooting_direct(y_traj_syn, t_traj_syn, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, eph_coord(coord_type), PREC_GSM, isPlotted, h4, 0);
         //Plot
         gnuplot_plot_X(refSt.isPlotted, h4, y_traj_jpl_n, final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
 
@@ -8268,8 +8283,7 @@ int compref3d_test_eml_synjpl(int man_grid_size_t,
     scanf("%c",&ch);
 
     int isPlotted   = 0;
-    multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, h2, refSt.isPar);
-    //multiple_shooting_direct_variable_time(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, isTimeFixed, h2);
+    multiple_shooting_direct(y_traj, t_traj, y_traj_n, t_traj_n, 42, final_index, coord_type, isPlotted, PREC_GSM, h2, 0);
 
     //------------------------------------------------------------------------------------
     // Final trajectory, on a grid
@@ -8434,7 +8448,7 @@ int compref3d_test_eml_synjpl(int man_grid_size_t,
         cout << fname << ". Refine trajectory in JPL ephemerides..." << endl;
 
         isPlotted   = 1;
-        multiple_shooting_direct(y_traj_syn, t_traj_syn, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, eph_coord(coord_type), isPlotted, h4, 0);
+        multiple_shooting_direct(y_traj_syn, t_traj_syn, y_traj_jpl_n, t_traj_jpl_n, 42, final_index, eph_coord(coord_type), PREC_GSM, isPlotted, h4, 0);
         //Plot
         gnuplot_plot_X(refSt.isPlotted, h4, y_traj_jpl_n, final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
 
@@ -8866,8 +8880,7 @@ int compref3d_test_eml2seml_synjpl(int coord_type, string filename_in)
     cout << fname << ". Refine trajectory in JPL ephemerides..." << endl;
 
     int isPlotted   = 1;
-    multiple_shooting_direct(y_traj_syn, t_traj_syn, y_traj_syn_n, t_traj_syn_n, 42, final_index, eph_coord(coord_type), isPlotted, h4, 0);
-    //multiple_shooting_direct_variable_time(y_traj_syn, t_traj_syn, y_traj_syn_n, t_traj_syn_n,  42, final_index, eph_coord(coord_type), 5e-9, isPlotted, h4);
+    multiple_shooting_direct(y_traj_syn, t_traj_syn, y_traj_syn_n, t_traj_syn_n, 42, final_index, eph_coord(coord_type), PREC_GSM, isPlotted, h4, 0);
     //Plot
     gnuplot_plot_X(true, h4, y_traj_syn_n, final_index+1, (char*) "Final trajectory", "lines", "2", "2", 7);
 
@@ -9032,10 +9045,10 @@ int notablePoints(gnuplot_ctrl* h2, gnuplot_ctrl* h3, int coord_type, int isPlot
     case VNCSEM:
     {
         semNCPoints(0.0, semP_coord);
-        semPlot(h2, semP_coord, true);
+        semPlot(h2, semP_coord, isPlot);
         //Comp
         emNCPoints(0.0, semP_comp);
-        emPlot(h3, semP_comp, true);
+        emPlot(h3, semP_comp, isPlot);
 
         //h2 displays the system in NCSEM coordinates
         gnuplot_set_xlabel(isPlot, h2, (char*) "xsem");
@@ -9052,10 +9065,10 @@ int notablePoints(gnuplot_ctrl* h2, gnuplot_ctrl* h3, int coord_type, int isPlot
     case VEM:
     {
         emPoints(0.0, semP_coord);
-        emPlot(h2, semP_coord, true);
+        emPlot(h2, semP_coord, isPlot);
         //Comp
         semPoints(0.0, semP_comp);
-        semPlot(h3, semP_comp, true);
+        semPlot(h3, semP_comp, isPlot);
 
         //h3 displays the system in SEM coordinates
         gnuplot_set_xlabel(isPlot, h3, (char*) "Xsem");
@@ -9072,10 +9085,10 @@ int notablePoints(gnuplot_ctrl* h2, gnuplot_ctrl* h3, int coord_type, int isPlot
     case VNCEM:
     {
         emNCPoints(0.0, semP_coord);
-        emPlot(h2, semP_coord, true);
+        emPlot(h2, semP_coord, isPlot);
         //Comp
         semNCPoints(0.0, semP_comp);
-        semPlot(h3, semP_comp, true);
+        semPlot(h3, semP_comp, isPlot);
 
         //h3 displays the system in NCSEM coordinates
         gnuplot_set_xlabel(isPlot, h3, (char*) "xsem");

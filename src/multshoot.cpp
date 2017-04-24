@@ -491,8 +491,8 @@ int multiple_shooting_gomez(double **ymd, double *tmd,
  **/
 int multiple_shooting_direct(double **ymd, double *tmd,
                              double **ymdn, double *tmdn,
-                             int N, int mgs, int coord_type,
-                             int isPlotted, gnuplot_ctrl *h1, int isPar)
+                             int N, int mgs, int coord_type, double prec,
+                             int isPlotted, gnuplot_ctrl *h1, int strConv)
 {
     //====================================================================================
     // 1. Initialization
@@ -501,7 +501,8 @@ int multiple_shooting_direct(double **ymd, double *tmd,
     string fname = "multiple_shooting_direct";
 
     //Cumulated norm of the error
-    double normC = 0.0;
+    double normC = 0.0, normC_old = 1e5;
+    int status = FTC_SUCCESS;
 
     //------------------------------------------------------------------------------------
     //Get the default coordinates system from the coord_type
@@ -566,7 +567,7 @@ int multiple_shooting_direct(double **ymd, double *tmd,
         //--------------------------------------------------------------------------------
         // Build the Jacobian and other useful matrices
         //--------------------------------------------------------------------------------
-        #pragma omp parallel for if(isPar)
+        //#pragma omp parallel for if(isPar)
         for(int k = 0; k <= mgs-1; k++)
         {
             //----------------------------------------------------------------------------
@@ -583,7 +584,12 @@ int multiple_shooting_direct(double **ymd, double *tmd,
             // Integration
             //----------------------------------------------------------------------------
             for(int i = 0; i < N; i++) yv[i] = ymdn[i][k];
-            ode78_int(ym, tm, &ode78coll, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
+            status = ode78_int(ym, tm, &ode78coll, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
+            if(status)
+            {
+                cout << fname << ". The integration in ode78_int failed. return." << endl;
+                return FTC_FAILURE;
+            }
 
             //----------------------------------------------------------------------------
             // Final position is at the end of ym
@@ -637,20 +643,32 @@ int multiple_shooting_direct(double **ymd, double *tmd,
         //================================================================================
         normC  = gsl_blas_dnrm2(Fv);
 
+
+
         //--------------------------------------------------------------------------------
         // Check that all points are under a given threshold
         //--------------------------------------------------------------------------------
         cout << fname << ". n° " << iter+1 << "/" << itermax << ". nerror = " << normC << endl;
-        if(normC < PREC_GSM)
+        if(normC < prec)
         {
             cout << fname << ". Desired precision was reached. " << endl; cout << "nerror = " << normC << endl;
             break;
         }
 
+
+        //--------------------------------------------------------------------------------
+        // If a strong convergence is desired, check that we are always decreasing the error
+        //--------------------------------------------------------------------------------
+        if(strConv && normC_old < normC)
+        {
+            cout << fname << ". error[n+1] < error[n]. " << endl;
+            return FTC_FAILURE;
+        }
+
         //================================================================================
         //Compute the correction vector
         //================================================================================
-        int status = ftc_corrvec_mn(DQv, Fv, DF, nfv, ncs);
+        status = ftc_corrvec_mn(DQv, Fv, DF, nfv, ncs);
         if(status)
         {
             cerr << fname << ". The computation of the correction vector failed."  << endl;
@@ -705,7 +723,7 @@ int multiple_shooting_direct_variable_time(double **ymd, double *tmd,
                                            double **ymdn, double *tmdn,
                                            int N, int mgs, int coord_type,
                                            double prec,
-                                           int isPlotted, gnuplot_ctrl *h1, int isPar)
+                                           int isPlotted, gnuplot_ctrl *h1, int strConv)
 {
     //Name of the routine
     string fname = "multiple_shooting_direct_variable_time";
@@ -714,13 +732,15 @@ int multiple_shooting_direct_variable_time(double **ymd, double *tmd,
     // 1. Initialization
     //====================================================================================
     //Cumulated norm of the error
-    double normC = 0.0;
+    double normC = 0.0, normC_old = 1e5;
+    int status = FTC_SUCCESS;
 
     //------------------------------------------------------------------------------------
     //Get the default coordinates system from the coord_type
     //------------------------------------------------------------------------------------
     int dcs  = default_coordinate_system(coord_type);
-    if(dcs == FTC_FAILURE){
+    if(dcs == FTC_FAILURE)
+    {
         cerr << fname << ". The selection of dcs failed." << endl;
         return FTC_FAILURE;
     }
@@ -729,7 +749,8 @@ int multiple_shooting_direct_variable_time(double **ymd, double *tmd,
     //Get the default framework from the coord_type
     //------------------------------------------------------------------------------------
     int fwrk = default_framework(coord_type);
-    if(fwrk == FTC_FAILURE){
+    if(fwrk == FTC_FAILURE)
+    {
         cerr << fname << ". The selection of fwrk failed." << endl;
         return FTC_FAILURE;
     }
@@ -799,7 +820,7 @@ int multiple_shooting_direct_variable_time(double **ymd, double *tmd,
         //================================================================================
         // Build the Jacobian and other useful matrices
         //================================================================================
-        #pragma omp parallel for if(isPar)
+        //#pragma omp parallel for if(isPar)
         for(int k = 0; k <= mgs-1; k++)
         {
             //----------------------------------------------------------------------------
@@ -816,7 +837,12 @@ int multiple_shooting_direct_variable_time(double **ymd, double *tmd,
             // Integration
             //----------------------------------------------------------------------------
             for(int i = 0; i < N; i++) yv[i] = ymdn[i][k];
-            ode78_int(ym, tm, &ode78coll, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
+            status = ode78_int(ym, tm, &ode78coll, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
+            if(status)
+            {
+                cout << fname << ". The integration in ode78_int failed. return." << endl;
+                return FTC_FAILURE;
+            }
 
             //----------------------------------------------------------------------------
             // Final position is at the end of ym
@@ -920,10 +946,19 @@ int multiple_shooting_direct_variable_time(double **ymd, double *tmd,
             break;
         }
 
+        //--------------------------------------------------------------------------------
+        // If a strong convergence is desired, check that we are always decreasing the error
+        //--------------------------------------------------------------------------------
+        if(strConv && normC_old < normC)
+        {
+            cout << fname << ". error[n+1] < error[n]. " << endl;
+            return FTC_FAILURE;
+        }
+
         //================================================================================
         //Compute the correction vector
         //================================================================================
-        int status = ftc_corrvec_mn(DQv, Fv, DF, nfv, ncs);
+        status = ftc_corrvec_mn(DQv, Fv, DF, nfv, ncs);
         if(status)
         {
             cerr << fname << ". The computation of the correction vector failed."  << endl;

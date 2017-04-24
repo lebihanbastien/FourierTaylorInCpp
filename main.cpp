@@ -94,7 +94,7 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         // Type of computation
         //--------------------------------------------------------------------------------
-        COMP_TYPE   = COMP_REF_JPL;
+        COMP_TYPE   = COMP_SINGLE_ORBIT;
 
         //--------------------------------------------------------------------------------
         // Model and libration points
@@ -473,7 +473,7 @@ int main(int argc, char** argv)
 
         //User parameters
         refSt.isFlagOn      = 1;                  // do we have steps in the procedure - asking the user to press enter to go on?
-        refSt.isPlotted     = 1;                  // do we plot the results during the computation?
+        refSt.isPlotted     = 0;                  // do we plot the results during the computation?
         refSt.isSaved       = 1;                  // do we save the results in data files?
         refSt.isFromServer  = 0;                  // does the raw data comes from server files?
         refSt.isPar         = 0;                  //is parallel computation allowed?
@@ -1041,10 +1041,10 @@ int main(int argc, char** argv)
                     if(reduced_nv == 5) st0[4] = 0.0;
                     break;
                 case 2:
-                    st0[0] = 28;//-20 ;
-                    st0[1] = 1.74347452709299;//-6.316522019280152e-03;
-                    st0[2] = 36;//-36;
-                    st0[3] = 1.74347452709299;//-1.681003648125090e-03;
+                    st0[0] = 5.93430881153360;//28;//-20 ;
+                    st0[1] = 0;//1.74347452709299;//-6.316522019280152e-03;
+                    st0[2] = -33.70990312213420;////36;//-36;
+                    st0[3] = 0;////1.74347452709299;//-1.681003648125090e-03;
                     if(reduced_nv == 5) st0[4] = 0.0;
 
                     break;
@@ -1078,8 +1078,8 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         int isFlagOn = 1;
         int isPlot   = 1;
-        double t0 = 0.96*SEML.us->T;
-        double  N = 50;
+        double t0    = 0.96*SEML.us->T;
+        double  N    = 200;
 
         //gridOrbit_si(st0, t0, t0 + N*SEML.us->T, 1e-2*SEML.us->T, isFlagOn, isPlot);
         gridOrbit_strob(st0, t0, N, isFlagOn, isPlot);

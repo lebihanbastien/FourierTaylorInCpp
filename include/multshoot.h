@@ -59,8 +59,8 @@ int multiple_shooting_gomez(double **ymd, double *tmd, double **ymdn, double *tm
  *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
  **/
 int multiple_shooting_direct(double **ymd, double *tmd, double **ymdn, double *tmdn,
-                             int N, int man_grid_size, int coord_type,
-                             int isPlotted, gnuplot_ctrl *h1, int isPar);
+                             int N, int man_grid_size, int coord_type, double prec,
+                             int isPlotted, gnuplot_ctrl *h1, int strConv);
 /**
  * \brief Multiple shooting scheme with no boundary conditions. The time vector is also variable.
  *        Contrary to multiple_shooting_gomez, no recursive scheme is used to compute the correction vector.
@@ -68,7 +68,7 @@ int multiple_shooting_direct(double **ymd, double *tmd, double **ymdn, double *t
  **/
 int multiple_shooting_direct_variable_time(double **ymd, double *tmd, double **ymdn, double *tmdn,
                                            int N, int man_grid_size, int coord_type, double prec,
-                                           int isPlotted, gnuplot_ctrl *h1, int isPar);
+                                           int isPlotted, gnuplot_ctrl *h1, int strConv);
 
 /**
  * \brief Multiple shooting scheme with no boundary conditions.

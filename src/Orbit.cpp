@@ -1118,7 +1118,7 @@ int oo_gridOrbit(double st0[], double t0, double tf, double dt)
     //------------------------------------------------------------------------------------
     //Diff Corr!
     //------------------------------------------------------------------------------------
-    multiple_shooting_direct(yc, tc, yc, tc, 42, N, new_ncd, true, h2, 0);
+    multiple_shooting_direct(yc, tc, yc, tc, 42, N, new_ncd, PREC_GSM, true, h2, 0);
 
     //------------------------------------------------------------------------------------
     //Trajectory on lines, segment by segment
