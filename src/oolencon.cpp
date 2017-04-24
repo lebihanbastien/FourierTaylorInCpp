@@ -5675,7 +5675,7 @@ int reffromcontemlisemli(RefSt& refSt)
     // Select the parameters
     //====================================================================================
     int isFirst = 1;
-    for(int k = 0; k < fsize; k+=10)
+    for(int k = 0; k < fsize; k++)
     {
         cout << "##################################" << endl;
         cout << "k = " << k  << "/" << fsize         << endl;
