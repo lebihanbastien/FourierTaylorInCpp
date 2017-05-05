@@ -186,6 +186,17 @@ echo ''
 
 
 #-----------------------------------------------------
+# Position of the poincaré section in NCEM coordinates
+# if -1, 3BSOI: about 159198km of radius around the Moon, 
+# hence 2.46761593 in NCEM coordinates about EML2
+#-----------------------------------------------------
+# At EML2
+if [ -z ${RPS+x} ]; then
+		set_param "RPS" -1
+fi
+echo "RPS       =" $RPS
+
+#-----------------------------------------------------
 # I/O Handling
 #-----------------------------------------------------
 # At EML2
@@ -414,9 +425,10 @@ if [ -z ${REFST_TYPE+x} ]; then
 	REFST_TERMINATION=$REF_COND_T    # Termination condition in the continuation with variable final time (either REF_VAR_TN/REF_VAR_TIME)
 	REFST_COORD_TYPE=$NCSEM		 # coordinates system in the refinement procedure
 
-	REFST_XPS=0.6			 # position of the poincaré section in NCSEM coordinates
+	REFST_XPS=0.7			     # position of the poincaré section in NCSEM coordinates
+	REFST_XPS_NCEM=0.8			 # position of the poincaré section in NCEM coordinates
 	REFST_ISJPL=1		         # is the JPL refinement performed when possible?
-	REFST_DJPLCOORD=-1		 # coordinate system used during the JPL refinement (if -1, it is user defined) Best results obtained with $NJ2000
+	REFST_DJPLCOORD=-1		     # coordinate system used during the JPL refinement (if -1, it is user defined) Best results obtained with $NJ2000
 	REFST_SIDIM=0		         # 0 or 2 - component of s0 that stays constant when t0 is free
 
 	# Sampling frequencies in REF_COMP (complete trajectory) in days
@@ -438,7 +450,6 @@ if [ -z ${REFST_TYPE+x} ]; then
 	#-----------------------------------------------------
 	# Filenames (used only if IO_HANDLING==$IO_BASH)
 	#-----------------------------------------------------
-	FILE_PCU="projcu.bin"
 	FILE_CONT="cont_atf.txt"
 	FILE_CONT_TRAJ="cont_atf_traj.bin"
 	FILE_JPL="cont_jpl.bin"
@@ -477,6 +488,17 @@ else
 	if [ -z ${REFST_SI_SEED_EM_LIM+x} ]; then
 		TEMP=(-40 +40 0 0 -40 +40 0 0)
 		set_param "REFST_SI_SEED_EM_LIM" TEMP[@]
+	fi
+	
+	#-----------------------------------------------------
+	# position of the poincaré section in NCSEM & NCEM coordinates
+	#-----------------------------------------------------
+	if [ -z ${REFST_XPS+x} ]; then
+		set_param "REFST_XPS" 0.7
+	fi
+	
+	if [ -z ${REFST_XPS_NCEM+x} ]; then
+		set_param "REFST_XPS_NCEM" 0.8
 	fi
 	
 
@@ -601,6 +623,7 @@ else
 	echo "REFST_MPLOT           =" $REFST_MPLOT
 	echo ''
 	echo "REFST_XPS             =" $REFST_XPS
+	echo "REFST_XPS_NCEM        =" $REFST_XPS_NCEM
 	echo "REFST_ISJPL           =" $REFST_ISJPL
 	echo "REFST_DJPLCOORD       =" $REFST_DJPLCOORD
 	echo "REFST_SIDIM           =" $REFST_SIDIM
@@ -670,7 +693,7 @@ if [ "$ans" == "y" ]; then
 	#-----------------------------------------------------------------------------
 
 	# The general parameters are common to all types of computation
-	COEFFS=($OFTS_ORDER $OFS_ORDER $COMP_TYPE $MODEL $LI_EM $LI_SEM $ISPAR $NUM_THREADS $HYP_EPSILON_EML2 $HYP_EPSILON_SEML2 $IO_HANDLING)
+	COEFFS=($OFTS_ORDER $OFS_ORDER $COMP_TYPE $MODEL $LI_EM $LI_SEM $ISPAR $NUM_THREADS $HYP_EPSILON_EML2 $HYP_EPSILON_SEML2 $RPS $IO_HANDLING)
 
 	# Then, for each type, we add some parameters
 	case $COMP_TYPE in

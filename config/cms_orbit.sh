@@ -60,6 +60,13 @@ ISPAR=0
 ISNOHUP=0
 
 #-----------------------------------------------------
+# Position of the poincaré section in NCEM coordinates
+# if -1, 3BSOI: about 159198km of radius around the Moon, 
+# hence 2.46761593 in NCEM coordinates about EML2
+#-----------------------------------------------------
+RPS=-1 
+
+#-----------------------------------------------------
 # I/O Handling
 #-----------------------------------------------------
 IO_HANDLING=$IO_BASH
@@ -71,9 +78,9 @@ IO_HANDLING=$IO_BASH
 #-----------------------------------------------------
 # Parameters that change often
 #-----------------------------------------------------
-REFST_TYPE=$REF_CONT_ORBIT            # Type of refinement - either REF_ORBIT or REF_CONT_ORBIT
-REFST_DIM=$REF_PLANAR            # Type of dimensions planar or 3d?
-REFST_T0_DES=0.0                 # Initial time - given as %T, with T the SEM period   
+REFST_TYPE=$REF_ORBIT       # Type of refinement - either REF_ORBIT or REF_CONT_ORBIT
+REFST_DIM=$REF_PLANAR       # Type of dimensions planar or 3d?
+REFST_T0_DES=0.0            # Initial time - given as %T, with T the SEM period   
 
 # Domain of search (min s1, max s1, min s2, max s2, min s3, max s3, min s4, max s4) for the first guess
 REFST_SI_CMU_EM_LIM=(-1e5 1e5 -1e5 +1e5 -1e5 +1e5 -1e5 +1e5)
@@ -81,7 +88,7 @@ REFST_SI_CMU_EM_LIM=(-1e5 1e5 -1e5 +1e5 -1e5 +1e5 -1e5 +1e5)
 REFST_ISLIMUD=0
 
 # Domain of search (min s1, max s1, min s3, max s3) for the seed of first guess
-REFST_SI_SEED_EM_LIM=(40 40 -40 +40 -40 +40 -40 +40)
+REFST_SI_SEED_EM_LIM=(10 10 -40 +40 -40 +40 -40 +40)
 
 # Maximum projection distance allowed during subselection
 REFST_PMAX_DIST_SEM=6e-4
@@ -123,9 +130,9 @@ REFST_ISFROMSERVER=0		 # does the raw data comes from server files?
 REFST_THETAMAX=180           # should be a multiple of 90°
 
 # Filenames (used only if IO_HANDLING==$IO_BASH)
-FILE_PCU="projcu_order_20_dest_L2_Orbit_10_40_eps_1e-5.bin"
-FILE_CONT="cont_atf_order_20_dest_L2_Orbit_40_CONT_LOOSE_eps_1e-5.txt"
-FILE_CONT_TRAJ="cont_atf_traj_order_20_dest_L2_Orbit_40_CONT_LOOSE_eps_1e-5.bin"
+FILE_PCU="Serv/projcu_order_20_dest_L2_Orbit_10_40_eps_1e-5.bin"
+FILE_CONT="Serv/cont_atf_order_20_dest_L2_TEST.txt"
+FILE_CONT_TRAJ="Serv/cont_atf_traj_order_20_dest_L2_TEST.bin"
 FILE_JPL="cont_jpl_orbit.bin"
 
 #-----------------------------------------------------
@@ -140,10 +147,11 @@ REFST_GRID=$REF_FIXED_GRID	 # type of grid
 REFST_TERMINATION=$REF_COND_T   # Termination condition in the continuation with variable final time (either REF_VAR_TN/REF_VAR_TIME)
 REFST_COORD_TYPE=$NCSEM		 # coordinates system in the refinement procedure
 
-REFST_XPS=0.7			 # position of the poincaré section in NCSEM coordinates
-REFST_ISJPL=1		         # is the JPL refinement performed when possible?
-REFST_DJPLCOORD=-1		 # coordinate system used during the JPL refinement (if -1, it is user defined) Best results obtained with $NJ2000
-REFST_SIDIM=0		         # 0 or 2 - component of s0 that stays constant when t0 is free
+REFST_XPS=0.65			  # position of the poincaré section in NCSEM coordinates
+REFST_XPS_NCEM=-1         # position of the poincaré section in NCEM coordinates 3BSOI: about 159198km of radius around the Moon, hence 2.46761593 in NCEM coordinates about EML2
+REFST_ISJPL=1		      # is the JPL refinement performed when possible?
+REFST_DJPLCOORD=-1		  # coordinate system used during the JPL refinement (if -1, it is user defined) Best results obtained with $NJ2000
+REFST_SIDIM=0		      # 0 or 2 - component of s0 that stays constant when t0 is free
 
 # Sampling frequencies in REF_COMP (complete trajectory) in days
 REFST_SF_EML2=2			 # orbit at EML2	
@@ -152,7 +160,7 @@ REFST_SF_SEML2=10		 # orbit at SEML2
 
 # Integration window for each orbit
 REFST_TSPAN_EM=10  		 # given as %T, where T is the SEM period, in EM units
-REFST_TSPAN_SEM=10 		 # given as %T, where T is the SEM period, in SEM units
+REFST_TSPAN_SEM=5 		 # given as %T, where T is the SEM period, in SEM units
 
 # Storing the orbits at each step?
 REFST_ISSAVED_EM=0               # 0: don't save, 1: save using projection method

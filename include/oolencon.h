@@ -40,6 +40,7 @@ struct ProjSt
     double hyp_epsilon_eml2, hyp_epsilon_seml2;
     string plot_folder;
     string FILE_CU, FILE_PCU;
+    double CENTER[3], RPS_NCEM;
 
     /**
      *  \brief Constructor for ProjSt
@@ -48,17 +49,25 @@ struct ProjSt
             int LI_START_, int LI_TARGET_,
             int IO_HANDLING_, int ISPAR_,
             double hyp_epsilon_eml2_, double hyp_epsilon_seml2_,
-            string plot_folder_):
+            double RPS, CSYS *cs):
             OFTS_ORDER(OFTS_ORDER_), LI_EM(LI_EM_), LI_SEM(LI_SEM_),
             LI_START(LI_START_), LI_TARGET(LI_TARGET_),
             IO_HANDLING(IO_HANDLING_), ISPAR(ISPAR_),
             dHd(-1.0), dt(0.001),
             hyp_epsilon_eml2(hyp_epsilon_eml2_),
             hyp_epsilon_seml2(hyp_epsilon_eml2_),
-            plot_folder(plot_folder_)
+            plot_folder(cs->F_PLOT)
     {
         // filename_output is initialized empty
         filename_output = "";
+
+        //Center
+        CENTER[0] = (cs->li == 1)? 1:-1;
+        CENTER[1] = 0; CENTER[2] = 0;
+
+        //Pk section
+        RPS_NCEM = RPS;
+        if(RPS_NCEM < 0) RPS_NCEM = cs->r3BSOI;
     }
 
     /**
@@ -647,7 +656,7 @@ int xpkemlisemli(double ye[6], double* te, double* t_traj_n, double** y_traj_n,
  *         Once the intersection is found, it is incorporated in the sequence of patch points,
  *         in place of a given point, at position newpos
  **/
-int xpkemlisemli(double ye[6], double* te, double* t_traj_n, double** y_traj_n,
+int xpk_emlis2emli(double ye[6], double* te, double* t_traj_n, double** y_traj_n,
                 int *newpos, int man_index, RefSt& refSt);
 
 /**
@@ -678,8 +687,8 @@ int reffromcontemlisemli(RefSt& refSt);
  *         (EML2 orbit + manifold leg + SEMLi orbit).
  **/
 int comprefemlisemli3d(int grid_freq_days[3], int coord_type,
-                  Orbit& orbit_EM, Orbit& orbit_SEM,
-                  RefSt& refSt, int label, int isFirst);
+                       Orbit& orbit_EM, Orbit& orbit_SEM,
+                        RefSt& refSt, int label, int isFirst);
 
 //========================================================================================
 //
@@ -792,39 +801,6 @@ int savetrajsegbyseg(double** y_traj, double* t_traj,
                      double et0,      double tsys0,
                      int coordsys1,   int coordsys2,
                      string filename, int label, bool isFirst);
-
-
-
-/**
- *  \brief Get the length the results of the continuation procedure, in txt file.
- **/
-int getLengthCONT_txt(string filename);
-
-/**
- *  \brief Reads the results of the continuation procedure, in txt file.
- **/
-int readCONT_txt(double*  t0_CMU_EM, double*   tf_CMU_EM,
-                 double** si_CMU_EM, double** si_CMS_SEM,
-                 double** z0_CMU_NCEM, double** z0_CMS_NCSEM,
-                 double* tethae, double** ye_NCSEM,
-                 double* H0_NCEM, double* He_NCEM,
-                 double* H0_NCSEM, double* He_NCSEM,
-                 int fsize, string filename);
-
-/**
- *  \brief Save a given solution as a complete trajectory
- **/
-int writeCONT_bin(RefSt& refSt, string filename_traj, int dcs, int coord_type,
-                   double** y_traj_n, double* t_traj_n, int man_index, int mPlot,
-                   Orbit &orbit_EM, Orbit &orbit_SEM, int label,
-                   bool isFirst, int comp_orb_eml, int comp_orb_seml);
-
-/**
- *  \brief Save a given solution as a complete trajectory
- **/
-int writeCONT_bin(RefSt& refSt, string filename_traj, double** y_traj_n, double* t_traj_n, int man_index,
-                  Orbit& orbit_EM, Orbit& orbit_SEM, bool isFirst, int comp_orb_eml, int comp_orb_seml,
-                  ProjResClass& projRes, int k);
 
 
 /**

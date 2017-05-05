@@ -171,6 +171,7 @@ struct CSYS
     int pmType;     //associated parameterization of manifold
     int model;      //associated model
     int fwrk;       //associated fwrk
+    double r3BSOI;  //radius of the 3B sphere of influence
 
     //Arrays
     double *coeffs; //Default set of vector field coefficients

@@ -1270,3 +1270,228 @@ int multiple_shooting_direct_deps(double **ymd, double *tmd,
 }
 
 
+/**
+ * \brief Multiple shooting scheme with boundary conditions at the origin (makes the system square)
+ *        Contrary to multiple_shooting_gomez,
+ *        no recursive scheme is used to compute the correction vector.
+ **/
+int multiple_shooting_direct_square(double **ymd, double *tmd,
+                                    double **ymdn, double *tmdn,
+                                    int N, int mgs, int coord_type, double prec,
+                                    int isPlotted, gnuplot_ctrl *h1, int strConv)
+{
+    //====================================================================================
+    // 1. Initialization
+    //====================================================================================
+    //Name of the routine
+    string fname = "multiple_shooting_direct_square";
+
+    //Cumulated norm of the error
+    double normC = 0.0, normC_old = 1e5;
+    int status = FTC_SUCCESS;
+
+    //------------------------------------------------------------------------------------
+    //Get the default coordinates system from the coord_type
+    //------------------------------------------------------------------------------------
+    int dcs = default_coordinate_system(coord_type);
+    if(dcs == FTC_FAILURE){
+        cerr << fname << ". The selection of dcs failed." << endl;
+        return FTC_FAILURE;
+    }
+
+    //------------------------------------------------------------------------------------
+    // Get the correct integration routine
+    //------------------------------------------------------------------------------------
+    //by default, to avoid gcc warning
+    int (*ode78_int)(double**, double*, int*, double, double, const double*y, int, int, int, int, int) = ode78;
+
+    //------------------------------------------------------------------------------------
+    // GSL matrices and vectors
+    //------------------------------------------------------------------------------------
+    int nfv = 6*mgs;  //free variables
+    int ncs = 6*mgs;  //constraints
+
+    // Correction vector at patch points
+    gsl_vector *DQv = gsl_vector_calloc(nfv);
+    // Error vector at patch points
+    gsl_vector *Fv  = gsl_vector_calloc(ncs);
+    //Jacobian at patch points
+    gsl_matrix **Ji  = gslc_matrix_array_calloc(6, 6, mgs);
+    gsl_matrix *DF   = gsl_matrix_calloc(ncs, nfv);
+    gsl_matrix *M    = gsl_matrix_calloc(ncs, ncs);
+
+    //Identity matrix eye(6)
+    gsl_matrix *Id = gsl_matrix_calloc(6,6);
+    gsl_matrix_set_identity (Id);
+
+    //Intermediate variables
+    gsl_vector *K3  = gsl_vector_calloc(ncs);
+
+    //------------------------------------------------------------------------------------
+    // Copy the departure state in ymdn
+    //------------------------------------------------------------------------------------
+    for(int k = 0; k <= mgs; k++)
+    {
+        for(int i = 0; i < N; i++) ymdn[i][k] = ymd[i][k];
+        tmdn[k] = tmd[k];
+    }
+
+    //====================================================================================
+    // 2. Loop correction
+    //====================================================================================
+    //Maximum number of iterations is retrieved from config manager
+    int itermax = Config::configManager().G_DC_ITERMAX();
+    int iter = 0;
+    while(iter < itermax)
+    {
+        //--------------------------------------------------------------------------------
+        //Trajectory plot
+        //--------------------------------------------------------------------------------
+        gnuplot_plot_X(isPlotted, h1, ymdn, mgs+1, (char*)"", "points", "1", "4", 4);
+
+        //--------------------------------------------------------------------------------
+        // Build the Jacobian and other useful matrices
+        //--------------------------------------------------------------------------------
+        //#pragma omp parallel for if(isPar)
+        for(int k = 0; k <= mgs-1; k++)
+        {
+            //----------------------------------------------------------------------------
+            // Initialization for // computing
+            //----------------------------------------------------------------------------
+            int ode78coll;
+            double yv[N], ye[N];
+            //Current state along the trajectory
+            double **ym  = dmatrix(0, 41, 0, mgs);
+            //Current time along the trajectory
+            double *tm   = dvector(0, mgs);
+
+            //----------------------------------------------------------------------------
+            // Integration
+            //----------------------------------------------------------------------------
+            for(int i = 0; i < N; i++) yv[i] = ymdn[i][k];
+            status = ode78_int(ym, tm, &ode78coll, tmdn[k], tmdn[k+1], yv, 42, 1, dcs, coord_type, coord_type);
+            if(status)
+            {
+                cout << fname << ". The integration in ode78_int failed. return." << endl;
+                return FTC_FAILURE;
+            }
+
+            //----------------------------------------------------------------------------
+            // Final position is at the end of ym
+            //----------------------------------------------------------------------------
+            for(int i = 0; i < N; i++) ye[i] = ym[i][1];
+
+            //----------------------------------------------------------------------------
+            // Update the Jacobian
+            //----------------------------------------------------------------------------
+            gslc_vectorToMatrix(Ji[k], ye, 6, 6, 6);
+
+            //----------------------------------------------------------------------------
+            // Update the error vector: F[k] = [ye[k] - ymdn[k+1]]
+            //----------------------------------------------------------------------------
+            for(int i = 0; i < 6; i++)
+            {
+                gsl_vector_set(Fv, 6*k+i, ye[i] - ymdn[i][k+1]);
+            }
+
+            //----------------------------------------------------------------------------
+            // Update DF
+            //----------------------------------------------------------------------------
+            if(k > 0)
+            {
+                for(int i = 0; i < 6; i++)
+                {
+                    for(int j = 0; j < 6; j++)
+                    {
+                        gsl_matrix_set(DF, i + 6*k, j + 6*(k-1), gsl_matrix_get(Ji[k], i, j));
+                        gsl_matrix_set(DF, i + 6*k, j + 6*k,    -gsl_matrix_get(Id, i, j));
+                    }
+                }
+            }
+            else
+            {
+                for(int i = 0; i < 6; i++)
+                {
+                    for(int j = 0; j < 6; j++)
+                    {
+                        gsl_matrix_set(DF, i + 6*k, j + 6*k,    -gsl_matrix_get(Id, i, j));
+                    }
+                }
+            }
+
+            //----------------------------------------------------------------------------
+            //Free
+            //----------------------------------------------------------------------------
+            free_dmatrix(ym, 0, 41, 0, mgs);
+            free_dvector(tm, 0, mgs);
+        }
+
+
+        //================================================================================
+        //Termination condition: if the desired precision is met,
+        //the process is terminated.
+        //================================================================================
+        normC  = gsl_blas_dnrm2(Fv);
+
+        //--------------------------------------------------------------------------------
+        // Check that all points are under a given threshold
+        //--------------------------------------------------------------------------------
+        cout << fname << ". n° " << iter+1 << "/" << itermax << ". nerror = " << normC << endl;
+        if(normC < prec)
+        {
+            cout << fname << ". Desired precision was reached. " << endl; cout << "nerror = " << normC << endl;
+            break;
+        }
+
+        //--------------------------------------------------------------------------------
+        // If a strong convergence is desired, check that we are always decreasing the error
+        //--------------------------------------------------------------------------------
+        if(strConv && normC_old < normC)
+        {
+            cout << fname << ". error[n+1] < error[n]. " << endl;
+            return FTC_FAILURE;
+        }
+
+        //================================================================================
+        //Compute the correction vector
+        //================================================================================
+        status = ftc_corrvec_mn(DQv, Fv, DF, nfv, ncs);
+        //status = ftc_corrvec_square(DQv, Fv, DF, ncs);
+        if(status)
+        {
+            cerr << fname << ". The computation of the correction vector failed."  << endl;
+            return FTC_FAILURE;
+        }
+
+        //================================================================================
+        // Update the free variables
+        //================================================================================
+        double factor;
+        if(dcs == I_ECLI) factor = 1.0;
+        else factor = 1.0;
+
+        for(int k = 1; k <= mgs; k++)
+        {
+            for(int i = 0; i < 6; i++) ymdn[i][k] += factor*gsl_vector_get(DQv, 6*(k-1)+i);
+        }
+
+        //----------------------------------------------------------------------
+        // Update number of iterations
+        //----------------------------------------------------------------------
+        iter++;
+    }
+
+    //====================================================================================
+    // Free
+    //====================================================================================
+    gslc_matrix_array_free(Ji , mgs);
+    gsl_vector_free(DQv);
+    gsl_vector_free(Fv);
+    gsl_vector_free(K3);
+    gsl_matrix_free(DF);
+    gsl_matrix_free(M);
+    gsl_matrix_free(Id);
+
+
+    return FTC_SUCCESS;
+}

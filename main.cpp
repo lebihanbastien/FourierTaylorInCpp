@@ -75,7 +75,7 @@ int main(int argc, char** argv)
     //====================================================================================
     // General parameters (orders, etc)
     int COMP_TYPE, NUM_THREADS, MODEL_TYPE, LI_EM, LI_SEM, ISPAR, IO_HANDLING;
-    double HYP_EPSILON_EML2, HYP_EPSILON_SEML2;
+    double RPS, HYP_EPSILON_EML2, HYP_EPSILON_SEML2;
 
     //------------------------------------------------------------------------------------
     // The variable index contains the index of the current argument of
@@ -123,6 +123,13 @@ int main(int argc, char** argv)
         HYP_EPSILON_SEML2 = HYP_EPSILON_SEML2_DEFAULT;
 
         //--------------------------------------------------------------------------------
+        // Position of the poincaré section in NCEM coordinates
+        // if -1, 3BSOI: about 159198km of radius around the Moon,
+        // hence 2.46761593 in NCEM coordinates about EML2
+        //--------------------------------------------------------------------------------
+        RPS = -1;
+
+        //--------------------------------------------------------------------------------
         // I/O handling
         //--------------------------------------------------------------------------------
         IO_HANDLING = IO_DEFAULT;
@@ -158,6 +165,13 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         HYP_EPSILON_EML2  = atof(argv[index++]);
         HYP_EPSILON_SEML2 = atof(argv[index++]);
+
+        //--------------------------------------------------------------------------------
+        // Position of the poincaré section in NCEM coordinates
+        // if -1, 3BSOI: about 159198km of radius around the Moon,
+        // hence 2.46761593 in NCEM coordinates about EML2
+        //--------------------------------------------------------------------------------
+        RPS = atof(argv[index++]);
 
         //--------------------------------------------------------------------------------
         // I/O handling
@@ -315,14 +329,20 @@ int main(int argc, char** argv)
     //====================================================================================
 
     //------------------------------------------------------------------------------------
+    // Position of the poincaré section in NCEM coordinates
+    // if -1, 3BSOI: about 159198km of radius around the Moon,
+    // hence 2.46761593 in NCEM coordinates about EML2
+    //------------------------------------------------------------------------------------
+    if(RPS < 0) RPS = SEML.cs->r3BSOI;
+
+    //------------------------------------------------------------------------------------
     // Structures
     //------------------------------------------------------------------------------------
     // Projection parameters (in structure)
     ProjSt projSt(OFTS_ORDER, LI_EM, LI_SEM, LI_START, LI_TARGET, IO_HANDLING, ISPAR,
-                  HYP_EPSILON_EML2_DEFAULT, HYP_EPSILON_SEML2_DEFAULT, SEML.cs->F_PLOT);
+                  HYP_EPSILON_EML2_DEFAULT, HYP_EPSILON_SEML2_DEFAULT, RPS, SEML.cs);
     // Refinement parameters (in structure)
-    RefSt refSt(OFTS_ORDER, LI_EM, LI_SEM, LI_START, LI_TARGET, IO_HANDLING, SEML.cs->F_PLOT);
-
+    RefSt refSt(OFTS_ORDER, LI_EM, LI_SEM, LI_START, LI_TARGET, IO_HANDLING, RPS, SEML.cs);
 
     //------------------------------------------------------------------------------------
     //Check if arguments have been passed
@@ -499,7 +519,7 @@ int main(int argc, char** argv)
         refSt.dsmax         = 1e-1;                       //with fixed time
         refSt.dsmax_vt      = 1e-1;                       //with variable time
 
-        refSt.xps           = (LI_SEM == 1)? +0.7:-0.7; // position of the poincaré section in NCSEM coordinates
+        refSt.xps_NCSEM     = (LI_SEM == 1)? +0.7:-0.7; // position of the poincaré section in NCSEM coordinates
         refSt.isJPL         = 1;                        // is the JPL refinement performed when possible?
         refSt.djplcoord     = NJ2000;                   // coordinate system used during the JPL refinement (if -1, it is user defined) Best results obtained with NJ2000
         refSt.sidim         = 0;                        // 0 or 2 - component of s0 that stays constant when t0 is free
@@ -720,8 +740,10 @@ int main(int argc, char** argv)
             refSt.dsmax         = 10;                   //with fixed time
             refSt.dsmax_vt      = 10;                   //with variable time
 
-            refSt.xps           = atof(argv[index++]);  // position of the poincaré section in NCSEM coordinates
-            refSt.xps *= (LI_SEM == 1)? +1:-1;
+            // position of the poincaré section in NCSEM coordinates
+            refSt.xps_NCSEM     = atof(argv[index++]);
+            refSt.xps_NCSEM    *= (LI_SEM == 1)? +1:-1;
+
             refSt.isJPL         = atoi(argv[index++]);  // is the JPL refinement performed when possible?
             refSt.djplcoord     = atoi(argv[index++]);  // coordinate system used during the JPL refinement (if -1, it is user defined) Best results obtained with NJ2000
             refSt.sidim         = atoi(argv[index++]);  // 0 or 2 - component of s0 that stays constant when t0 is free
@@ -1041,9 +1063,9 @@ int main(int argc, char** argv)
                     if(reduced_nv == 5) st0[4] = 0.0;
                     break;
                 case 2:
-                    st0[0] = 5.93430881153360;//28;//-20 ;
+                    st0[0] = 6.99128234571013 ;//5.93430881153360;//28;//-20 ;
                     st0[1] = 0;//1.74347452709299;//-6.316522019280152e-03;
-                    st0[2] = -33.70990312213420;////36;//-36;
+                    st0[2] = -15.90071267144652;//-33.70990312213420;////36;//-36;
                     st0[3] = 0;////1.74347452709299;//-1.681003648125090e-03;
                     if(reduced_nv == 5) st0[4] = 0.0;
 
@@ -1079,7 +1101,7 @@ int main(int argc, char** argv)
         int isFlagOn = 1;
         int isPlot   = 1;
         double t0    = 0.96*SEML.us->T;
-        double  N    = 200;
+        double  N    = 90;
 
         //gridOrbit_si(st0, t0, t0 + N*SEML.us->T, 1e-2*SEML.us->T, isFlagOn, isPlot);
         gridOrbit_strob(st0, t0, N, isFlagOn, isPlot);

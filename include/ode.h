@@ -147,6 +147,7 @@ int custom_odezero_2(double y[],
                      OdeStruct *ode_s,
                      struct value_function fvalue);
 
+double radius_intersection(double t, double yv[], void *params);
 double linear_intersection(double t, double yv[], void *params);
 double angle_intersection(double t, double yv[], void *params);
 double null_flight_path_angle(double t, double yv[], void *params);

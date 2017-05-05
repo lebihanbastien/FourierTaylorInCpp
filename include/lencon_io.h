@@ -211,7 +211,8 @@ struct RefSt
     double dsmax;           //with fixed time
     double dsmax_vt;        //with variable time
 
-    double xps;           //position of the poincaré section in NCSEM coordinates
+    double xps_NCSEM;     //position of the poincaré section in NCSEM coordinates
+    double xps_NCEM;      //position of the poincaré section in NCEM coordinates
     int isJPL;            //is the JPL refinement performed when possible?
     int djplcoord;        //coordinate system used during the JPL refinement (if -1, it is user defined) Best results obtained with $NJ2000
     int sidim;            //0 or 2 - component of s0 that stays constant when t0 is free.
@@ -246,6 +247,9 @@ struct RefSt
     //Inner precision for differential correction procedures
     double inner_prec;
 
+    //Center
+    double center[3];
+
     //------------------------------------------------------------------------------------
     //Additional variables for specific differential correctors:
     // - goodvector is used to add the pseudo-arclength constraint
@@ -261,14 +265,22 @@ struct RefSt
     //------------------------------------------------------------------------------------
     //RefSt():pmax_dist_SEM(1e-3) {};
     RefSt(int OFTS_ORDER_, int LI_EM_, int LI_SEM_,
-          int LI_START_, int LI_TARGET_, int IO_HANDLING_, string plot_folder_):
+          int LI_START_, int LI_TARGET_, int IO_HANDLING_, double RPS, CSYS *cs):
           OFTS_ORDER(OFTS_ORDER_), LI_EM(LI_EM_), LI_SEM(LI_SEM_),
           LI_START(LI_START_), LI_TARGET(LI_TARGET_), IO_HANDLING(IO_HANDLING_),
-          plot_folder(plot_folder_),
+          plot_folder(cs->F_PLOT),
           isCollisionOn(1), pmax_dist_SEM(1e5), last_error(0.0), inner_prec(5e-8)
     {
         for(int i = 0; i <4; i++) si_SEED_EM_MIN[i] = -50;
         for(int i = 0; i <4; i++) si_SEED_EM_MAX[i] = +50;
+
+        //Center
+        center[0] = (cs->li == 1)? 1:-1;
+        center[1] = 0; center[2] = 0;
+
+        //Pk section
+        xps_NCEM = RPS;
+        if(xps_NCEM < 0) xps_NCEM = SEML.cs->r3BSOI;
     };
 
     /**
@@ -331,6 +343,12 @@ struct ProjResSt
     double min_proj_dist_SEM_o;
     double crossings_NCSEM_o;
     int collision_NCEM_o;
+
+    //------------------------------------------------------------------------------------
+    // At the EML2 Pk section
+    //------------------------------------------------------------------------------------
+    double ye_NCEM[6], te_NCEM, ye_NCSEM[6], te_NCSEM;
+    double ve_NCEM[3], ve_NCSEM[3];
 
     //------------------------------------------------------------------------------------
     //Constructor, wrt NC_COORD
@@ -789,13 +807,49 @@ void displayCompletion(string funcname, double percent);
 /**
  *   \brief Storing the results of the continuation procedure, in txt file.
  **/
-void writeCONT_txt(string filename, Orbit& orbit_EM, Orbit& orbit_SEM,
-                   double te_NCSEM, double* ye_NCSEM, ProjResClass& projRes, int isFirst,  int k);
+void write_ref_conn_txt(string filename, Orbit& orbit_EM, Orbit& orbit_SEM,
+                        double te_NCSEM, double* ye_NCSEM,
+                        double te_NCEM, double* ye_NCEM,
+                        double ve_NCEM[3], double ve_NCSEM[3],
+                        ProjResClass& projRes, int isFirst,  int k);
 
 /**
  *   \brief Storing the results of the continuation procedure, in txt file.
  **/
 void writeCONT_txt(int label, string filename, Orbit& orbit_EM, Orbit& orbit_SEM,
                    double te_NCSEM, double* ye_NCSEM,  int isFirst);
+
+                   /**
+ *  \brief Get the length the results of the continuation procedure, in txt file.
+ **/
+int getLengthCONT_txt(string filename);
+
+/**
+ *  \brief Reads the results of the continuation procedure, in txt file.
+ **/
+int readCONT_txt(double*  t0_CMU_EM, double*   tf_CMU_EM,
+                 double** si_CMU_EM, double** si_CMS_SEM,
+                 double** z0_CMU_NCEM, double** z0_CMS_NCSEM,
+                 double* tethae, double** ye_NCSEM,
+                 double* H0_NCEM, double* He_NCEM,
+                 double* H0_NCSEM, double* He_NCSEM,
+                 int fsize, string filename);
+
+/**
+ *  \brief Save a given solution as a complete trajectory
+ **/
+int writeCONT_bin(RefSt& refSt, string filename_traj, int dcs, int coord_type,
+                   double** y_traj_n, double* t_traj_n, int man_index, int mPlot,
+                   Orbit &orbit_EM, Orbit &orbit_SEM, int label,
+                   bool isFirst, int comp_orb_eml, int comp_orb_seml);
+
+/**
+ *  \brief Save a given solution as a complete trajectory
+ **/
+int writeCONT_ORBIT_bin(RefSt& refSt, string filename_traj, double** y_traj_n, double* t_traj_n, int man_index,
+                  Orbit& orbit_EM, Orbit& orbit_SEM, bool isFirst, int comp_orb_eml, int comp_orb_seml,
+                  ProjResClass& projRes, int k);
+
+
 
 #endif // SINGLE_ORBIT_IO_H_INCLUDED

@@ -1087,6 +1087,123 @@ int compute_grid_CMU_EM_dH(double dist_to_cm, ProjSt& projSt)
     return FTC_SUCCESS;
 }
 
+
+/**
+ *  \brief Find the intersection of a EML2-SEMLi connection contained in
+ *         y_traj_n/t_traj_n with a certain Pk section defined by refSt.
+ **/
+int pk_ref_conn(double ye_NCEM[6], double* te_NCEM,
+                double ye_NCSEM[6], double* te_NCSEM,
+                double ve_NCEM[3], double ve_NCSEM[3],
+                double* t_traj_NCSEM, double** y_traj_NCSEM,
+                int man_index, double pk_center[3], double pk_radius)
+{
+    double yv[42];
+
+    //====================================================================================
+    // Section in NCEM coordinates: the distance to the pk_center is equal
+    // to pk_radius
+    //====================================================================================
+    struct value_params val_par;
+    val_par.max_events = 1;
+    val_par.direction  = 0;
+    val_par.dim        = 0;
+    val_par.value      = pk_radius;
+    val_par.center     = pk_center;
+    val_par.type       = 'R';
+
+    //------------------------------------------------------------------------------------
+    //To NCEM coordinates
+    //------------------------------------------------------------------------------------
+    double** y_traj_NCEM = dmatrix(0, 5, 0, man_index);
+    double* t_traj_NCEM  = dvector(0, man_index);
+    qbcp_coc_vec(y_traj_NCSEM, t_traj_NCSEM, y_traj_NCEM, t_traj_NCEM, man_index, NCSEM, NCEM);
+
+    //====================================================================================
+    //Find, from the beginning, the couple of patch points before and after the PS
+    //====================================================================================
+    double y1[3], y2[3], cond1, cond2;
+    int k1 = 0, k2 = 1;
+    bool test = false;
+    do
+    {
+        k1++;
+        k2++;
+
+        //Update the configuration states
+        for(int i = 0; i <3; i++) y1[i] = y_traj_NCEM[i][k1];
+        for(int i = 0; i <3; i++) y2[i] = y_traj_NCEM[i][k2];
+
+        //Get the event condition for both states
+        cond1 = radius_intersection(t_traj_NCEM[k1], y1, &val_par);
+        cond2 = radius_intersection(t_traj_NCEM[k2], y2, &val_par);
+
+        //Test if the condition has been crossed
+        test = (cond1 * cond2 < 0);
+    }
+    while(!test && k1 < man_index);
+
+
+    //====================================================================================
+    //If a solution has been found:
+    //====================================================================================
+    if(test && k1 < man_index)
+    {
+        //================================================================================
+        //2. Integrate until the distance to the smallest primary is equal
+        //   to fabs(refSt.xps)
+        //================================================================================
+        double** yv_NCEM = dmatrix(0, 5, 0, 1);
+        double* tv_NCEM  = dvector(0, 1);
+
+        //Get the default coordinates system from the coord_type
+        int dcs_NCEM  = default_coordinate_system(NCEM);
+
+        //================================================================================
+        //3. After this step: ye_NCSEM[*][0] & te_NCSEM[0] contains the intersection
+        //================================================================================
+        int ode78coll;
+        for(int i = 0; i < 6; i++) yv[i] = y_traj_NCEM[i][k1];
+        ode78_qbcp_event(yv_NCEM, tv_NCEM, &ode78coll, t_traj_NCEM[k1], t_traj_NCEM[k2], yv, 6, dcs_NCEM, NCEM, NCEM, &val_par);
+
+        //================================================================================
+        //4. Store
+        //================================================================================
+        *te_NCEM = tv_NCEM[0];
+        for(int i = 0; i < 6; i++) ye_NCEM[i] = yv_NCEM[i][0];
+
+        //================================================================================
+        //5. Free
+        //================================================================================
+        free_dmatrix(yv_NCEM, 0, 5, 0, 1);
+        free_dvector(tv_NCEM, 0, 1);
+
+    }
+    else
+    {
+        *te_NCEM = -1;
+        for(int i = 0; i < 6; i++) ye_NCEM[i] = 0.0;
+    }
+
+
+    //====================================================================================
+    // Section in NCSEM coordinates
+    //====================================================================================
+    qbcp_coc(*te_NCEM, ye_NCEM, ye_NCSEM, te_NCSEM, NCEM, NCSEM);
+
+    //====================================================================================
+    // Velocities in NCEM/NCSEM coordinates
+    //====================================================================================
+    qbcp_coc(*te_NCEM, ye_NCEM, yv, NCEM, VNCEM);
+    for(int k = 0; k < 3; k++) ve_NCEM[k] = yv[k+3];
+
+    qbcp_coc(*te_NCSEM, ye_NCSEM, yv, NCSEM, VNCSEM);
+    for(int k = 0; k < 3; k++) ve_NCSEM[k] = yv[k+3];
+
+    return FTC_SUCCESS;
+}
+
+
 //========================================================================================
 //
 //         Projection on the CM/CMS/CMU of SEMLi
@@ -1305,6 +1422,17 @@ int proj_subroutine(ProjResSt& projResSt, Invman& invman_target, ProjSt& projSt)
             // Free temporary objects
             free_dmatrix(y_purge, 0, 5, 0, 2);
             free_dvector(t_purge, 0, 2);
+        }
+
+        //--------------------------------------------------------------------------------
+        // We check for the crossing of the Pk section @EMLi,
+        // if it is an EML to SEML connection
+        //--------------------------------------------------------------------------------
+        if(min_proj_dist_DP < ePdef && projResSt.IC_COORD ==  NCEM)
+        {
+            pk_ref_conn(projResSt.ye_NCEM, &projResSt.te_NCEM, projResSt.ye_NCSEM, &projResSt.te_NCSEM,
+                        projResSt.ve_NCEM, projResSt.ve_NCSEM, t_man_PR, y_man_PR, projSt.MSIZE,
+                        projSt.CENTER, projSt.RPS_NCEM);
         }
 
         //--------------------------------------------------------------------------------
@@ -3638,6 +3766,149 @@ int refemlisemli(RefSt& refSt)
 
 
 /**
+ *  \brief Save a given solution as a complete trajectory
+ **/
+int refine_eml2seml2(RefSt& refSt, string filename_traj, double** y_traj_n, double* t_traj_n,
+                     int man_index, int nseml2_max, Orbit& orbit_EM, Orbit& orbit_SEM, bool isFirst,
+                     int comp_orb_seml, ProjResClass& projRes, int k)
+{
+    string fname = "refine_eml2seml2";
+    //====================================================================================
+    //Framework
+    //====================================================================================
+    int coord_type    = refSt.coord_type;
+    //int dcs           = default_coordinate_system(coord_type);
+
+    //------------------------------------------------------------------------------------
+    //Gnuplot window
+    //------------------------------------------------------------------------------------
+    gnuplot_ctrl* h0;
+    h0 = gnuplot_init(refSt.isPlotted);
+
+    //------------------------------------------------------------------------------------
+    //Notable points in SEM system
+    //------------------------------------------------------------------------------------
+    notablePoints_sem(h0, coord_type, refSt.isPlotted);
+
+    //====================================================================================
+    //Save all points from the manifold leg
+    //====================================================================================
+    int ntot_max = man_index + nseml2_max;
+    int ntot = ntot_max;
+    double** ymc_NCSEM = dmatrix(0, 41, 0, ntot);
+    double*  tmc_SEM   = dvector(0, ntot);
+
+    for(int k = 0; k <= man_index; k++)
+    {
+        for(int i = 0; i < 6; i++) ymc_NCSEM[i][k] = y_traj_n[i][k];
+        tmc_SEM[k] = t_traj_n[k];
+    }
+
+    //====================================================================================
+    // Compute the final orbit and store in ymc_NCSEM/tmc_NCSEM
+    //====================================================================================
+    //------------------------------------------------------------------------------------
+    // Initialize
+    //------------------------------------------------------------------------------------
+    int nseml2 = nseml2_max;
+    double** yorb_NCSEM = dmatrix(0, 5, 0, nseml2_max);
+    double*  torb_SEM   = dvector(0, nseml2_max);
+
+    //Save unstable value
+    //double s5 = orbit_SEM.getSi(4);
+
+    //Reset the unstable direction
+    //orbit_SEM.setSi(0, 4);
+
+    //Set the final time
+    orbit_SEM.setTf(orbit_SEM.getT0()+refSt.tspan_SEM);
+
+    //Update the initial state in the orbit, with the RCM coordinates
+    orbit_SEM.update_ic(orbit_SEM.getSi(), orbit_SEM.getT0());
+
+    //--------------------------------------------------------------------------------
+    // Switch on the integration method, in comp_orb_seml
+    //--------------------------------------------------------------------------------
+    switch(comp_orb_seml)
+    {
+    case 1: //computation using projection method
+    {
+        cout << fname << ". computing the SEMLi orbit using projection method... " << endl;
+        //----------------------------------------------------------------------------
+        //Integration on oPlot+1 fixed grid
+        //----------------------------------------------------------------------------
+        int output = orbit_SEM.traj_int_grid(orbit_SEM.getTf(), yorb_NCSEM, torb_SEM, nseml2, 1);
+
+        //If output is strictly greater than 0, then the projection procedure inside
+        //the integration went wrong, and the new indix is output.
+        //It output == ORBIT_EPROJ, the projection procedure failed so bad that there
+        //is no point stored in the data, except the first one, and the new indix is zero
+        if(output == ORBIT_EPROJ) nseml2 = 0;
+        else if(output > 0) nseml2 = output;
+        break;
+    }
+    case 2: //computation using reduced coordinates
+    {
+        cout << fname << ". computing the SEMLi orbit using reduced vector field... " << endl;
+        //----------------------------------------------------------------------------
+        //Integration on oPlot+1 fixed grid
+        //----------------------------------------------------------------------------
+        orbit_SEM.traj_red_grid(orbit_SEM.getTf(), yorb_NCSEM, torb_SEM, nseml2);
+        break;
+    }
+    }
+
+    //------------------------------------------------------------------------------------
+    //Update the number of points
+    //------------------------------------------------------------------------------------
+    ntot = man_index + nseml2;
+
+    //------------------------------------------------------------------------------------
+    //Save all BUT the first point
+    //------------------------------------------------------------------------------------
+    if(nseml2 > 0)
+    {
+        for(int k = 1; k <= nseml2; k++)
+        {
+            for(int i = 0; i <6; i++) ymc_NCSEM[i][k+man_index] = yorb_NCSEM[i][k];
+            tmc_SEM[k+man_index] = torb_SEM[k];
+        }
+    }
+
+    //------------------------------------------------------------------------------------
+    //Free variables
+    //------------------------------------------------------------------------------------
+    free_dmatrix(yorb_NCSEM, 0, 5, 0, nseml2_max);
+    free_dvector(torb_SEM, 0, nseml2_max);
+
+    //------------------------------------------------------------------------------------
+    //Plot
+    //------------------------------------------------------------------------------------
+    gnuplot_plot_X(refSt.isPlotted, h0, ymc_NCSEM, ntot+1, (char*)"", "points", "1", "4", 4);
+    pressEnter(true);
+
+    //====================================================================================
+    // Correction
+    //====================================================================================
+    multiple_shooting_direct_square(ymc_NCSEM, tmc_SEM, ymc_NCSEM, tmc_SEM, 42, ntot, coord_type, PREC_GSM, 0, h0, 0);
+    gnuplot_plot_X(refSt.isPlotted, h0, ymc_NCSEM, ntot+1, (char*)"", "points", "1", "4", 5);
+    pressEnter(true);
+
+
+    //====================================================================================
+    // Free
+    //====================================================================================
+    free_dmatrix(ymc_NCSEM, 0, 41, 0, ntot);
+    free_dvector(tmc_SEM, 0, ntot);
+
+    return FTC_SUCCESS;
+}
+
+
+
+
+
+/**
  *  \brief Computes the best trajectories from int_proj_ORBIT_EM_on_CM_SEM.
  *         A multiple_shooting_direct is applied on the MANIFOLD trajectory (manifold leg).
  *         The initial conditions vary in the paramerization of the CMU of i.
@@ -3763,6 +4034,11 @@ int sorefemlisemli(RefSt& refSt)
     orbit_SEM.update_ic(st_SEM, t0_SEM);
 
     //------------------------------------------------------------------------------------
+    // Set loose projection distance @ SEML2
+    //------------------------------------------------------------------------------------
+    orbit_SEM.setEPmaxx(1e-2);
+
+    //------------------------------------------------------------------------------------
     // Time and state vectors (twice the size)
     //------------------------------------------------------------------------------------
     double** y_traj  = dmatrix(0, 41, 0, 2*man_grid_size);
@@ -3834,22 +4110,36 @@ int sorefemlisemli(RefSt& refSt)
             //----------------------------------------------------------------------------
             // Find the intersection with a certain Poincaré Section (PS)
             //----------------------------------------------------------------------------
-            double ye[6], te = 0.0;
-            xpkemlisemli(ye, &te, t_traj, y_traj, man_grid_size, refSt);
+            double ye_NCSEM[6], te_NCSEM = 0.0;
+            double ye_NCEM[6], te_NCEM = 0.0;
+            double ve_NCEM[3], ve_NCSEM[3];
+
+            //xpkemlisemli(ye_NCSEM, &te_NCSEM, t_traj, y_traj, man_grid_size, refSt);
+
+            pk_ref_conn(ye_NCEM, &te_NCEM, ye_NCSEM, &te_NCSEM,
+                        ve_NCEM, ve_NCSEM, t_traj, y_traj, man_grid_size,
+                        refSt.center, refSt.xps_NCEM);
+
+            //----------------------------------------------------------------------------
+            // Refinement
+            //----------------------------------------------------------------------------
+            //refine_eml2seml2(refSt, filename_traj,  y_traj, t_traj, man_grid_size, 10, orbit_EM, orbit_SEM, isfirst, 2, projRes, k);
 
             //----------------------------------------------------------------------------
             // Saving
             //----------------------------------------------------------------------------
             // Only the txt results
-            writeCONT_txt(filename, orbit_EM, orbit_SEM, te, ye, projRes, isfirst,  k);
+            write_ref_conn_txt(filename, orbit_EM, orbit_SEM, te_NCSEM, ye_NCSEM,
+                               te_NCEM, ye_NCEM, ve_NCEM, ve_NCSEM, projRes, isfirst,  k);
+
             // Entire trajectory
-            writeCONT_bin(refSt, filename_traj, y_traj, t_traj, man_grid_size,
-                          orbit_EM, orbit_SEM, isfirst, 0, 0, projRes, k);
+            writeCONT_ORBIT_bin(refSt, filename_traj, y_traj, t_traj, man_grid_size,
+                                orbit_EM, orbit_SEM, isfirst, 0, 0, projRes, k);
             isfirst = 0;
         }
         else
         {
-            cout << "PRECISION NOT GOOD ENOUGH" << endl;
+            cout << "sorefemlisemli. convergence was not achieved." << endl;
         }
 
         //--------------------------------------------------------------------------------
@@ -3868,6 +4158,8 @@ int sorefemlisemli(RefSt& refSt)
 //         Refinement of solutions: CMU to CMS - subroutines
 //
 //========================================================================================
+
+
 /**
  *  \brief Continuation of a single of EML2-to-SEMLi connection, between orbit_EM and
  *         orbit_SEM.
@@ -5423,8 +5715,8 @@ int xpkemlisemli(double ye[6], double* te, double* t_traj_n, double** y_traj_n,
     {
         k1--;
         k2--;
-        test = (y_traj_n[0][k2] > refSt.xps && y_traj_n[0][k1] < refSt.xps) ||
-               (y_traj_n[0][k2] < refSt.xps && y_traj_n[0][k1] > refSt.xps);
+        test = (y_traj_n[0][k2] > refSt.xps_NCSEM && y_traj_n[0][k1] < refSt.xps_NCSEM) ||
+               (y_traj_n[0][k2] < refSt.xps_NCSEM && y_traj_n[0][k1] > refSt.xps_NCSEM);
     }
     while(!test && k1 >= 0);
 
@@ -5435,7 +5727,7 @@ int xpkemlisemli(double ye[6], double* te, double* t_traj_n, double** y_traj_n,
     if(test && k1 >= 0)
     {
         //cout << "xpkemlisemli. Range accross the PS found:" << endl;
-        //cout << y_traj_n[0][k1] << " < " << refSt.xps << " < " << y_traj_n[0][k2] << endl;
+        //cout << y_traj_n[0][k1] << " < " << refSt.xps_NCSEM << " < " << y_traj_n[0][k2] << endl;
 
         //================================================================================
         //2. Integrate until x = xps
@@ -5445,7 +5737,7 @@ int xpkemlisemli(double ye[6], double* te, double* t_traj_n, double** y_traj_n,
         val_par.max_events = 1;
         val_par.direction  = 0;
         val_par.dim        = 0;
-        val_par.value      = refSt.xps;
+        val_par.value      = refSt.xps_NCSEM;
         val_par.center     = center;
         val_par.type       = 'X';
 
@@ -5491,8 +5783,8 @@ int xpkemlisemli(double ye[6], double* te, double* t_traj_n, double** y_traj_n,
  *         Once the intersection is found, it is incorporated in the sequence of patch points,
  *         in place of a given point, at position newpos
  **/
-int xpkemlisemli(double ye[6], double* te, double* t_traj_n, double** y_traj_n,
-                 int* newpos, int man_index, RefSt& refSt)
+int xpk_emlis2emli(double ye[6], double* te, double* t_traj_n, double** y_traj_n,
+                   int* newpos, int man_index, RefSt& refSt)
 {
     double yv[42];
     //Get the default coordinates system from the coord_type
@@ -5508,8 +5800,8 @@ int xpkemlisemli(double ye[6], double* te, double* t_traj_n, double** y_traj_n,
     {
         k1--;
         k2--;
-        test = (y_traj_n[0][k2] > refSt.xps && y_traj_n[0][k1] < refSt.xps) ||
-               (y_traj_n[0][k2] < refSt.xps && y_traj_n[0][k1] > refSt.xps);
+        test = (y_traj_n[0][k2] > refSt.xps_NCSEM && y_traj_n[0][k1] < refSt.xps_NCSEM) ||
+               (y_traj_n[0][k2] < refSt.xps_NCSEM && y_traj_n[0][k1] > refSt.xps_NCSEM);
     }
     while(!test && k1 >= 0);
 
@@ -5520,7 +5812,7 @@ int xpkemlisemli(double ye[6], double* te, double* t_traj_n, double** y_traj_n,
     if(test && k1 >= 0)
     {
         //cout << "xpkemlisemli. Range accross the PS found:" << endl;
-        //cout << y_traj_n[0][k1] << " < " << refSt.xps << " < " << y_traj_n[0][k2] << endl;
+        //cout << y_traj_n[0][k1] << " < " << refSt.xps_NCSEM << " < " << y_traj_n[0][k2] << endl;
 
 
         //================================================================================
@@ -5531,7 +5823,7 @@ int xpkemlisemli(double ye[6], double* te, double* t_traj_n, double** y_traj_n,
         val_par.max_events = 1;
         val_par.direction  = 0;
         val_par.dim        = 0;
-        val_par.value      = refSt.xps;
+        val_par.value      = refSt.xps_NCSEM;
         val_par.center     = center;
         val_par.type       = 'X';
 
@@ -5834,7 +6126,6 @@ int comprefemlisemli3d(int grid_freq_days[3], int coord_type,
     cout << "==> the number of points  = "  << grid_points_des[1] << endl    << endl;
     cout << "Desired frequency on leg 3: "  << grid_freq_days[2]  << "days " << endl;
     cout << "==> the number of points  = "  << grid_points_des[2] << endl    << endl;
-
 
     //Effective number of points for the following computation: equal to grid_points_des
     //if the number of points if fixed, equal to max_grid otherwise

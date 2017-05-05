@@ -20,12 +20,12 @@ typedef int (*vfptr)(double, const double*, double*, void*);
 typedef struct RVF RVF;
 struct RVF
 {
-    vector<Oftsc>* fh;   //Reduced vector field
-    Ofsc* ofs;           //Auxiliary Ofs object
-    int order;           //Order of the evaluation     (<= OFTS_ORDER)
-    int ofs_order;       //Order of the ofs evaluation (<= OFS_ORDER)
-    double n;            //Pulsation of the QBCP
-    int reduced_nv;      //Number of reduced variables
+    const vector<Oftsc>* fh;    //Reduced vector field
+    Ofsc* ofs;            //Auxiliary Ofs object
+    int order;            //Order of the evaluation     (<= OFTS_ORDER)
+    int ofs_order;        //Order of the ofs evaluation (<= OFS_ORDER)
+    double n;             //Pulsation of the QBCP
+    int reduced_nv;       //Number of reduced variables
 };
 
 //========================================================================================

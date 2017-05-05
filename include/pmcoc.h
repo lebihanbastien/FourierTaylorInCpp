@@ -269,7 +269,7 @@ void CCM8toRVF8(const double s8[],
                 const int order,
                 const int ofs_order,
                 const int reduced_nv,
-                vector<Oftsc> &fh,
+                const vector<Oftsc> &fh,
                 Ofsc &ofs,
                 double f8[]);
 

@@ -257,6 +257,28 @@ void Orbit::setEPmaxx(double ePmax)
 }
 
 //========================================================================================
+//
+//          Display completion
+//
+//========================================================================================
+/**
+ *   \brief Display the current completion (percent) of a routine.
+ **/
+void displayCompletion(string funcname, double percent, int *completion)
+{
+    if(floor(percent*0.1) > *completion)
+    {
+        cout << resetiosflags(ios::floatfield) << resetiosflags(ios::showpos);
+        cout << cout <<  setw(2) << setprecision(2);
+        cout << "\r" << funcname << ": " << percent << "% completed: ";
+        cout << string((int)floor(0.1*percent), '|') << endl;
+        cout.flush();
+        cout << std::showpos << setiosflags(ios::scientific);
+        *completion = *completion + 1;
+    }
+}
+
+//========================================================================================
 // Integrate
 //========================================================================================
 /**
@@ -388,8 +410,8 @@ int Orbit::traj_int_grid(double tfc, double **yNCE, double *tNCE, int N, int isR
     //Initialization
     //------------------------------------------------------------------------------------
     int nvar = odestruct->dim;   //number of variables
-    int status;               //current status
-    double yv[nvar], t;       //current state and time
+    int status;                  //current status
+    double yv[nvar], t;          //current state and time
 
     //Projection tools
     double projdist;
@@ -644,7 +666,6 @@ int Orbit::traj_int_grid(double **yNCE, double *tgridNCE, int N, int isResetOn)
     return FTC_SUCCESS;
 }
 
-
 /**
  *   \brief Integrates a given trajectory up to tf, on a variable grid.
  *          This routine returns:
@@ -816,6 +837,110 @@ int Orbit::proj_traj_grid(double **sRCM, double **yNCE, double *tNCE, int N)
 
     return GSL_SUCCESS;
 }
+
+//========================================================================================
+// Integrate in reduced coordinates
+//========================================================================================
+/**
+ *   \brief Integrates a given trajectory up to tf, on a given grid, in reduced coordinates.
+ *          Note that such an integration is, for now, always on the center manifold,
+ *          hence the reduced coordinates are always of dimension 4.
+ **/
+int Orbit::traj_red_grid(double tfc, double** yNCE, double* tNCE, int N)
+{
+    //------------------------------------------------------------------------------------
+    //Initialization
+    //------------------------------------------------------------------------------------
+    Ofsc AUX(ofs_order);
+    //For dot(s) = fh(s)
+    RVF rvf;
+    rvf.ofs_order  = ofs_order;
+    rvf.fh         = &invman->getFhc();
+    rvf.ofs        = &AUX;
+    rvf.order      = order;
+    rvf.n          = this->getN();
+    rvf.reduced_nv = 4;
+
+    gsl_odeiv2_system sys_fh;
+    sys_fh.function  = qbfbp_fh;
+    sys_fh.jacobian  = NULL;
+    sys_fh.dimension = 8;
+    sys_fh.params    = &rvf;
+
+    const gsl_odeiv2_step_type* T_fh = gsl_odeiv2_step_rk8pd;
+    gsl_odeiv2_driver* d_fh = gsl_odeiv2_driver_alloc_y_new (&sys_fh, T_fh,
+                              Config::configManager().G_PREC_HSTART(),
+                              Config::configManager().G_PREC_ABS(),
+                              Config::configManager().G_PREC_REL());
+
+    //Change sign of step if necessary
+    if((tfc < t0x && d_fh->h>0)    || (tfc > t0x && d_fh->h<0)) d_fh->h *= -1;
+
+
+    //------------------------------------------------------------------------------------
+    // Temp variables
+    // coordinates in CCM8: note that we use the number of coordinates from the orbit,
+    // not exactly 2*4, because the orbit could be associated with 5 reduced coordinates
+    //------------------------------------------------------------------------------------
+    double  s1ccm8[2*this->reduced_nv];
+    double yv[6], t, ti;
+    int status, nt;
+
+    //------------------------------------------------------------------------------------
+    // Init before integration
+    //------------------------------------------------------------------------------------
+    //Initial time
+    t = t0x;
+    // Initial state in CCM8 form
+    RCMtoCCM8(six, s1ccm8, this->reduced_nv);
+    //Init the indexes that evolve along with the state
+    nt = 1;
+
+    //Update the state in NC coordinates
+    this->invman->evalCCM8toNC(s1ccm8, t0x, yv, this->order, this->ofs_order);
+
+    //Save in final outputs
+    for(int k = 0; k < 6; k++) yNCE[k][0] = yv[k];
+    tNCE[0] = t0x;
+
+    //------------------------------------------------------------------------------------
+    //Loop
+    //------------------------------------------------------------------------------------
+    int completion = 0;
+    do
+    {
+        //Update the time
+        ti = t0x + (double) nt *(tfc-t0x)/(1.0*N);
+
+        //Evolve the status
+        status = gsl_odeiv2_driver_apply (d_fh, &t, ti, s1ccm8); //gsl_odeiv2_evolve_apply (d_fh->e, d_fh->c, d_fh->s, d_fh->sys, &t2, t1_SEM, &d_fh->h, s1ccm8);
+
+        //Update the state in NC coordinates
+
+        this->invman->evalCCM8toNC(s1ccm8, ti, yv, this->order, this->ofs_order);
+
+        //Save in final outputs
+        for(int k = 0; k < 6; k++) yNCE[k][nt] = yv[k];
+        tNCE[nt] = ti;
+
+        //Display
+        displayCompletion("traj_red_grid", (double) nt/N*100, &completion);
+
+        //Advance one step
+        nt++;
+    }
+    while((nt<=N) && (status == 0));
+
+
+    //------------------------------------------------------------------------------------
+    //Return
+    //------------------------------------------------------------------------------------
+    return FTC_SUCCESS;
+}
+
+
+
+
 //========================================================================================
 //          Projection on (un)stable manifold
 //========================================================================================

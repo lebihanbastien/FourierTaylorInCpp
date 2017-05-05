@@ -59,10 +59,18 @@ ISPAR=1
 # NOHUP condition
 #-----------------------------------------------------
 ISNOHUP=0
+
+#-----------------------------------------------------
+# Position of the poincaré section in NCEM coordinates
+# if -1, 3BSOI: about 159198km of radius around the Moon, 
+# hence 2.46761593 in NCEM coordinates about EML2
+#-----------------------------------------------------
+RPS=-1 
+
 #-----------------------------------------------------
 # I/O Handling
 #-----------------------------------------------------
-IO_HANDLING=$IO_DIALOG
+IO_HANDLING=$IO_BASH
 
 #=====================================================
 #  ---- Projection parameters ----
@@ -116,5 +124,3 @@ NSMIN=20      # Number of sorted solutions
 YNMAX=0.6     # The maximum norm (in SEM normalized units) for a projection to occur on the CM_NC of SEMLi
 SNMAX=0.6     # The maximum norm (in RCM normalized units) for a projection to occur on the CM_NC of SEMLi
 NOD=6         # Number of dimensions on which we compute the norm of the projection error
-
-

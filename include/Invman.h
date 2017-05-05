@@ -49,6 +49,14 @@ class Invman
         vector<Oftsc> W;            //Parameterization in NC coordinates
 
         //--------------------------------------------------------------------------------
+        // Reduced vector field for the associated center manifold
+        // Note: the vector field is ALWAYS the one of the center manifold, because
+        // there is no need, at least in the current implementation, to integrate in the
+        // reduced center-hyperbolic coordinates.
+        //--------------------------------------------------------------------------------
+        vector<Oftsc> Fhc;
+
+        //--------------------------------------------------------------------------------
         //Additionnal objects (see constructor for details)
         //--------------------------------------------------------------------------------
         vector<Oftsc> Hy;           //Additionnal parameterization object for CS/CU.
@@ -86,6 +94,7 @@ class Invman
         const matrix<Ofsc>& getMIcoc() const;
         const matrix<Oftsc>& getDWh() const;
         const vector<Oftsc>& getWh()  const;
+        const vector<Oftsc>& getFhc()  const;
         const vector<Oftsc>& getW()   const;
         const vector<Oftsc>& getHy()  const;
         const CSYS* getCS() const;
@@ -108,6 +117,7 @@ class Invman
         void evalDCCMtoTFC(cdouble const  s0[], matrix<Ofsc> &mIn, const int ofts_order, const int ofs_order) const;
         void evalRCMtoNC(double const  st0[], double const t, double z1[], const int ofts_order, const int ofs_order) const;
         void evalCCMtoNC(cdouble const s0[], double const t, double z1[], const int ofts_order, const int ofs_order) const;
+        void evalCCM8toNC(double const s0[], double const t, double z1[], const int ofts_order, const int ofs_order) const;
         void evalDRCMtoTFC_partial(double const  st0[], double const t, gsl_matrix_complex *m1, const int ofts_order, const int ofs_order) const;
         void evalDRCMtoNC(double const  st0[], double const t, gsl_matrix *m1, const int ofts_order, const int ofs_order) const;
         void evalDRCMtoCOORD(double const  st0[], double const t, gsl_matrix *m1, const int ofts_order, const int ofs_order, const int coord_type) const;

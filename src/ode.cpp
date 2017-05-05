@@ -378,6 +378,19 @@ double linear_intersection(double t, double yv[], void *params)
 }
 
 
+double radius_intersection(double t, double yv[], void *params)
+{
+    struct value_params *p = (struct value_params *) params;
+
+    //Coordinate relative to the center
+    double xl = yv[0] - p->center[0];
+    double yl = yv[1] - p->center[1];
+    double zl = yv[2] - p->center[2];
+
+    double val =  sqrt(xl*xl + yl*yl + zl*zl) - p->value;
+    return val;
+}
+
 double angle_intersection(double t, double yv[], void *params)
 {
     struct value_params *p = (struct value_params *) params;

@@ -5163,10 +5163,10 @@ int msvftplan_dte(double** ymd, double* tmd, double** ymdn, double* tmdn, double
             {
                 if(k == refSt.pkpos)
                 {
-                    //gsl_vector_set(Fv, ncs-1, ye[0] - refSt.xps);
-                    //cout << "gsl_vector_set(Fv, ncs-1, ye[0] - refSt.xps) = " << gsl_vector_get(Fv, ncs-1) << endl;
-                    gsl_vector_set(Fv, ncs-1, ymdn[0][k] - refSt.xps);
-                    //cout << "gsl_vector_set(Fv, ncs-1, ymdn[0][k] - refSt.xps) = " << gsl_vector_get(Fv, ncs-1) << endl;
+                    //gsl_vector_set(Fv, ncs-1, ye[0] - refSt.xps_NCSEM);
+                    //cout << "gsl_vector_set(Fv, ncs-1, ye[0] - refSt.xps_NCSEM) = " << gsl_vector_get(Fv, ncs-1) << endl;
+                    gsl_vector_set(Fv, ncs-1, ymdn[0][k] - refSt.xps_NCSEM);
+                    //cout << "gsl_vector_set(Fv, ncs-1, ymdn[0][k] - refSt.xps_NCSEM) = " << gsl_vector_get(Fv, ncs-1) << endl;
                 }
             }
             else gsl_vector_set(Fv, ncs-1, 0.0); //constraint automatically satisfied

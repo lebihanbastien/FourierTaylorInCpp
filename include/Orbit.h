@@ -37,8 +37,8 @@ class Orbit
 
 
         //Macro structures and objects
-        Invman const *invman; //The associated manifold (cannot be null)
-        QBCP_L const *qbcp_l; //QBCP around a given Li point (parent)
+        Invman const *invman;  //The associated manifold (cannot be null)
+        QBCP_L const *qbcp_l;  //QBCP around a given Li point (parent)
         OdeStruct  *odestruct; //NC ode struct
 
 
@@ -86,6 +86,7 @@ class Orbit
         int gslc_proj_step(double yv[], double *t, double t0, double t1, double *projdist, int *nreset, int isResetOn);
         int gslc_proj_evolve(double yv[], double *t, double t0, double t1, double *projdist, int *nreset, int isResetOn);
         int proj_traj_grid(double **sRCM, double **yNCE, double *tNCE, int N);
+        int traj_red_grid(double tfc, double **yNCE, double *tNCE, int N);
 
         //--------------------------------------------------------------------------------
         //Projection on (un)stable manifold

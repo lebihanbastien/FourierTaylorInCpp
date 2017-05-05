@@ -504,6 +504,13 @@ int ode78_qbcp_event(double **ye, double *te, int *ode78coll,
             break;
         }
 
+        case 'R':
+        {
+            fvalue.value   = &radius_intersection;
+            break;
+        }
+
+
         case 'A':
         {
             fvalue.value   = &angle_intersection;

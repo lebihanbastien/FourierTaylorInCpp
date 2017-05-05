@@ -41,6 +41,7 @@ Invman::Invman(int ofts_order_, int ofs_order_, CSYS& csys):
     DWh(),
     Wh(),
     W(),
+    Fhc(),
     Hy(),
     mIn(6, reduced_nv, ofs_order),
     nc_B_SYS(6, Ofsc(ofs_order_)),
@@ -613,6 +614,17 @@ Invman::Invman(int ofts_order_, int ofs_order_, CSYS& csys):
     VSYS_R_SYS.setCoef(a1, 3, 3);
     VSYS_R_SYS.setCoef(a1, 4, 4);
     VSYS_R_SYS.setCoef(a1, 5, 5);
+
+
+    //====================================================================================
+    // Reduced vector field for the associated center manifold
+    // Note: the vector field is ALWAYS the one of the center manifold, because
+    // there is no need, at least in the current implementation, to integrate in the
+    // reduced center-hyperbolic coordinates.
+    //====================================================================================
+    Fhc.reserve(4);
+    for(int i = 0; i < 4; i++) Fhc.push_back(Oftsc(4, OFTS_ORDER, OFS_NV, OFS_ORDER));
+    readVOFTS_bin(Fhc, cs->F_GS+"rvf/fh");
 }
 
 //========================================================================================
@@ -762,6 +774,29 @@ void Invman::evalRCMtoNC(double const st0[], double const t, double z1[], const 
     // RCM to CCM
     //------------------------------------------
     RCMtoCCM(st0, s0, reduced_nv);
+
+    //------------------------------------------
+    // CCM to NC
+    //------------------------------------------
+    this->evalCCMtoNC(s0, t, z1, ofts_order, ofs_order);
+}
+
+
+/**
+ *  \brief Evaluate the invariant manifold from CCM8 coordinates (double[]), to
+ *         NC coordinates (double[]).
+ **/
+void Invman::evalCCM8toNC(double const st0[], double const t, double z1[], const int ofts_order, const int ofs_order) const
+{
+    //------------------------------------------
+    // Inner variables (CCM, TFC, NC)
+    //------------------------------------------
+    cdouble s0[reduced_nv];
+
+    //------------------------------------------
+    // CCM8 to CCM
+    //------------------------------------------
+    CCM8toCCM(st0, s0, reduced_nv);
 
     //------------------------------------------
     // CCM to NC
@@ -1585,6 +1620,11 @@ void Invman::NCprojCCMtoCM(double* yv, double tv, double sti[5])
 //========================================================================================
 // Getters
 //========================================================================================
+const vector<Oftsc>& Invman::getFhc() const
+{
+    return Fhc;
+}
+
 const vector<Oftsc>& Invman::getWh() const
 {
     return Wh;

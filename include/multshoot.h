@@ -80,3 +80,13 @@ int multiple_shooting_direct_deps(double **ymd, double *tmd,
                                   double *nullvector, int isFirst,
                                   int N, int mgs, int coord_type,
                                   int isPlotted, gnuplot_ctrl *h1);
+
+/**
+ * \brief Multiple shooting scheme with boundary conditions at the origin (makes the system square)
+ *        Contrary to multiple_shooting_gomez,
+ *        no recursive scheme is used to compute the correction vector.
+ **/
+int multiple_shooting_direct_square(double **ymd, double *tmd,
+                                    double **ymdn, double *tmdn,
+                                    int N, int mgs, int coord_type, double prec,
+                                    int isPlotted, gnuplot_ctrl *h1, int strConv);

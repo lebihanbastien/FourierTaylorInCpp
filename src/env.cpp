@@ -1103,6 +1103,11 @@ void init_CSYS(CSYS* csys, QBCP_L* qbcp_l, QBCP* qbcp, int fwrk, int li, int coe
     //------------------------------
     csys->c2 = cn(csys->li, csys->gamma, csys->mu, 2);
 
+    //------------------------------
+    //3BSOI: equal to 159198 km (cf Parker 2007 & 2013)
+    //------------------------------
+    csys->r3BSOI = 159198/(csys->cr3bp.L * csys->gamma);
+
     //--------------------------------------
     // Creating the arrays of coefficients
     //--------------------------------------
