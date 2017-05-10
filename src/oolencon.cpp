@@ -7187,12 +7187,13 @@ int jplref_eml_to_seml(int coord_type, RefSt& refSt, int label, int isFirst, str
         cout << "The final trajectory is saved in " << filename << endl;
         savetrajsegbyseg(y_traj_jpl_n, t_traj_jpl_n, final_index, mPlot, coord_int, et0, tsys0, coord_type, comp_type, filename, label, 0);
 
-        string fprefix = refSt.get_and_update_filename(refSt.FILE_FOR_CELESTIA, TYPE_TRAJ_CELESTIA, ios::out);
-        cout << "The final trajectory is also saved to celestia format with the prefix " << fprefix << endl;
-        write_NJ2000_ref_to_celestia(y_traj_jpl_n, t_traj_jpl_n, final_index, mPlot, et0, tsys0, fprefix, label);
+        // Uncomment these lines to save in Celestia format
+        //        string fprefix = refSt.get_and_update_filename(refSt.FILE_FOR_CELESTIA, TYPE_TRAJ_CELESTIA, ios::out);
+        //        cout << "The final trajectory is also saved to celestia format with the prefix " << fprefix << endl;
+        //        write_NJ2000_ref_to_celestia(y_traj_jpl_n, t_traj_jpl_n, final_index, mPlot, et0, tsys0, fprefix, label);
     }
 
-    pressEnter(true);
+    //pressEnter(true);
     //------------------------------------------------------------------------------------
     //Gnuplot window
     //------------------------------------------------------------------------------------
