@@ -135,7 +135,7 @@ struct RefSt
     int    OFTS_ORDER, LI_EM, LI_SEM, LI_START, LI_TARGET;
     int    IO_HANDLING;
     string plot_folder;
-    string FILE_PCU, FILE_CONT, FILE_CONT_TRAJ, FILE_JPL_TXT, FILE_JPL_BIN;
+    string FILE_PCU, FILE_CONT, FILE_CONT_RES, FILE_TRAJ_FROM_W, FILE_TRAJ_FROM_C, FILE_JPL_TXT, FILE_JPL_BIN, FILE_FOR_CELESTIA;
 
     //------------------------------------------------------------------------------------
     // Parameters that change often
@@ -198,7 +198,7 @@ struct RefSt
     //------------------------------------------------------------------------------------
     int isDebug;          //if yes, additionnal tests are performed
     int gridSize;         //number of points on the refinement grid
-    int mplot;            //number of points per plot between to pach points (e.g. total plot points is gridSize*mplot)
+    int mPlot;            //number of points per plot between to pach points (e.g. total plot points is gridSize*mplot)
 
     int time;             //type of constraints on the times in REF_CONT
     int grid;             //type of grid
@@ -226,9 +226,13 @@ struct RefSt
     double tspan_EM;
     double tspan_SEM;
 
-    // Storing the orbits at each step?
+    // Storing the orbits at each step? DEPRECATED, kept for consistency, use comp_orb_em/comp_orb_sem instead
     int isSaved_EM;    //0: don't save, 1: save using projection method
     int isSaved_SEM;   //0: don't save, 1: save using projection method, 2: save using integration in reduced coordinates
+
+    // Type of computation for each orbit
+    int comp_orb_em;
+    int comp_orb_sem;
 
     //Type of time selection
     int typeOfTimeSelection;
@@ -258,7 +262,7 @@ struct RefSt
     //------------------------------------------------------------------------------------
     double goodvector[1000]; //vector of free variables
     double dH;               //energy value at the origin
-    int pkpos;               //indix of the patch point that bear the poincaré section
+    int pkpos;               //index of the patch point that bear the poincaré section
 
     //------------------------------------------------------------------------------------
     //Constructor
@@ -627,7 +631,7 @@ public:
 
     /**
      *  \brief Update sortId, the vector of sorted indices, with respect to pmin_dist_SEM.
-     *         After this routine, sortId[0] is the indix for which pmin_dist_SEM is minimum.
+     *         After this routine, sortId[0] is the index for which pmin_dist_SEM is minimum.
      **/
     void sort_pmin_dist_SEM();
 
@@ -647,8 +651,6 @@ public:
 };
 
 
-
-
 //========================================================================================
 //
 //          I/O (complete trajectories)
@@ -658,23 +660,23 @@ public:
  *  \brief Stores the final_index+1 points trajectory contained in t_traj_n (time vector)
  *         and y_traj_n (state vectors) into a data file of type TYPE_COMP_FOR_JPL.
  **/
-void writeCOMP_txt(double* t_traj_n, double** y_traj_n, int final_index, string filename);
+void write_cref_for_jpl_txt(double* t_traj_n, double** y_traj_n, int final_index, string filename);
 
 /**
  *  \brief Reads the final_index+1 points trajectory contained in a data file of type
  *         TYPE_COMP_FOR_JPL and stores it in t_traj_n (time vector) and y_traj_n
- *         (state vectors). The size of the data file is given by getLengthCOMP_txt(), and
+ *         (state vectors). The size of the data file is given by getl_cref_for_jpl_txt(), and
  *         the data vectors should be initialized accordingly by the user prior to the use
  *         of this routine.
  **/
-int readCOMP_txt(double* t_traj_n, double** y_traj_n, int final_index, string filename);
+int read_cref_for_jpl_txt(double* t_traj_n, double** y_traj_n, int final_index, string filename);
 
 /**
  *  \brief Get the length of the final_index+1 points trajectory contained in a
  *         data file of type TYPE_COMP_FOR_JPL and stores it in t_traj_n (time vector)
  *         and y_traj_n (state vectors).
  **/
-int getLengthCOMP_txt(string filename);
+int getl_cref_for_jpl_txt(string filename);
 
 //========================================================================================
 //
@@ -804,10 +806,27 @@ void displayCompletion(string funcname, double percent);
 //          I/O (refinement & continuation)
 //
 //========================================================================================
+int getl_wref_traj_bin(string filename_traj, int *last_index, int *man_grid_size);
+
+void write_wref_traj_bin(string filename_traj, Orbit& orbit_EM, Orbit& orbit_SEM,
+                         double **y_traj_NCSEM, double *t_traj_NCSEM,
+                         double te_NCSEM,   double* ye_NCSEM,
+                         double te_NCEM,    double* ye_NCEM,
+                         double ve_NCEM[3], double ve_NCSEM[3],
+                         ProjResClass& projRes,
+                         int isFirst, int index, int man_grid_size);
+
+int read_wref_traj_bin(string filename_traj, int *labels,
+                       double* t0_CMU_EM, double* tf_CMU_EM,
+                       double** si_CMU_EM, double** si_CMS_SEM,
+                       double** t_traj_NCSEM, double*** y_traj_NCSEM,
+                       int man_grid_size,
+                       int last_index);
+
 /**
  *   \brief Storing the results of the continuation procedure, in txt file.
  **/
-void write_ref_conn_txt(string filename, Orbit& orbit_EM, Orbit& orbit_SEM,
+void write_wref_conn_txt(string filename, Orbit& orbit_EM, Orbit& orbit_SEM,
                         double te_NCSEM, double* ye_NCSEM,
                         double te_NCEM, double* ye_NCEM,
                         double ve_NCEM[3], double ve_NCSEM[3],
@@ -838,17 +857,17 @@ int readCONT_txt(double*  t0_CMU_EM, double*   tf_CMU_EM,
 /**
  *  \brief Save a given solution as a complete trajectory
  **/
-int writeCONT_bin(RefSt& refSt, string filename_traj, int dcs, int coord_type,
-                   double** y_traj_n, double* t_traj_n, int man_index, int mPlot,
-                   Orbit &orbit_EM, Orbit &orbit_SEM, int label,
-                   bool isFirst, int comp_orb_eml, int comp_orb_seml);
+int writeCONT_bin(RefSt& refSt, string filename_res, int dcs, int coord_type,
+                  double** y_traj_n, double* t_traj_n, int man_index, int mPlot,
+                  Orbit &orbit_EM, Orbit &orbit_SEM, int label,
+                  bool isFirst, int comp_orb_eml, int comp_orb_seml);
 
 /**
  *  \brief Save a given solution as a complete trajectory
  **/
-int writeCONT_ORBIT_bin(RefSt& refSt, string filename_traj, double** y_traj_n, double* t_traj_n, int man_index,
-                  Orbit& orbit_EM, Orbit& orbit_SEM, bool isFirst, int comp_orb_eml, int comp_orb_seml,
-                  ProjResClass& projRes, int k);
+int write_wref_res_bin(RefSt& refSt, string filename_res, double** y_traj_n, double* t_traj_n, int man_index,
+                       Orbit& orbit_EM, Orbit& orbit_SEM, bool isFirst, int comp_orb_eml, int comp_orb_seml,
+                       ProjResClass& projRes, int k);
 
 
 

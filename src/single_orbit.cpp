@@ -8,6 +8,401 @@ int COMPLETION = 0;
 //========================================================================================
 /**
  * \brief Integrates a generic vector field from any input type to any output type.
+ *        Difference with respect to ode78: the inputs are given in the form ys/ts, i.e.
+ *        a series of state/time on a nSeed+1-point grid, and NOT just initial conditions
+ *        + final time
+ **/
+int ode78_patched(double **yv, double *tv, OdeEvent *odeEvent,
+                  double **ys, double *ts,
+                  int nGrid, int nSeed, int dcs,
+                  int inputType, int outputType)
+{
+    //====================================================================================
+    // 1. Do some checks on the inputs
+    //====================================================================================
+    string fname = "ode78_patched";
+
+    //Type of default coordinate system (dcs) for integration
+    if(dcs > I_NJ2000) cerr << fname << ". Unknown dcs." << endl;
+
+    //Type of inputs
+    if(inputType > NJ2000) cerr << fname << ". Unknown inputType" << endl;
+
+    //Type of outputs
+    if(outputType > NJ2000)
+        cerr << fname << ". Unknown outputType" << endl;
+
+    //If the JPL integration is required, the dcs, the outputType and the inputType
+    //must match! This is to simplify  the change of coordinates afterwards
+    if(dcs > I_ECISEM)
+    {
+        if(dcs != default_coordinate_system(outputType) ||
+        dcs != default_coordinate_system(inputType))
+        {
+            cerr << fname << ". If a JPL integration is desired, the "  << endl;
+            cerr << "outputType must match the default coordinate system (dcs)." << endl;
+        }
+    }
+
+
+    //====================================================================================
+    // 2. Define the framework from the default coordinate system
+    //    Define also the default variable type that will be used throughout the computation
+    //====================================================================================
+    int varType = default_coordinate_type(dcs);
+
+    //====================================================================================
+    // 4. Selection of the vector field
+    //====================================================================================
+    vfptr vf = ftc_select_vf(dcs, 6);
+
+    //====================================================================================
+    // 5. ODE system
+    //====================================================================================
+    OdeStruct odestruct;
+    //Root-finding
+    const gsl_root_fsolver_type *T_root = gsl_root_fsolver_brent;
+    //Stepper
+    const gsl_odeiv2_step_type *T = gsl_odeiv2_step_rk8pd;
+    //Parameters
+    OdeParams odeParams(&SEML, dcs, odeEvent->detection, odeEvent->warnings);
+    //Init ode structure
+    init_ode_structure(&odestruct, T, T_root, 6, vf, &odeParams);
+
+
+    //====================================================================================
+    // 6. to NCFWRK coordinates.
+    //====================================================================================
+    double **ys0 = dmatrix(0, 5, 0, nSeed);
+    double *ts0  = dvector(0, nSeed);
+
+    //------------------------------------------------------------------------------------
+    //From inputType to varType, if we are using a QBCP integration
+    //------------------------------------------------------------------------------------
+    switch(dcs)
+    {
+        //--------------------------------------------------------------------------------
+        // If we are dealing with a JPL integration, there is no need for a COC
+        //--------------------------------------------------------------------------------
+        case  I_ECLI:
+        case  I_J2000:
+        case  I_NJ2000:
+        {
+            for(int k = 0; k <= nSeed; k++) ts0[k] = ts[k];
+            break;
+        }
+        //--------------------------------------------------------------------------------
+        // Else, we proceed
+        //--------------------------------------------------------------------------------
+        default:
+        qbcp_coc_vec((double **)ys, (double *) ts, ys0, ts0, nSeed, inputType, varType);
+    }
+
+
+    //------------------------------------------------------------------------------------
+    //For the initial and final time, a switch is necessary
+    //------------------------------------------------------------------------------------
+    switch(dcs)
+    {
+        //--------------------------------------------------------------------------------
+        // If I_PSEM/I_VSEM, etc... the system is focused on the SEM system via SEML
+        //--------------------------------------------------------------------------------
+    case I_NCSEM:
+    case I_VNCSEM:
+    case I_PSEM:
+    case I_VSEM:
+    case I_INSEM:
+    case I_ECISEM:
+    {
+        //Time
+        switch(inputType)
+        {
+        case PSEM:
+        case NCSEM:
+        case VNCSEM:
+        case VSEM:
+        case INSEM:
+        case ECISEM:
+            //Time is already in SEM units
+            for(int k = 0; k <= nSeed; k++) ts0[k] = ts[k];
+            break;
+        case PEM:
+        case NCEM:
+        case VNCEM:
+        case VEM:
+        case INEM:
+            //Time is now in SEM units
+            for(int k = 0; k <= nSeed; k++) ts0[k] = ts[k]*SEML.us_em.ns;
+            break;
+        }
+        break;
+    }
+        //--------------------------------------------------------------------------------
+        // If I_PEM/I_VEM, etc, the system is focused on the EM system via SEML
+        //--------------------------------------------------------------------------------
+    case I_NCEM:
+    case I_VNCEM:
+    case I_PEM:
+    case I_VEM:
+    case I_INEM:
+    {
+        //Time
+        switch(inputType)
+        {
+        case PSEM:
+        case NCSEM:
+        case VNCSEM:
+        case INSEM:
+        case VSEM:
+        case ECISEM:
+            //Time is now in EM units
+            for(int k = 0; k <= nSeed; k++) ts0[k] = ts[k]/SEML.us_em.ns;
+            break;
+        case PEM:
+        case NCEM:
+        case VNCEM:
+        case VEM:
+        case INEM:
+            //Time is already in EM units
+            vector_memcpy(ts0, ts, nSeed+1);
+            break;
+        }
+        break;
+    }
+        //--------------------------------------------------------------------------------
+        // The default case will apply on the JPL integration schemes, for which the time
+        // is already in the right units (seconds, or normalized time)
+        //--------------------------------------------------------------------------------
+    default:
+    {
+        vector_memcpy(ts0, ts, nSeed+1);
+    }
+    }
+
+    //====================================================================================
+    // 7. Integration, for 2 outputs
+    //
+    // The seeds are in y0/t0, on a given nSeed+1-point grid.
+    // The desired output is yvIN/tvIN, on a given nGrid+1 point grid.
+    //
+    //====================================================================================
+    double **yvIN, *tvIN;
+    yvIN  = dmatrix(0, 5, 0, nGrid);
+    tvIN  = dvector(0, nGrid);
+
+    //------------------------------------------------------------------------------------
+    //Creation of the time grid
+    //------------------------------------------------------------------------------------
+    for(int k = 0; k <= nGrid; k++)
+    {
+        tvIN[k] = ts0[0] + (double) k *(ts0[nSeed]-ts0[0])/nGrid;
+    }
+
+    //------------------------------------------------------------------------------------
+    //Integration in yvIN/tvIN
+    //------------------------------------------------------------------------------------
+    int status  = 0;
+    int head    = 0;
+    double y0[6];
+    vector<double> tlist;
+    vector<int> ilist;
+
+    // Loop on all times in the seed
+    for(int m = 0; m < nSeed; m++)
+    {
+        //--------------------------------------------------------------------------------
+        // Inner variables
+        //--------------------------------------------------------------------------------
+        int k = head;
+        tlist.clear();
+        ilist.clear();
+
+        //--------------------------------------------------------------------------------
+        // Store the time in the output that satisfies ts0[m] <= tvIN[k] <= ts0[m+1]
+        //--------------------------------------------------------------------------------
+        while(k <= nGrid)
+        {
+            if(ts0[m] <= tvIN[k] && ts0[m+1] >= tvIN[k])
+            {
+                ilist.push_back(k);
+                tlist.push_back(tvIN[k]);
+            }
+            k++;
+        }
+
+        //--------------------------------------------------------------------------------
+        // Integrate
+        //
+        // At this step, we need to check if tvIN[ilist[0]] == ts0[m]
+        // If it is NOT the case, the time vector must start at ts0[m] nonetheless,
+        // but the first state is NOT stored.
+        //--------------------------------------------------------------------------------
+        if(!tlist.empty())
+        {
+        if(tvIN[ilist[0]] == ts0[m] && tlist.size() == 1)
+        {
+            //----------------------------------------------------------------------------
+            //We just copy the unique point in the output
+            //----------------------------------------------------------------------------
+            for(int i = 0; i < 6; i++) yvIN[i][ilist[0]] = ys0[i][m];
+        }
+        else
+        {
+            //----------------------------------------------------------------------------
+            //We need to integrate and store
+            //----------------------------------------------------------------------------
+            int ntGrid         = (int) tlist.size()-1;
+            if(tvIN[ilist[0]] != ts0[m]) ntGrid++;
+
+            double** ytIN  = dmatrix(0, 5, 0, ntGrid);
+            double*  ttIN  = dvector(0, ntGrid);
+
+            //Time grid
+            if(tvIN[ilist[0]] != ts0[m])
+            {
+                //First time = ts0[m]
+                ttIN[0] = ts0[m];
+
+                //Rest of the time grid
+                for(int p = 1; p <= ntGrid; p++)
+                {
+                    ttIN[p] = tvIN[ilist[p-1]];
+                }
+            }
+            else
+            {
+                //Time grid
+                for(int p = 0; p <= ntGrid; p++)
+                {
+                    ttIN[p] = tvIN[ilist[p]];
+                }
+            }
+
+            //Initial position: at the seed
+            for(int i = 0; i <6; i++) y0[i] = ys0[i][m];
+
+            //Integration
+            status = ode78_grid_gg(&odestruct, y0, ytIN, ttIN, ntGrid);
+
+            //--------------------------------------------------------------------------------
+            //Save in output
+            //--------------------------------------------------------------------------------
+            if(tvIN[ilist[0]] != ts0[m])
+            {
+                //The first point is discarded an NOT saved in yvIN
+                for(int p = 1; p <= ntGrid; p++)
+                {
+                    for(int i = 0; i < 6; i++) yvIN[i][ilist[p-1]] = ytIN[i][p];
+                }
+            }
+            else
+            {
+                //All points are saved
+                for(int p = 0; p <= ntGrid; p++)
+                {
+                    for(int i = 0; i < 6; i++) yvIN[i][ilist[p]] = ytIN[i][p];
+                }
+            }
+
+
+            // Free temp variables
+            free_dmatrix(ytIN, 0, 5, 0, ntGrid);
+            free_dvector(ttIN, 0, ntGrid);
+        }
+
+        //--------------------------------------------------------------------------------
+        //Update the head in the output
+        //--------------------------------------------------------------------------------
+        head = ilist.back()+1;
+        }
+    }
+
+    //====================================================================================
+    // Check in the results: if head is not equal to nGrid+1, something is wrong
+    //====================================================================================
+    if(head != nGrid+1)
+    {
+        cout << fname << ". The head was not able to reach the end of the output vector. Return" << endl;
+        return FTC_FAILURE;
+    }
+
+    //====================================================================================
+    // 8. To the right outputs: varType to outputType, if necessary
+    //====================================================================================
+    switch(dcs)
+    {
+        //--------------------------------------------------------------------------------
+        // If we are dealing with a JPL integration, there is no need for a COC
+        //--------------------------------------------------------------------------------
+    case  I_ECLI:
+    case  I_J2000:
+    case  I_NJ2000:
+    {
+        for(int p = 0; p <= nGrid; p++)
+        {
+            for(int i = 0; i < 6; i++) yv[i][p] = yvIN[i][p];
+            tv[p] = tvIN[p];
+        }
+        break;
+    }
+        //--------------------------------------------------------------------------------
+        // Else, we proceed to the COC
+        //--------------------------------------------------------------------------------
+    default:
+    {
+        qbcp_coc_vec(yvIN, tvIN, yv, tv, nGrid, varType, outputType);
+    }
+    }
+
+
+    //====================================================================================
+    // Update the collisionner
+    //====================================================================================
+    odeEvent->coll           = odeParams.event.coll;
+    odeEvent->crossings      = odeParams.event.crossings;
+    odeEvent->crossings_moon = odeParams.event.crossings_moon;
+
+    //====================================================================================
+    // 10. Free memory
+    //====================================================================================
+    free_dmatrix(yvIN, 0, 5, 0, nGrid);
+    free_dvector(tvIN, 0, nGrid);
+
+    //====================================================================================
+    // 11. Something went wrong inside the stepper?
+    //====================================================================================
+    return status;
+}
+
+/**
+ * \brief Integrates a generic vector field from any input type to any output type.
+ *        Difference with respect to ode78: the inputs are given in the form ys/ts, i.e.
+ *        a series of state/time on a nSeed+1-point grid, and NOT just initial conditions
+ *        + final time
+ **/
+int ode78_patched(double **yv, double *tv, int *ode78coll,
+                  double **ys, double *ts,
+                  int nGrid, int nSeed, int dcs,
+                  int inputType, int outputType)
+{
+    //------------------------------------------------------------------------------------
+    // Use of the other ode78 with OdeEvent.
+    //------------------------------------------------------------------------------------
+    OdeEvent odeEvent;
+    int status = ode78_patched(yv, tv, &odeEvent, ys, ts, nGrid,
+                               nSeed, dcs, inputType, outputType);
+
+    //------------------------------------------------------------------------------------
+    // Update of ode78coll from the information in the OdeEvent.
+    //------------------------------------------------------------------------------------
+    *ode78coll = odeEvent.coll;
+
+    return status;
+}
+
+
+/**
+ * \brief Integrates a generic vector field from any input type to any output type.
  **/
 int ode78(double **yv, double *tv, OdeEvent *odeEvent,
           double t0NC, double tfNC, const double *y0NC,
@@ -1839,7 +2234,7 @@ int trajectory_integration_grid(SingleOrbit &orbit, double t0, double tf, double
 
     //Projection tools
     double proj_dist_SEM;
-    int nreset, nt;
+    int nreset = 1, nt;
 
     //Plot
     double ti;
@@ -1931,7 +2326,7 @@ int trajectory_integration_variable_grid(SingleOrbit &orbit, double t0, double t
 
     //Projection tools
     double proj_dist;
-    int nreset, nt;
+    int nreset = 1, nt;
 
     //------------------------------------------------------------------------------------
     //Evolving yv(t) up to tf

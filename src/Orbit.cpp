@@ -53,7 +53,6 @@ Orbit::Orbit(Invman const *invman_, QBCP_L const *qbcp_l_, OdeStruct *odestruct_
     odestruct = odestruct_;
 }
 
-
 //========================================================================================
 // Destructor
 //========================================================================================
@@ -69,7 +68,6 @@ Orbit::~Orbit()
     free_dcvector(s0x, 0, reduced_nv-1);
     free_ode_structure(odestruct);
 }
-
 
 //========================================================================================
 // Update
@@ -227,7 +225,6 @@ void Orbit::setSi(double value, int i)
     six[i] = value;
 }
 
-
 /**
  *  \brief Add value to the ith dimension of si.
  **/
@@ -292,7 +289,7 @@ void displayCompletion(string funcname, double percent, int *completion)
  *                     parameterization of the center manifold).
  **/
 int Orbit::gslc_proj_step(double yv[], double *t, double t0, double t1,
-                          double *projdist, int *nreset, int isResetOn)
+                          double *projdist, int *nreset, int isResetOn, int isResetCheckOn)
 {
     //------------------------------------------------------------------------------------
     //Evolve one step of z(t)
@@ -341,7 +338,7 @@ int Orbit::gslc_proj_step(double yv[], double *t, double t0, double t1,
         //Get the current error
         *projdist = DENorm(yvi, yvp, 6);
 
-        if(*projdist > ePmaxx)
+        if(isResetCheckOn && *projdist > ePmaxx)
         {
             cout << "-----------------------------------------" << endl;
             cout << "Orbit::gslc_proj_step. Warning: Reset n° " << *nreset << endl;
@@ -377,12 +374,12 @@ int Orbit::gslc_proj_step(double yv[], double *t, double t0, double t1,
  *                     parameterization of the center manifold).
  **/
 int Orbit::gslc_proj_evolve(double yv[], double *t, double t0, double t1,
-                            double *projdist, int *nreset, int isResetOn)
+                            double *projdist, int *nreset, int isResetOn, int isResetCheckOn)
 {
     int status;
     do
     {
-        status = this->gslc_proj_step(yv, t, t0, t1, projdist, nreset, isResetOn);
+        status = this->gslc_proj_step(yv, t, t0, t1, projdist, nreset, isResetOn, isResetCheckOn);
     }
     while(status == FTC_SUCCESS && fabs(*t - t1) > 1e-16);
 
@@ -415,7 +412,7 @@ int Orbit::traj_int_grid(double tfc, double **yNCE, double *tNCE, int N, int isR
 
     //Projection tools
     double projdist;
-    int nreset, nt;
+    int nreset = 1, nt;
 
     //Plot
     double ti;
@@ -456,7 +453,7 @@ int Orbit::traj_int_grid(double tfc, double **yNCE, double *tNCE, int N, int isR
         do
         {
             ti = t0x + (double) nt *(tfc-t0x)/(1.0*N);
-            if(isResetOn) status = this->gslc_proj_evolve(yv, &t, t0x, ti, &projdist, &nreset, isResetOn);
+            if(isResetOn) status = this->gslc_proj_evolve(yv, &t, t0x, ti, &projdist, &nreset, isResetOn, true);
             else  status = gsl_odeiv2_driver_apply (odestruct->d, &t, ti, yv);
 
             for(int k = 0; k < nvar; k++) yNCE[k][nt] = yv[k];
@@ -493,11 +490,11 @@ int Orbit::traj_int_grid(double tfc, double **yNCE, double *tNCE, int N, int isR
 
     //------------------------------------------------------------------------------------
     //If the projection procedure failed enough time to reach the minimum projection time,
-    //the last "good" indix is returned. If this good indix is exactly zero (which might
+    //the last "good" index is returned. If this good index is exactly zero (which might
     //happen, if the projection procedure is really bad), we have a problem, because then
     //it is equal to FTC_SUCCESS = 0. Since FTC_SUCCESS is set equal to zero
     //to match GSL standard (GSL_SUCCESS := 0), we cannot change its value now.
-    //So, if the last indix is exactly zero, we output ORBIT_EPROJ
+    //So, if the last index is exactly zero, we output ORBIT_EPROJ
     //------------------------------------------------------------------------------------
     if(tprojx < tprojminx)
     {
@@ -553,7 +550,7 @@ int Orbit::traj_int_grid(double **yNCE, double *tgridNCE, int N, int isResetOn)
 
     //Projection tools
     double projdist;
-    int nreset, nt;
+    int nreset = 1, nt;
 
     //Initial & final time
     double t0c = tgridNCE[0];
@@ -597,7 +594,7 @@ int Orbit::traj_int_grid(double **yNCE, double *tgridNCE, int N, int isResetOn)
         do
         {
             ti = tgridNCE[nt];
-            if(isResetOn) status = this->gslc_proj_evolve(yv, &t, t0c, ti, &projdist, &nreset, isResetOn);
+            if(isResetOn) status = this->gslc_proj_evolve(yv, &t, t0c, ti, &projdist, &nreset, isResetOn, true);
             else  status = gsl_odeiv2_driver_apply (odestruct->d, &t, ti, yv);
 
             for(int k = 0; k < nvar; k++) yNCE[k][nt] = yv[k];
@@ -632,11 +629,11 @@ int Orbit::traj_int_grid(double **yNCE, double *tgridNCE, int N, int isResetOn)
 
     //------------------------------------------------------------------------------------
     //If the projection procedure failed enough time to reach the minimum projection time,
-    //the last "good" indix is returned. If this good indix is exactly zero (which might
+    //the last "good" index is returned. If this good index is exactly zero (which might
     //happen, if the projection procedure is really bad), we have a problem, because then
     //it is equal to FTC_SUCCESS = 0. Since FTC_SUCCESS is set equal to zero
     //to match GSL standard (GSL_SUCCESS := 0), we cannot change its value now.
-    //So, if the last indix is exactly zero, we output ORBIT_EPROJ
+    //So, if the last index is exactly zero, we output ORBIT_EPROJ
     //------------------------------------------------------------------------------------
     if(tprojx < tprojminx)
     {
@@ -669,7 +666,7 @@ int Orbit::traj_int_grid(double **yNCE, double *tgridNCE, int N, int isResetOn)
 /**
  *   \brief Integrates a given trajectory up to tf, on a variable grid.
  *          This routine returns:
- *                  - The last indix that contains data in the data vectors.
+ *                  - The last index that contains data in the data vectors.
  *                  - ORBIT_EINT = -1 if the stepper gslc_proj_step went wrong
  *                     (via the GSL routine gsl_odeiv2_evolve_apply)
  *                  - The index corresponding to the last good state
@@ -682,7 +679,7 @@ int Orbit::traj_int_grid(double **yNCE, double *tgridNCE, int N, int isResetOn)
  *                    is returned.
  *
  *          Note that if the maximum number of points N is reached before the end of the
- *          integration procedure, the last indix is still returned as an output, but
+ *          integration procedure, the last index is still returned as an output, but
  *          a warning is displayed to the user.
  **/
 int Orbit::traj_int_var_grid(double tfc, double **yNCE, double *tNCE, int N, int isResetOn)
@@ -696,7 +693,7 @@ int Orbit::traj_int_var_grid(double tfc, double **yNCE, double *tNCE, int N, int
 
     //Projection tools
     double projdist;
-    int nreset, nt;
+    int nreset = 1, nt;
 
     //tproj
     double trpoji = tprojx;
@@ -733,7 +730,7 @@ int Orbit::traj_int_var_grid(double tfc, double **yNCE, double *tNCE, int N, int
         //--------------------------------------------------------------------------------
         do
         {
-            status = this->gslc_proj_step(yv, &t, t0x, tfc, &projdist, &nreset, isResetOn);
+            status = this->gslc_proj_step(yv, &t, t0x, tfc, &projdist, &nreset, isResetOn, true);
             for(int k = 0; k < nvar; k++) yNCE[k][nt] = yv[k];
             tNCE[nt] = t;
             //Advance one step
@@ -763,7 +760,7 @@ int Orbit::traj_int_var_grid(double tfc, double **yNCE, double *tNCE, int N, int
             return ORBIT_EINT;
         }
 
-        //The maximum number of points is reached. The loop will end and the last indix
+        //The maximum number of points is reached. The loop will end and the last index
         //N-1 will be output.
         if(nt == N)
         {
@@ -775,11 +772,11 @@ int Orbit::traj_int_var_grid(double tfc, double **yNCE, double *tNCE, int N, int
 
     //------------------------------------------------------------------------------------
     //If the projection procedure failed enough time to reach the minimum projection time,
-    //the last "good" indix is returned. If this good indix is exactly zero (which might
+    //the last "good" index is returned. If this good index is exactly zero (which might
     //happen, if the projection procedure is really bad), we have a problem, because then
     //it is equal to FTC_SUCCESS = 0. Since FTC_SUCCESS is set equal to zero
     //to match GSL standard (GSL_SUCCESS := 0), we cannot change its value now.
-    //So, if the last indix is exactly zero, we output ORBIT_EPROJ
+    //So, if the last index is exactly zero, we output ORBIT_EPROJ
     //------------------------------------------------------------------------------------
     if(tprojx < tprojminx)
     {
@@ -804,7 +801,7 @@ int Orbit::traj_int_var_grid(double tfc, double **yNCE, double *tNCE, int N, int
     tprojx = trpoji;
 
     //------------------------------------------------------------------------------------
-    //If the whole integration went well, the last indix is returned.
+    //If the whole integration went well, the last index is returned.
     //------------------------------------------------------------------------------------
     return nt-1;
 }
@@ -837,6 +834,117 @@ int Orbit::proj_traj_grid(double **sRCM, double **yNCE, double *tNCE, int N)
 
     return GSL_SUCCESS;
 }
+
+//========================================================================================
+// Integrate with free projection
+//========================================================================================
+/**
+ *   \brief Essentially like traj_int_grid with the same arguments, except that there is
+ *          no safety check on the distance of projection, except when it is greater than
+ *          0.5 (very big) in this case, we cut the results right before.
+ **/
+int Orbit::traj_int_grid_free_proj(double tfc, double** yNCE, double* tNCE, int N)
+{
+    //------------------------------------------------------------------------------------
+    //Initialization
+    //------------------------------------------------------------------------------------
+    int nvar = odestruct->dim;   //number of variables
+    int status;                  //current status
+    double yv[nvar], t;          //current state and time
+    int nt;
+
+    //Plot
+    double ti;
+
+    //------------------------------------------------------------------------------------
+    //Projection tools
+    //------------------------------------------------------------------------------------
+    //    double omega1 = invman->getOmega1();
+    //    double omega3 = invman->getOmega3();
+    //    cdouble scp[reduced_nv];
+    double projdist;
+    int nreset = 1;
+
+    //------------------------------------------------------------------------------------
+    // Initialize the integration
+    //------------------------------------------------------------------------------------
+    //Reset ode structure.
+    reset_ode_structure(odestruct);
+
+    //Change sign of step if necessary
+    if((tfc < t0x && odestruct->h>0)    || (tfc > t0x && odestruct->h<0)) odestruct->h *= -1;
+    if((tfc < t0x && odestruct->d->h>0) || (tfc > t0x && odestruct->d->h<0)) odestruct->d->h *= -1;
+
+    //Init the state & time
+    for(int i = 0; i < nvar; i++) yv[i] = z0x[i];
+    t = t0x;
+
+    //Init the indexes that evolve along with the state
+    nt = 1;
+
+    //First position
+    for(int k = 0; k < nvar; k++) yNCE[k][0] = yv[k];
+    tNCE[0] = t0x;
+
+    //------------------------------------------------------------------------------------
+    //Loop
+    //------------------------------------------------------------------------------------
+    do
+    {
+        //Integrate until ti
+        ti = t0x + (double) nt *(tfc-t0x)/(1.0*N);
+
+        //Evolve and project
+        status = this->gslc_proj_evolve(yv, &t, t0x, ti, &projdist, &nreset, true, false);
+
+        //Check that the projection is not awful
+        if(projdist > 0.5) status = ORBIT_EPROJ;
+
+
+        //status = gsl_odeiv2_driver_apply (odestruct->d, &t, ti, yv);
+
+        //            //Free projection;
+        //            //Get the closest point on the center manifold
+        //            NCprojCCM(yv, t, invman->getN(), OFS_ORDER, invman->getMIcoc(), invman->getVcoc(), omega1, omega3, scp, reduced_nv);
+        //            //Update the state
+        //            invman->evalCCMtoNC(scp, t, yv, order, ofs_order);
+
+        //Save
+        for(int k = 0; k < nvar; k++) yNCE[k][nt] = yv[k];
+        tNCE[nt] = ti;
+
+        //Advance one step
+        nt++;
+    }
+    while((nt<=N) && (status == FTC_SUCCESS));
+
+    //------------------------------------------------------------------------------------
+    //Checks
+    //------------------------------------------------------------------------------------
+    //If a new reset is necessary
+    if (status == ORBIT_EPROJ)
+    {
+        cout << "Orbit::traj_int_grid_free_proj. Warning: the projection went wrong" << endl;
+        cout << "The index corresponding to the last good state is returned if it is not zero." << endl;
+        if(nt-2 > 0) return nt-2; //NOTE: here it is nt-2 instead of nt-1 just to add a little bit of safety
+        else return ORBIT_EPROJ;
+    }
+
+
+    //Something went wrong inside the stepper
+    if(status == ORBIT_EINT)
+    {
+        cout << "Orbit::traj_int_grid_free_proj. Warning: the stepper went wrong." << endl;
+        cout << "No output is produced.";
+        return ORBIT_EINT;
+    }
+
+    //------------------------------------------------------------------------------------
+    //Return
+    //------------------------------------------------------------------------------------
+    return FTC_SUCCESS;
+}
+
 
 //========================================================================================
 // Integrate in reduced coordinates
@@ -915,8 +1023,10 @@ int Orbit::traj_red_grid(double tfc, double** yNCE, double* tNCE, int N)
         //Evolve the status
         status = gsl_odeiv2_driver_apply (d_fh, &t, ti, s1ccm8); //gsl_odeiv2_evolve_apply (d_fh->e, d_fh->c, d_fh->s, d_fh->sys, &t2, t1_SEM, &d_fh->h, s1ccm8);
 
-        //Update the state in NC coordinates
+        //Check that the integration is not diverging
+        if(fabs(s1ccm8[0]) >  this->invman->getSIMAX()) status = ORBIT_EPROJ;
 
+        //Update the state in NC coordinates
         this->invman->evalCCM8toNC(s1ccm8, ti, yv, this->order, this->ofs_order);
 
         //Save in final outputs
@@ -929,7 +1039,19 @@ int Orbit::traj_red_grid(double tfc, double** yNCE, double* tNCE, int N)
         //Advance one step
         nt++;
     }
-    while((nt<=N) && (status == 0));
+    while((nt<=N) && (status == FTC_SUCCESS));
+
+    //------------------------------------------------------------------------------------
+    //Checks
+    //------------------------------------------------------------------------------------
+    //If a new reset is necessary
+    if (status == ORBIT_EPROJ)
+    {
+        cout << "Orbit::traj_red_grid. Warning: the integration went wrong" << endl;
+        cout << "The index corresponding to the last good state is returned if it is not zero." << endl;
+        if(nt-2 > 0) return nt-2; //NOTE: here it is nt-2 instead of nt-1 just to add a little bit of safety
+        else return ORBIT_EPROJ;
+    }
 
 
     //------------------------------------------------------------------------------------
@@ -938,7 +1060,87 @@ int Orbit::traj_red_grid(double tfc, double** yNCE, double* tNCE, int N)
     return FTC_SUCCESS;
 }
 
+//========================================================================================
+// Switch function on the different types of integration
+//========================================================================================
+/**
+ *   \brief Switch between traj_int_grid/traj_red_grid/traj_int_grid_free_proj,
+ *          depending on the value of comp_orb
+ **/
+int Orbit::traj_int_main(double tfc, double** yNCE, double* tNCE, int N, int comp_orb)
+{
+    string fname = "traj_int_main";
+    int orb_index = N;
 
+    switch(comp_orb)
+    {
+    case INT_PROJ_CHECK: //computation using projection method
+    {
+        cout << fname << ". computing the orbit using the (checked) projection method... " << endl;
+
+        int output = this->traj_int_grid(tfc, yNCE, tNCE, N, true);
+        //--------------------------------------------------------------------------------
+        //If output is strictly greater than 0, then the projection procedure inside
+        //the integration went wrong, and the new index is output.
+        //It output == ORBIT_EPROJ, the projection procedure failed so bad that there
+        //is no point stored in the data, except the first one, and the new index is zero
+        //--------------------------------------------------------------------------------
+        if(output == ORBIT_EPROJ) orb_index = 0;
+        else if(output > 0) orb_index = output;
+        break;
+    }
+
+    case INT_PROJ_FREE: //computation with free projection
+    {
+        cout << fname << ". computing the orbit using the free projection method... " << endl;
+        int output = this->traj_int_grid_free_proj(tfc, yNCE, tNCE, N);
+        if(output > 0) orb_index = output;
+        break;
+    }
+
+
+    case INT_RED_COORD: //computation using reduced coordinates
+    {
+
+        cout << fname << ". computing the orbit using the reduced vector field... " << endl;
+        //--------------------------------------------------------------------------------
+        //Integration on grid_points_eff[0]+1 fixed grid
+        //--------------------------------------------------------------------------------
+        int output = this->traj_red_grid(tfc, yNCE, tNCE, N);
+        if(output > 0) orb_index = output;
+        break;
+    }
+
+    case INT_TRY_BOTH: //computation with free projection, then reduced coordinates if failed
+    {
+        cout << fname << ". computing the orbit using the free projection method... " << endl;
+        int output = this->traj_int_grid_free_proj(tfc, yNCE, tNCE, N);
+
+
+        if(output > 0)
+        {
+            cout << fname << ". now trying to compute the orbit using the reduced vector field... " << endl;
+            //----------------------------------------------------------------------------
+            //Integration on grid_points_eff[0]+1 fixed grid
+            //----------------------------------------------------------------------------
+            int output = this->traj_red_grid(tfc, yNCE, tNCE, N);
+            if(output > 0) orb_index = output;
+        }
+
+        break;
+    }
+
+
+    default:
+    {
+        cout << fname << ". Unknown integration type. " << endl;
+        orb_index = 0;
+    }
+
+    }
+
+    return orb_index;
+}
 
 
 //========================================================================================

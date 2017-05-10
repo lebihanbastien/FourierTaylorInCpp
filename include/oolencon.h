@@ -554,7 +554,7 @@ int cmu_grid_orbit_on_one_period(Orbit& orbit, double* tNCE, double** yNCE, doub
  *         other coordinate systems (VNCSEM, PSEM, PEM...), as long as these two routines
  *         are not used.
  **/
-int refemlisemli(RefSt& refSt);
+int ref_eml_to_seml_maps(RefSt& refSt);
 
 ;/**
  *  \brief Computes the best trajectories from int_proj_ORBIT_EM_on_CM_SEM.
@@ -571,7 +571,51 @@ int refemlisemli(RefSt& refSt);
  *
  *         so stands for single orbit.
  **/
-int sorefemlisemli(RefSt& refSt);
+int ref_eml_to_seml_orbits(RefSt& refSt);
+
+
+//========================================================================================
+//
+//         Refinement of solutions: CMU to CMS - subroutines for orbits
+//
+//========================================================================================
+/**
+ *  \brief Computing the first guess for the connection leg between the orbit orbit_EM and
+ *         and the orbit orbit_SEM. The complete trajectory (EML2 + man leg + SEMLi)
+ *         is computed. The grid size is returned.
+ **/
+int cref_eml_to_seml_ic(double** y_traj, double* t_traj,
+                        double** y_traj_comp, double* t_traj_comp,
+                        double** y_seed_NCSEM, double* t_seed_NCSEM,
+                        int man_grid_size,
+                        Orbit& orbit_EM, Orbit& orbit_SEM,
+                        int dcs, int coord_type, int grid_points_des[3],
+                        int grid_points_eff[3], int max_grid,
+                        RefSt& refSt, gnuplot_ctrl* h2, gnuplot_ctrl* h3);
+
+/**
+ *  \brief Save a trajectory, segment by segment, in to complementary coordinate systems.
+ *         Same as savetrajsegbyseg, but with an additional computation @ the Pk section
+ *         defined in refSt.
+ **/
+int write_cref_traj_bin(double** y_traj, double* t_traj,
+                        int final_index, int mPlot,
+                        int coord_int,
+                        double et0,      double tsys0,
+                        int coordsys1,   int coordsys2,
+                        string filename, int label, bool isFirst, RefSt& refSt);
+
+/**
+ *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM.
+ *         A multiple_shooting_direct is applied on the WHOLE trajectory
+ *         (EML2 orbit + manifold leg + SEMLi orbit). Note that the scope of this routine
+ *         is LIMITED to  refSt.grid == REF_FIXED_GRID
+ **/
+int cref_eml_to_seml(int grid_freq_days[3], int coord_type,
+                     double** y_seed_NCSEM, double* t_seed_NCSEM,
+                     int man_grid_size,
+                     Orbit& orbit_EM, Orbit& orbit_SEM,
+                     RefSt& refSt, int label, int isFirst);
 
 //========================================================================================
 //
@@ -591,7 +635,7 @@ int sorefemlisemli(RefSt& refSt);
  *         reasons. In this way, a warning is issued when coord_type is different
  *         from NCSEM.
  **/
-int subrefemlisemli(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* t_traj,
+int wref_eml_to_seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* t_traj,
                    int dcs, int coord_type, int* man_grid_size_t,
                    RefSt& refSt, gnuplot_ctrl* h2);
 
@@ -698,7 +742,7 @@ int comprefemlisemli3d(int grid_freq_days[3], int coord_type,
 /**
  *  \brief Refine a given output of comprefemlisemli3d into JPL ephemerides.
  **/
-int jplref3d(int coord_type, RefSt& refSt, int label, int isFirst, string filename_in);
+int jplref_eml_to_seml(int coord_type, RefSt& refSt, int label, int isFirst, string filename_in);
 
 /**
  *  \brief Refine a given output of comprefemlisemli3d into Inertial Coordinates, then into
@@ -709,6 +753,19 @@ int comptojplref3d(int coord_type, RefSt& refSt, string filename_in);
 //----------------------------------------------------------------------------------------
 //         Refinement of solutions: to JPL - Subroutines
 //----------------------------------------------------------------------------------------
+int new_last_index(int final_index_old, int mRef, int nsh0, int nsh1);
+
+/**
+ * \brief Same as jplfg3d_switch, with an interpolation before and after the switching
+ *        point.
+ **/
+int jplfg3d_interpolation(double** y_traj_n, double* t_traj_n,
+                          double** y_traj_jpl_out, double* t_traj_jpl_out,
+                          int final_index_old, int coord_type,
+                          int comp_type, int coord_int,
+                          int mRef, int nsh0, int nsh1,
+                          double et0, double tsys0, double tsys0_comp);
+
 /**
  * \brief Computes a first guess in ephemerides coordinates, switching between the
  *        Earth-Moon and Sun-Earth plane of motion when the discrepancy between the two
@@ -729,17 +786,6 @@ int jplfg3d_super_switch(double** y_traj_n, double* t_traj_n,
                            int comp_type, int coord_int,
                            int mRef,
                            double et0, double tsys0, double tsys0_comp);
-
-/**
- * \brief Same as jplfg3d_switch, with an interpolation before and after the switching
- *        point.
- **/
-int jplfg3d_interpolation(double** y_traj_n, double* t_traj_n,
-                            double** * y_traj_jpl, double** t_traj_jpl,
-                            int final_index, int coord_type,
-                            int comp_type, int coord_int,
-                            int mRef,
-                            double et0, double tsys0, double tsys0_comp);
 
 //----------------------------------------------------------------------------------------
 //         Refinement of solutions: to JPL - Tests
@@ -765,6 +811,25 @@ int compref3d_test_eml_synjpl(int man_grid_size_t,
  *  \brief Computes only a EML2-SEMLi connection and test a JPL refinement, in synodical coordinates
  **/
 int compref3d_test_eml2seml_synjpl(int coord_type, string filename_in);
+
+
+//========================================================================================
+//
+//         Pk section routines
+//
+//========================================================================================
+/**
+ *  \brief Find the intersection of a EML2-SEMLi connection contained in
+ *         y_traj_n/t_traj_n with a certain Pk section defined by refSt.
+ *         The Pk section is of the form: the distance to the pk_center[3] is equal
+ *         to pk_radius, all in NCEM coordinates.
+ **/
+int pk_ref_conn(double ye_NCEM[6], double* te_NCEM,
+                double ye_NCSEM[6], double* te_NCSEM,
+                double ve_NCEM[3], double ve_NCSEM[3],
+                double* t_traj_NCSEM, double** y_traj_NCSEM,
+                int man_index, double pk_center[3], double pk_radius);
+
 
 //========================================================================================
 //

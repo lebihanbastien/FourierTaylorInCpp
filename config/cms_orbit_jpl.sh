@@ -125,13 +125,13 @@ REFST_THETAMAX=180           # should be a multiple of 90°
 # Filenames (used only if IO_HANDLING==$IO_BASH)
 # FILE_PCU="projcu_order_20_dest_L2_Orbit_10_40_eps_1e-5.bin"
 # FILE_CONT="Serv/cont_atf_order_20_dest_L2_Orbit_10_SINGLE_eps_1e-5.txt"  #local results: "cont_atf_order_16_dest_L2_t0_0.99.txt"
-# FILE_CONT_TRAJ="Serv/cont_atf_traj_order_20_dest_L2_Orbit_10_eps_1e-5.bin"
+# FILE_CONT_RES="Serv/cont_atf_traj_order_20_dest_L2_Orbit_10_eps_1e-5.bin"
 # FILE_JPL="cont_jpl_order_20_dest_L2_Orbit_10.bin"
 
 # For QHalo, on server
 FILE_PCU="projcu_order_20_dest_L2_Orbit_10_40_eps_1e-5.bin"
 FILE_CONT="cont_atf_order_20_dest_L2_QHalo_CONT.txt"  #local results: "cont_atf_order_16_dest_L2_t0_0.99.txt"
-FILE_CONT_TRAJ="cont_atf_traj_order_20_dest_L2_QHalo_CONT.bin"
+FILE_CONT_RES="cont_atf_traj_order_20_dest_L2_QHalo_CONT.bin"
 FILE_JPL="cont_jpl_order_20_dest_L2_QHalo.bin"
 
 

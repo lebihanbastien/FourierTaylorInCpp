@@ -35,6 +35,7 @@ Invman::Invman(int ofts_order_, int ofs_order_, CSYS& csys):
     fwrk(csys.fwrk),
     ncs(csys.fwrk==F_SEM?NCSEM:NCEM),
     scs(csys.fwrk==F_SEM?PSEM:PEM),
+    si_norm_max(csys.fwrk==F_SEM?SI_NORM_SEM_MAX:SI_NORM_EM_MAX),
     Mcoc(6, 6, ofs_order_),
     MIcoc(6, 6, ofs_order_),
     Vcoc(6, Ofsc(ofs_order_)),
@@ -1715,7 +1716,10 @@ int Invman::getOFTSORDER() const
     return ofts_order;
 }
 
-
+int Invman::getSIMAX() const
+{
+    return si_norm_max;
+}
 //========================================================================================
 // Energy
 //========================================================================================

@@ -408,3 +408,13 @@ void state_memcpy(double *dest, const double *src)
 {
     vector_memcpy(dest, src, 6);
 }
+
+
+/**
+ *  \brief Copy src into dest, both of size 6 x (last_indix+1)
+ **/
+void vecstate_memcpy(double **dest, const double **src, int last_indix)
+{
+    for(int k = 0; k <= last_indix; k++)
+        for(int i = 0; i < 6; i++)  dest[i][k] = src[i][k];
+}

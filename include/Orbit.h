@@ -8,6 +8,11 @@
 
 #include "gsl/gsl_statistics_double.h"
 
+#define INT_NO_COMP    0
+#define INT_PROJ_CHECK 1
+#define INT_RED_COORD  2
+#define INT_PROJ_FREE  3
+#define INT_TRY_BOTH   4
 
 class Orbit
 {
@@ -83,10 +88,12 @@ class Orbit
         int traj_int_grid(double tf, double **yNCE, double *tNCE, int N, int isResetOn);
         int traj_int_grid(double **yNCE, double *tgridNCE, int N, int isResetOn);
         int traj_int_var_grid(double tf, double **yNCE, double *tNCE, int N, int isResetOn);
-        int gslc_proj_step(double yv[], double *t, double t0, double t1, double *projdist, int *nreset, int isResetOn);
-        int gslc_proj_evolve(double yv[], double *t, double t0, double t1, double *projdist, int *nreset, int isResetOn);
+        int gslc_proj_step(double yv[], double *t, double t0, double t1, double *projdist, int *nreset, int isResetOn, int isResetCheckOn);
+        int gslc_proj_evolve(double yv[], double *t, double t0, double t1, double *projdist, int *nreset, int isResetOn, int isResetCheckOn);
         int proj_traj_grid(double **sRCM, double **yNCE, double *tNCE, int N);
         int traj_red_grid(double tfc, double **yNCE, double *tNCE, int N);
+        int traj_int_grid_free_proj(double tfc, double **yNCE, double *tNCE, int N);
+        int traj_int_main(double tfc, double** yNCE, double* tNCE, int N, int comp_orb);
 
         //--------------------------------------------------------------------------------
         //Projection on (un)stable manifold

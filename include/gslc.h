@@ -173,4 +173,9 @@ void vector_memcpy(double *dest, const double *src, int n);
  **/
 void state_memcpy(double *dest, const double *src);
 
+/**
+ *  \brief Copy src into dest, both of size 6 x (last_indix+1)
+ **/
+void vecstate_memcpy(double **dest, const double **src, int last_indix);
+
 #endif // GSLC_H_INCLUDED

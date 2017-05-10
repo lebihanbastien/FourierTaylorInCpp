@@ -145,3 +145,12 @@ export TIME_SELECTION_RATIO=0
 export IO_DEFAULT=0
 export IO_BASH=1
 export IO_DIALOG=2
+
+#-----------------------------------------------------
+# Type of computation for each orbit
+#-----------------------------------------------------
+export INT_NO_COMP=0
+export INT_PROJ_CHECK=1
+export INT_RED_COORD=2
+export INT_PROJ_FREE=3
+export INT_TRY_BOTH=4

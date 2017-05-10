@@ -3742,6 +3742,21 @@ void matrix_complex_printf(const cdouble **y, int n, int m)
     }
 }
 
+
+/**
+ *  \brief Prints a matrix of double using cout.
+ **/
+void matrix_printf(double **y, int n, int m)
+{
+    coutlp();
+    for(int i = 0; i < n; i ++)
+    {
+        cout << i;
+        for(int j = 0; j < m; j++) printf(" %+1.2e", y[i][j]);
+        cout << endl;
+    }
+}
+
 //----------------------------------------------------------------------------------------
 //   Print
 //----------------------------------------------------------------------------------------

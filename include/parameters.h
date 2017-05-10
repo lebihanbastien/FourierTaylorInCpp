@@ -58,10 +58,10 @@ typedef complex double cdouble;
 //----------------------------------------------------------------------------------------
 //Model
 //----------------------------------------------------------------------------------------
-#define M_RTBP  0  // RTBP model indix
-#define M_QBCP  1  // QBCP model indix
-#define M_BCP   2  // BCP model indix
-#define M_ERTBP 3  // ERTBP model indix
+#define M_RTBP  0  // RTBP model index
+#define M_QBCP  1  // QBCP model index
+#define M_BCP   2  // BCP model index
+#define M_ERTBP 3  // ERTBP model index
 
 //----------------------------------------------------------------------------------------
 //Frameworks

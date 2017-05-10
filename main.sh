@@ -444,6 +444,10 @@ if [ -z ${REFST_TYPE+x} ]; then
 	REFST_ISSAVED_EM=0   # 0: don't save, 1: save using projection method
 	REFST_ISSAVED_SEM=0  # 0: don't save, 1: save using projection method, 2: save using integration in reduced coordinates
 	
+	# Type of computation for each orbit
+	REFST_COMP_ORB_EM=$INT_TRY_BOTH
+	REFST_COMP_ORB_SEM=$INT_TRY_BOTH
+	
 	# Type of time selection
 	REFST_TYPE_OF_T_SEL=$TIME_SELECTION_RATIO
 	
@@ -451,7 +455,9 @@ if [ -z ${REFST_TYPE+x} ]; then
 	# Filenames (used only if IO_HANDLING==$IO_BASH)
 	#-----------------------------------------------------
 	FILE_CONT="cont_atf.txt"
-	FILE_CONT_TRAJ="cont_atf_traj.bin"
+	FILE_CONT_RES="cont_atf_traj.bin"
+	FILE_TRAJ_FROM_W="traj_from_w.bin"
+	FILE_TRAJ_FROM_C="traj_from_c.bin"
 	FILE_JPL="cont_jpl.bin"
 	
 else
@@ -499,6 +505,17 @@ else
 	
 	if [ -z ${REFST_XPS_NCEM+x} ]; then
 		set_param "REFST_XPS_NCEM" 0.8
+	fi
+	
+	#-----------------------------------------------------
+	# Type of computation for each orbit
+	#-----------------------------------------------------
+	if [ -z ${REFST_COMP_ORB_EM+x} ]; then
+		set_param "REFST_COMP_ORB_EM" $INT_TRY_BOTH
+	fi
+	
+	if [ -z ${REFST_COMP_ORB_SEM+x} ]; then
+		set_param "REFST_COMP_ORB_SEM" $INT_TRY_BOTH
 	fi
 	
 
@@ -638,6 +655,9 @@ else
 	echo "REFST_ISSAVED_EM      =" $REFST_ISSAVED_EM
 	echo "REFST_ISSAVED_SEM     =" $REFST_ISSAVED_SEM
 	echo ''
+	echo "REFST_COMP_ORB_EM     =" $REFST_COMP_ORB_EM
+	echo "REFST_COMP_ORB_SEM    =" $REFST_COMP_ORB_SEM
+	echo ''
 	
 	#-----------------------------------------------------
 	# Type of time selection
@@ -662,8 +682,16 @@ else
 		set_param "FILE_CONT" "cont_atf.txt"
 	fi
 	
-	if [ -z ${FILE_CONT_TRAJ+x} ]; then
-		set_param "FILE_CONT_TRAJ" "cont_atf_traj.bin"
+	if [ -z ${FILE_CONT_RES+x} ]; then
+		set_param "FILE_CONT_RES" "cont_atf_traj.bin"
+	fi
+	
+	if [ -z ${FILE_TRAJ_FROM_W+x} ]; then
+		set_param "FILE_TRAJ_FROM_W" "traj_from_w.bin"
+	fi
+	
+	if [ -z ${FILE_TRAJ_FROM_C+x} ]; then
+		set_param "FILE_TRAJ_FROM_C" "traj_from_c.bin"
 	fi
 	
 	if [ -z ${FILE_JPL+x} ]; then
@@ -672,7 +700,9 @@ else
 	
 	echo "FILE_PCU              =" $FILE_PCU
 	echo "FILE_CONT             =" $FILE_CONT
-	echo "FILE_CONT_TRAJ        =" $FILE_CONT_TRAJ
+	echo "FILE_CONT_RES         =" $FILE_CONT_RES
+	echo "FILE_TRAJ_FROM_W      =" $FILE_TRAJ_FROM_W
+	echo "FILE_TRAJ_FROM_C      =" $FILE_TRAJ_FROM_C
 	echo "FILE_JPL              =" $FILE_JPL
 	echo ''
 fi
@@ -720,9 +750,10 @@ if [ "$ans" == "y" ]; then
 			COEFFS=(${COEFFS[*]}  $REFST_SF_EML2 $REFST_SF_MAN $REFST_SF_SEML2)
 			COEFFS=(${COEFFS[*]}  $REFST_TSPAN_EM $REFST_TSPAN_SEM)
 			COEFFS=(${COEFFS[*]}  $REFST_ISSAVED_EM $REFST_ISSAVED_SEM)
+			COEFFS=(${COEFFS[*]}  $REFST_COMP_ORB_EM $REFST_COMP_ORB_SEM)
 			COEFFS=(${COEFFS[*]}  $REFST_TYPE_OF_T_SEL)
 			
-			COEFFS=(${COEFFS[*]}   $FILE_PCU $FILE_CONT $FILE_CONT_TRAJ $FILE_JPL)
+			COEFFS=(${COEFFS[*]}   $FILE_PCU $FILE_CONT $FILE_CONT_RES $FILE_TRAJ_FROM_W $FILE_TRAJ_FROM_C $FILE_JPL)
 		;;
 		$COMP_SINGLE_ORBIT)              
 

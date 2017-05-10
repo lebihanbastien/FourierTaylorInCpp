@@ -161,8 +161,8 @@ void initialize_environment(int li_EM, int li_SEM, int isNormalized, int model, 
  *  \brief Update a complex Fourier series given as the component (k,p) of a matrix matrix, from a given txt file.
  *  \param xFFT: the \c ofs<cdouble> to update
  *  \param matrix: the beginning of the name of the source txt file. e.g. "alpha"
- *  \param k the lign indix of the desired component in the matrix \c matrix.
- *  \param p the column indix of the desired component in the matrix \c matrix.
+ *  \param k the lign index of the desired component in the matrix \c matrix.
+ *  \param p the column index of the desired component in the matrix \c matrix.
  *
  *  As an example, the call readCOC(xFFT, "alpha", 2, 1), will update xFFT with the file "alpha21.txt".
  **/
@@ -948,7 +948,7 @@ void init_USYS(USYS* usys, int label, int model)
  * \param csys pointer on the CSYS structure to initialize.
  * \param qbcp_l pointer on the QBCP_L structure that contains csys.
  * \param qbcp pointer on the QBCP structure that contains parameters specific to each libration points (namely, gamma)
- * \param coordsys indix of the coordinate system to use (F_EM, F_SEM).
+ * \param coordsys index of the coordinate system to use (F_EM, F_SEM).
  * \param li number of the libration point to focus on (L1, L2).
  * \param coefNumber the number of vector field coefficients to initialize. It has been set in the QBCP_init function.
  * \param isNew boolean. if true, the qbtbp has not been computed via the qbtbp() routine, so the vector field coefficients cannot be initialized.
@@ -1345,7 +1345,7 @@ void init_QBCP_I(QBCP_I* model,
  * \brief Initializes a libration point.
  * \param libp a pointer towards the LibrationPoint structure to init.
  * \param cr3bp a CR3BP structure that contains useful coefficients.
- * \param number the indix of the libration point to init.
+ * \param number the index of the libration point to init.
  **/
 void init_libp(LibrationPoint* libp, CR3BP cr3bp, int number)
 {
@@ -1895,7 +1895,7 @@ string init_F_LI(int li)
 }
 
 /**
- *  \brief Return the string corresponding to the model indix provided (e.g. "QBCP" if model == M_QBCP).
+ *  \brief Return the string corresponding to the model index provided (e.g. "QBCP" if model == M_QBCP).
  **/
 string init_F_MODEL(int model)
 {
@@ -1916,7 +1916,7 @@ string init_F_MODEL(int model)
 }
 
 /**
- *  \brief Return the string corresponding to the framework (coord. syst.) indix provided (e.g. "EM" if coordsys == F_EM).
+ *  \brief Return the string corresponding to the framework (coord. syst.) index provided (e.g. "EM" if coordsys == F_EM).
  **/
 string init_F_FRAMEWORK(int fwrk)
 {
@@ -1946,7 +1946,7 @@ string init_F_FOLDER(string prefix, int model, int fwrk, int li)
  * \param filename the name of the txt file.
  * \param params a pointer toward the array to update.
  * \param nf the order of the Fourier series.
- * \param shift the indix from which to start the storage of the coefficients in params.
+ * \param shift the index from which to start the storage of the coefficients in params.
  * \param flag: if flag == 1, the coefficients computed via FFT are used. Otherwise, the expansions obtained through Fourier series algebraic manipulations are used.
  *
  *  Warning: As of now, FFT coefficients must be used for betas and deltas (see QBCP_L structure).
@@ -2001,7 +2001,7 @@ double jacobi(double y[], double mu)
 /**
  * \brief Compute the coefficient cn for a given libration point (L1, L2, and L3 for now)
  * \param qbcp_l a reference to the QBCP_L initialized around the selected libration point.
- * \param n the indix of the coefficient to compute.
+ * \param n the index of the coefficient to compute.
  *
  * We recall that the cn coefficient are given by the following equation:
  * \f$  c_n = \frac{1}{\gamma_j^3} \left( (\pm1)^n \mu + (-1)^n \frac{(1-\mu) \gamma_j^{(n+1)}}{(1 -\mp \gamma_j)^{(n+1)}} \right) \f$ for \f$ L_j, j = 1,2 \f$, and where:
@@ -2053,7 +2053,7 @@ double cn(QBCP_L& qbcp_l, int n)
  * \param li the number of the current libration point (1,2,3)
  * \param gamma the gamma parameter associated to the current libration point
  * \param mu the mass ratio of the current TBP system
- * \param n the indix of the coefficient to compute.
+ * \param n the index of the coefficient to compute.
  *
  * We recall that the cn coefficient are given by the following equation:
  * \f$  c_n = \frac{1}{\gamma_j^3} \left( (\pm1)^n \mu + (-1)^n \frac{(1-\mu) \gamma_j^{(n+1)}}{(1 -\mp \gamma_j)^{(n+1)}} \right) \f$ for \f$ L_j, j = 1,2 \f$, and where:

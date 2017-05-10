@@ -477,7 +477,7 @@ void EMtoNC_prim(double Zc[3], double zc[3], double c1, double gamma);
  * \param csys pointer on the CSYS structure to initialize.
  * \param qbcp_l pointer on the QBCP_L structure that contains csys.
  * \param qbcp pointer on the QBCP structure that contains parameters specific to each libration points (namely, gamma)
- * \param fwrk indix of the framework to use (F_EM, F_SEM).
+ * \param fwrk index of the framework to use (F_EM, F_SEM).
  * \param li number of the libration point to focus on (L1, L2).
  * \param coefNumber the number of vector field coefficients to initialize. It has been set in the QBCP_init function.
  * \param isNew boolean. if true, the qbtbp has not been computed via the qbtbp() routine, so the vector field coefficients cannot be initialized.
@@ -522,7 +522,7 @@ void init_QBCP_I(QBCP_I *model, QBCP_L *model1, QBCP_L *model2, int n1, int n2, 
  * \brief Initializes a libration point.
  * \param libp a pointer towards the LibrationPoint structure to init.
  * \param cr3bp a CR3BP structure that contains useful coefficients.
- * \param number the indix of the libration point to init.
+ * \param number the index of the libration point to init.
  **/
 void init_libp(LibrationPoint *libp, CR3BP cr3bp, int number);
 
@@ -607,12 +607,12 @@ void init_grid(double *grid, double gmin, double gmax, int gsize);;
 string init_F_LI(int li);
 
 /**
- *  \brief Return the string corresponding to the model indix provided (e.g. "QBCP" if model == M_QBCP).
+ *  \brief Return the string corresponding to the model index provided (e.g. "QBCP" if model == M_QBCP).
  **/
 string init_F_MODEL(int model);
 
 /**
- *  \brief Return the string corresponding to the framework  indix provided (e.g. "EM" if coordsys == F_EM).
+ *  \brief Return the string corresponding to the framework  index provided (e.g. "EM" if coordsys == F_EM).
  **/
 string init_F_FRAMEWORK(int fwrk);
 
@@ -626,7 +626,7 @@ string init_F_FOLDER(string prefix, int model, int fwrk, int li);
  * \param filename the name of the txt file.
  * \param params a pointer toward the array to update.
  * \param nf the order of the Fourier series.
- * \param shift the indix from which to start the storage of the coefficients in params.
+ * \param shift the index from which to start the storage of the coefficients in params.
  * \param flag: if flag == 1, the coefficients computed via FFT are used. Otherwise, the expansions obtained through Fourier series algebraic manipulations are used.
  *
  *  Warning: As of now, FFT coefficients must be used for betas and deltas (see QBCP_L structure).
@@ -650,7 +650,7 @@ double jacobi(double y[], double mu);
 /**
  * \brief Compute the coefficient cn for a given libration point (L1 or L2 for now)
  * \param qbcp_l a reference to the QBCP_L initialized around the selected libration point.
- * \param n the indix of the coefficient to compute.
+ * \param n the index of the coefficient to compute.
  *
  * We recall that the cn coefficient are given by the following equation:
  * \f$  c_n = \frac{1}{\gamma_j^3} \left( (\pm1)^n \mu + (-1)^n \frac{(1-\mu) \gamma_j^{(n+1)}}{(1 -\mp \gamma_j)^{(n+1)}} \right) \f$ for \f$ L_j, j = 1,2 \f$, and where:
@@ -664,7 +664,7 @@ double cn(QBCP_L& qbcp_l, int n);
  * \param li the number of the current libration point (1,2,3)
  * \param gamma the gamma parameter associated to the current libration point
  * \param mu the mass ratio of the current TBP system
- * \param n the indix of the coefficient to compute.
+ * \param n the index of the coefficient to compute.
  *
  * We recall that the cn coefficient are given by the following equation:
  * \f$  c_n = \frac{1}{\gamma_j^3} \left( (\pm1)^n \mu + (-1)^n \frac{(1-\mu) \gamma_j^{(n+1)}}{(1 -\mp \gamma_j)^{(n+1)}} \right) \f$ for \f$ L_j, j = 1,2 \f$, and where:

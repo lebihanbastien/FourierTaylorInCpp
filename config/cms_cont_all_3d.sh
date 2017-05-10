@@ -124,7 +124,7 @@ REFST_THETAMAX=180           # should be a multiple of 90°
 # Filenames (used only if IO_HANDLING==$IO_BASH)
 FILE_PCU="projcu_3d.bin"
 FILE_CONT="cont_atf.txt"
-FILE_CONT_TRAJ="cont_atf_traj.bin"
+FILE_CONT_RES="cont_atf_traj.bin"
 FILE_JPL="cont_jpl.bin"
 
 #-----------------------------------------------------

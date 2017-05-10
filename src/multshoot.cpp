@@ -664,6 +664,8 @@ int multiple_shooting_direct(double **ymd, double *tmd,
             cout << fname << ". error[n+1] < error[n]. " << endl;
             return FTC_FAILURE;
         }
+        normC_old = normC;
+
 
         //================================================================================
         //Compute the correction vector
@@ -1451,6 +1453,7 @@ int multiple_shooting_direct_square(double **ymd, double *tmd,
             cout << fname << ". error[n+1] < error[n]. " << endl;
             return FTC_FAILURE;
         }
+        normC_old = normC;
 
         //================================================================================
         //Compute the correction vector

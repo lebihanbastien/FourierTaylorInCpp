@@ -160,7 +160,7 @@ int custom_odezero_2(double y[],
     //------------------------------------------------------------------------------
     //Initialization
     //------------------------------------------------------------------------------
-    int last_indix;                     //indix of the final position to be returned
+    int last_indix;                     //index of the final position to be returned
     int events = 0;                     //number of events during integration
     int dim = ode_s->d->sys->dimension; //system dimension
     int i, k;                           //loop parameter

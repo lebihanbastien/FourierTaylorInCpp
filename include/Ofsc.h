@@ -76,14 +76,14 @@ public:
     /**
      *  \brief Sets a coefficient at a given position in the serie.
      *  \param value: the value to set
-     *  \param pos: the position (indix in the serie) to modify
+     *  \param pos: the position (index in the serie) to modify
      */
     void setCoef(cdouble  const&  value, int const& pos);
 
     /**
      *  \brief Adds a coefficient at a given position in the serie.
      *  \param value: the value to add
-     *  \param pos: the position (indix in the serie) to modify
+     *  \param pos: the position (index in the serie) to modify
      */
     void addCoef(cdouble  const&  value, int const& pos);
 

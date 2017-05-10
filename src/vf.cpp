@@ -1348,8 +1348,8 @@ int jpl_vf_syn(double t, const double y[], double f[], void* params_void)
     double mu1    = qbp->ss->mu1;              //mass ratio
     double mu2    = qbp->ss->mu2;              //1-mass ratio
     double nsys   = qbp->ss->n;                //mean motion (in s)
-    double pos1   = qbp->ss->pos1;             //indix of m1
-    double pos2   = qbp->ss->pos2;             //indix of m2
+    double pos1   = qbp->ss->pos1;             //index of m1
+    double pos2   = qbp->ss->pos2;             //index of m2
     double et     = et0 + (t-t0)/nsys;        //Current time in seconds
 
     //------------------------------------------------------------------------------------
@@ -1361,8 +1361,8 @@ int jpl_vf_syn(double t, const double y[], double f[], void* params_void)
     //    cout << " mu1    = " << qbp->ss->mu1 << endl;              //mass ratio
     //    cout << " mu2    = " << qbp->ss->mu2 << endl;              //1-mass ratio
     //    cout << " nsys   = " << qbp->ss->n << endl;                //mean motion (in s)
-    //    cout << " pos1   = " << qbp->ss->pos1 << endl;             //indix of m1
-    //    cout << " pos2   = " << qbp->ss->pos2 << endl;             //indix of m2
+    //    cout << " pos1   = " << qbp->ss->pos1 << endl;             //index of m1
+    //    cout << " pos2   = " << qbp->ss->pos2 << endl;             //index of m2
     //    cout << " et     = " << et0 + (t-t0)/nsys << endl;        //Current time in seconds
 
     //------------------------------------------------------------------------------------
@@ -1602,8 +1602,8 @@ int jpl_vf_syn_var(double t, const double y[], double f[], void* params_void)
     double mu1    = qbp->ss->mu1;              //mass ratio
     double mu2    = qbp->ss->mu2;              //1-mass ratio
     double nsys   = qbp->ss->n;                //mean motion (in s)
-    double pos1   = qbp->ss->pos1;             //indix of m1
-    double pos2   = qbp->ss->pos2;             //indix of m2
+    double pos1   = qbp->ss->pos1;             //index of m1
+    double pos2   = qbp->ss->pos2;             //index of m2
     double et     = et0 + (t - t0) / qbp->ss->n; //Current time in seconds
 
     //------------------------------------------------------------------------------------

@@ -139,8 +139,8 @@ void qbcp2jpl(double tSYS, double *et, int coord_type)
     string epoch_start, epoch_end;
     SpiceDouble  et_start, et_end;
 
-    epoch_start = "2046 MAR 01 00:00:00.000"; //We start in 1950
-    epoch_end   = "2046 JUN 01 00:00:00.000"; //We end in 1950
+    epoch_start = "2020 MAR 01 00:00:00.000"; //We start in 2020
+    epoch_end   = "2020 JUN 01 00:00:00.000"; //We end in 2020
 
     //In ephemeris time
     str2et_c(epoch_start.c_str(), &et_start);
@@ -2220,6 +2220,17 @@ void neci2ecl(double yneci[6], double YEARTH[6], double YECL[6], SS &ss)
 }
 
 /**
+ *  \brief To full earth-centered inertial coordinates (directly from SPICE) from normalized earth-centered inertial coordinates.
+ **/
+void neci2eci(double yneci[6], double yeci[6], SS &ss)
+{
+    //Position
+    for(int i = 0; i < 3; i++) yeci[i] = yneci[i]*ss.a;
+    //Velocity
+    for(int i = 3; i < 6; i++) yeci[i] = yneci[i]*(ss.a*ss.n);
+}
+
+/**
  * \brief From synodic to earth-centered normalized coordinates, vector format.
  *        Note that coord_eph = VEM/VSEM can be chosen independantly from the ss structure
  *        that normalizes the state.
@@ -2318,6 +2329,91 @@ void neci2synstate_vec(double **yneci, double *tneci, double **yout, double *tou
     }
 }
 
+
+//========================================================================================
+//                          For Celestia
+//========================================================================================
+/**
+ * \brief From NJ2000 to J2000, vector format.
+ *        The final time is in Julian date.
+ **/
+void neci2eci_vec(double **yneci, double *tneci, double **yout, double *tout, int N, SS & ss)
+{
+    //====================================================================================
+    //Init
+    //====================================================================================
+    double vin[6], vout[6];
+    double etecl;
+
+    //====================================================================================
+    //Loop
+    //====================================================================================
+    for(int p = 0; p <= N; p++)
+    {
+        //Update etecl (non-normalized shifted time):
+        etecl = tneci[p]/ss.n;
+
+        //Update vin
+        for(int i = 0; i < 6; i++) vin[i] = yneci[i][p];
+
+        //Denormalization
+        neci2eci(vin, vout, ss);
+
+        //Update yout
+        for(int i = 0; i <6; i++) yout[i][p] = vout[i];
+
+        //Update tout in Julian Date
+        tout[p] = unitim_c(etecl, "TDB", "JED");
+    }
+}
+
+/**
+ * \brief From NJ2000 to non-normalized synodic coordinates, vector format. Only the position is good for now
+ *        The final time is in Julian date.
+ **/
+void neci2syndpos_vec(double **yneci, double *tneci, double **yout, double *tout, int N, int coord_eph, SS & ss)
+{
+    //=================================================================================
+    //Init
+    //=================================================================================
+    double B[3], C[3][3], etecl;
+    double vin[6], vout[6];
+
+    //=================================================================================
+    //Loop
+    //=================================================================================
+    for(int p = 0; p <= N; p++)
+    {
+        //----------------------------
+        //Update etecl (non-normalized shifted time):
+        //----------------------------
+        etecl = tneci[p]/ss.n;
+
+        //Position of the Center
+        double Re[6], lt;
+        spkez_c (ss.center, etecl, DEFFRAME, "NONE", SSB, Re, &lt);
+
+        //----------------------------
+        // COC
+        //----------------------------
+        //Init the COC
+        init_ecl2syndpos(etecl, B, C, coord_eph);
+        //Update vin
+        for(int i = 0; i < 6; i++) vin[i] = yneci[i][p];
+        //Denormalization
+        neci2ecl(vin, Re, vout, ss);
+        //COC, ONLY IN POSITION FOR NOW
+        ecl2syndpos(vout, vin, B, C);
+
+        //----------------------------
+        //Store data
+        //----------------------------
+        //Update yout
+        for(int i = 0; i <6; i++) yout[i][p] = vin[i];
+        //Update tout in Julian Date
+        tout[p] = unitim_c(etecl, "TDB", "JED");
+    }
+}
 
 
 

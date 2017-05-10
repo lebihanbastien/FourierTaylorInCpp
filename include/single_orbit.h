@@ -39,6 +39,14 @@
 //For orbit
 #define TYPE_MAN_PROJ_ORBIT 62
 
+//For intern computation
+#define TYPE_TRAJ_FROM_W    14
+#define TYPE_TRAJ_FROM_C    15
+
+//To celestia
+#define TYPE_TRAJ_CELESTIA  16
+
+
 #define GSIZE 50;
 #define ORBIT_SEM_UNSTABLE_MIN 1e-5
 
@@ -114,6 +122,29 @@ struct SingleOrbit
 //          Integration - main routines
 //
 //========================================================================================
+/**
+ * \brief Integrates a generic vector field from any input type to any output type.
+ *        Difference with respect to ode78: the inputs are given in the form ys/ts, i.e.
+ *        a series of state/time on a nSeed+1-point grid, and NOT just initial conditions
+ *        + final time
+ **/
+int ode78_patched(double **yv, double *tv, OdeEvent *odeEvent,
+                  double **ys, double *ts,
+                  int nGrid, int nSeed, int dcs,
+                  int inputType, int outputType);
+
+/**
+ * \brief Integrates a generic vector field from any input type to any output type.
+ *        Difference with respect to ode78: the inputs are given in the form ys/ts, i.e.
+ *        a series of state/time on a nSeed+1-point grid, and NOT just initial conditions
+ *        + final time
+ **/
+int ode78_patched(double **yv, double *tv, int *ode78coll,
+                  double **ys, double *ts,
+                  int nGrid, int nSeed, int dcs,
+                  int inputType, int outputType);
+
+
 /**
  * \brief Integrates a generic vector field from any input type to any output type.
  **/

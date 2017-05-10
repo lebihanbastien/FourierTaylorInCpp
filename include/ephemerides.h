@@ -425,6 +425,11 @@ void ecl2neci(double YECL[6], double YEARTH[6], double yneci[6], SS &ss);
  **/
 void neci2ecl(double yneci[6], double YEARTH[6], double YECL[6], SS &ss);
 /**
+ *  \brief To full earth-centered inertial coordinates (directly from SPICE) from normalized earth-centered inertial coordinates.
+ **/
+void neci2eci(double yneci[6], double YECL[6], SS &ss);
+
+/**
  * \brief From synodic to earth-centered normalized coordinates, vector format.
  *        Note that coord_eph = VEM/VSEM can be chosen independantly from the ss structure
  *        that normalizes the state.
@@ -439,6 +444,7 @@ void neci2synstate_vec(double **yneci, double *tneci, double **yout, double *tou
 //---------------------------------
 // Normalized Earth-centered inertial (NECI) coordinates <-> any other native type (NCEM, NCSEM...)
 //---------------------------------
+
 /**
  *  From Normalized-Ecliptic coordinates to a generic other coordinate system. The initial time tsys0 is given in SEM/EM coordinates, and yields the correspondance
  *  between the ephemerides epoch and the normalized QBCP time.
@@ -450,6 +456,22 @@ void neci2coordstate_vec(double **yecl, double *etecl, double **yout, double *to
  *  between the ephemerides epoch and the normalized QBCP time.
  **/
 void coord2necistate_vec(double **yin, double *tin, double **yecl, double *etecl, int N, int coord_type, double et0,  double tsys0, int coord_eph, SS &ss);
+
+//========================================================================================
+//                          For Celestia
+//========================================================================================
+/**
+ * \brief From NJ2000 to J2000, vector format.
+ *        The final time is in Julian date.
+ **/
+void neci2eci_vec(double **yneci, double *tneci, double **yout, double *tout, int N, SS & ss);
+
+/**
+ * \brief From NJ2000 to non-normalized synodic coordinates, vector format. Only the position is good for now
+ *        The final time is in Julian date.
+ **/
+void neci2syndpos_vec(double **yneci, double *tneci, double **yout, double *tout, int N, int coord_eph, SS & ss);
+
 
 //========================================================================================
 //                          Compute the acceleration of the

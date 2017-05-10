@@ -69,7 +69,6 @@ int main(int argc, char** argv)
     //Tests
     //====================================================================================
 
-
     //====================================================================================
     //Declare configuration parameters
     //====================================================================================
@@ -94,7 +93,7 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         // Type of computation
         //--------------------------------------------------------------------------------
-        COMP_TYPE   = COMP_SINGLE_ORBIT;
+        COMP_TYPE   = COMP_CM_EML2_TO_CMS_SEML;
 
         //--------------------------------------------------------------------------------
         // Model and libration points
@@ -132,7 +131,7 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         // I/O handling
         //--------------------------------------------------------------------------------
-        IO_HANDLING = IO_DEFAULT;
+        IO_HANDLING = IO_BASH;
     }
     else  //arguments were passed
     {
@@ -431,9 +430,9 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         //rk: set REF_CONT_D_HARD_CASE for difficult cases
         //with REF_CONT_D (ex: EML2-SEMLi via SEML1...)
-        refSt.type          = REF_CONT;                       // Type of refinement
+        refSt.type          = REF_ORBIT;                       // Type of refinement
         refSt.dim           = REF_PLANAR;                      // Type of dimensions planar or 3d?
-        refSt.t0xT_des      = 0.99;                            // Initial time (xT)
+        refSt.t0xT_des      = 0.0;                            // Initial time (xT)
         refSt.t0_des        = refSt.t0xT_des*SEML.us->T;     // Initial time
 
         // Direction of the continuation procedure
@@ -457,8 +456,8 @@ int main(int argc, char** argv)
         refSt.isLimUD       =  0;
 
         // Domain of search for the seed of the first guess
-        refSt.si_SEED_EM_MIN[0] = -40;
-        refSt.si_SEED_EM_MAX[0] = +40;
+        refSt.si_SEED_EM_MIN[0] = 10;
+        refSt.si_SEED_EM_MAX[0] = 10;
 
         refSt.si_SEED_EM_MIN[1] = +0;
         refSt.si_SEED_EM_MAX[1] = +0;
@@ -477,23 +476,23 @@ int main(int argc, char** argv)
         refSt.crossings     = -1;
 
         // Maximum projection distance allowed during subselection
-        refSt.pmax_dist_SEM = 1e-0;
+        refSt.pmax_dist_SEM = 6e-4;
 
         // Number of steps in the continuation procedure
         refSt.cont_step_max    = +450;            // with fixed times
-        refSt.cont_step_max_vt = +2;              // with variable times
+        refSt.cont_step_max_vt = +50;              // with variable times
 
         // Initial step in the continuation procedure
-        refSt.ds0    = 1e-3;                      //with fixed time
-        refSt.ds0_vt = (LI_EM ==1)?  3e-2:1e-2;   //with variable time
+        refSt.ds0    = 5e-1;                      //with fixed time
+        refSt.ds0_vt = (LI_EM ==1)?  3e-2:8e-2;   //with variable time
 
         // Desired number of iterations in Newton's method in the continuation procedure
         refSt.nu0 = 2;          //with fixed time
         refSt.nu0_vt = 3;       //with variable time
 
         //User parameters
-        refSt.isFlagOn      = 1;                  // do we have steps in the procedure - asking the user to press enter to go on?
-        refSt.isPlotted     = 0;                  // do we plot the results during the computation?
+        refSt.isFlagOn      = 0;                  // do we have steps in the procedure - asking the user to press enter to go on?
+        refSt.isPlotted     = 1;                  // do we plot the results during the computation?
         refSt.isSaved       = 1;                  // do we save the results in data files?
         refSt.isFromServer  = 0;                  // does the raw data comes from server files?
         refSt.isPar         = 0;                  //is parallel computation allowed?
@@ -506,7 +505,7 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         refSt.isDebug       = 0;                        // if yes, additionnal tests are performed
         refSt.gridSize      = 20;                       // number of points on the refinement grid. 20 is taken by heuristics.
-        refSt.mplot         = 200;                      // number of points per plot between to pach points (e.g. total plot points is gridSize*mplot)
+        refSt.mPlot         = 200;                      // number of points per plot between to pach points (e.g. total plot points is gridSize*mplot)
 
         refSt.time          = REF_VAR_TN;               // type of constraints on the times in REF_CONT
         refSt.grid          = REF_FIXED_GRID;           // type of grid
@@ -531,12 +530,16 @@ int main(int argc, char** argv)
 
         // Integration window for each orbit
         refSt.tspan_EM      = +10*SEML.us_em.T;
-        refSt.tspan_SEM     = +10*SEML.us_sem.T;
+        refSt.tspan_SEM     = +1*SEML.us_sem.T;
 
-        // Storing the orbits at each step?
+        // Storing the orbits at each step? DEPRECATED, kept for consistency, use comp_orb_em/comp_orb_sem instead
         refSt.isSaved_EM    = 0;      //0: don't save, 1: save using projection method
         refSt.isSaved_SEM   = 0;      //0: don't save, 1: save using projection method,
-        //2: save using integration in reduced coordinates
+                                      //2: save using integration in reduced coordinates
+
+        // Type of computation for each orbit
+        refSt.comp_orb_em   = INT_TRY_BOTH;
+        refSt.comp_orb_sem  = INT_TRY_BOTH;
 
         //Energy
         refSt.dH     = 0.0;
@@ -548,11 +551,14 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         // Filenames (used only if IO_HANDLING==$IO_BASH)
         //--------------------------------------------------------------------------------
-        refSt.FILE_PCU       ="projcu_order_16_dest_L2_t0_0.995.bin";
-        refSt.FILE_CONT      ="cont_atf.txt";
-        refSt.FILE_CONT_TRAJ ="cont_atf_traj.bin";
-        refSt.FILE_JPL_BIN   ="cont_jpl.bin";
-        refSt.FILE_JPL_TXT   ="cont_jpl.txt";
+        refSt.FILE_PCU          ="Serv/projcu_order_20_dest_L2_Orbit_10_40_eps_1e-5.bin";
+        refSt.FILE_CONT         ="Serv/cont_atf_order_20_dest_L2_TEST.txt";
+        refSt.FILE_CONT_RES     ="Serv/cont_atf_traj_order_20_dest_L2_TEST.bin";
+        refSt.FILE_TRAJ_FROM_W  ="Serv/traj_from_w_order_20_dest_L2_TEST.bin";
+        refSt.FILE_TRAJ_FROM_C  ="Serv/traj_from_c_order_20_dest_L2_TEST.bin" ;
+        refSt.FILE_JPL_BIN      ="Serv/cont_jpl_order_20_dest_L2_TEST.bin";
+        refSt.FILE_JPL_TXT      ="cont_jpl.txt";
+        refSt.FILE_FOR_CELESTIA ="traj_for_celestia";
 
     }
     else  //arguments were passed
@@ -727,7 +733,7 @@ int main(int argc, char** argv)
             //----------------------------------------------------------------------------
             refSt.isDebug       = atoi(argv[index++]);  // if yes, additionnal tests are performed
             refSt.gridSize      = atoi(argv[index++]);  // number of points on the refinement grid. 20 is taken by heuristics.
-            refSt.mplot         = atoi(argv[index++]);  // number of points per plot between to pach points (e.g. total plot points is gridSize*mplot)
+            refSt.mPlot         = atoi(argv[index++]);  // number of points per plot between to pach points (e.g. total plot points is gridSize*mplot)
 
             refSt.time          = atoi(argv[index++]);  // type of constraints on the times in REF_CONT
             refSt.grid          = atoi(argv[index++]);  // type of grid
@@ -757,10 +763,13 @@ int main(int argc, char** argv)
             refSt.tspan_EM      = atof(argv[index++])*SEML.us_em.T;
             refSt.tspan_SEM     = atof(argv[index++])*SEML.us_sem.T;
 
-            // Storing the orbits at each step?
+            // Storing the orbits at each step? DEPRECATED, kept for consistency, use comp_orb_em/comp_orb_sem instead
             refSt.isSaved_EM    = atoi(argv[index++]);  //0: don't save, 1: save using projection method
             refSt.isSaved_SEM   = atoi(argv[index++]);  //0: don't save, 1: save using projection method,
-            //2: save using integration in reduced coordinates
+                                                        //2: save using integration in reduced coordinates
+            // Type of computation for each orbit
+            refSt.comp_orb_em   = atoi(argv[index++]);
+            refSt.comp_orb_sem  = atoi(argv[index++]);
 
             //Type of time selection
             refSt.typeOfTimeSelection = atoi(argv[index++]);
@@ -768,11 +777,14 @@ int main(int argc, char** argv)
             //----------------------------------------------------------------------------
             // Filenames (used only if IO_HANDLING==$IO_BASH)
             //----------------------------------------------------------------------------
-            refSt.FILE_PCU       = argv[index++];
-            refSt.FILE_CONT      = argv[index++];
-            refSt.FILE_CONT_TRAJ = argv[index++];
-            refSt.FILE_JPL_BIN   = argv[index++];
-            refSt.FILE_JPL_TXT   = "cont_jpl_temp.txt";
+            refSt.FILE_PCU          = argv[index++];
+            refSt.FILE_CONT         = argv[index++];
+            refSt.FILE_CONT_RES     = argv[index++];
+            refSt.FILE_TRAJ_FROM_W  = argv[index++];
+            refSt.FILE_TRAJ_FROM_C  = argv[index++];
+            refSt.FILE_JPL_BIN      = argv[index++];
+            refSt.FILE_JPL_TXT      = "cont_jpl_temp.txt";
+            refSt.FILE_FOR_CELESTIA = "traj_for_celestia";
             break;
         }
 
@@ -922,11 +934,11 @@ int main(int argc, char** argv)
         {
         case REF_ORBIT:
         case REF_CONT_ORBIT:
-            sorefemlisemli(refSt);
+            ref_eml_to_seml_orbits(refSt);
             break;
 
         default:
-            refemlisemli(refSt);
+            ref_eml_to_seml_maps(refSt);
             break;
         }
 
@@ -958,7 +970,7 @@ int main(int argc, char** argv)
     {
         reffromcontemlisemli(refSt);
 
-        //jplref3d(refSt.coord_type, refSt);
+        //jplref_eml_to_seml(refSt.coord_type, refSt);
         //comptojplref3d(refSt.coord_type, refSt);
         //compref3d_test_eml2seml_synjpl(refSt.coord_type);
         break;

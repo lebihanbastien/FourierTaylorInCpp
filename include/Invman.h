@@ -10,6 +10,12 @@
 #include "timec.h"
 #include "pmcoc.h"
 
+//----------------------------------------------------------------------------------------
+// Limits for the domain of practical convergence
+//----------------------------------------------------------------------------------------
+#define SI_NORM_EM_MAX  56.0
+#define SI_NORM_SEM_MAX 1.0
+
 
 class Invman
 {
@@ -28,6 +34,7 @@ class Invman
         int fwrk;                   //framework (EM or SEM?)
         int ncs;                    //Normalized Coordinate System (NCEM or NCSEM?)
         int scs;                    //Non-normalized Coordinate System (PEM or PSEM?)
+        double si_norm_max;         //Limits for the domain of practical convergence
 
         //--------------------------------------------------------------------------------
         // Change of coordinates TFC <-> NC
@@ -108,6 +115,7 @@ class Invman
         int getNCS() const;
         int getSCS() const;
         int getOFTSORDER() const;
+        int getSIMAX() const;
 
         //--------------------------------------------------------------------------------
         //Evaluate

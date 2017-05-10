@@ -590,6 +590,10 @@ void vector_complex_printf_prec(const cdouble *y, int n);
  *  \brief Prints a matrix of complex double using cout.
  **/
 void matrix_complex_printf(const cdouble **y, int n, int m);
+/**
+ *  \brief Prints a matrix of double using cout.
+ **/
+void matrix_printf(double **y, int n, int m);
 
 //----------------------------------------------------------------------------------------
 //   Norm
