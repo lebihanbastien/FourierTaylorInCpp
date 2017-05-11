@@ -2249,6 +2249,8 @@ int int_proj_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
 
             cmu_grid_orbit_on_one_period(orbit, tNCE, yNCE, sRCM, stp, t0, Tp, N, isPar, projSt.hyp_epsilon_eml2);
 
+            cout << "projSt.hyp_epsilon_eml2 = " << projSt.hyp_epsilon_eml2 << endl;
+
             //----------------------------------------------------------------------------
             //Once the unstable directions are obtained, we propagate & project
             //----------------------------------------------------------------------------

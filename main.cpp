@@ -339,7 +339,7 @@ int main(int argc, char** argv)
     //------------------------------------------------------------------------------------
     // Projection parameters (in structure)
     ProjSt projSt(OFTS_ORDER, LI_EM, LI_SEM, LI_START, LI_TARGET, IO_HANDLING, ISPAR,
-                  HYP_EPSILON_EML2_DEFAULT, HYP_EPSILON_SEML2_DEFAULT, RPS, SEML.cs);
+                  HYP_EPSILON_EML2, HYP_EPSILON_SEML2, RPS, SEML.cs);
     // Refinement parameters (in structure)
     RefSt refSt(OFTS_ORDER, LI_EM, LI_SEM, LI_START, LI_TARGET, IO_HANDLING, RPS, SEML.cs);
 
@@ -351,12 +351,6 @@ int main(int argc, char** argv)
         //================================================================================
         // Projection parameters
         //================================================================================
-        //--------------------------------------------------------------------------------
-        // Hyperbolic component (default values)
-        //--------------------------------------------------------------------------------
-        projSt.hyp_epsilon_eml2  = HYP_EPSILON_EML2;
-        projSt.hyp_epsilon_seml2 = HYP_EPSILON_SEML2;
-
         //--------------------------------------------------------------------------------
         //Time grid: min, max and number of points on the grid
         //--------------------------------------------------------------------------------
