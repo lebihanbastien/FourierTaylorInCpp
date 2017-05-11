@@ -701,6 +701,16 @@ int multiple_shooting_direct(double **ymd, double *tmd,
     }
 
     //====================================================================================
+    // Check that the desired condition was met
+    //====================================================================================
+    if(normC > prec)
+    {
+        cerr << fname << ". The desired precision was not reached."  << endl;
+        return FTC_FAILURE;
+    }
+
+
+    //====================================================================================
     // Free
     //====================================================================================
     gslc_matrix_array_free(Ji , mgs);
@@ -981,6 +991,15 @@ int multiple_shooting_direct_variable_time(double **ymd, double *tmd,
         // Update number of iterations
         //================================================================================
         iter++;
+    }
+
+    //====================================================================================
+    // Check that the desired condition was met
+    //====================================================================================
+    if(normC > prec)
+    {
+        cerr << fname << ". The desired precision was not reached."  << endl;
+        return FTC_FAILURE;
     }
 
 

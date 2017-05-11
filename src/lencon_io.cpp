@@ -2908,11 +2908,16 @@ int read_wref_traj_bin(string filename_traj, int *labels,
 /**
  *  \brief Save a given solution as a complete trajectory
  **/
-int write_wref_res_bin(RefSt& refSt, string filename_res, double** y_traj_n, double* t_traj_n,
-                        int man_index, Orbit& orbit_EM, Orbit& orbit_SEM, bool isFirst,
-                        int comp_orb_eml, int comp_orb_seml, ProjResClass& projRes, int k)
+int write_wref_res_bin(RefSt& refSt, string filename_res,
+                       double** y_traj_n, double* t_traj_n, int man_index,
+                       Orbit& orbit_EM, Orbit& orbit_SEM,
+                       double te_NCSEM,   double* ye_NCSEM,
+                       double te_NCEM,    double* ye_NCEM,
+                       double ve_NCEM[3], double ve_NCSEM[3],
+                       bool isFirst, int comp_orb_eml,
+                       int comp_orb_seml, ProjResClass& projRes, int k)
 {
-    string fname = "writeCONT_bin";
+    string fname = "write_wref_res_bin";
 
     //====================================================================================
     //Framework
@@ -3004,7 +3009,7 @@ int write_wref_res_bin(RefSt& refSt, string filename_res, double** y_traj_n, dou
             res = tmc_SEM[p];
             filestream.write((char*) &res, sizeof(double));
 
-            //4. Current state in NCSEM coordinates
+            //4-9. Current state in NCSEM coordinates
             for(int i = 0; i < 6; i++)
             {
                 res  = ymc_NCSEM[i][p];
@@ -3012,20 +3017,57 @@ int write_wref_res_bin(RefSt& refSt, string filename_res, double** y_traj_n, dou
                 filestream.write((char*) &res, sizeof(double));
             }
 
-            //5. Current state in NCEM coordinates
+            //10-15. Current state in NCEM coordinates
             for(int i = 0; i < 6; i++)
             {
                 res = ymc_NCEM[i][p];
                 filestream.write((char*) &res, sizeof(double));
             }
 
-            //6. Hamiltonian in NCSEM coordinates
+            //16. Hamiltonian in NCSEM coordinates
             res = qbcp_Hn_SEM(tmc_SEM[p], yv, &SEML);
             filestream.write((char*) &res, sizeof(double));
 
-            //7. t_EM_0 as a ratio
+            //17. t_EM_0 as a ratio
             res = r0_CMU_EMT;
             filestream.write((char*) &res, sizeof(double));
+
+
+            //18. te_NCSEM
+            res = te_NCSEM;
+            filestream.write((char*) &res, sizeof(double));
+
+            //19-24. ze in NCSEM coordinates
+            for(int i = 0; i < 6; i++)
+            {
+                res  = ye_NCSEM[i];
+                filestream.write((char*) &res, sizeof(double));
+            }
+
+            //25-27. ve in NCSEM coordinates
+            for(int i = 0; i < 3; i++)
+            {
+                res  = ve_NCSEM[i];
+                filestream.write((char*) &res, sizeof(double));
+            }
+
+            //28. te_NCEM
+            res = te_NCEM;
+            filestream.write((char*) &res, sizeof(double));
+
+            //29-34. ze in NCEM coordinates
+            for(int i = 0; i < 6; i++)
+            {
+                res  = ye_NCEM[i];
+                filestream.write((char*) &res, sizeof(double));
+            }
+
+            //35-37. ve in NCEM coordinates
+            for(int i = 0; i < 3; i++)
+            {
+                res  = ve_NCEM[i];
+                filestream.write((char*) &res, sizeof(double));
+            }
         }
     }
     filestream.close();
@@ -3065,7 +3107,7 @@ int write_wref_res_bin(RefSt& refSt, string filename_res, double** y_traj_n, dou
         nPlot = orbit_EM.traj_int_main(orbit_EM.getTf(), yorb_NCEM, torb_EM, oPlot, INT_PROJ_CHECK);
 
         //--------------------------------------------------------------------------------
-        // old implemenation, for refererence (equivalent to last line)
+        // old implemenation, for reference (equivalent to last line)
         //--------------------------------------------------------------------------------
         //        int output = orbit_EM.traj_int_grid(orbit_EM.getTf(), yorb_NCEM, torb_EM, oPlot, 1);
         //
@@ -3135,6 +3177,42 @@ int write_wref_res_bin(RefSt& refSt, string filename_res, double** y_traj_n, dou
                 //7. t_EM_0 as a ratio
                 res = r0_CMU_EMT;
                 filestream.write((char*) &res, sizeof(double));
+
+                //18. te_NCSEM
+                res = te_NCSEM;
+                filestream.write((char*) &res, sizeof(double));
+
+                //19-24. ze in NCSEM coordinates
+                for(int i = 0; i < 6; i++)
+                {
+                    res  = ye_NCSEM[i];
+                    filestream.write((char*) &res, sizeof(double));
+                }
+
+                //25-27. ve in NCSEM coordinates
+                for(int i = 0; i < 3; i++)
+                {
+                    res  = ve_NCSEM[i];
+                    filestream.write((char*) &res, sizeof(double));
+                }
+
+                //28. te_NCEM
+                res = te_NCEM;
+                filestream.write((char*) &res, sizeof(double));
+
+                //29-34. ze in NCEM coordinates
+                for(int i = 0; i < 6; i++)
+                {
+                    res  = ye_NCEM[i];
+                    filestream.write((char*) &res, sizeof(double));
+                }
+
+                //35-37. ve in NCEM coordinates
+                for(int i = 0; i < 3; i++)
+                {
+                    res  = ve_NCEM[i];
+                    filestream.write((char*) &res, sizeof(double));
+                }
             }
             filestream.close();
         }
@@ -3432,6 +3510,42 @@ int write_wref_res_bin(RefSt& refSt, string filename_res, double** y_traj_n, dou
                 //7. t_EM_0 as a ratio
                 res = r0_CMU_EMT;
                 filestream.write((char*) &res, sizeof(double));
+
+                //18. te_NCSEM
+                res = te_NCSEM;
+                filestream.write((char*) &res, sizeof(double));
+
+                //19-24. ze in NCSEM coordinates
+                for(int i = 0; i < 6; i++)
+                {
+                    res  = ye_NCSEM[i];
+                    filestream.write((char*) &res, sizeof(double));
+                }
+
+                //25-27. ve in NCSEM coordinates
+                for(int i = 0; i < 3; i++)
+                {
+                    res  = ve_NCSEM[i];
+                    filestream.write((char*) &res, sizeof(double));
+                }
+
+                //28. te_NCEM
+                res = te_NCEM;
+                filestream.write((char*) &res, sizeof(double));
+
+                //29-34. ze in NCEM coordinates
+                for(int i = 0; i < 6; i++)
+                {
+                    res  = ye_NCEM[i];
+                    filestream.write((char*) &res, sizeof(double));
+                }
+
+                //35-37. ve in NCEM coordinates
+                for(int i = 0; i < 3; i++)
+                {
+                    res  = ve_NCEM[i];
+                    filestream.write((char*) &res, sizeof(double));
+                }
             }
             filestream.close();
         }

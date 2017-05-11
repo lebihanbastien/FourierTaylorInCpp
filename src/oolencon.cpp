@@ -1261,7 +1261,7 @@ int proj_subroutine(ProjResSt& projResSt, Invman& invman_target, ProjSt& projSt)
                 // minimum without any risk of losing good solutions. If
                 // proj_dist_DP > min_proj_dist_DP, we know that we have passed the
                 // first minimum, and we can break the loop.
-                break;
+                //break;
             }
 
         }
@@ -1335,7 +1335,7 @@ int proj_subroutine(ProjResSt& projResSt, Invman& invman_target, ProjSt& projSt)
         }
 
         //--------------------------------------------------------------------------------
-        //If we save ONLY the primary family
+        //If we look for lunar crossings
         //--------------------------------------------------------------------------------
         if(crossings_lunar > 0)
         {
@@ -2249,7 +2249,7 @@ int int_proj_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
 
             cmu_grid_orbit_on_one_period(orbit, tNCE, yNCE, sRCM, stp, t0, Tp, N, isPar, projSt.hyp_epsilon_eml2);
 
-            cout << "projSt.hyp_epsilon_eml2 = " << projSt.hyp_epsilon_eml2 << endl;
+            //cout << "projSt.hyp_epsilon_eml2 = " << projSt.hyp_epsilon_eml2 << endl;
 
             //----------------------------------------------------------------------------
             //Once the unstable directions are obtained, we propagate & project
@@ -3643,7 +3643,10 @@ int ref_eml_to_seml_orbits(RefSt& refSt)
 
 
             // Entire trajectory, for plotting purposes
-            write_wref_res_bin(refSt, filename_res, y_traj, t_traj, man_grid_size, orbit_EM, orbit_SEM, isFirst, 0, 0, projRes, k);
+            write_wref_res_bin(refSt, filename_res, y_traj, t_traj, man_grid_size,
+                               orbit_EM, orbit_SEM, te_NCSEM, ye_NCSEM,
+                               te_NCEM, ye_NCEM, ve_NCEM, ve_NCSEM, isFirst,
+                               0, 0, projRes, k);
 
             //----------------------------------------------------------------------------
             // Testing
@@ -3694,7 +3697,7 @@ int ref_eml_to_seml_orbits(RefSt& refSt)
             cerr << fname << ". Error during the continuation procedure with variable time." << endl;
         }
 
-        step = 0;
+        //step = 0;
         //--------------------------------------------------------------------------------
         //Second step: Complete trajectory
         //--------------------------------------------------------------------------------

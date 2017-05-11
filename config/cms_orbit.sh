@@ -91,7 +91,7 @@ REFST_ISLIMUD=0
 REFST_SI_SEED_EM_LIM=(10 10 -40 +40 -40 +40 -40 +40)
 
 # Maximum projection distance allowed during subselection
-REFST_PMAX_DIST_SEM=1e-4
+REFST_PMAX_DIST_SEM=6e-4
 
 # Limits for the time of flight during transfers - not used if -1
 REFST_TOF_LIM=(-1 -1)
@@ -138,7 +138,7 @@ FILE_CONT_RES="cont_atf_traj_order_20_dest_L2_TEST.bin"
 FILE_TRAJ_FROM_W="traj_from_w_order_20_dest_L2_TEST.bin"
 FILE_TRAJ_FROM_C="traj_from_c_order_20_dest_L2_TEST.bin" 
 
-FILE_JPL="cont_jpl_order_20_dest_L2_TEST.bin"
+FILE_JPL="/cont_jpl_order_20_dest_L2_TEST_local.bin"
 
 #-----------------------------------------------------
 # Parameters that are stable
@@ -164,8 +164,8 @@ REFST_SF_MAN=5			 # transfer leg
 REFST_SF_SEML2=10		 # orbit at SEML2
 
 # Integration window for each orbit
-REFST_TSPAN_EM=1    	 # given as %T, where T is the SEM period, in EM units
-REFST_TSPAN_SEM=1		 # given as %T, where T is the SEM period, in SEM units
+REFST_TSPAN_EM=10    	 # given as %T, where T is the SEM period, in EM units
+REFST_TSPAN_SEM=10		 # given as %T, where T is the SEM period, in SEM units
 
 # Type of computation for each orbit
 REFST_COMP_ORB_EM=$INT_TRY_BOTH  #may use INT_RED_COORD directly for bigger orbits (QHalo?)

@@ -862,8 +862,14 @@ int writeCONT_bin(RefSt& refSt, string filename_res, int dcs, int coord_type,
 /**
  *  \brief Save a given solution as a complete trajectory
  **/
-int write_wref_res_bin(RefSt& refSt, string filename_res, double** y_traj_n, double* t_traj_n, int man_index,
-                       Orbit& orbit_EM, Orbit& orbit_SEM, bool isFirst, int comp_orb_eml, int comp_orb_seml,
+int write_wref_res_bin(RefSt& refSt, string filename_res, double** y_traj_n,
+                       double* t_traj_n, int man_index,
+                       Orbit& orbit_EM, Orbit& orbit_SEM,
+                       double te_NCSEM,   double* ye_NCSEM,
+                       double te_NCEM,    double* ye_NCEM,
+                       double ve_NCEM[3], double ve_NCSEM[3],
+                       bool isFirst, int comp_orb_eml,
+                       int comp_orb_seml,
                        ProjResClass& projRes, int k);
 
 
