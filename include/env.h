@@ -37,7 +37,7 @@
 #define MAN_CENTER_US 3
 
 //Hyperbolic component (default values)
-#define HYP_EPSILON_EML2_DEFAULT   1e-6
+#define HYP_EPSILON_EML2_DEFAULT   1e-5
 #define HYP_EPSILON_SEML2_DEFAULT  1e-6
 
 using namespace std;

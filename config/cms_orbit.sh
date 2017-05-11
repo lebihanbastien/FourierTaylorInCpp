@@ -91,7 +91,7 @@ REFST_ISLIMUD=0
 REFST_SI_SEED_EM_LIM=(10 10 -40 +40 -40 +40 -40 +40)
 
 # Maximum projection distance allowed during subselection
-REFST_PMAX_DIST_SEM=6e-4
+REFST_PMAX_DIST_SEM=1e-4
 
 # Limits for the time of flight during transfers - not used if -1
 REFST_TOF_LIM=(-1 -1)
@@ -122,7 +122,7 @@ REFST_DIR=-1    		 # if not, +1 or -1
  
 # User parameters
 REFST_ISFLAGON=0   	         # do we have steps in the procedure - asking the user to press enter to go on?
-REFST_ISPLOTTED=1   		 # do we plot the results during the computation?
+REFST_ISPLOTTED=0   		 # do we plot the results during the computation?
 REFST_ISSAVED=1     		 # do we save the results in data files?
 REFST_ISFROMSERVER=0		 # does the raw data comes from server files?
 
@@ -130,15 +130,15 @@ REFST_ISFROMSERVER=0		 # does the raw data comes from server files?
 REFST_THETAMAX=180           # should be a multiple of 90°
 
 # Filenames (used only if IO_HANDLING==$IO_BASH)
-FILE_PCU="Serv/projcu_order_20_dest_L2_Orbit_10_40_eps_1e-5.bin" #"Serv/projcu_order_20_dest_L2_orbit.bin" #"Serv/projcu_order_20_dest_L2_QHalo.bin" 
+FILE_PCU="projcu_order_20_dest_L2_Orbit_10_eps_1e-5.bin" #"Serv/projcu_order_20_dest_L2_orbit.bin" #"Serv/projcu_order_20_dest_L2_QHalo.bin" 
 
-FILE_CONT="Serv/cont_atf_order_20_dest_L2_TEST.txt"
-FILE_CONT_RES="Serv/cont_atf_traj_order_20_dest_L2_TEST.bin"
+FILE_CONT="cont_atf_order_20_dest_L2_TEST.txt"
+FILE_CONT_RES="cont_atf_traj_order_20_dest_L2_TEST.bin"
 
-FILE_TRAJ_FROM_W="Serv/traj_from_w_order_20_dest_L2_TEST.bin"
-FILE_TRAJ_FROM_C="Serv/traj_from_c_order_20_dest_L2_TEST.bin" 
+FILE_TRAJ_FROM_W="traj_from_w_order_20_dest_L2_TEST.bin"
+FILE_TRAJ_FROM_C="traj_from_c_order_20_dest_L2_TEST.bin" 
 
-FILE_JPL="Serv/cont_jpl_order_20_dest_L2_TEST.bin"
+FILE_JPL="cont_jpl_order_20_dest_L2_TEST.bin"
 
 #-----------------------------------------------------
 # Parameters that are stable

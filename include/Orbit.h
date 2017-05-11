@@ -110,4 +110,9 @@ class Orbit
 int oo_gridOrbit(double st0[], double t0, double tf, double dt);
 int gridOrbit_si(double st0[], double t0, double tf, double dt, int isFlagOn, int isPlot);
 int gridOrbit_strob(double st0[], double t0, int N, int isFlagOn, int isPlot);
+/**
+ *   \brief Display the current completion (percent) of a routine.
+ **/
+void displayCompletion(string funcname, double percent, int *completion);
+
 #endif // ORBIT_H_INCLUDED

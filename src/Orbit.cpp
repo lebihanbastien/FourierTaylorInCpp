@@ -268,7 +268,8 @@ void displayCompletion(string funcname, double percent, int *completion)
         cout << resetiosflags(ios::floatfield) << resetiosflags(ios::showpos);
         cout << cout <<  setw(2) << setprecision(2);
         cout << "\r" << funcname << ": " << percent << "% completed: ";
-        cout << string((int)floor(0.1*percent), '|') << endl;
+        cout << "\033[1;31m" << string((int)floor(0.1*percent), '|') << "\033[0m";//
+        cout << string((int) 10 - floor(0.1*(percent)), '|') << endl;
         cout.flush();
         cout << std::showpos << setiosflags(ios::scientific);
         *completion = *completion + 1;

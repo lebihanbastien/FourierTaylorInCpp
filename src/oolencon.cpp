@@ -128,7 +128,7 @@ int compute_grid_CMU_SEM_3D(double dist_to_cm, ProjSt& projSt)
     // Note that openMP is only used on the inner loop, since
     // it is useless to use on nested loops.
     //====================================================================================
-    COMPLETION = 0;
+    int completion = 0;
     for(int kt = 0; kt <= projSt.TSIZE; kt++)
     {
         //--------------------------------------------------------------------------------
@@ -143,7 +143,7 @@ int compute_grid_CMU_SEM_3D(double dist_to_cm, ProjSt& projSt)
             {
                 for(int ks1 = 0; ks1 <= projSt.GSIZE_SI[0]; ks1++)
                 {
-                    #pragma omp parallel for if(isPar)  shared(iter)
+                    #pragma omp parallel for if(isPar)  shared(iter) shared(completion)
                     for(int ks3 = 0; ks3 <= projSt.GSIZE_SI[2]; ks3++)
                     {
                         Ofsc ofs(OFS_ORDER);
@@ -176,7 +176,7 @@ int compute_grid_CMU_SEM_3D(double dist_to_cm, ProjSt& projSt)
                             for(int i = 0; i < 6; i++) init_state_CMU_NCSEM[i][ks3] = yvu[i];
                             for(int i = 0; i < 5; i++) init_state_CMU_RCM[i][ks3] = sti[i];
                             //Display
-                            displayCompletion("compute_grid_CMU_SEM", (double) iter++/noe*100);
+                            displayCompletion("compute_grid_CMU_SEM", (double) iter++/noe*100, &completion);
                         }
 
                         free_dvector(yvu, 0, 5);
@@ -336,7 +336,7 @@ int int_proj_CMU_SEM_on_CM_EM_3D(ProjSt& projSt)
     // Note that openMP is only used on the inner loop, since
     // it is useless to use on nested loops.
     //====================================================================================
-    COMPLETION = 0;
+    int completion = 0;
     int index  = 0;
     for(int kt = 0; kt <= t_grid_size; kt++)
     {
@@ -371,7 +371,7 @@ int int_proj_CMU_SEM_on_CM_EM_3D(ProjSt& projSt)
                     //--------------------------------------------------------------------
                     //Most inner loop is parallelized
                     //--------------------------------------------------------------------
-                    #pragma omp parallel for if(isPar)  shared(index)
+                    #pragma omp parallel for if(isPar)  shared(index) shared(completion)
                     for(int ks3 = 0; ks3 <= si_grid_size[2]; ks3++)
                     {
 
@@ -414,7 +414,7 @@ int int_proj_CMU_SEM_on_CM_EM_3D(ProjSt& projSt)
                         //----------------------------------------------------------------
                         #pragma omp critical
                         {
-                            displayCompletion("int_proj_CMU_SEM_on_CM_EM_3D", 100.0*index++/noe);
+                            displayCompletion("int_proj_CMU_SEM_on_CM_EM_3D", 100.0*index++/noe, &completion);
                         }
                     }
                 }
@@ -561,7 +561,7 @@ int compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt& projSt)
     // Note that openMP is only used on the inner loop, since
     // it is useless to use on nested loops.
     //====================================================================================
-    COMPLETION = 0;
+    int completion = 0;
     for(int kt = 0; kt <= projSt.TSIZE; kt++)
     {
         //----------------------
@@ -576,7 +576,7 @@ int compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt& projSt)
             {
                 for(int ks1 = 0; ks1 <= projSt.GSIZE_SI[0]; ks1++)
                 {
-                    #pragma omp parallel for if(isPar)  shared(iter)
+                    #pragma omp parallel for if(isPar)  shared(iter) shared(completion)
                     for(int ks3 = 0; ks3 <= projSt.GSIZE_SI[2]; ks3++)
                     {
                         Ofsc ofs(OFS_ORDER);
@@ -609,7 +609,7 @@ int compute_grid_CMU_EM_3D(double dist_to_cm, ProjSt& projSt)
                             for(int i = 0; i < 6; i++) init_state_CMU_NCEM[i][ks3] = yvu[i];
                             for(int i = 0; i < 5; i++) init_state_CMU_RCM[i][ks3] = sti[i];
                             //Display
-                            displayCompletion("compute_grid_CMU_EM", (double) iter++/noe*100);
+                            displayCompletion("compute_grid_CMU_EM", (double) iter++/noe*100, &completion);
                         }
 
                         free_dvector(yvu, 0, 5);
@@ -756,12 +756,12 @@ int compute_grid_CMU_EM(double dist_to_cm, ProjSt& projSt)
     // Note that openMP is only used on the inner loop, since
     // it is useless to use on nested loops.
     //====================================================================================
-    COMPLETION = 0;
+    int completion = 0;
     for(int kt = 0; kt <= projSt.TSIZE; kt++)
     {
         for(int ks1 = 0; ks1 <= projSt.GSIZE_SI[0]; ks1++)
         {
-            #pragma omp parallel for if(isPar)  shared(iter)
+            #pragma omp parallel for if(isPar)  shared(iter) shared(completion)
             for(int ks3 = 0; ks3 <= projSt.GSIZE_SI[2]; ks3++)
             {
                 Ofsc ofs(OFS_ORDER);
@@ -835,7 +835,7 @@ int compute_grid_CMU_EM(double dist_to_cm, ProjSt& projSt)
                     for(int i = 0; i < 6; i++) init_state_CMU_NCEM[i][kt][ks1][ks3] = yvu[i];
                     for(int i = 0; i < 5; i++) init_state_CMU_RCM[i][kt][ks1][ks3] = sti[i];
                     //Display
-                    displayCompletion("compute_grid_CMU_EM", (double) iter++/noe*100);
+                    displayCompletion("compute_grid_CMU_EM", (double) iter++/noe*100, &completion);
                 }
 
                 free_dvector(yvu, 0, 5);
@@ -982,10 +982,10 @@ int compute_grid_CMU_EM_dH(double dist_to_cm, ProjSt& projSt)
     // Note that openMP is only used on the inner loop, since
     // it is useless to use on nested loops.
     //====================================================================================
-    COMPLETION = 0;
+    int completion = 0;
     for(int kt = 0; kt <= projSt.TSIZE; kt++)
     {
-        #pragma omp parallel for if(isPar)  shared(iter)
+        #pragma omp parallel for if(isPar)  shared(iter)  shared(completion)
         for(int ks1 = 0; ks1 <= projSt.GSIZE_SI[0]; ks1++)
         {
             //----------------------------------------------------------------------------
@@ -1062,7 +1062,7 @@ int compute_grid_CMU_EM_dH(double dist_to_cm, ProjSt& projSt)
                 for(int i = 0; i < 6; i++) init_state_CMU_NCEM[i][kt][ks1] = yvu[i];
                 for(int i = 0; i < 5; i++) init_state_CMU_RCM[i][kt][ks1] = sti[i];
                 //Display
-                displayCompletion("compute_grid_CMU_EM", (double) iter++/noe*100);
+                displayCompletion("compute_grid_CMU_EM", (double) iter++/noe*100, &completion);
             }
 
             free_dvector(yvu, 0, 5);
@@ -1504,7 +1504,7 @@ int int_proj_CMU_EM_on_CM_SEM_3D(ProjSt& projSt)
     // Note that openMP is only used on the inner loop, since
     // it is useless to use on nested loops.
     //====================================================================================
-    COMPLETION = 0;
+    int completion = 0;
     int index  = 0;
     for(int kt = 0; kt <= t_grid_size; kt++)
     {
@@ -1540,7 +1540,7 @@ int int_proj_CMU_EM_on_CM_SEM_3D(ProjSt& projSt)
                     //--------------------------------------------------------------------
                     //Most inner loop is parallelized
                     //--------------------------------------------------------------------
-                    #pragma omp parallel for if(isPar)  shared(index)
+                    #pragma omp parallel for if(isPar)  shared(index)  shared(completion)
                     for(int ks3 = 0; ks3 <= si_grid_size[2]; ks3++)
                     {
 
@@ -1583,7 +1583,7 @@ int int_proj_CMU_EM_on_CM_SEM_3D(ProjSt& projSt)
                         //----------------------------------------------------------------
                         #pragma omp critical
                         {
-                            displayCompletion("int_proj_CMU_EM_on_CM_SEM_3D", 100.0*index++/noe);
+                            displayCompletion("int_proj_CMU_EM_on_CM_SEM_3D", 100.0*index++/noe, &completion);
                         }
 
                     }
@@ -1736,13 +1736,13 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt& projSt)
     // 3. Loop: only the inner loop is parallelized, since
     //    open_mp doest not allow nested // loops by default
     //====================================================================================
-    COMPLETION = 0;
+    int completion = 0;
     int index  = 0;
     for(int kt = 0; kt <= t_grid_size; kt++)
     {
         for(int ks1 = 0; ks1 <= s1_grid_size; ks1++)
         {
-            #pragma omp parallel for if(isPar) shared(index)
+            #pragma omp parallel for if(isPar) shared(index) shared(completion)
             for(int ks3 = 0; ks3 <= s3_grid_size; ks3++)
             {
                 //========================================================================
@@ -1790,7 +1790,7 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt& projSt)
                 //------------------------------------------------------------------------
                 #pragma omp critical
                 {
-                    displayCompletion("int_proj_CMU_EM_on_CM_SEM", 100.0*index++/((1+s1_grid_size)*(1+s3_grid_size)*(1+t_grid_size)));
+                    displayCompletion("int_proj_CMU_EM_on_CM_SEM", 100.0*index++/((1+s1_grid_size)*(1+s3_grid_size)*(1+t_grid_size)), &completion);
                 }
             }
         }
@@ -1949,11 +1949,11 @@ int int_proj_CMU_EM_on_CM_SEM_dH(ProjSt& projSt)
     // 3. Loop: only the inner loop is parallelized, since
     //    open_mp doest not allow nested // loops by default
     //====================================================================================
-    COMPLETION = 0;
+    int completion = 0;
     int index  = 0;
     for(int kt = 0; kt <= t_grid_size; kt++)
     {
-        #pragma omp parallel for if(isPar) shared(index)
+        #pragma omp parallel for if(isPar) shared(index) shared(completion)
         for(int ks1 = 0; ks1 <= s1_grid_size; ks1++)
         {
             //============================================================================
@@ -2001,7 +2001,7 @@ int int_proj_CMU_EM_on_CM_SEM_dH(ProjSt& projSt)
             //----------------------------------------------------------------------------
             #pragma omp critical
             {
-                displayCompletion("int_proj_CMU_EM_on_CM_SEM", 100.0*index++/((1+s1_grid_size)*(1+t_grid_size)));
+                displayCompletion("int_proj_CMU_EM_on_CM_SEM", 100.0*index++/((1+s1_grid_size)*(1+t_grid_size)), &completion);
             }
         }
     }
@@ -2187,7 +2187,7 @@ int int_proj_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
     //====================================================================================
     int index  = 0;
     int label  = 0;
-    COMPLETION = 0;
+    int completion = 0;
     double stp[5];
 
     //s0 loop
@@ -2252,7 +2252,7 @@ int int_proj_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
             //----------------------------------------------------------------------------
             //Once the unstable directions are obtained, we propagate & project
             //----------------------------------------------------------------------------
-            #pragma omp parallel for if(isPar) shared(index)
+            #pragma omp parallel for if(isPar) shared(index) shared(completion)
             for(int ks = 0; ks <= N; ks++)
             {
                 //------------------------------------------------------------------------
@@ -2303,7 +2303,7 @@ int int_proj_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
                 //------------------------------------------------------------------------
                 #pragma omp critical
                 {
-                    displayCompletion("int_proj_CMU_EM_on_CM_SEM", 100.0*index++/noe);
+                    displayCompletion("int_proj_CMU_EM_on_CM_SEM", 100.0*index++/noe, &completion);
                 }
             }
 
@@ -2468,7 +2468,7 @@ int int_proj_SINGLE_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
     //====================================================================================
     int index  = 0;
     int label  = 0;
-    COMPLETION = 0;
+    int completion = 0;
     double stp[5];
 
     //------------------------------------------------------------------------------------
@@ -2523,7 +2523,7 @@ int int_proj_SINGLE_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
         //--------------------------------------------------------------------------------
         //Once the unstable directions are obtained, we propagate & project
         //--------------------------------------------------------------------------------
-        #pragma omp parallel for if(isPar) shared(index)
+        #pragma omp parallel for if(isPar) shared(index) shared(completion)
         for(int ks = 0; ks <= N; ks++)
         {
             //----------------------------------------------------------------------------
@@ -2574,7 +2574,7 @@ int int_proj_SINGLE_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
             //----------------------------------------------------------------------------
             #pragma omp critical
             {
-                displayCompletion("int_proj_CMU_EM_on_CM_SEM", 100.0*index++/noe);
+                displayCompletion("int_proj_CMU_EM_on_CM_SEM", 100.0*index++/noe, &completion);
             }
         }
 
@@ -2663,8 +2663,8 @@ int cmu_grid_strob(double* tNCE, double** yNCE, double** sRCM, double st0[], dou
     // Building the initial conditions on the unstable manifold of the orbit
     //====================================================================================
     int iter = 1;
-    COMPLETION = 0;
-    #pragma omp parallel for if(isPar)  shared(iter)
+    int completion = 0;
+    #pragma omp parallel for if(isPar)  shared(iter) shared(completion)
     for(int k = 0; k <= N; k++)
     {
         Ofsc ofs(OFS_ORDER);
@@ -2697,7 +2697,7 @@ int cmu_grid_strob(double* tNCE, double** yNCE, double** sRCM, double st0[], dou
             for(int i = 0; i < 6; i++) yNCE[i][k] = yvu[i];
             for(int i = 0; i < 5; i++) sRCM[i][k] = sti[i];
             //Display
-            displayCompletion("compute_grid_CMU_EM", (double) iter++/(N+1)*100);
+            displayCompletion("compute_grid_CMU_EM", (double) iter++/(N+1)*100, &completion);
         }
 
         free_dvector(yvu, 0, 5);
@@ -2781,8 +2781,8 @@ int cmu_grid_orbit(double* tNCE, double** yNCE, double** sRCM, double st0[], dou
     // Building the initial conditions on the unstable manifold of the orbit
     //====================================================================================
     int iter = 1;
-    COMPLETION = 0;
-    #pragma omp parallel for if(isPar)  shared(iter)
+    int completion = 0;
+    #pragma omp parallel for if(isPar)  shared(iter) shared(completion)
     for(int k = 0; k <= N; k++)
     {
         Ofsc ofs(OFS_ORDER);
@@ -2815,7 +2815,7 @@ int cmu_grid_orbit(double* tNCE, double** yNCE, double** sRCM, double st0[], dou
             for(int i = 0; i < 6; i++) yNCE[i][k] = yvu[i];
             for(int i = 0; i < 5; i++) sRCM[i][k] = sti[i];
             //Display
-            displayCompletion("compute_grid_CMU_EM", (double) iter++/(N+1)*100);
+            displayCompletion("compute_grid_CMU_EM", (double) iter++/(N+1)*100, &completion);
         }
 
         free_dvector(yvu, 0, 5);
@@ -3427,7 +3427,7 @@ int ref_eml_to_seml_orbits(RefSt& refSt)
     //====================================================================================
     string fname = "ref_eml_to_seml_orbits";
     cout << "===================================================================" << endl;
-    cout << "   ref_eml_to_seml_orbits. Refinement of EMLi-SEMLi arc                    " << endl;
+    cout << "   ref_eml_to_seml_orbits. Refinement of EMLi-SEMLi arc            " << endl;
     cout << "===================================================================" << endl;
 
     //====================================================================================
@@ -3566,6 +3566,7 @@ int ref_eml_to_seml_orbits(RefSt& refSt)
     int isFirst = 1;
     int step = 0;
     int isSaved = refSt.isSaved;
+    int completion = 0;
     for(int k = 0; k < projRes.size(); k++)
     {
         //--------------------------------------------------------------------------------
@@ -3691,7 +3692,7 @@ int ref_eml_to_seml_orbits(RefSt& refSt)
             cerr << fname << ". Error during the continuation procedure with variable time." << endl;
         }
 
-
+        step = 0;
         //--------------------------------------------------------------------------------
         //Second step: Complete trajectory
         //--------------------------------------------------------------------------------
@@ -3721,6 +3722,13 @@ int ref_eml_to_seml_orbits(RefSt& refSt)
         // press Enter
         //--------------------------------------------------------------------------------
         pressEnter(refSt.isFlagOn);
+
+        //--------------------------------------------------------------------------------
+        // Display
+        //--------------------------------------------------------------------------------
+        cout << "===================================================================" << endl;
+        displayCompletion(fname, (double) 100.0*k/projRes.size(), &completion);
+        cout << "===================================================================" << endl;
 
     }
 

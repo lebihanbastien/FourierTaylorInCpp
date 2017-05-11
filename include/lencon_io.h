@@ -796,10 +796,7 @@ void writeIntProjCUSeed_bin(string filename,
 //          Display completion
 //
 //========================================================================================
-/**
- *   \brief Display the current completion (percent) of a routine.
- **/
-void displayCompletion(string funcname, double percent);
+
 
 //========================================================================================
 //

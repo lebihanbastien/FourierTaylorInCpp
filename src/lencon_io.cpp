@@ -3482,22 +3482,22 @@ int write_wref_res_bin(RefSt& refSt, string filename_res, double** y_traj_n, dou
 //          Display completion
 //
 //========================================================================================
-/**
- *   \brief Display the current completion (percent) of a routine.
- **/
-void displayCompletion(string funcname, double percent)
-{
-    if(floor(percent*0.1) > COMPLETION)
-    {
-        cout << resetiosflags(ios::floatfield) << resetiosflags(ios::showpos);
-        cout << cout <<  setw(2) << setprecision(2);
-        cout << "\r" << funcname << ": " << percent << "% completed: ";
-        cout << string((int)floor(0.1*percent), '|') << endl;
-        cout.flush();
-        cout << std::showpos << setiosflags(ios::scientific);
-        COMPLETION++;
-    }
-}
+///**
+// *   \brief Display the current completion (percent) of a routine.
+// **/
+//void displayCompletion(string funcname, double percent)
+//{
+//    if(floor(percent*0.1) > COMPLETION)
+//    {
+//        cout << resetiosflags(ios::floatfield) << resetiosflags(ios::showpos);
+//        cout << cout <<  setw(2) << setprecision(2);
+//        cout << "\r" << funcname << ": " << percent << "% completed: ";
+//        cout << string((int)floor(0.1*percent), '|') << endl;
+//        cout.flush();
+//        cout << std::showpos << setiosflags(ios::scientific);
+//        COMPLETION++;
+//    }
+//}
 
 
 //========================================================================================

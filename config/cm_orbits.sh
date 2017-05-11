@@ -63,7 +63,7 @@ ISNOHUP=0
 #-----------------------------------------------------
 # I/O Handling
 #-----------------------------------------------------
-IO_HANDLING=$IO_DIALOG
+IO_HANDLING=$IO_BASH
 
 #=====================================================
 #  ---- Projection parameters ----
@@ -75,14 +75,14 @@ IO_HANDLING=$IO_DIALOG
 # Time grid: min, max and number of points on the grid
 TMIN=0.0    # (given as %T, with T the SEM period)
 TMAX=1.0    # (given as %T, with T the SEM period)
-TSIZE=100	  
+TSIZE=200	  
 
 # Configuration (s1, s2, s3, s4) grid
 GLIM_S1=(+10 +40)
 GLIM_S2=(+0 +0)
 GLIM_S3=(-10 +35)
 GLIM_S4=(+0 +0)
-GSIZE_SI=(+3 +0 +10 +0)
+GSIZE_SI=(+0 +0 +10 +0)
 
 # Primary family - keep in mind that the first minimum rule is used now for the primary!
 PRIMARY=1
@@ -99,7 +99,7 @@ HYP_EPSILON_SEML2=1e-6	# Hyperbolic component at seml2
 
 # Filenames (used only if IO_HANDLING==$IO_BASH)
 FILE_CU="cu_orbit.bin"
-FILE_PCU="projcu_orbit.bin"
+FILE_PCU="projcu_order_20_dest_L2_Orbit_10_eps_1e-5.bin"
 
 
 #-----------------------------------------------------

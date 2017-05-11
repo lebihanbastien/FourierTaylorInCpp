@@ -56,7 +56,7 @@ export M_ERTBP=3
 #-----------------------------------------------------
 # Hyperbolic component (default values)
 #-----------------------------------------------------
-export HYP_EPSILON_EML2_DEFAULT=1e-6
+export HYP_EPSILON_EML2_DEFAULT=1e-5
 export HYP_EPSILON_SEML2_DEFAULT=1e-6
 
 
