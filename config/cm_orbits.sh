@@ -98,8 +98,15 @@ HYP_EPSILON_EML2=1e-5	# Hyperbolic component at eml2
 HYP_EPSILON_SEML2=1e-6	# Hyperbolic component at seml2
 
 # Filenames (used only if IO_HANDLING==$IO_BASH)
-FILE_CU="cu_orbit.bin"
-FILE_PCU="projcu_order_20_dest_L2_Orbit_10_eps_1e-5.bin"
+if [ $SERVER == 1 ]; then
+	FILE_CU="cu_orbit.bin"
+	FILE_PCU="projcu_order_20_dest_L2_Orbit_10_eps_1e-5.bin"
+else
+	FILE_CU="cu_orbit.bin"
+	FILE_PCU="Serv/projcu_order_20_dest_L2_Orbit_10_local.bin"
+fi
+
+
 
 
 #-----------------------------------------------------

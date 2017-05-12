@@ -57,7 +57,12 @@ ISPAR=0
 #-----------------------------------------------------
 # NOHUP condition
 #-----------------------------------------------------
-ISNOHUP=0
+if [ $SERVER == 1 ]; then
+	ISNOHUP=0
+else
+	ISNOHUP=0
+fi
+
 
 #-----------------------------------------------------
 # Position of the poincaré section in NCEM coordinates
@@ -130,15 +135,23 @@ REFST_ISFROMSERVER=0		 # does the raw data comes from server files?
 REFST_THETAMAX=180           # should be a multiple of 90°
 
 # Filenames (used only if IO_HANDLING==$IO_BASH)
-FILE_PCU="projcu_order_20_dest_L2_Orbit_10_eps_1e-5.bin" #"Serv/projcu_order_20_dest_L2_orbit.bin" #"Serv/projcu_order_20_dest_L2_QHalo.bin" 
+if [ $SERVER == 1 ]; then
+	FILE_PCU="projcu_order_20_dest_L2_Orbit_10_eps_1e-5.bin" #"Serv/projcu_order_20_dest_L2_orbit.bin" #"Serv/projcu_order_20_dest_L2_QHalo.bin" 
+	FILE_CONT="cont_atf_order_20_dest_L2_TEST.txt"
+	FILE_CONT_RES="cont_atf_traj_order_20_dest_L2_TEST.bin"
+	FILE_TRAJ_FROM_W="traj_from_w_order_20_dest_L2_TEST.bin"
+	FILE_TRAJ_FROM_C="traj_from_c_order_20_dest_L2_TEST.bin" 
+	FILE_JPL="cont_jpl_order_20_dest_L2_TEST.bin"
+else
+	FILE_PCU="Serv/projcu_order_20_dest_L2_Orbit_10_eps_1e-5.bin"
+	FILE_CONT="Serv/cont_atf_order_20_dest_L2_TEST_local.txt"
+	FILE_CONT_RES="Serv/cont_atf_traj_order_20_dest_L2_TEST_local.bin"
+	FILE_TRAJ_FROM_W="Serv/traj_from_w_order_20_dest_L2_TEST_local.bin"
+	FILE_TRAJ_FROM_C="Serv/traj_from_c_order_20_dest_L2_TEST_local.bin" 
+	FILE_JPL="Serv/cont_jpl_order_20_dest_L2_TEST_local.bin"
+fi
 
-FILE_CONT="cont_atf_order_20_dest_L2_TEST.txt"
-FILE_CONT_RES="cont_atf_traj_order_20_dest_L2_TEST.bin"
 
-FILE_TRAJ_FROM_W="traj_from_w_order_20_dest_L2_TEST.bin"
-FILE_TRAJ_FROM_C="traj_from_c_order_20_dest_L2_TEST.bin" 
-
-FILE_JPL="/cont_jpl_order_20_dest_L2_TEST_local.bin"
 
 #-----------------------------------------------------
 # Parameters that are stable

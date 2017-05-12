@@ -4422,7 +4422,7 @@ int cref_eml_to_seml(int grid_freq_days[3], int coord_type,
     // Initial trajectory, on a grid
     //====================================================================================
     cout << fname << ". Initial trajectory, on a grid..."  << endl;
-    int mPlot = refSt.mPlot;
+    int mPlot = floor(grid_freq_days[0]*24/refSt.fHours);//refSt.mPlot;
 
     //Initial trajectory on lines, segment by segment
     if(refSt.isPlotted)
@@ -4580,18 +4580,6 @@ int wref_eml_to_seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double*
     int max_grid_size = 1000;
     int man_grid_size = (refSt.grid == REF_VAR_GRID) ? max_grid_size:*man_grid_size_t;
 
-    //------------------------------------------------------------------------------------
-    //Local variables for plotting
-    //------------------------------------------------------------------------------------
-    int mPlot  = refSt.mPlot;
-    int isPlot = refSt.isPlotted;
-    double** y_man_NCEM        = dmatrix(0, 5, 0, mPlot);
-    double** y_man_NCSEM       = dmatrix(0, 5, 0, mPlot);
-    double*  t_man_EM          = dvector(0, mPlot);
-    double*  t_man_SEM         = dvector(0, mPlot);
-    double** y_man_coord_plot  = dmatrix(0, 5, 0, mPlot);
-    double*  t_man_coord_plot  = dvector(0, mPlot);
-
     //Number of potential new points, during the continuation procedure with variable time
     int nnew = 4;
     int ode78coll = 0;
@@ -4633,8 +4621,21 @@ int wref_eml_to_seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double*
     int man_index = icmanemlisemli(y_traj, t_traj, orbit_EM, orbit_SEM, dcs, coord_type, man_grid_size, refSt);
 
     // Plot the resulting trajectory
+    int isPlot = refSt.isPlotted;
     gnuplot_plot_X(isPlot, h2, y_traj, man_index,   (char*)"", "lines", "1", "1", 4);
     gnuplot_plot_X(isPlot, h2, y_traj, man_index+1, (char*)"", "points", "1", "1", 4);
+
+
+    //------------------------------------------------------------------------------------
+    //Local variables for plotting
+    //------------------------------------------------------------------------------------
+    int mPlot  = number_of_plot_points((t_traj[1]- t_traj[0]), refSt.fHours, coord_type);
+    double** y_man_NCEM        = dmatrix(0, 5, 0, mPlot);
+    double** y_man_NCSEM       = dmatrix(0, 5, 0, mPlot);
+    double*  t_man_EM          = dvector(0, mPlot);
+    double*  t_man_SEM         = dvector(0, mPlot);
+    double** y_man_coord_plot  = dmatrix(0, 5, 0, mPlot);
+    double*  t_man_coord_plot  = dvector(0, mPlot);
 
 
     //====================================================================================
@@ -6541,7 +6542,7 @@ int comprefemlisemli3d(int grid_freq_days[3], int coord_type,
     // Initial trajectory, on a grid
     //====================================================================================
     cout << " comprefemlisemli3d. Initial trajectory, on a grid..."  << endl;
-    int mPlot = refSt.mPlot;
+    int mPlot = floor(grid_freq_days[0]*24/refSt.fHours);
 
     double** ymc        = dmatrix(0, 5, 0, mPlot);
     double* tmc         = dvector(0, mPlot);
@@ -6855,7 +6856,7 @@ int jplref_eml_to_seml(int coord_type, RefSt& refSt, int label, int isFirst, str
     //------------------------------------------------------------------------------------
     // State and time vectors
     //------------------------------------------------------------------------------------
-    int mPlot = refSt.mPlot;
+    int mPlot = number_of_plot_points((t_traj_n[1] - t_traj_n[0]), refSt.fHours, coord_type);
     double** ymc        = dmatrix(0, 5, 0, mPlot);
     double* tmc         = dvector(0, mPlot);
     double** ymc_comp   = dmatrix(0, 5, 0, mPlot);

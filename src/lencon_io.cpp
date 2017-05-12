@@ -2516,6 +2516,20 @@ int writeCONT_bin(RefSt& refSt, string filename_res, int dcs, int coord_type,
 //          I/O (continuation procedures on one orbit)
 //
 //========================================================================================
+int number_of_plot_points(double deltaT, double fHours, int coord_type)
+{
+    // 1. Get the delta time in the right units
+    double deltaT_NCSEM;
+    qbcp_coc_time(&deltaT, &deltaT_NCSEM, 0, coord_type, NCSEM);
+
+    // 2. The frequency in NCSEM
+    double fNCSEM = fHours*2*M_PI*3600/SEML.cs_sem.cr3bp.T;
+
+    // 3. Return the number of points
+    cout << "Number of points is: " << floor(deltaT_NCSEM/fNCSEM) << endl;
+    return(floor(deltaT_NCSEM/fNCSEM));
+}
+
 /**
  *   \brief Storing the results of the continuation procedure, in txt file.
  **/
@@ -2940,10 +2954,13 @@ int write_wref_res_bin(RefSt& refSt, string filename_res,
     double yv[42], res = 0.0;
     int ode78coll  = 0, status;
 
-    double** ymc_NCSEM  = dmatrix(0, 5, 0, refSt.mPlot);
-    double* tmc_SEM     = dvector(0, refSt.mPlot);
-    double** ymc_NCEM   = dmatrix(0, 5, 0, refSt.mPlot);
-    double* tmc_EM      = dvector(0, refSt.mPlot);
+    //Number of plot points
+    int mPlot = number_of_plot_points((t_traj_n[1] - t_traj_n[0]), refSt.fHours, NCSEM);
+
+    double** ymc_NCSEM  = dmatrix(0, 5, 0, mPlot);
+    double* tmc_SEM     = dvector(0, mPlot);
+    double** ymc_NCEM   = dmatrix(0, 5, 0, mPlot);
+    double* tmc_EM      = dvector(0, mPlot);
 
     //====================================================================================
     // Transfer leg
@@ -2963,7 +2980,7 @@ int write_wref_res_bin(RefSt& refSt, string filename_res,
     {
         //Integration segment by segment
         for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
-        status = ode78(ymc_NCSEM, tmc_SEM, &ode78coll, t_traj_n[k], t_traj_n[k+1], yv, 6, refSt.mPlot, dcs, coord_type, coord_type);
+        status = ode78(ymc_NCSEM, tmc_SEM, &ode78coll, t_traj_n[k], t_traj_n[k+1], yv, 6, mPlot, dcs, coord_type, coord_type);
 
         //Checks and warnings, if necessary
         if(status != FTC_SUCCESS)
@@ -2982,7 +2999,7 @@ int write_wref_res_bin(RefSt& refSt, string filename_res,
         //--------------------------------------------------------------------------------
         //To NCEM coordinates
         //--------------------------------------------------------------------------------
-        qbcp_coc_vec(ymc_NCSEM, tmc_SEM, ymc_NCEM, tmc_EM, refSt.mPlot, NCSEM, NCEM);
+        qbcp_coc_vec(ymc_NCSEM, tmc_SEM, ymc_NCEM, tmc_EM, mPlot, NCSEM, NCEM);
 
         //--------------------------------------------------------------------------------
         // Save to data file
@@ -2995,7 +3012,7 @@ int write_wref_res_bin(RefSt& refSt, string filename_res,
         //  6. Hamiltonian in NCSEM coordinates
         //  7. t_EM_0 as a ratio
         //--------------------------------------------------------------------------------
-        for(int p = 0; p <= refSt.mPlot; p++)
+        for(int p = 0; p <= mPlot; p++)
         {
             //1. Label of the solution
             res = label;
@@ -3581,10 +3598,10 @@ int write_wref_res_bin(RefSt& refSt, string filename_res,
     //====================================================================================
     // Free
     //====================================================================================
-    free_dmatrix(ymc_NCSEM, 0, 5, 0, refSt.mPlot);
-    free_dvector(tmc_SEM, 0, refSt.mPlot);
-    free_dmatrix(ymc_NCEM, 0, 5, 0, refSt.mPlot);
-    free_dvector(tmc_EM, 0, refSt.mPlot);
+    free_dmatrix(ymc_NCSEM, 0, 5, 0, mPlot);
+    free_dvector(tmc_SEM, 0, mPlot);
+    free_dmatrix(ymc_NCEM, 0, 5, 0, mPlot);
+    free_dvector(tmc_EM, 0, mPlot);
 
 
 
