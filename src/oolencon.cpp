@@ -2084,7 +2084,6 @@ int int_proj_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
     //------------------------------------------------------------------------------------
     Orbit orbit(&invman, &SEML, &odestruct, OFTS_ORDER, OFS_ORDER, projSt.TLIM[0], projSt.TLIM[0]+10);
 
-
     //====================================================================================
     // Building the initial conditions on the orbit
     //====================================================================================
@@ -2280,7 +2279,7 @@ int int_proj_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
                 // Init the state in RCM coordinates
                 for(int i = 0; i < 5; i++) projResSt.init_state_CMU_RCM[i] = sRCM[i][ks];
                 //Label
-                projResSt.label = label;
+                projResSt.label = label+ks;
 
                 //------------------------------------------------------------------------
                 //Projection on center manifold at SEML2
@@ -2309,7 +2308,7 @@ int int_proj_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
                 }
             }
 
-            label++;
+            label+=N+1;
         }
 
         //--------------------------------------------------------------------------------
@@ -2551,7 +2550,7 @@ int int_proj_SINGLE_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
             // Init the state in RCM coordinates
             for(int i = 0; i < 5; i++) projResSt.init_state_CMU_RCM[i] = sRCM[i][ks];
             //Label
-            projResSt.label = label;
+            projResSt.label = label+ks;
 
             //----------------------------------------------------------------------------
             //Projection on center manifold at SEML2
@@ -2580,7 +2579,7 @@ int int_proj_SINGLE_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
             }
         }
 
-        label++;
+        label+=N+1;
     }
 
     //------------------------------------------------------------------------------------
@@ -3372,7 +3371,9 @@ int ref_eml_to_seml_maps(RefSt& refSt)
         scanf("%c",&ch);
 
         int sampfreq[3] = {sf_eml2, sf_man, sf_seml2};
-        status = comprefemlisemli3d(sampfreq, coord_type, orbit_EM, orbit_SEM, refSt, 0, 1);
+        int mPlot = floor(sampfreq[1]*24/refSt.fHours);
+
+        status = comprefemlisemli3d(sampfreq, coord_type, orbit_EM, orbit_SEM, refSt, 0, 1, mPlot);
 
         if(status)
         {
@@ -3569,7 +3570,7 @@ int ref_eml_to_seml_orbits(RefSt& refSt)
     int step = 0;
     int isSaved = refSt.isSaved;
     int completion = 0;
-    for(int k = 0; k < projRes.size(); k++)
+    for(int k = 19; k < projRes.size(); k++)
     {
         //--------------------------------------------------------------------------------
         // Update initial conditions
@@ -3621,8 +3622,8 @@ int ref_eml_to_seml_orbits(RefSt& refSt)
             // Find the intersection with a certain Poincaré Section (PS)
             //----------------------------------------------------------------------------
             double ye_NCSEM[6], te_NCSEM = 0.0;
-            double ye_NCEM[6], te_NCEM = 0.0;
-            double ve_NCEM[3], ve_NCSEM[3];
+            double ye_NCEM[6],  te_NCEM = 0.0;
+            double ve_NCEM[3],  ve_NCSEM[3];
 
             pk_ref_conn(ye_NCEM, &te_NCEM, ye_NCSEM, &te_NCSEM,
                         ve_NCEM, ve_NCSEM, t_traj, y_traj, man_grid_size,
@@ -3701,11 +3702,14 @@ int ref_eml_to_seml_orbits(RefSt& refSt)
         //--------------------------------------------------------------------------------
         //Second step: Complete trajectory
         //--------------------------------------------------------------------------------
+        int sampfreq[3] = {refSt.sf_eml2, refSt.sf_man, refSt.sf_seml2};
+        int mPlot = floor(sampfreq[1]*24/refSt.fHours);
+
         if(step == 1)
         {
             refSt.type = REF_COMP;
-            int sampfreq[3] = {refSt.sf_eml2, refSt.sf_man, refSt.sf_seml2};
-            status = cref_eml_to_seml(sampfreq, coord_type, y_traj, t_traj, man_grid_size, orbit_EM, orbit_SEM, refSt, label, isFirst);
+            status = cref_eml_to_seml(sampfreq, coord_type, y_traj, t_traj, man_grid_size,
+                                      orbit_EM, orbit_SEM, refSt, label, isFirst, mPlot);
             if(status == FTC_SUCCESS) step = 2;
         }
 
@@ -3715,7 +3719,7 @@ int ref_eml_to_seml_orbits(RefSt& refSt)
         if(step == 2 && refSt.isJPL)
         {
             string filename = refSt.get_and_update_filename(refSt.FILE_JPL_TXT, TYPE_COMP_FOR_JPL, ios::in);
-            status = jplref_eml_to_seml(coord_type, refSt, label, isFirst, filename);
+            status = jplref_eml_to_seml(coord_type, refSt, label, isFirst, filename, mPlot);
         }
 
         //--------------------------------------------------------------------------------
@@ -4299,7 +4303,8 @@ int cref_eml_to_seml(int grid_freq_days[3], int coord_type,
                      double** y_seed_NCSEM, double* t_seed_NCSEM,
                      int man_grid_size,
                      Orbit& orbit_EM, Orbit& orbit_SEM,
-                     RefSt& refSt, int label, int isFirst)
+                     RefSt& refSt, int label, int isFirst,
+                     int mPlot)
 
 {
     string fname = "cref_eml_to_seml";
@@ -4422,7 +4427,7 @@ int cref_eml_to_seml(int grid_freq_days[3], int coord_type,
     // Initial trajectory, on a grid
     //====================================================================================
     cout << fname << ". Initial trajectory, on a grid..."  << endl;
-    int mPlot = floor(grid_freq_days[0]*24/refSt.fHours);//refSt.mPlot;
+    //int mPlot = floor(grid_freq_days[1]*24/refSt.fHours);//refSt.mPlot;
 
     //Initial trajectory on lines, segment by segment
     if(refSt.isPlotted)
@@ -6407,7 +6412,9 @@ int reffromcontemlisemli(RefSt& refSt)
         //--------------------------------------------------------------------------------
         refSt.type = REF_COMP;
         int sampfreq[3] = {refSt.sf_eml2, refSt.sf_man, refSt.sf_seml2};
-        status = comprefemlisemli3d(sampfreq, coord_type, orbit_EM, orbit_SEM, refSt, k, isFirst);
+        int mPlot = floor(sampfreq[1]*24/refSt.fHours);
+
+        status = comprefemlisemli3d(sampfreq, coord_type, orbit_EM, orbit_SEM, refSt, k, isFirst, mPlot);
 
         if(status)
         {
@@ -6434,7 +6441,8 @@ int reffromcontemlisemli(RefSt& refSt)
  **/
 int comprefemlisemli3d(int grid_freq_days[3], int coord_type,
                        Orbit& orbit_EM, Orbit& orbit_SEM,
-                       RefSt& refSt, int label, int isFirst)
+                       RefSt& refSt, int label, int isFirst,
+                       int mPlot)
 
 {
     //====================================================================================
@@ -6542,7 +6550,7 @@ int comprefemlisemli3d(int grid_freq_days[3], int coord_type,
     // Initial trajectory, on a grid
     //====================================================================================
     cout << " comprefemlisemli3d. Initial trajectory, on a grid..."  << endl;
-    int mPlot = floor(grid_freq_days[0]*24/refSt.fHours);
+    //int mPlot = floor(grid_freq_days[1]*24/refSt.fHours);
 
     double** ymc        = dmatrix(0, 5, 0, mPlot);
     double* tmc         = dvector(0, mPlot);
@@ -6616,7 +6624,7 @@ int comprefemlisemli3d(int grid_freq_days[3], int coord_type,
     //====================================================================================
     if(refSt.isJPL)
     {
-        status = jplref_eml_to_seml(coord_type, refSt, label, isFirst, filename);
+        status = jplref_eml_to_seml(coord_type, refSt, label, isFirst, filename, mPlot);
 
         //--------------------------------------------------------------------------------
         // If something went bad, an error is returned
@@ -6811,7 +6819,7 @@ int write_NJ2000_ref_to_celestia(double** y_traj, double* t_traj,
 /**
  *  \brief Refine a given output of comprefemlisemli3d into JPL ephemerides.
  **/
-int jplref_eml_to_seml(int coord_type, RefSt& refSt, int label, int isFirst, string filename_in)
+int jplref_eml_to_seml(int coord_type, RefSt& refSt, int label, int isFirst, string filename_in, int mPlot)
 {
     //====================================================================================
     // 1. Read the data, in sys units
@@ -6856,7 +6864,7 @@ int jplref_eml_to_seml(int coord_type, RefSt& refSt, int label, int isFirst, str
     //------------------------------------------------------------------------------------
     // State and time vectors
     //------------------------------------------------------------------------------------
-    int mPlot = number_of_plot_points((t_traj_n[1] - t_traj_n[0]), refSt.fHours, coord_type);
+    //int mPlot = number_of_plot_points((t_traj_n[1] - t_traj_n[0]), refSt.fHours*2.0/5, coord_type);
     double** ymc        = dmatrix(0, 5, 0, mPlot);
     double* tmc         = dvector(0, mPlot);
     double** ymc_comp   = dmatrix(0, 5, 0, mPlot);

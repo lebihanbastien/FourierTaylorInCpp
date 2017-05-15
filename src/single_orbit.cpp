@@ -226,6 +226,11 @@ int ode78_patched(double **yv, double *tv, OdeEvent *odeEvent,
             {
                 ilist.push_back(k);
                 tlist.push_back(tvIN[k]);
+            }else if(fabs(ts0[m] - tvIN[k])< 1e-15 || fabs(ts0[m+1] - tvIN[k]) < 1e-15)
+            {
+                //Additional check to see if we have equality at one of the end
+                ilist.push_back(k);
+                tlist.push_back(tvIN[k]);
             }
             k++;
         }
@@ -239,81 +244,82 @@ int ode78_patched(double **yv, double *tv, OdeEvent *odeEvent,
         //--------------------------------------------------------------------------------
         if(!tlist.empty())
         {
-        if(tvIN[ilist[0]] == ts0[m] && tlist.size() == 1)
-        {
-            //----------------------------------------------------------------------------
-            //We just copy the unique point in the output
-            //----------------------------------------------------------------------------
-            for(int i = 0; i < 6; i++) yvIN[i][ilist[0]] = ys0[i][m];
-        }
-        else
-        {
-            //----------------------------------------------------------------------------
-            //We need to integrate and store
-            //----------------------------------------------------------------------------
-            int ntGrid         = (int) tlist.size()-1;
-            if(tvIN[ilist[0]] != ts0[m]) ntGrid++;
-
-            double** ytIN  = dmatrix(0, 5, 0, ntGrid);
-            double*  ttIN  = dvector(0, ntGrid);
-
-            //Time grid
-            if(tvIN[ilist[0]] != ts0[m])
+            if(tvIN[ilist[0]] == ts0[m] && tlist.size() == 1)
             {
-                //First time = ts0[m]
-                ttIN[0] = ts0[m];
-
-                //Rest of the time grid
-                for(int p = 1; p <= ntGrid; p++)
-                {
-                    ttIN[p] = tvIN[ilist[p-1]];
-                }
+                //------------------------------------------------------------------------
+                //We just copy the unique point in the output
+                //------------------------------------------------------------------------
+                for(int i = 0; i < 6; i++) yvIN[i][ilist[0]] = ys0[i][m];
             }
             else
             {
+                //------------------------------------------------------------------------
+                //We need to integrate and store
+                //------------------------------------------------------------------------
+                int ntGrid         = (int) tlist.size()-1;
+                if(tvIN[ilist[0]] != ts0[m]) ntGrid++;
+
+                double** ytIN  = dmatrix(0, 5, 0, ntGrid);
+                double*  ttIN  = dvector(0, ntGrid);
+
                 //Time grid
-                for(int p = 0; p <= ntGrid; p++)
+                if(tvIN[ilist[0]] != ts0[m])
                 {
-                    ttIN[p] = tvIN[ilist[p]];
+                    //First time = ts0[m]
+                    ttIN[0] = ts0[m];
+
+                    //Rest of the time grid
+                    for(int p = 1; p <= ntGrid; p++)
+                    {
+                        ttIN[p] = tvIN[ilist[p-1]];
+                    }
                 }
+                else
+                {
+                    //Time grid
+                    for(int p = 0; p <= ntGrid; p++)
+                    {
+                        ttIN[p] = tvIN[ilist[p]];
+                    }
+                }
+
+                //Initial position: at the seed
+                for(int i = 0; i <6; i++) y0[i] = ys0[i][m];
+
+                //Integration
+                status = ode78_grid_gg(&odestruct, y0, ytIN, ttIN, ntGrid);
+
+                //------------------------------------------------------------------------
+                //Save in output
+                //------------------------------------------------------------------------
+                if(tvIN[ilist[0]] != ts0[m])
+                {
+                    //The first point is discarded an NOT saved in yvIN
+                    for(int p = 1; p <= ntGrid; p++)
+                    {
+                        for(int i = 0; i < 6; i++) yvIN[i][ilist[p-1]] = ytIN[i][p];
+                    }
+                }
+                else
+                {
+                    //All points are saved
+                    for(int p = 0; p <= ntGrid; p++)
+                    {
+                        for(int i = 0; i < 6; i++) yvIN[i][ilist[p]] = ytIN[i][p];
+                    }
+                }
+
+
+                // Free temp variables
+                free_dmatrix(ytIN, 0, 5, 0, ntGrid);
+                free_dvector(ttIN, 0, ntGrid);
             }
 
-            //Initial position: at the seed
-            for(int i = 0; i <6; i++) y0[i] = ys0[i][m];
-
-            //Integration
-            status = ode78_grid_gg(&odestruct, y0, ytIN, ttIN, ntGrid);
-
-            //--------------------------------------------------------------------------------
-            //Save in output
-            //--------------------------------------------------------------------------------
-            if(tvIN[ilist[0]] != ts0[m])
-            {
-                //The first point is discarded an NOT saved in yvIN
-                for(int p = 1; p <= ntGrid; p++)
-                {
-                    for(int i = 0; i < 6; i++) yvIN[i][ilist[p-1]] = ytIN[i][p];
-                }
-            }
-            else
-            {
-                //All points are saved
-                for(int p = 0; p <= ntGrid; p++)
-                {
-                    for(int i = 0; i < 6; i++) yvIN[i][ilist[p]] = ytIN[i][p];
-                }
-            }
-
-
-            // Free temp variables
-            free_dmatrix(ytIN, 0, 5, 0, ntGrid);
-            free_dvector(ttIN, 0, ntGrid);
-        }
-
-        //--------------------------------------------------------------------------------
-        //Update the head in the output
-        //--------------------------------------------------------------------------------
-        head = ilist.back()+1;
+            //----------------------------------------------------------------------------
+            //Update the head in the output
+            //----------------------------------------------------------------------------
+            //cout << "head (old) = " << head << endl;
+            head = ilist.back()+1;
         }
     }
 
@@ -323,6 +329,9 @@ int ode78_patched(double **yv, double *tv, OdeEvent *odeEvent,
     if(head != nGrid+1)
     {
         cout << fname << ". The head was not able to reach the end of the output vector. Return" << endl;
+        cout << "head = " << head << endl;
+        cout << "nGrid+1 = " << nGrid+1 << endl;
+        pressEnter(true);
         return FTC_FAILURE;
     }
 

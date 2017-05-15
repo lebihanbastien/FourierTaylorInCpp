@@ -198,8 +198,8 @@ struct RefSt
     //------------------------------------------------------------------------------------
     int isDebug;          //if yes, additionnal tests are performed
     int gridSize;         //number of points on the refinement grid
-    int mPlot;            //number of points per plot between to pach points (e.g. total plot points is gridSize*mplot) - DEPRECATED
-    int fHours;           // desired frequency of plotting (in hours)
+    int mPlot;          //number of points per plot between to pach points (e.g. total plot points is gridSize*mplot)
+    int fHours;         // desired frequency of plotting (in hours)
 
     int time;             //type of constraints on the times in REF_CONT
     int grid;             //type of grid
@@ -287,8 +287,8 @@ struct RefSt
         xps_NCEM = RPS;
         if(xps_NCEM < 0) xps_NCEM = SEML.cs->r3BSOI;
 
-        //Frequency by default: every 10 hours
-        fHours = 10.0;
+        //Frequency by default: every 5 hours
+        fHours = 5.0;
     };
 
     /**

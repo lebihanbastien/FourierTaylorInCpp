@@ -177,8 +177,8 @@ REFST_SF_MAN=5			 # transfer leg
 REFST_SF_SEML2=10		 # orbit at SEML2
 
 # Integration window for each orbit
-REFST_TSPAN_EM=10    	 # given as %T, where T is the SEM period, in EM units
-REFST_TSPAN_SEM=10		 # given as %T, where T is the SEM period, in SEM units
+REFST_TSPAN_EM=1    	 # given as %T, where T is the SEM period, in EM units
+REFST_TSPAN_SEM=1		 # given as %T, where T is the SEM period, in SEM units
 
 # Type of computation for each orbit
 REFST_COMP_ORB_EM=$INT_TRY_BOTH  #may use INT_RED_COORD directly for bigger orbits (QHalo?)

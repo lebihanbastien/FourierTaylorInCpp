@@ -615,7 +615,8 @@ int cref_eml_to_seml(int grid_freq_days[3], int coord_type,
                      double** y_seed_NCSEM, double* t_seed_NCSEM,
                      int man_grid_size,
                      Orbit& orbit_EM, Orbit& orbit_SEM,
-                     RefSt& refSt, int label, int isFirst);
+                     RefSt& refSt, int label, int isFirst,
+                     int mPlot);
 
 //========================================================================================
 //
@@ -732,7 +733,8 @@ int reffromcontemlisemli(RefSt& refSt);
  **/
 int comprefemlisemli3d(int grid_freq_days[3], int coord_type,
                        Orbit& orbit_EM, Orbit& orbit_SEM,
-                        RefSt& refSt, int label, int isFirst);
+                       RefSt& refSt, int label, int isFirst,
+                       int mPlot);
 
 //========================================================================================
 //
@@ -742,7 +744,7 @@ int comprefemlisemli3d(int grid_freq_days[3], int coord_type,
 /**
  *  \brief Refine a given output of comprefemlisemli3d into JPL ephemerides.
  **/
-int jplref_eml_to_seml(int coord_type, RefSt& refSt, int label, int isFirst, string filename_in);
+int jplref_eml_to_seml(int coord_type, RefSt& refSt, int label, int isFirst, string filename_in, int mPlot);
 
 /**
  *  \brief Refine a given output of comprefemlisemli3d into Inertial Coordinates, then into

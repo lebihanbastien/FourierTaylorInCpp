@@ -82,9 +82,9 @@ GLIM_S1=(+10 +40)
 GLIM_S2=(+0 +0)
 GLIM_S3=(-10 +35)
 GLIM_S4=(+0 +0)
-GSIZE_SI=(+0 +0 +10 +0)
+GSIZE_SI=(+3 +0 +10 +0)
 
-# Primary family - keep in mind that the first minimum rule is used now for the primary!
+# Primary family
 PRIMARY=1
 
 # Fixed delta of energy (-1 if not used)
@@ -100,7 +100,7 @@ HYP_EPSILON_SEML2=1e-6	# Hyperbolic component at seml2
 # Filenames (used only if IO_HANDLING==$IO_BASH)
 if [ $SERVER == 1 ]; then
 	FILE_CU="cu_orbit.bin"
-	FILE_PCU="projcu_order_20_dest_L2_Orbit_10_eps_1e-5.bin"
+	FILE_PCU="projcu_order_20_dest_L2_Orbit_10_40_eps_1e-5.bin"
 else
 	FILE_CU="cu_orbit.bin"
 	FILE_PCU="Serv/projcu_order_20_dest_L2_Orbit_10_local.bin"
