@@ -1035,8 +1035,8 @@ void writeIntProjCU_bin(string filename,
         //--------------------------------------------------------------------------------
         // Store data column by column
         //--------------------------------------------------------------------------------
-        // 1. label
-        res  = projResSt.label;
+        // 1. label (of the seed)
+        res  = projResSt.seed_label;
         filestream.write((char*) &res, sizeof(double));
 
         // 2. time grid in IC_COORD units
@@ -1224,8 +1224,8 @@ void writeIntProjCUSeed_bin(string filename,
         //--------------------------------------------------------------------------------
         // Store data column by column
         //--------------------------------------------------------------------------------
-        // 1. label
-        res  = projResSt.label;
+        // 1. label (of the seed)
+        res  = projResSt.seed_label;
         filestream.write((char*) &res, sizeof(double));
 
         // 2. time grid in NCEM units
@@ -1427,6 +1427,11 @@ void writeIntProjCUSeed_bin(string filename,
             res = projResSt.ve_NCSEM[k];
             filestream.write((char*) &res, sizeof(double));
         }
+
+        // 82. label (of the connection itself)
+        res  = projResSt.label;
+        filestream.write((char*) &res, sizeof(double));
+
 
         filestream.close();
     }
@@ -3937,8 +3942,8 @@ int ProjResClass::readProjRes(string filename)
     //====================================================================================
     //Get the number of columns
     //====================================================================================
-    int ncol[6] = {61, 81, 56, 55, 39, 37};
-    int ncol0   = numberOfColumns(filename, ncol, 5);
+    int ncol[7] = {61, 82, 81, 56, 55, 39, 37};
+    int ncol0   = numberOfColumns(filename, ncol, 7);
 
     //cout << "Number of columns in " << filename << " is: " << ncol0 << endl;
     //pressEnter(true);
@@ -4256,6 +4261,87 @@ int ProjResClass::readProjRes(string filename)
 
                 //79-81. NCSEM velocity at the Pk section
                 for (int k = 0; k < 3; k++) filestream.read((char*) &res, sizeof(double));
+
+                break;
+            }
+
+
+            case 82:
+            {
+                //38. Number of crossings of the x = -1 line (clock/counterclockwise)
+                filestream.read((char*) &res, sizeof(double));
+                this->crossings_NCSEM.push_back(res);
+
+                //39. Collision flag, from NCEM flow
+                filestream.read((char*) &res, sizeof(double));
+                this->collision_NCEM.push_back(res);
+
+                //40-43: H0 at IC - NOT SAVED FOR NOW
+                filestream.read((char*) &res, sizeof(double));
+                filestream.read((char*) &res, sizeof(double));
+                filestream.read((char*) &res, sizeof(double));
+                filestream.read((char*) &res, sizeof(double));
+
+                //44-47: H0 at emli - NOT SAVED FOR NOW
+                filestream.read((char*) &res, sizeof(double));
+                filestream.read((char*) &res, sizeof(double));
+                filestream.read((char*) &res, sizeof(double));
+                filestream.read((char*) &res, sizeof(double));
+
+                //48-51: Hf - NOT SAVED FOR NOW
+                filestream.read((char*) &res, sizeof(double));
+                filestream.read((char*) &res, sizeof(double));
+                filestream.read((char*) &res, sizeof(double));
+                filestream.read((char*) &res, sizeof(double));
+
+                //52-55: Hf at semli - NOT SAVED FOR NOW
+                filestream.read((char*) &res, sizeof(double));
+                filestream.read((char*) &res, sizeof(double));
+                filestream.read((char*) &res, sizeof(double));
+                filestream.read((char*) &res, sizeof(double));
+
+                //57. init_time_EM_seed
+                filestream.read((char*) &res, sizeof(double));
+                this->t0_CMU_EM_seed.push_back(res);
+
+                //58-61. initial seed in RCM coordinates
+                filestream.read((char*) &res, sizeof(double));
+                this->s1_CMU_EM_seed.push_back(res);
+
+                filestream.read((char*) &res, sizeof(double));
+                this->s2_CMU_EM_seed.push_back(res);
+
+                filestream.read((char*) &res, sizeof(double));
+                this->s3_CMU_EM_seed.push_back(res);
+
+                filestream.read((char*) &res, sizeof(double));
+                this->s4_CMU_EM_seed.push_back(res);
+
+
+                //------------------------------------------------------------------------
+                // States @ the EML2 pk section
+                //------------------------------------------------------------------------
+                //62. NCEM time at the Pk section
+                filestream.read((char*) &res, sizeof(double));
+
+                //63-68. NCEM coordinates at the Pk section
+                for (int k = 0; k < 6; k++) filestream.read((char*) &res, sizeof(double));
+
+                //69-71. NCEM velocity at the Pk section
+                for (int k = 0; k < 3; k++) filestream.read((char*) &res, sizeof(double));
+
+                //72. NCSEM time at the Pk section
+                filestream.read((char*) &res, sizeof(double));
+
+                //73-78. NCSEM coordinates at the Pk section
+                for (int k = 0; k < 6; k++) filestream.read((char*) &res, sizeof(double));
+
+                //79-81. NCSEM velocity at the Pk section
+                for (int k = 0; k < 3; k++) filestream.read((char*) &res, sizeof(double));
+
+                //82. Label (of the connection itself)
+                filestream.read((char*) &res, sizeof(double));
+                this->label[this->label.size()-1] = (int) res; //we replace the value!
 
                 break;
             }

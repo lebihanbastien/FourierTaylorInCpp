@@ -143,7 +143,7 @@ if [ $SERVER == 1 ]; then
 	FILE_TRAJ_FROM_C="traj_from_c_order_20_dest_L2_TEST.bin" 
 	FILE_JPL="cont_jpl_order_20_dest_L2_TEST.bin"
 else
-	FILE_PCU="Serv/projcu_order_20_dest_L2_Orbit_10_eps_1e-5.bin"
+	FILE_PCU="Serv/projcu_order_20_dest_L2_Orbit_10_local.bin"
 	FILE_CONT="Serv/cont_atf_order_20_dest_L2_TEST_local.txt"
 	FILE_CONT_RES="Serv/cont_atf_traj_order_20_dest_L2_TEST_local.bin"
 	FILE_TRAJ_FROM_W="Serv/traj_from_w_order_20_dest_L2_TEST_local.bin"

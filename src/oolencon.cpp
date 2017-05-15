@@ -390,7 +390,7 @@ int int_proj_CMU_SEM_on_CM_EM_3D(ProjSt& projSt)
                         // Init the state in RCM coordinates
                         for(int i = 0; i < 5; i++) projResSt.init_state_CMU_RCM[i] = init_state_CMU_RCM[i][ks3];
                         //Label
-                        projResSt.label = 0;
+                        projResSt.seed_label = 0;
 
                         //----------------------------------------------------------------
                         //Projection on center manifold at EMLj
@@ -1559,7 +1559,7 @@ int int_proj_CMU_EM_on_CM_SEM_3D(ProjSt& projSt)
                         // Init the state in RCM coordinates
                         for(int i = 0; i < 5; i++) projResSt.init_state_CMU_RCM[i] = init_state_CMU_RCM[i][ks3];
                         //Label
-                        projResSt.label = 0;
+                        projResSt.seed_label = 0;
 
                         //----------------------------------------------------------------
                         //Projection on center manifold at SEML2
@@ -1765,7 +1765,7 @@ int int_proj_CMU_EM_on_CM_SEM(ProjSt& projSt)
                     // Init the state in RCM coordinates
                     for(int i = 0; i < 5; i++) projResSt.init_state_CMU_RCM[i] = init_state_CMU_RCM[i][kt][ks1][ks3];
                     //Label
-                    projResSt.label = 0;
+                    projResSt.seed_label = 0;
 
                     //--------------------------------------------------------------------
                     //Projection on center manifold at SEML2
@@ -1976,7 +1976,7 @@ int int_proj_CMU_EM_on_CM_SEM_dH(ProjSt& projSt)
                 // Init the state in RCM coordinates
                 for(int i = 0; i < 5; i++) projResSt.init_state_CMU_RCM[i] = init_state_CMU_RCM[i][kt][ks1];
                 //Label
-                projResSt.label = 0;
+                projResSt.seed_label = 0;
 
                 //------------------------------------------------------------------------
                 //Projection on center manifold at SEML2
@@ -2278,8 +2278,9 @@ int int_proj_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
                 for(int i = 0; i < 6; i++) projResSt.init_state_CMU_NC[i] = yNCE[i][ks];
                 // Init the state in RCM coordinates
                 for(int i = 0; i < 5; i++) projResSt.init_state_CMU_RCM[i] = sRCM[i][ks];
-                //Label
-                projResSt.label = label+ks;
+                //Labels
+                projResSt.seed_label = label;
+                projResSt.label      = label+ks;
 
                 //------------------------------------------------------------------------
                 //Projection on center manifold at SEML2
@@ -2308,7 +2309,7 @@ int int_proj_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
                 }
             }
 
-            label+=N+1;
+            label+=(N+1);
         }
 
         //--------------------------------------------------------------------------------
@@ -2549,8 +2550,9 @@ int int_proj_SINGLE_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
             for(int i = 0; i < 6; i++) projResSt.init_state_CMU_NC[i] = yNCE[i][ks];
             // Init the state in RCM coordinates
             for(int i = 0; i < 5; i++) projResSt.init_state_CMU_RCM[i] = sRCM[i][ks];
-            //Label
-            projResSt.label = label+ks;
+            //Labels
+            projResSt.seed_label = label;
+            projResSt.label      = label+ks;
 
             //----------------------------------------------------------------------------
             //Projection on center manifold at SEML2
@@ -3570,7 +3572,7 @@ int ref_eml_to_seml_orbits(RefSt& refSt)
     int step = 0;
     int isSaved = refSt.isSaved;
     int completion = 0;
-    for(int k = 19; k < projRes.size(); k++)
+    for(int k = 0; k < projRes.size(); k++)
     {
         //--------------------------------------------------------------------------------
         // Update initial conditions

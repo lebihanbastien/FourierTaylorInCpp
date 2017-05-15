@@ -334,6 +334,7 @@ struct ProjResSt
     //------------------------------------------------------------------------------------
     //Seeds
     //------------------------------------------------------------------------------------
+    int seed_label;
     double seed_time;
     double seed_state_CMU_RCM[4];
 
@@ -400,7 +401,7 @@ struct ProjResSt
         cout << "----------------------------" << endl;
         cout << "ProjResSt = "                 << endl;
         cout << "----------------------------" << endl;
-        cout << "label     = " << label        << endl;
+        cout << "label     = " << seed_label   << endl;
         cout << "init_time = " << init_time    << endl;
 
         cout << "init_state_CMU_NC = "         << endl;
