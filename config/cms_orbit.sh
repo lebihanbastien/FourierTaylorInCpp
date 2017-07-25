@@ -136,12 +136,12 @@ REFST_THETAMAX=180           # should be a multiple of 90°
 
 # Filenames (used only if IO_HANDLING==$IO_BASH)
 if [ $SERVER == 1 ]; then
-	FILE_PCU="projcu_order_20_dest_L2_Orbit_10_eps_1e-5.bin" #"Serv/projcu_order_20_dest_L2_orbit.bin" #"Serv/projcu_order_20_dest_L2_QHalo.bin" 
-	FILE_CONT="cont_atf_order_20_dest_L2_TEST.txt"
-	FILE_CONT_RES="cont_atf_traj_order_20_dest_L2_TEST.bin"
-	FILE_TRAJ_FROM_W="traj_from_w_order_20_dest_L2_TEST.bin"
-	FILE_TRAJ_FROM_C="traj_from_c_order_20_dest_L2_TEST.bin" 
-	FILE_JPL="cont_jpl_order_20_dest_L2_TEST.bin"
+	FILE_PCU="projcu_order_20_dest_L2_Orbit_QHalo_eps_1e-5.bin" #"Serv/projcu_order_20_dest_L2_orbit.bin" #"Serv/projcu_order_20_dest_L2_QHalo.bin" 
+	FILE_CONT="cont_atf_order_20_dest_L2_QHalo_DIST_SEM_5e-4_TSPAN_SEM_20.txt"
+	FILE_CONT_RES="cont_atf_traj_order_20_dest_L2_QHalo_DIST_SEM_5e-4_TSPAN_SEM_20.bin"
+	FILE_TRAJ_FROM_W="traj_from_w_order_20_dest_L2_QHalo_DIST_SEM_5e-4_TSPAN_SEM_20.bin"
+	FILE_TRAJ_FROM_C="traj_from_c_order_20_dest_L2_QHalo_DIST_SEM_5e-4_TSPAN_SEM_20.bin" 
+	FILE_JPL="cont_jpl_order_20_dest_L2_QHalo_DIST_SEM_5e-4_TSPAN_SEM_20.bin"
 else
 	FILE_PCU="Serv/projcu_order_20_dest_L2_Orbit_10_All.bin"
 	FILE_CONT="Serv/cont_atf_order_20_dest_L2_TEST_local.txt"
@@ -177,8 +177,8 @@ REFST_SF_MAN=5			 # transfer leg
 REFST_SF_SEML2=10		 # orbit at SEML2
 
 # Integration window for each orbit
-REFST_TSPAN_EM=1    	 # given as %T, where T is the SEM period, in EM units
-REFST_TSPAN_SEM=1		 # given as %T, where T is the SEM period, in SEM units
+REFST_TSPAN_EM=20    	 # given as %T, where T is the SEM period, in EM units
+REFST_TSPAN_SEM=20		 # given as %T, where T is the SEM period, in SEM units
 
 # Type of computation for each orbit
 REFST_COMP_ORB_EM=$INT_TRY_BOTH  #may use INT_RED_COORD directly for bigger orbits (QHalo?)

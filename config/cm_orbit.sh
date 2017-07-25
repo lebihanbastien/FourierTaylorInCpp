@@ -81,15 +81,15 @@ IO_HANDLING=$IO_BASH
 #-----------------------------------------------------
 # Time grid: min, max and number of points on the grid
 TMIN=0.0    # (given as %T, with T the SEM period)
-TMAX=0.5    # (given as %T, with T the SEM period)
-TSIZE=10	  
+TMAX=1.0    # (given as %T, with T the SEM period)
+TSIZE=200	  
 
 # Configuration (s1, s2, s3, s4) grid
-GLIM_S1=(+10 +30)
-GLIM_S2=(+0 +0)
-GLIM_S3=(-10 +35)
-GLIM_S4=(+0 +0)
-GSIZE_SI=(+0 +0 +10 +0)
+# GLIM_S1=(+10 +30)
+# GLIM_S2=(+0 +0)
+# GLIM_S3=(-10 +35)
+# GLIM_S4=(+0 +0)
+# GSIZE_SI=(+0 +0 +10 +0)
 
 # Values for QHalo orbit (small one)
 # GLIM_S1=(+28 +30)
@@ -99,11 +99,11 @@ GSIZE_SI=(+0 +0 +10 +0)
 # GSIZE_SI=(+0 +0 +10 +0)
 
 # Values for QHalo orbit (medium one)
-# GLIM_S1=(+28 +30)
-# GLIM_S2=(+1.74347452709299 +0)
-# GLIM_S3=(36 +35)
-# GLIM_S4=(1.74347452709299 +0)
-# GSIZE_SI=(+0 +0 +10 +0)
+GLIM_S1=(+28 +30)
+GLIM_S2=(+1.74347452709299 +0)
+GLIM_S3=(36 +35)
+GLIM_S4=(1.74347452709299 +0)
+GSIZE_SI=(+0 +0 +10 +0)
 
 # Values for QHalo orbit (big one)
 # GLIM_S1=(+41.7272727272727 +30)
@@ -113,7 +113,7 @@ GSIZE_SI=(+0 +0 +10 +0)
 # GSIZE_SI=(+0 +0 +10 +0)
 
 # Primary family
-PRIMARY=0
+PRIMARY=1
 
 # Fixed delta of energy (-1 if not used)
 DHD=-1
