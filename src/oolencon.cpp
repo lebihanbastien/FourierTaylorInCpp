@@ -3190,7 +3190,8 @@ int ref_eml_to_seml_maps(RefSt& refSt)
         //--------------------------------------------------------------------------------
         //Multiple shooting procedure
         //--------------------------------------------------------------------------------
-        status = wref_eml_to_seml(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, &man_grid_size, refSt, h2);
+        int man_index = -1;
+        status = wref_eml_to_seml(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, man_grid_size, refSt, h2, &man_index);
         gnuplot_close(refSt.isPlotted, h2);
         if(status)
         {
@@ -3216,13 +3217,15 @@ int ref_eml_to_seml_maps(RefSt& refSt)
         //First step: variable tn
         //--------------------------------------------------------------------------------
         refSt.time = REF_VAR_TN;
+        refSt.inner_prec = refSt.inner_prec_vt;
 
         //There is no need to save at this point,
         //since everything is gonna be erased by the second step
         int isSaved = refSt.isSaved;
         refSt.isSaved = 0;
 
-        status = wref_eml_to_seml(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, &man_grid_size, refSt, h2);
+        int man_index = -1;
+        status = wref_eml_to_seml(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, man_grid_size, refSt, h2, &man_index);
         if(status)
         {
             cerr << fname << ". Error during the continuation procedure with variable time. ref_errno = " << ref_strerror(status) << endl;
@@ -3233,10 +3236,11 @@ int ref_eml_to_seml_maps(RefSt& refSt)
         //--------------------------------------------------------------------------------
         //Second step: fixed time + saved, if desired by the user
         //--------------------------------------------------------------------------------
-        refSt.time    = REF_FIXED_TIME;
-        refSt.isSaved = isSaved;
+        refSt.time       = REF_FIXED_TIME;
+        refSt.isSaved    = isSaved;
+        refSt.inner_prec = refSt.inner_prec_ft;
 
-        status = wref_eml_to_seml(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, &man_grid_size, refSt, h2);
+        status = wref_eml_to_seml(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, man_grid_size, refSt, h2, &man_index);
         if(status)
         {
             cerr << fname << ". Error during the continuation procedure with fixed time. ref_errno = " << ref_strerror(status) << endl;
@@ -3269,7 +3273,8 @@ int ref_eml_to_seml_maps(RefSt& refSt)
         int isSaved = refSt.isSaved;
         refSt.isSaved = 0;
 
-        status = wref_eml_to_seml(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, &man_grid_size, refSt, h2);
+        int man_index = -1;
+        status = wref_eml_to_seml(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, man_grid_size, refSt, h2, &man_index);
         if(status)
         {
             cerr << fname << ". Error during the continuation procedure with variable time. ref_errno = " << ref_strerror(status) << endl;
@@ -3286,7 +3291,7 @@ int ref_eml_to_seml_maps(RefSt& refSt)
         refSt.grid    = REF_GIVEN_GRID;
         refSt.isSaved = isSaved;
 
-        status = wref_eml_to_seml(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, &man_grid_size, refSt, h2);
+        status = wref_eml_to_seml(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, man_grid_size, refSt, h2, &man_index);
         if(status)
         {
             cerr << fname << ". Error during the continuation procedure with fixed time. ref_errno = " << ref_strerror(status) << endl;
@@ -3323,7 +3328,8 @@ int ref_eml_to_seml_maps(RefSt& refSt)
         notablePoints_sem(h2, coord_type, refSt.isPlotted);
 
         //Multiple shooting procedure
-        status = wref_eml_to_seml(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, &man_grid_size, refSt, h2);
+        int man_index = -1;
+        status = wref_eml_to_seml(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, man_grid_size, refSt, h2, &man_index);
 
         if(status)
         {
@@ -3339,7 +3345,7 @@ int ref_eml_to_seml_maps(RefSt& refSt)
 
 
         //Multiple shooting procedure
-        status = wref_eml_to_seml(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, &man_grid_size, refSt, h2);
+        status = wref_eml_to_seml(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, man_grid_size, refSt, h2, &man_index);
         gnuplot_close(refSt.isPlotted, h2);
 
         if(status)
@@ -3593,7 +3599,9 @@ int ref_eml_to_seml_orbits(RefSt& refSt)
         refSt.type    = REF_ORBIT;
         refSt.time    = REF_FIXED_TIME;
         refSt.isSaved = 0;
-        status = wref_eml_to_seml(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, &man_grid_size, refSt, h2);
+        int man_index = -1;
+
+        status = wref_eml_to_seml(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, man_grid_size, refSt, h2, &man_index);
 
         //--------------------------------------------------------------------------------
         //Optionnal step: variable tn & continuation, if necessary
@@ -3602,7 +3610,7 @@ int ref_eml_to_seml_orbits(RefSt& refSt)
         {
             refSt.type  = REF_CONT_ORBIT;
             refSt.time  = REF_VAR_TN;
-            status      = wref_eml_to_seml(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, &man_grid_size, refSt, h2);
+            status      = wref_eml_to_seml(orbit_EM, orbit_SEM, y_traj, t_traj, dcs, coord_type, man_grid_size, refSt, h2, &man_index);
         }
 
         //--------------------------------------------------------------------------------
@@ -4555,8 +4563,8 @@ int cref_eml_to_seml(int grid_freq_days[3], int coord_type,
  *         from NCSEM.
  **/
 int wref_eml_to_seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* t_traj,
-                    int dcs, int coord_type, int* man_grid_size_t,
-                    RefSt& refSt, gnuplot_ctrl* h2)
+                    int dcs, int coord_type, int man_grid_size_t,
+                    RefSt& refSt, gnuplot_ctrl* h2, int* man_index)
 {
     //====================================================================================
     // 0. Check on  coord_type (for now)
@@ -4585,11 +4593,11 @@ int wref_eml_to_seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double*
     //big value (max_grid_size) so that the arrays would not be saturated.
     //------------------------------------------------------------------------------------
     int max_grid_size = 1000;
-    int man_grid_size = (refSt.grid == REF_VAR_GRID) ? max_grid_size:*man_grid_size_t;
+    int man_grid_size = (refSt.grid == REF_VAR_GRID) ? max_grid_size:man_grid_size_t;
 
     //Number of potential new points, during the continuation procedure with variable time
     int nnew = 4;
-    int ode78coll = 0;
+    //int ode78coll = 0;
 
     //------------------------------------------------------------------------------------
     //Local variables to store the refined trajectory
@@ -4625,12 +4633,15 @@ int wref_eml_to_seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double*
     //====================================================================================
     // 2.  Compute first guess
     //====================================================================================
-    int man_index = icmanemlisemli(y_traj, t_traj, orbit_EM, orbit_SEM, dcs, coord_type, man_grid_size, refSt);
+    if(*man_index == -1)
+    {
+        *man_index = icmanemlisemli(y_traj, t_traj, orbit_EM, orbit_SEM, dcs, coord_type, man_grid_size, refSt);
+    }
 
     // Plot the resulting trajectory
     int isPlot = refSt.isPlotted;
-    gnuplot_plot_X(isPlot, h2, y_traj, man_index,   (char*)"", "lines", "1", "1", 4);
-    gnuplot_plot_X(isPlot, h2, y_traj, man_index+1, (char*)"", "points", "1", "1", 4);
+    gnuplot_plot_X(isPlot, h2, y_traj, *man_index,   (char*)"", "lines", "1", "1", 4);
+    gnuplot_plot_X(isPlot, h2, y_traj, *man_index+1, (char*)"", "points", "1", "1", 4);
 
 
     //------------------------------------------------------------------------------------
@@ -4654,7 +4665,7 @@ int wref_eml_to_seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double*
     //------------------------------------------------------------------------------------
     //Free variables
     //------------------------------------------------------------------------------------
-    int nfv = nfreevariables(refSt, man_index);
+    int nfv = nfreevariables(refSt, *man_index);
     double* nullvector = dvector(0, nfv-1);
 
     //------------------------------------------------------------------------------------
@@ -4720,7 +4731,7 @@ int wref_eml_to_seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double*
     int niter = 1;
 
     status = diffcorr(y_traj, t_traj, y_traj_n, t_traj_n, nullvector, 42,
-                      man_index, coord_type, true, orbit_EM, orbit_SEM,
+                      *man_index, coord_type, true, orbit_EM, orbit_SEM,
                       h2, refSt, &niter);
 
 
@@ -4741,7 +4752,7 @@ int wref_eml_to_seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double*
     //------------------------------------------------------------------------------------
     // Some inner variables
     //------------------------------------------------------------------------------------
-    double yv[6];
+    //double yv[6];
     int kn = 0;
 
     //====================================================================================
@@ -4749,7 +4760,7 @@ int wref_eml_to_seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double*
     //====================================================================================
     double ye[6], te = 0.0;
     //int newpos;
-    xpkemlisemli(ye, &te, t_traj_n, y_traj_n, man_index, refSt);
+    xpkemlisemli(ye, &te, t_traj_n, y_traj_n, *man_index, refSt);
     //xpkemlisemli(ye, &te, t_traj_n, y_traj_n, &newpos, man_index, refSt);
 
     //====================================================================================
@@ -4774,7 +4785,7 @@ int wref_eml_to_seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double*
 
         // Entire trajectory
         writeCONT_bin(refSt, filename_res, dcs, coord_type,
-                      y_traj_n, t_traj_n, man_index, mPlot,
+                      y_traj_n, t_traj_n, *man_index, mPlot,
                       orbit_EM, orbit_SEM, kn++, true,
                       refSt.isSaved_EM, refSt.isSaved_SEM);
     }
@@ -4829,7 +4840,7 @@ int wref_eml_to_seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double*
         //--------------------------------------------------------------------------------
         bool addCondition = true;
         double theta_acc  = 0.0, theta_old = 0.0, theta_max  = refSt.thetaMax;
-        int mani_old = man_index;
+        int mani_old = *man_index;
         switch(refSt.termination)
         {
         case REF_COND_S5:
@@ -4886,20 +4897,20 @@ int wref_eml_to_seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double*
             // Updating the free variables via the predictor
             //============================================================================
             predictor(y_traj_n, t_traj_n, &ds, ds, nullvector,
-                      orbit_EM, orbit_SEM, man_index, coord_type, refSt);
+                      orbit_EM, orbit_SEM, *man_index, coord_type, refSt);
 
             //============================================================================
             // Diff correction
             //============================================================================
             status = diffcorr(y_traj_n, t_traj_n, y_traj_n, t_traj_n,
-                              nullvector, 42, man_index, coord_type,
+                              nullvector, 42, *man_index, coord_type,
                               false, orbit_EM, orbit_SEM, h2, refSt, &niter);
 
             //============================================================================
             // Find the intersection with a certain Poincaré Section (PS)
             //============================================================================
             double ye[6], te = 0.0;
-            if(status == GSL_SUCCESS) xpkemlisemli(ye, &te, t_traj_n, y_traj_n, man_index, refSt);
+            if(status == GSL_SUCCESS) xpkemlisemli(ye, &te, t_traj_n, y_traj_n, *man_index, refSt);
 
             //============================================================================
             // Save
@@ -4915,7 +4926,7 @@ int wref_eml_to_seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double*
 
                 // Entire trajectory
                 writeCONT_bin(refSt, filename_res, dcs, coord_type,
-                              y_traj_n, t_traj_n, man_index, mPlot,
+                              y_traj_n, t_traj_n, *man_index, mPlot,
                               orbit_EM, orbit_SEM, kn, false,
                               refSt.isSaved_EM, refSt.isSaved_SEM);
             }
@@ -4992,10 +5003,10 @@ int wref_eml_to_seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double*
 
                 //Compute the angle between the last point (entry in the manifold)
                 // and the second last, at the beginning of the procedure
-                dot = y_traj_n[0][man_index]*y_traj_n[0][mani_old-1] +
-                      y_traj_n[1][man_index]*y_traj_n[1][mani_old-1];  // dot product
-                det = y_traj_n[0][man_index]*y_traj_n[1][mani_old-1] -
-                      y_traj_n[1][man_index]*y_traj_n[0][mani_old-1];  // determinant
+                dot = y_traj_n[0][*man_index]*y_traj_n[0][mani_old-1] +
+                      y_traj_n[1][*man_index]*y_traj_n[1][mani_old-1];  // dot product
+                det = y_traj_n[0][*man_index]*y_traj_n[1][mani_old-1] -
+                      y_traj_n[1][*man_index]*y_traj_n[0][mani_old-1];  // determinant
 
                 theta = 180/M_PI*atan(det/dot);//180/M_PI*atan2(det, dot);  // atan2(sin, cos) or tan(sin/cos)
 
@@ -5093,46 +5104,46 @@ int wref_eml_to_seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double*
         // take into account this change.
         //
         //================================================================================
-        if(theta_acc >= theta_max && refSt.type == REF_CONT_D_HARD_CASE)
-        {
-            //  Add a few patch points
-            for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][man_index-1];
-            status = ode78(ymt, tmt, &ode78coll, t_traj_n[man_index-1],
-                           t_traj_n[man_index], yv, 6, nnew, dcs, coord_type,
-                           coord_type);
-
-            //Copy y_traj_n/t_traj_n in y_traj/t_traj
-            for(int k = 0; k <= man_index; k++)
-            {
-                for(int i = 0; i < 6; i++) y_traj[i][k] = y_traj_n[i][k];
-                t_traj[k] = t_traj_n[k];
-            }
-
-            //Copy y_traj/t_traj back in y_traj_n/t_traj_n, except the last point
-            for(int k = 0; k < man_index; k++)
-            {
-                for(int i = 0; i < 6; i++) y_traj_n[i][k] = y_traj[i][k];
-                t_traj_n[k] = t_traj[k];
-            }
-
-            //Copy additionnal points, except the first one
-            for(int k = 1; k <= nnew; k++)
-            {
-                for(int i = 0; i < 6; i++) y_traj_n[i][k+man_index-1] = ymt[i][k];
-                t_traj_n[k+man_index-1] = tmt[k];
-            }
-
-            //////////////////////////////////////////////////////////////////////////
-            //New size is man_index+nnew-1 +
-            //IMPORTANT: we also update *man_grid_size_t for
-            //next continuation !!!
-            //////////////////////////////////////////////////////////////////////////
-            man_index += nnew-1;
-            *man_grid_size_t = man_index;
-
-            //Plot the new distribution
-            gnuplot_plot_X(isPlot, h2, y_traj_n, man_index+1, (char*)"", "points", "1", "1", 8);
-        }
+        //        if(theta_acc >= theta_max && refSt.type == REF_CONT_D_HARD_CASE)
+        //        {
+        //            //  Add a few patch points
+        //            for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][man_index-1];
+        //            status = ode78(ymt, tmt, &ode78coll, t_traj_n[man_index-1],
+        //                           t_traj_n[man_index], yv, 6, nnew, dcs, coord_type,
+        //                           coord_type);
+        //
+        //            //Copy y_traj_n/t_traj_n in y_traj/t_traj
+        //            for(int k = 0; k <= man_index; k++)
+        //            {
+        //                for(int i = 0; i < 6; i++) y_traj[i][k] = y_traj_n[i][k];
+        //                t_traj[k] = t_traj_n[k];
+        //            }
+        //
+        //            //Copy y_traj/t_traj back in y_traj_n/t_traj_n, except the last point
+        //            for(int k = 0; k < man_index; k++)
+        //            {
+        //                for(int i = 0; i < 6; i++) y_traj_n[i][k] = y_traj[i][k];
+        //                t_traj_n[k] = t_traj[k];
+        //            }
+        //
+        //            //Copy additionnal points, except the first one
+        //            for(int k = 1; k <= nnew; k++)
+        //            {
+        //                for(int i = 0; i < 6; i++) y_traj_n[i][k+man_index-1] = ymt[i][k];
+        //                t_traj_n[k+man_index-1] = tmt[k];
+        //            }
+        //
+        //            //////////////////////////////////////////////////////////////////////////
+        //            //New size is man_index+nnew-1 +
+        //            //IMPORTANT: we also update *man_grid_size_t for
+        //            //next continuation !!!
+        //            //////////////////////////////////////////////////////////////////////////
+        //            man_index += nnew-1;
+        //            *man_grid_size_t0 = man_index;
+        //
+        //            //Plot the new distribution
+        //            gnuplot_plot_X(isPlot, h2, y_traj_n, man_index+1, (char*)"", "points", "1", "1", 8);
+        //        }
     }
 
     //====================================================================================
@@ -5221,14 +5232,14 @@ int wref_eml_to_seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double*
         double label = (refSt.isSaved)? kn+1:0;
 
         // Intersection with the Pk section
-        xpkemlisemli(ye, &te, t_traj_n, y_traj_n, man_index, refSt);
+        xpkemlisemli(ye, &te, t_traj_n, y_traj_n, *man_index, refSt);
 
         // Main parameters
         writeCONT_txt(label, filename, orbit_EM, orbit_SEM, te, ye, true);
 
         // Entire trajectory
         writeCONT_bin(refSt, filename_res, dcs, coord_type,
-                      y_traj_n, t_traj_n, man_index, mPlot,
+                      y_traj_n, t_traj_n, *man_index, mPlot,
                       orbit_EM, orbit_SEM, label, !refSt.isSaved, 1, 1);
     }
 
@@ -5261,7 +5272,7 @@ int wref_eml_to_seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double*
         //--------------------------------------------------------------------------------
         //Final trajectory on lines, segment by segment
         //--------------------------------------------------------------------------------
-        for(int k = 0; k < man_index; k++)
+        for(int k = 0; k < *man_index; k++)
         {
             //Integration segment by segment
             for(int i = 0; i < 6; i++) yv[i] = y_traj_n[i][k];
@@ -5309,7 +5320,7 @@ int wref_eml_to_seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double*
         //================================================================================
         // Finally, copy y_traj/t_traj if necessary for the next step.
         //================================================================================
-        for(int k = 0; k <= man_index; k++)
+        for(int k = 0; k <= *man_index; k++)
         {
             for(int i = 0; i < 6; i++) y_traj[i][k] = y_traj_n[i][k];
             t_traj[k] = t_traj_n[k];
@@ -5322,7 +5333,7 @@ int wref_eml_to_seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double*
         // 2. The final time.
         //================================================================================
         //orbit_EM.setSi(PROJ_EPSILON, 4);
-        orbit_EM.setTf(t_traj_n[man_index]/SEML.us_em.ns);
+        orbit_EM.setTf(t_traj_n[*man_index]/SEML.us_em.ns);
 
         //--------------------------------------------------------------------------------
         // Update the initial state in the orbit, with the RCM coordinates
@@ -5334,7 +5345,7 @@ int wref_eml_to_seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double*
         // Hence, we need to update:
         // 1. The initial time.
         //================================================================================
-        orbit_SEM.setT0(t_traj_n[man_index]);
+        orbit_SEM.setT0(t_traj_n[*man_index]);
 
         //--------------------------------------------------------------------------------
         // Update the initial state in the orbit, with the RCM coordinates

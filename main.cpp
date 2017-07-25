@@ -93,7 +93,7 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         // Type of computation
         //--------------------------------------------------------------------------------
-        COMP_TYPE   = COMP_CM_EML2_TO_CMS_SEML;
+        COMP_TYPE   = COMP_SINGLE_ORBIT;
 
         //--------------------------------------------------------------------------------
         // Model and libration points
@@ -105,7 +105,7 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         //Orders
         //--------------------------------------------------------------------------------
-        OFTS_ORDER  = 16;
+        OFTS_ORDER  = 20;
         if(MODEL_TYPE == M_RTBP) OFS_ORDER  = 0;
         else OFS_ORDER  = 30;
 
@@ -321,6 +321,7 @@ int main(int argc, char** argv)
     //====================================================================================
     initialize_environment(LI_EM, LI_SEM, isNorm, model, fwrk,
                            pms_EM, pms_SEM, mType_EM, mType_SEM);
+
 
 
     //====================================================================================
@@ -728,6 +729,7 @@ int main(int argc, char** argv)
             refSt.isDebug       = atoi(argv[index++]);  // if yes, additionnal tests are performed
             refSt.gridSize      = atoi(argv[index++]);  // number of points on the refinement grid. 20 is taken by heuristics.
             refSt.mPlot         = atoi(argv[index++]);  // number of points per plot between to pach points (e.g. total plot points is gridSize*mplot)
+            refSt.fHours        = atoi(argv[index++]);  // plotting frequency (in hours)
 
             refSt.time          = atoi(argv[index++]);  // type of constraints on the times in REF_CONT
             refSt.grid          = atoi(argv[index++]);  // type of grid
@@ -737,8 +739,8 @@ int main(int argc, char** argv)
             // Maximum/Minimum step in the continuation procedure (for now, not changed by the user)
             refSt.dsmin         = 1e-6;                 //with fixed time
             refSt.dsmin_vt      = 1e-6;                 //with variable time
-            refSt.dsmax         = 10;                   //with fixed time
-            refSt.dsmax_vt      = 10;                   //with variable time
+            refSt.dsmax         = 5e-1;                   //with fixed time
+            refSt.dsmax_vt      = 5e-1;                   //with variable time
 
             // position of the poincaré section in NCSEM coordinates
             refSt.xps_NCSEM     = atof(argv[index++]);
@@ -1069,10 +1071,90 @@ int main(int argc, char** argv)
                     if(reduced_nv == 5) st0[4] = 0.0;
                     break;
                 case 2:
-                    st0[0] = 6.99128234571013 ;//5.93430881153360;//28;//-20 ;
-                    st0[1] = 0;//1.74347452709299;//-6.316522019280152e-03;
-                    st0[2] = -15.90071267144652;//-33.70990312213420;////36;//-36;
-                    st0[3] = 0;////1.74347452709299;//-1.681003648125090e-03;
+
+                    //--------------------------------------------------------------------
+                    // QHalo:
+                    //
+                    // OFTS_ORDER = 20
+                    // Computed with:
+                    // int isFlagOn = 1;
+                    // int isPlot   = 1;
+                    // double t0    = 0;
+                    // double  N    = 50;
+                    // double tfreq = 5e-3*SEML.us->T;
+                    //--------------------------------------------------------------------
+                    // Small (dH = 0.011)
+                    //                    st0[0] = 28;
+                    //                    st0[1] = 1.74347452709299;
+                    //                    st0[2] = 36;
+                    //                    st0[3] = 1.74347452709299;
+
+                    // Medium (dH = 0.012)
+                    //                    st0[0] = 28;
+                    //                    st0[1] = 2.81422620372967;
+                    //                    st0[2] = 36;
+                    //                    st0[3] = 2.81422620372967;
+
+                    // Large (dH = 0.014) - only on 35 periods
+                    //                    st0[0] = 41.7272727272727;
+                    //                    st0[1] = 1.55435533128842;
+                    //                    st0[2] = 13.9090909090909;
+                    //                    st0[3] = 1.55435533128842;
+
+                    //"Thin" (dH = 0.014) - only on 35 periods
+                    //                    st0[0] = 32.4545454545455;
+                    //                    st0[1] = 3.48331278366297;
+                    //                    st0[2] = 32.4545454545455;
+                    //                    st0[3] = 3.48331278366297;
+
+                    double ss = 7;
+                                        st0[0] = ss*4.47049575300673;
+                                        st0[1] = ss;
+                                        st0[2] = ss*4.47049575300673;
+                                        st0[3] = ss;
+
+
+                    //--------------------------------------------------------------------
+                    // Lissajous:
+                    //
+                    // OFTS_ORDER = 20
+                    // Computed with:
+                    // int isFlagOn = 1;
+                    // int isPlot   = 1;
+                    // double t0    = 0;
+                    // double  N    = 50;
+                    // double tfreq = 5e-3*SEML.us->T;
+                    //--------------------------------------------------------------------
+                    //st0[0] = 12;
+                    //st0[1] = 10;
+                    //st0[2] = 12;
+                    //st0[3] = 10;
+
+
+                    //--------------------------------------------------------------------
+                    // Lissajous:
+                    //
+                    // OFTS_ORDER = 20
+                    // Computed with:
+                    // int isFlagOn = 1;
+                    // int isPlot   = 1;
+                    // double t0    = 0;
+                    // double  N    = 50;
+                    // double tfreq = 5e-3*SEML.us->T;
+                    //--------------------------------------------------------------------
+                    //st0[0] = 35;
+                    //st0[1] = 0;
+                    //st0[2] = 35;
+                    //st0[3] = 0;
+
+                    //--------------------------------------------------------------------
+                    // Misc
+                    //--------------------------------------------------------------------
+                    //   st0[0] = 6.99128234571013 ;//5.93430881153360;//28;//-20 ;
+                    //   st0[1] = 0;//1.74347452709299;//-6.316522019280152e-03;
+                    //   st0[2] = -15.90071267144652;//-33.70990312213420;////36;//-36;
+                    //   st0[3] = 0;////1.74347452709299;//-1.681003648125090e-03;
+
                     if(reduced_nv == 5) st0[4] = 0.0;
 
                     break;
@@ -1080,11 +1162,31 @@ int main(int argc, char** argv)
                 break;
 
             case F_SEM:
-                //Values for Earth capture via Moon slingshot
-                st0[0] =  0.1;
-                st0[1] =  0.2;
-                st0[2] = -0.1;
-                st0[3] =  0.0;
+
+
+                    //--------------------------------------------------------------------
+                    // Lissajous:
+                    //
+                    // OFTS_ORDER = 20
+                    // Computed with:
+                    // int isFlagOn = 1;
+                    // int isPlot   = 1;
+                    // double t0    = 0;
+                    // double  N    = 50;
+                    // double tfreq = 5e-3*SEML.us->T;
+                    //--------------------------------------------------------------------
+                    st0[0] = 0.25;
+                    st0[1] = 0.31;
+                    st0[2] = 0.0;
+                    st0[3] = 0.29;
+
+                    ////Values for Earth capture via Moon slingshot
+                    //st0[0] =  0.1;
+                    //st0[1] =  0.2;
+                    //st0[2] = -0.1;
+                    //st0[3] =  0.0;
+
+
                 if(reduced_nv == 5) st0[4] =  0.0;
                 break;
             }
@@ -1106,11 +1208,13 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         int isFlagOn = 1;
         int isPlot   = 1;
-        double t0    = 0.96*SEML.us->T;
-        double  N    = 90;
+        double t0    = 0;//0.96*SEML.us->T;
+        double  N    = 20;
+        double tfreq = 5e-3*SEML.us->T;//1e-2*SEML.us->T;
 
-        //gridOrbit_si(st0, t0, t0 + N*SEML.us->T, 1e-2*SEML.us->T, isFlagOn, isPlot);
-        gridOrbit_strob(st0, t0, N, isFlagOn, isPlot);
+
+        gridOrbit_si(st0, t0, t0 + N*SEML.us->T, tfreq, isFlagOn, isPlot);
+        //gridOrbit_strob(st0, t0, N, isFlagOn, isPlot);
 
         //--------------------------------------------------------------------------------
         // Mean orbit of the Moon, in NCSEM coordinates

@@ -637,8 +637,8 @@ int cref_eml_to_seml(int grid_freq_days[3], int coord_type,
  *         from NCSEM.
  **/
 int wref_eml_to_seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* t_traj,
-                   int dcs, int coord_type, int* man_grid_size_t,
-                   RefSt& refSt, gnuplot_ctrl* h2);
+                   int dcs, int coord_type, int man_grid_size_t,
+                   RefSt& refSt, gnuplot_ctrl* h2, int* man_index);
 
 //----------------------------------------------------------------------------------------
 //         Brick A: select the good IC for EML2-to-SEMli connections in data files

@@ -251,6 +251,8 @@ struct RefSt
 
     //Inner precision for differential correction procedures
     double inner_prec;
+    double inner_prec_vt;
+    double inner_prec_ft;
 
     //Center
     double center[3];
@@ -274,7 +276,8 @@ struct RefSt
           OFTS_ORDER(OFTS_ORDER_), LI_EM(LI_EM_), LI_SEM(LI_SEM_),
           LI_START(LI_START_), LI_TARGET(LI_TARGET_), IO_HANDLING(IO_HANDLING_),
           plot_folder(cs->F_PLOT),
-          isCollisionOn(1), pmax_dist_SEM(1e5), last_error(0.0), inner_prec(5e-8)
+          isCollisionOn(1), pmax_dist_SEM(1e5), last_error(0.0),
+          inner_prec(5e-8), inner_prec_vt(5e-8), inner_prec_ft(5e-8)
     {
         for(int i = 0; i <4; i++) si_SEED_EM_MIN[i] = -50;
         for(int i = 0; i <4; i++) si_SEED_EM_MAX[i] = +50;

@@ -98,7 +98,7 @@ export REF_COMP=4
 
 # Type of constraints on the times in REF_CONT
 export REF_FIXED_TIME=5		#all times are fixed
-export REF_VAR_TN=6		#the final time (at SEMLi) is free
+export REF_VAR_TN=6		    #the final time (at SEMLi) is free
 export REF_VAR_TIME=7		#all times except the first one are free
 
 # Type of grid in REF_CONT

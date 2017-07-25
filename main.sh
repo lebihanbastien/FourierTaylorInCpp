@@ -419,7 +419,8 @@ if [ -z ${REFST_TYPE+x} ]; then
 	REFST_ISDEBUG=0			 # if yes, additionnal tests are performed
 	REFST_GRIDSIZE=20        	 # number of points on the refinement grid
 	REFST_MPLOT=200        	         # number of points per plot between to pach points (e.g. total plot points is REFST_MPLOT*REFST_GRIDSIZE)
-
+	REFST_FPLOT=5                    # frequency of plotting in hours
+	
 	REFST_TIME=$REF_VAR_TN		 # type of constraints on the times in REF_CONT
 	REFST_GRID=$REF_FIXED_GRID	 # type of grid
 	REFST_TERMINATION=$REF_COND_T    # Termination condition in the continuation with variable final time (either REF_VAR_TN/REF_VAR_TIME)
@@ -634,10 +635,18 @@ else
 		*)       echo "REFST_COORD_TYPE      = "$REFST_COORD_TYPE". Unknown type."
 	esac
 	echo ''
+	
+	#-----------------------------------------------------
+	# REFST_FPLOT
+	#-----------------------------------------------------
+	if [ -z ${REFST_FPLOT+x} ]; then
+		set_param "REFST_FPLOT" 5
+	fi
 
 	echo "REFST_ISDEBUG         =" $REFST_ISDEBUG
 	echo "REFST_GRIDSIZE        =" $REFST_GRIDSIZE
 	echo "REFST_MPLOT           =" $REFST_MPLOT
+	echo "REFST_FPLOT           =" $REFST_FPLOT
 	echo ''
 	echo "REFST_XPS             =" $REFST_XPS
 	echo "REFST_XPS_NCEM        =" $REFST_XPS_NCEM
@@ -658,6 +667,8 @@ else
 	echo "REFST_COMP_ORB_EM     =" $REFST_COMP_ORB_EM
 	echo "REFST_COMP_ORB_SEM    =" $REFST_COMP_ORB_SEM
 	echo ''
+	
+	
 	
 	#-----------------------------------------------------
 	# Type of time selection
@@ -744,7 +755,7 @@ if [ "$ans" == "y" ]; then
 			COEFFS=(${COEFFS[*]}  $REFST_ISFLAGON $REFST_ISPLOTTED $REFST_ISSAVED $REFST_ISFROMSERVER)
 			COEFFS=(${COEFFS[*]}  $REFST_THETAMAX)
 
-			COEFFS=(${COEFFS[*]}  $REFST_ISDEBUG $REFST_GRIDSIZE $REFST_MPLOT)
+			COEFFS=(${COEFFS[*]}  $REFST_ISDEBUG $REFST_GRIDSIZE $REFST_MPLOT $REFST_FPLOT)
 			COEFFS=(${COEFFS[*]}  $REFST_TIME $REFST_GRID $REFST_TERMINATION $REFST_COORD_TYPE)
 			COEFFS=(${COEFFS[*]}  $REFST_XPS $REFST_ISJPL $REFST_DJPLCOORD $REFST_SIDIM)
 			COEFFS=(${COEFFS[*]}  $REFST_SF_EML2 $REFST_SF_MAN $REFST_SF_SEML2)

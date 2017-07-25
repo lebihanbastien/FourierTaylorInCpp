@@ -1227,6 +1227,8 @@ int writeOrbit(double *tNCE, double *tNCET, double **yNCE, double **sNCE,
     //====================================================================================
     string filename = filenameOrbit(ofts_order, st0, tNCET[0], type);
     fstream filestream;
+
+    cout << "The orbit is written in " << filename << endl;
     filestream.open (filename.c_str(), ios::out);
     filestream << setprecision(15) <<  setiosflags(ios::scientific) << std::showpos;
 

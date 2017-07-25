@@ -93,16 +93,16 @@ REFST_SI_CMU_EM_LIM=(-1e5 1e5 -1e5 +1e5 -1e5 +1e5 -1e5 +1e5)
 REFST_ISLIMUD=0
 
 # Domain of search (min s1, max s1, min s3, max s3) for the seed of first guess
-REFST_SI_SEED_EM_LIM=(10 10 -40 +40 -40 +40 -40 +40)
+REFST_SI_SEED_EM_LIM=(-40 +40 -40 +40 -40 +40 -40 +40)
 
 # Maximum projection distance allowed during subselection
-REFST_PMAX_DIST_SEM=6e-4
+REFST_PMAX_DIST_SEM=9e-4
 
 # Limits for the time of flight during transfers - not used if -1
 REFST_TOF_LIM=(-1 -1)
 
 # Values for crossings
-REFST_CROSSINGS=-1
+REFST_CROSSINGS=4
 
 # Number of steps in the continuation procedure
 REFST_CONT_STEP_MAX=+450;       # with fixed times
@@ -126,8 +126,8 @@ REFST_ISDIRUD=0			 # is it user defined?
 REFST_DIR=-1    		 # if not, +1 or -1
  
 # User parameters
-REFST_ISFLAGON=0   	         # do we have steps in the procedure - asking the user to press enter to go on?
-REFST_ISPLOTTED=0   		 # do we plot the results during the computation?
+REFST_ISFLAGON=1   	         # do we have steps in the procedure - asking the user to press enter to go on?
+REFST_ISPLOTTED=1    		 # do we plot the results during the computation?
 REFST_ISSAVED=1     		 # do we save the results in data files?
 REFST_ISFROMSERVER=0		 # does the raw data comes from server files?
 
@@ -143,7 +143,7 @@ if [ $SERVER == 1 ]; then
 	FILE_TRAJ_FROM_C="traj_from_c_order_20_dest_L2_TEST.bin" 
 	FILE_JPL="cont_jpl_order_20_dest_L2_TEST.bin"
 else
-	FILE_PCU="Serv/projcu_order_20_dest_L2_Orbit_10_local.bin"
+	FILE_PCU="Serv/projcu_order_20_dest_L2_Orbit_10_All.bin"
 	FILE_CONT="Serv/cont_atf_order_20_dest_L2_TEST_local.txt"
 	FILE_CONT_RES="Serv/cont_atf_traj_order_20_dest_L2_TEST_local.bin"
 	FILE_TRAJ_FROM_W="Serv/traj_from_w_order_20_dest_L2_TEST_local.bin"

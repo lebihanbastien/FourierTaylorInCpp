@@ -73,7 +73,7 @@ IO_HANDLING=$IO_BASH
 #-----------------------------------------------------
 REFST_TYPE=$REF_CONT             # Type of refinement - rk: set REF_CONT_D_HARD_CASE for difficult cases with REF_CONT_D (ex: EML2-SEMLi via SEML1...)
 REFST_DIM=$REF_PLANAR            # Type of dimensions planar or 3d?
-REFST_T0_DES=0.995                # Initial time - given as %T, with T the SEM period   
+REFST_T0_DES=0.995               # Initial time - given as %T, with T the SEM period   
 
 # Domain of search (min s1, max s1, min s2, max s2, min s3, max s3, min s4, max s4) for the first guess
 REFST_SI_CMU_EM_LIM=(-35 35 0 0 -35 +35 0 0)

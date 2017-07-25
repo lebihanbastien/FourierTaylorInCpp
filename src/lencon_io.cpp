@@ -3828,6 +3828,7 @@ bool ProjResClass::push_back_conditional(ProjResClass& inSt, RefSt& refSt)
         //--------------------------------------------------------------------------------
         if(refSt.crossings > 0)
         {
+            cout << "refSt.crossings = " << refSt.crossings << "  " << inSt.crossings_NCSEM[kpor] << endl;
             cst = cst & (inSt.crossings_NCSEM[kpor] == refSt.crossings);
         }
 
