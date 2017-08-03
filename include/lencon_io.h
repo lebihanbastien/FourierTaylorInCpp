@@ -257,6 +257,9 @@ struct RefSt
     //Center
     double center[3];
 
+    //Number of solutions to be refined
+    int nref;
+
     //------------------------------------------------------------------------------------
     //Additional variables for specific differential correctors:
     // - goodvector is used to add the pseudo-arclength constraint
@@ -277,7 +280,7 @@ struct RefSt
           LI_START(LI_START_), LI_TARGET(LI_TARGET_), IO_HANDLING(IO_HANDLING_),
           plot_folder(cs->F_PLOT),
           isCollisionOn(1), pmax_dist_SEM(1e5), last_error(0.0),
-          inner_prec(5e-8), inner_prec_vt(5e-8), inner_prec_ft(5e-8)
+          inner_prec(5e-8), inner_prec_vt(5e-8), inner_prec_ft(5e-8), nref(-1)
     {
         for(int i = 0; i <4; i++) si_SEED_EM_MIN[i] = -50;
         for(int i = 0; i <4; i++) si_SEED_EM_MAX[i] = +50;
@@ -538,6 +541,7 @@ private:
 
     vector<double> pmin_dist_SEM;
     vector<double> tf_man_SEM;
+    vector<double> dHf_SEM;
 
     vector<double> s1_CM_SEM;
     vector<double> s2_CM_SEM;
@@ -592,6 +596,12 @@ public:
      **/
     bool push_back_conditional(ProjResClass& inSt, RefSt & refSt);
 
+    /**
+     *  \brief Performs a subselection in terms of dHf_SEM: only a few solutions between
+     *         min(projSt.dHf_SEM) and max(projSt.dHf_SEM) are selected.
+     **/
+    bool push_back_subselection(ProjResClass& projSt, RefSt& refSt);
+
     //------------------------------------------------------------------------------------
     // Getters
     //------------------------------------------------------------------------------------
@@ -642,6 +652,12 @@ public:
      *         After this routine, sortId[0] is the index for which pmin_dist_SEM is minimum.
      **/
     void sort_pmin_dist_SEM();
+
+    /**
+     *  \brief Update sortId, the vector of sorted indices, with respect to dHf_SEM.
+     *         After this routine, sortId[0] is the index for which dHf_SEM is minimum.
+     **/
+    void sort_dHf_SEM();
 
     /**
      *  \brief Update st_EM, st_SEM... With the elements contained in sortId[k].

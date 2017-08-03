@@ -452,6 +452,9 @@ if [ -z ${REFST_TYPE+x} ]; then
 	# Type of time selection
 	REFST_TYPE_OF_T_SEL=$TIME_SELECTION_RATIO
 	
+	# Desired number of solutions
+	REFST_NREF=-1
+	
 	#-----------------------------------------------------
 	# Filenames (used only if IO_HANDLING==$IO_BASH)
 	#-----------------------------------------------------
@@ -683,6 +686,15 @@ else
 	esac
 	
 	#-----------------------------------------------------
+	# Desired number of solutions
+	#-----------------------------------------------------
+	if [ -z ${REFST_NREF+x} ]; then
+		set_param "REFST_NREF" -1
+	fi
+	echo "REFST_NREF            =" $REFST_NREF
+	echo ''
+	
+	#-----------------------------------------------------
 	# Filenames (used only if IO_HANDLING==$IO_BASH)
 	#-----------------------------------------------------
 	if [ -z ${FILE_PCU+x} ]; then
@@ -762,7 +774,7 @@ if [ "$ans" == "y" ]; then
 			COEFFS=(${COEFFS[*]}  $REFST_TSPAN_EM $REFST_TSPAN_SEM)
 			COEFFS=(${COEFFS[*]}  $REFST_ISSAVED_EM $REFST_ISSAVED_SEM)
 			COEFFS=(${COEFFS[*]}  $REFST_COMP_ORB_EM $REFST_COMP_ORB_SEM)
-			COEFFS=(${COEFFS[*]}  $REFST_TYPE_OF_T_SEL)
+			COEFFS=(${COEFFS[*]}  $REFST_TYPE_OF_T_SEL $REFST_NREF)
 			
 			COEFFS=(${COEFFS[*]}   $FILE_PCU $FILE_CONT $FILE_CONT_RES $FILE_TRAJ_FROM_W $FILE_TRAJ_FROM_C $FILE_JPL)
 		;;

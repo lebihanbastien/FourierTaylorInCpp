@@ -58,7 +58,7 @@ ISPAR=1
 #-----------------------------------------------------
 # NOHUP condition
 #-----------------------------------------------------
-ISNOHUP=0
+ISNOHUP=1
 
 #-----------------------------------------------------
 # Position of the poincaré section in NCEM coordinates
@@ -85,11 +85,11 @@ TMAX=1.0    # (given as %T, with T the SEM period)
 TSIZE=200	  
 
 # Configuration (s1, s2, s3, s4) grid
-# GLIM_S1=(+10 +30)
-# GLIM_S2=(+0 +0)
-# GLIM_S3=(-10 +35)
-# GLIM_S4=(+0 +0)
-# GSIZE_SI=(+0 +0 +10 +0)
+GLIM_S1=(+30 +10)
+GLIM_S2=(+5 +0)
+GLIM_S3=(-30 -10)
+GLIM_S4=(+5 +0)
+GSIZE_SI=(+0 +0 +10 +0)
 
 # Values for QHalo orbit (small one)
 # GLIM_S1=(+28 +30)
@@ -99,11 +99,11 @@ TSIZE=200
 # GSIZE_SI=(+0 +0 +10 +0)
 
 # Values for QHalo orbit (medium one)
-GLIM_S1=(+28 +30)
-GLIM_S2=(+1.74347452709299 +0)
-GLIM_S3=(36 +35)
-GLIM_S4=(1.74347452709299 +0)
-GSIZE_SI=(+0 +0 +10 +0)
+# GLIM_S1=(+28 +30)
+# GLIM_S2=(+2.81422620372967 +0)
+# GLIM_S3=(36 +35)
+# GLIM_S4=(2.81422620372967 +0)
+# GSIZE_SI=(+0 +0 +10 +0)
 
 # Values for QHalo orbit (big one)
 # GLIM_S1=(+41.7272727272727 +30)
@@ -129,7 +129,7 @@ HYP_EPSILON_SEML2=1e-6	# Hyperbolic component at seml2
 # Filenames (used only if IO_HANDLING==$IO_BASH)
 if [ $SERVER == 1 ]; then
 	FILE_CU="cu_orbit.bin"
-	FILE_PCU="projcu_order_20_dest_L2_Orbit_QHalo_medium.bin"
+	FILE_PCU="projcu_order_20_dest_L2_Orbit_Liss_s1_30_s2_5.bin"
 else
 	FILE_CU="cu_orbit.bin"
 	FILE_PCU="Serv/projcu_order_20_dest_L2_Orbit_10_All.bin"

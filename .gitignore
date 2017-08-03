@@ -6,3 +6,5 @@
 *.layout
 *.cbp
 /spice/
+*.out
+/1

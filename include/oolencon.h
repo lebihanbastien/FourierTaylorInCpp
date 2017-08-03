@@ -657,6 +657,12 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
  **/
 int soselectemlisemli(RefSt& refSt, ProjResClass& subSt);
 
+/**
+ *  \brief Performs a subselection on top of soselectemlisemli
+ *         so that only a few solutions are actually refined.
+ **/
+int sosubselectemlisemli(RefSt& refSt, ProjResClass& subSt);
+
 //----------------------------------------------------------------------------------------
 //         Brick B: generate a first guess (either a single unstable manifold leg or
 //              a complete trajectory EML2 orbit + man leg + SEMLi orbit).

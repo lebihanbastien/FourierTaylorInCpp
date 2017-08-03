@@ -770,6 +770,9 @@ int main(int argc, char** argv)
             //Type of time selection
             refSt.typeOfTimeSelection = atoi(argv[index++]);
 
+            //Desired number of solutions
+            refSt.nref = atoi(argv[index++]);
+
             //----------------------------------------------------------------------------
             // Filenames (used only if IO_HANDLING==$IO_BASH)
             //----------------------------------------------------------------------------
@@ -1108,10 +1111,10 @@ int main(int argc, char** argv)
                     //                    st0[3] = 3.48331278366297;
 
                     double ss = 7;
-                                        st0[0] = ss*4.47049575300673;
-                                        st0[1] = ss;
-                                        st0[2] = ss*4.47049575300673;
-                                        st0[3] = ss;
+                    st0[0] = ss*4.47049575300673;
+                    st0[1] = ss;
+                    st0[2] = ss*4.47049575300673;
+                    st0[3] = ss;
 
 
                     //--------------------------------------------------------------------

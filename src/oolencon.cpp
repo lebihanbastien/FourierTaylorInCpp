@@ -3460,33 +3460,76 @@ int ref_eml_to_seml_orbits(RefSt& refSt)
     // 3. Select the good IC for EML2-to-SEMLi connections in data files
     //====================================================================================
     ProjResClass projRes;
-    status = soselectemlisemli(refSt, projRes);
-
-    if(status == FTC_FAILURE)
+    if(refSt.nref > 0)
     {
-        cout << "No solution satisfying all the constraints has been found." << endl;
-        cout << "End of computation." << endl;
-        return FTC_FAILURE;
+        //Perform subselection, retaining only refSt.nref solutions that satisfy the conditions in refSt
+        status = sosubselectemlisemli(refSt, projRes);
+
+
+        if(status == FTC_FAILURE)
+        {
+            cout << "The subselection failed." << endl;
+            cout << "End of computation." << endl;
+            return FTC_FAILURE;
+        }
+
+        //================================================================================
+        // Display
+        //================================================================================
+        coutmp();
+        cout << "===================================================================" << endl;
+        cout << " ref_eml_to_seml_maps. " << refSt.nref     << " solutions were desired. " << endl;
+        cout << " ref_eml_to_seml_maps. " << projRes.size() << " solutions have been found: " << endl;
+        //Display
+        coutmp();
+        cout << "--------------------------------------" << endl;
+        cout << "The first entry is:" << endl;
+        projRes.displayFirstEntry();
+
+        cout << "--------------------------------------" << endl;
+        cout << "The last entry is:" << endl;
+        projRes.displayLastEntry();
+        cout << "===================================================================" << endl;
+        coutlp();
     }
+    else
+    {
+        //Perform selection, retaining all solutions that satisfy the conditions in refSt
+        status = soselectemlisemli(refSt, projRes);
 
-    //====================================================================================
-    // Display
-    //====================================================================================
-    coutmp();
-    cout << "===================================================================" << endl;
-    cout << " ref_eml_to_seml_maps. " << projRes.size() << " solutions have been found: " << endl;
-    //Display
-    coutmp();
-    cout << "--------------------------------------" << endl;
-    cout << "The first entry is:" << endl;
-    projRes.displayFirstEntry();
 
-    cout << "--------------------------------------" << endl;
-    cout << "The last entry is:" << endl;
-    projRes.displayLastEntry();
-    cout << "===================================================================" << endl;
-    coutlp();
+        if(status == FTC_FAILURE)
+        {
+            cout << "No solution satisfying all the constraints has been found." << endl;
+            cout << "End of computation." << endl;
+            return FTC_FAILURE;
+        }
+
+        //================================================================================
+        // Display
+        //================================================================================
+        coutmp();
+        cout << "===================================================================" << endl;
+        cout << " ref_eml_to_seml_maps. " << projRes.size() << " solutions have been found: " << endl;
+        //Display
+        coutmp();
+        cout << "--------------------------------------" << endl;
+        cout << "The first entry is:" << endl;
+        projRes.displayFirstEntry();
+
+        cout << "--------------------------------------" << endl;
+        cout << "The last entry is:" << endl;
+        projRes.displayLastEntry();
+        cout << "===================================================================" << endl;
+        coutlp();
+
+    }
     pressEnter(refSt.isFlagOn);
+
+
+
+
+
 
 
     //====================================================================================
@@ -5086,8 +5129,6 @@ int wref_eml_to_seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double*
             cout << "niter  = " << niter << endl;
             cout << "ds_new = " << ds                                             << endl;
             cout << "----------------------------------------------------------"  << endl;
-
-
         }
 
         //================================================================================
@@ -5575,7 +5616,6 @@ int selectemlisemli(RefSt& refSt, double st_EM[5], double st_SEM[5], double t_EM
         // Else, we return a failure
         //================================================================================
         return FTC_FAILURE;
-
     }
 }
 
@@ -5663,6 +5703,49 @@ int soselectemlisemli(RefSt& refSt, ProjResClass& subSt)
 
     return FTC_SUCCESS;
 }
+
+/**
+ *  \brief Performs a subselection on top of soselectemlisemli
+ *         so that only a few solutions are actually refined.
+ **/
+int sosubselectemlisemli(RefSt& refSt, ProjResClass& subSt)
+{
+    //====================================================================================
+    // 0. Splash screen
+    //====================================================================================
+    cout << "-------------------------------------------------------------------" << endl;
+    cout << " sosubselectemlisemli. Subselection of good IC for EMLi-SEMLi arc  " << endl;
+    cout << "-------------------------------------------------------------------" << endl;
+
+    //------------------------------------------------------------------------------------
+    // Perform soselectemlisemli on a temp structure
+    //------------------------------------------------------------------------------------
+    ProjResClass projSt;
+
+    int status = soselectemlisemli(refSt, projSt);
+    if(status == FTC_FAILURE)
+    {
+        cout << "sosubselectemlisemli. No solution satisfying all the constraints has been found." << endl;
+        cout << "End of computation." << endl;
+        return FTC_FAILURE;
+    }
+
+
+    //------------------------------------------------------------------------------------
+    // Perform subselection
+    //------------------------------------------------------------------------------------
+    int flag = subSt.push_back_subselection(projSt, refSt);
+    if(flag == FTC_FAILURE)
+    {
+        cout << "sosubselectemlisemli. push_back_subselection was not successfull." << endl;
+        cout << "End of computation." << endl;
+        return FTC_FAILURE;
+    }
+
+    return FTC_SUCCESS;
+}
+
+
 
 //----------------------------------------------------------------------------------------
 //         Brick B: generate a first guess (either a single unstable manifold leg or

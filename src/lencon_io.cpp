@@ -1495,7 +1495,7 @@ struct is_within_range
 {
 public:
     is_within_range(const double& t0) : t0_desired(t0) {}   //constructor
-    bool operator()(const double& t0)                 //operator
+    bool operator()(const double& t0)                       //operator
     {
         return fabs(t0 - t0_desired) < 1e-10;
     }
@@ -2076,7 +2076,7 @@ int writeCONT_bin(RefSt& refSt, string filename_res, int dcs, int coord_type,
             filestream.write((char*) &res, sizeof(double));
 
             //2. Type of leg: either emli orbit (1), transfer leg (2) or semli orbit (3)
-            res = 2;
+            res = 2; //for primary single solution: res =(tmc_SEM[p]<2.7)?2:3;
             filestream.write((char*) &res, sizeof(double));
 
             //3. Current time in NCSEM coordinates
@@ -3664,6 +3664,7 @@ void ProjResClass::push_back(ProjResClass& inSt, int kpor)
 
     this->pmin_dist_SEM.push_back(inSt.pmin_dist_SEM[kpor]);
     this->tf_man_SEM.push_back(inSt.tf_man_SEM[kpor]);
+    if((int) inSt.dHf_SEM.size() > kpor) this->dHf_SEM.push_back(inSt.dHf_SEM[kpor]);
 
     this->s1_CM_SEM.push_back(inSt.s1_CM_SEM[kpor]);
     this->s2_CM_SEM.push_back(inSt.s2_CM_SEM[kpor]);
@@ -3704,6 +3705,7 @@ void ProjResClass::pop_back()
     s5_CMU_EM.pop_back();
     pmin_dist_SEM.pop_back();
     tf_man_SEM.pop_back();
+    if((int) dHf_SEM.size() > 0) dHf_SEM.pop_back();
     s1_CM_SEM.pop_back();
     s2_CM_SEM.pop_back();
     s3_CM_SEM.pop_back();
@@ -3867,6 +3869,103 @@ bool ProjResClass::push_back_conditional(ProjResClass& inSt, RefSt& refSt)
 }
 
 
+/**
+ *  \brief Performs a subselection in terms of dHf_SEM: only a few solutions between
+ *         min(projSt.dHf_SEM) and max(projSt.dHf_SEM) are selected.
+ **/
+bool ProjResClass::push_back_subselection(ProjResClass& projSt, RefSt& refSt)
+
+{
+    //------------------------------------------------------------------------------------
+    // Check that we can indeed perform a subselection with respect to the energy dHf_SEM
+    //------------------------------------------------------------------------------------
+    if(projSt.dHf_SEM.size() <= 0)
+    {
+        cout << "push_back_subselection. Error: projSt.dHf_SEM is empty." << endl;
+        return 0;
+    }
+
+    //------------------------------------------------------------------------------------
+    // Sort projSt in terms of dHf_SEM
+    //------------------------------------------------------------------------------------
+    projSt.sort_dHf_SEM();
+
+    //------------------------------------------------------------------------------------
+    // We need to check that the desired number of solutions is smaller than
+    // the actual number
+    //------------------------------------------------------------------------------------
+    int nmax = projSt.size()-1;
+    int nref = min(nmax+1, refSt.nref);
+    if(refSt.nref < nmax+1)
+    {
+        //--------------------------------------------------------------------------------
+        // Create vector of dHf_SEM values
+        //--------------------------------------------------------------------------------
+        double dHf_SEM_min = projSt.dHf_SEM[projSt.sortId[0]];
+        double dHf_SEM_max = projSt.dHf_SEM[projSt.sortId[nmax]];
+
+        vector<double> dHf_vec(nref, 0);
+        for(int k = 0; k < nref; k++)
+        {
+            dHf_vec[k] = dHf_SEM_min + (double) k/(nref-1)*(dHf_SEM_max - dHf_SEM_min);
+        }
+
+        //--------------------------------------------------------------------------------
+        // Create vector of dHf_SEM values
+        //--------------------------------------------------------------------------------
+        int nearest = 0;
+        double diff = 0; //abs(projSt.dHf_SEM[0] - dHf_vec[k]);
+
+
+        cout << "dHf_vec_closest = " << endl;
+        for(int k = 0; k < nref; k++)
+        {
+            cout << dHf_vec[k] << endl;
+
+
+            //Find index of the value of projSt.dHf_SEM closest to dHf_vec[k]
+            nearest = 0;
+            diff    = fabs(projSt.dHf_SEM[0] - dHf_vec[k]);
+
+            for(int p = 0; p <= nmax; p++)
+            {
+                if(diff > fabs(projSt.dHf_SEM[p] - dHf_vec[k]))
+                {
+                    nearest = p;
+                    diff    = fabs(projSt.dHf_SEM[p] - dHf_vec[k]);
+                }
+            }
+
+            cout << "nearest = " << nearest << endl;
+            cout << projSt.dHf_SEM[nearest] << endl;
+
+            //Push back in results
+            this->push_back(projSt, nearest);
+        }
+
+    }
+    else
+    {
+        //--------------------------------------------------------------------------------
+        // Simple copy
+        //--------------------------------------------------------------------------------
+        for(int p = 0; p <= nmax; p++) this->push_back(projSt, p);
+    }
+    //------------------------------------------------------------------------------------
+    // Update the csize
+    //------------------------------------------------------------------------------------
+    this->csize = this->t0_CMU_EM.size();
+
+    //------------------------------------------------------------------------------------
+    // Sort
+    //------------------------------------------------------------------------------------
+    this->sort_pmin_dist_SEM();
+
+
+    return 1;
+}
+
+
 //----------------------------------------------------------------------------------------
 // Getters
 //----------------------------------------------------------------------------------------
@@ -3956,7 +4055,7 @@ int ProjResClass::readProjRes(string filename)
     filestream.open (filename.c_str(), ios::binary | ios::in);
     if (filestream.is_open())
     {
-        double res;
+        double res, res2;
 
         //--------------------------------------------------------------------------------
         // Read data
@@ -4113,17 +4212,18 @@ int ProjResClass::readProjRes(string filename)
                 filestream.read((char*) &res, sizeof(double));
                 filestream.read((char*) &res, sizeof(double));
 
-                //48-51: Hf - NOT SAVED FOR NOW
+                //48-51: Hf - last one save in dHf_SEM
                 filestream.read((char*) &res, sizeof(double));
                 filestream.read((char*) &res, sizeof(double));
                 filestream.read((char*) &res, sizeof(double));
                 filestream.read((char*) &res, sizeof(double));
 
-                //52-55: Hf at semli - NOT SAVED FOR NOW
-                filestream.read((char*) &res, sizeof(double));
-                filestream.read((char*) &res, sizeof(double));
-                filestream.read((char*) &res, sizeof(double));
-                filestream.read((char*) &res, sizeof(double));
+                //52-55: Hf at semli - last one save in dHf_SEM
+                filestream.read((char*) &res2, sizeof(double));
+                filestream.read((char*) &res2, sizeof(double));
+                filestream.read((char*) &res2, sizeof(double));
+                filestream.read((char*) &res2, sizeof(double));
+                this->dHf_SEM.push_back(res - res2);
 
                 //57. t0_CMU_EM_seed - SET to -1
                 this->t0_CMU_EM_seed.push_back(res);
@@ -4158,17 +4258,18 @@ int ProjResClass::readProjRes(string filename)
                 filestream.read((char*) &res, sizeof(double));
                 filestream.read((char*) &res, sizeof(double));
 
-                //48-51: Hf - NOT SAVED FOR NOW
+                //48-51: Hf - last one save in dHf_SEM
                 filestream.read((char*) &res, sizeof(double));
                 filestream.read((char*) &res, sizeof(double));
                 filestream.read((char*) &res, sizeof(double));
                 filestream.read((char*) &res, sizeof(double));
 
-                //52-55: Hf at semli - NOT SAVED FOR NOW
-                filestream.read((char*) &res, sizeof(double));
-                filestream.read((char*) &res, sizeof(double));
-                filestream.read((char*) &res, sizeof(double));
-                filestream.read((char*) &res, sizeof(double));
+                //52-55: Hf at semli - last one save in dHf_SEM
+                filestream.read((char*) &res2, sizeof(double));
+                filestream.read((char*) &res2, sizeof(double));
+                filestream.read((char*) &res2, sizeof(double));
+                filestream.read((char*) &res2, sizeof(double));
+                this->dHf_SEM.push_back(res - res2);
 
                 //57. init_time_EM_seed
                 filestream.read((char*) &res, sizeof(double));
@@ -4212,17 +4313,18 @@ int ProjResClass::readProjRes(string filename)
                 filestream.read((char*) &res, sizeof(double));
                 filestream.read((char*) &res, sizeof(double));
 
-                //48-51: Hf - NOT SAVED FOR NOW
+                //48-51: Hf - last one save in dHf_SEM
                 filestream.read((char*) &res, sizeof(double));
                 filestream.read((char*) &res, sizeof(double));
                 filestream.read((char*) &res, sizeof(double));
                 filestream.read((char*) &res, sizeof(double));
 
-                //52-55: Hf at semli - NOT SAVED FOR NOW
-                filestream.read((char*) &res, sizeof(double));
-                filestream.read((char*) &res, sizeof(double));
-                filestream.read((char*) &res, sizeof(double));
-                filestream.read((char*) &res, sizeof(double));
+                //52-55: Hf at semli - last one save in dHf_SEM
+                filestream.read((char*) &res2, sizeof(double));
+                filestream.read((char*) &res2, sizeof(double));
+                filestream.read((char*) &res2, sizeof(double));
+                filestream.read((char*) &res2, sizeof(double));
+                this->dHf_SEM.push_back(res - res2);
 
                 //57. init_time_EM_seed
                 filestream.read((char*) &res, sizeof(double));
@@ -4289,17 +4391,18 @@ int ProjResClass::readProjRes(string filename)
                 filestream.read((char*) &res, sizeof(double));
                 filestream.read((char*) &res, sizeof(double));
 
-                //48-51: Hf - NOT SAVED FOR NOW
+                //48-51: Hf - last one save in dHf_SEM
                 filestream.read((char*) &res, sizeof(double));
                 filestream.read((char*) &res, sizeof(double));
                 filestream.read((char*) &res, sizeof(double));
                 filestream.read((char*) &res, sizeof(double));
 
-                //52-55: Hf at semli - NOT SAVED FOR NOW
-                filestream.read((char*) &res, sizeof(double));
-                filestream.read((char*) &res, sizeof(double));
-                filestream.read((char*) &res, sizeof(double));
-                filestream.read((char*) &res, sizeof(double));
+                //52-55: Hf at semli - last one save in dHf_SEM
+                filestream.read((char*) &res2, sizeof(double));
+                filestream.read((char*) &res2, sizeof(double));
+                filestream.read((char*) &res2, sizeof(double));
+                filestream.read((char*) &res2, sizeof(double));
+                this->dHf_SEM.push_back(res - res2);
 
                 //57. init_time_EM_seed
                 filestream.read((char*) &res, sizeof(double));
@@ -4578,6 +4681,8 @@ int ProjResClass::readProjRes_t0(string filename, double t0_des, int typeOfTimeS
         this->pmin_dist_SEM.push_back(readSt.pmin_dist_SEM[indRes[ind]]);
         //tf_man_SEM
         this->tf_man_SEM.push_back(readSt.tf_man_SEM[indRes[ind]]);
+        //dHf_SEM
+        if((int) readSt.dHf_SEM.size() > ind) this->dHf_SEM.push_back(readSt.dHf_SEM[indRes[ind]]);
         //CM of SEM
         this->s1_CM_SEM.push_back(readSt.s1_CM_SEM[indRes[ind]]);
         this->s2_CM_SEM.push_back(readSt.s2_CM_SEM[indRes[ind]]);
@@ -4632,6 +4737,21 @@ void ProjResClass::sort_pmin_dist_SEM()
     if(this->csize > 0) this->sortId = sort_indexes(this->pmin_dist_SEM);
     else cout << "sort_pmin_dist_SEM. Warning: data is empty. No sorting is performed." << endl;
 }
+
+/**
+ *  \brief Update sortId, the vector of sorted indices, with respect to dHf_SEM.
+ *         After this routine, sortId[0] is the index for which dHf_SEM is minimum.
+ **/
+void ProjResClass::sort_dHf_SEM()
+{
+    if(this->csize > 0)
+    {
+        if(this->dHf_SEM.size() > 0) this->sortId = sort_indexes(this->dHf_SEM);
+        else cout << "sort_dHf_SEM. Warning: this->dHf_SEM is empty. No sorting is performed." << endl;
+    }
+    else cout << "sort_dHf_SEM. Warning: data is empty. No sorting is performed." << endl;
+}
+
 
 /**
  *  \brief Update st_EM, st_SEM... With the elements contained in sortId[k].
