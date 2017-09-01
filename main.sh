@@ -463,6 +463,7 @@ if [ -z ${REFST_TYPE+x} ]; then
 	FILE_TRAJ_FROM_W="traj_from_w.bin"
 	FILE_TRAJ_FROM_C="traj_from_c.bin"
 	FILE_JPL="cont_jpl.bin"
+	FILE_JPL_TEMP="cont_jpl_temp.txt"
 	
 else
 	#-----------------------------------------------------
@@ -721,12 +722,17 @@ else
 		set_param "FILE_JPL" "cont_jpl.bin"
 	fi
 	
+	if [ -z ${FILE_JPL_TEMP+x} ]; then
+		set_param "FILE_JPL_TEMP" "cont_jpl_temp.txt"
+	fi
+	
 	echo "FILE_PCU              =" $FILE_PCU
 	echo "FILE_CONT             =" $FILE_CONT
 	echo "FILE_CONT_RES         =" $FILE_CONT_RES
 	echo "FILE_TRAJ_FROM_W      =" $FILE_TRAJ_FROM_W
 	echo "FILE_TRAJ_FROM_C      =" $FILE_TRAJ_FROM_C
 	echo "FILE_JPL              =" $FILE_JPL
+	echo "FILE_JPL_TEMP         =" $FILE_JPL_TEMP
 	echo ''
 fi
 
@@ -776,7 +782,7 @@ if [ "$ans" == "y" ]; then
 			COEFFS=(${COEFFS[*]}  $REFST_COMP_ORB_EM $REFST_COMP_ORB_SEM)
 			COEFFS=(${COEFFS[*]}  $REFST_TYPE_OF_T_SEL $REFST_NREF)
 			
-			COEFFS=(${COEFFS[*]}   $FILE_PCU $FILE_CONT $FILE_CONT_RES $FILE_TRAJ_FROM_W $FILE_TRAJ_FROM_C $FILE_JPL)
+			COEFFS=(${COEFFS[*]}   $FILE_PCU $FILE_CONT $FILE_CONT_RES $FILE_TRAJ_FROM_W $FILE_TRAJ_FROM_C $FILE_JPL $FILE_JPL_TEMP)
 		;;
 		$COMP_SINGLE_ORBIT)              
 

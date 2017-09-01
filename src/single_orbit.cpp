@@ -2008,13 +2008,13 @@ int gslc_event_step(OdeStruct* odestruct, OdeParams* odP, double yv[], double* t
     int status = gsl_odeiv2_evolve_apply (odestruct->e, odestruct->c, odestruct->s, &odestruct->sys, t, t1, &odestruct->h, yv);
 
     //------------------------------------------------------------------------------------
-    //Check crossings of x = -1, in EML2 NCSEM coordinates
+    //Check crossings of x = +-1, in NCSEM coordinates
     //------------------------------------------------------------------------------------
     x1 = odP->event.x1;
-    if(x1 == -1.0) odP->event.x1 = yv[0] + 1.0; //first use
+    if(x1 == -1.0) odP->event.x1 = yv[0] - odP->event.sign*1.0; //first use
     else
     {
-        x2 = yv[0] + 1.0;
+        x2 = yv[0] - odP->event.sign*1.0;
 
         if(x1 > 0 && x2 < 0)
         {
@@ -2031,7 +2031,7 @@ int gslc_event_step(OdeStruct* odestruct, OdeParams* odP, double yv[], double* t
     }
 
     //------------------------------------------------------------------------------------
-    // Check crossings with the radius of the Moon, in EML2 NCSEM coordinates
+    // Check crossings with the radius of the Moon, in NCSEM coordinates
     // Mean radius of the lunar orbit:
     //          odP->event.mr_moon = 2.518747349676265e-01 (see env.h)
     // being centered on (-1.0, 0, 0), the position of Bem, the Earth-Moon center of mass.
@@ -2039,14 +2039,14 @@ int gslc_event_step(OdeStruct* odestruct, OdeParams* odP, double yv[], double* t
     x1 = odP->event.x1_moon;
     if(x1 == -1.0)
     {
-        //We compare the distance to (-1.0, 0) wrt to the radius of the lunar orbit
-        dist_to_Bem = sqrt((-1.0 - yv[0])*(-1.0 - yv[0]) + yv[1]*yv[1] + yv[2]*yv[2]);
+        //We compare the distance to (-1.0, 0, 0) wrt to the radius of the lunar orbit
+        dist_to_Bem = sqrt((odP->event.sign*1.0 - yv[0])*(odP->event.sign*1.0 - yv[0]) + yv[1]*yv[1] + yv[2]*yv[2]);
         odP->event.x1_moon = dist_to_Bem - odP->event.mr_moon; //first use
     }
     else
     {
         //We compare the distance to (-1.0, 0) wrt to the radius of the lunar orbit
-        dist_to_Bem = sqrt((-1.0 - yv[0])*(-1.0 - yv[0]) + yv[1]*yv[1] + yv[2]*yv[2]);
+        dist_to_Bem = sqrt((odP->event.sign*1.0- yv[0])*(odP->event.sign*1.0 - yv[0]) + yv[1]*yv[1] + yv[2]*yv[2]);
         x2 = dist_to_Bem - odP->event.mr_moon; //first use
 
         //Detecting a cross of the lunar orbit

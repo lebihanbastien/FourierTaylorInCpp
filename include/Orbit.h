@@ -59,6 +59,7 @@ class Orbit
         const double  getT0xT() const;
         const double  getN()  const;
         const double  getTf() const;
+        const double  getEPmaxx() const;
         const double* getZ0() const;
         const double* getSi() const;
         const double  getSi(int dim) const;

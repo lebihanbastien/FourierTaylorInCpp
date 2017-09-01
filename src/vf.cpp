@@ -3089,28 +3089,6 @@ int sub_vfn(double t, const double y[], double f[], OdeParams *odeParams, USYS *
         //cout << "Moon collision!" << endl;
     }
 
-    //------------------------------------------------------------------------------------
-    //Check crossings of x = -1
-    //------------------------------------------------------------------------------------
-    //    double x1 = odeParams->event.x1;
-    //    if(x1 == -1.0) odeParams->event.x1 = y[0] + 1.0; //first use
-    //    else
-    //    {
-    //        double x2 = y[0] + 1.0;
-    //
-    //        if(x1 > 0 && x2 < 0)
-    //        {
-    //            if(y[1] > 0) odeParams->event.crossings += 1.0;    //clockwise
-    //            else         odeParams->event.crossings += 0.1;    //counterclockwise
-    //        }
-    //        else if(x1 < 0 && x2 > 0)
-    //        {
-    //            if(y[1] < 0) odeParams->event.crossings += 1.0;    //clockwise
-    //            else         odeParams->event.crossings += 0.1;    //counterclockwise
-    //        }
-    //
-    //        odeParams->event.x1 = x2;
-    //    }
     return FTC_SUCCESS;
 }
 
@@ -3279,13 +3257,13 @@ int qbcp_vfn_backup(double t, const double y[], double f[], void* params_void)
     }
 
     //------------------------------------------------------------------------------------
-    //Check crossings of x = -1
+    //Check crossings of x = +-1
     //------------------------------------------------------------------------------------
     double x1 = odeParams->event.x1;
-    if(x1 == 0.0) odeParams->event.x1 = y[0] + 1.0;
+    if(x1 == 0.0) odeParams->event.x1 = y[0] - odeParams->event.sign*1.0;
     else
     {
-        double x2 = y[0] + 1.0;
+        double x2 = y[0] - odeParams->event.sign*1.0;
 
         if(x1 > 0 && x2 < 0)
         {

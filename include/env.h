@@ -341,6 +341,7 @@ struct OdeEvent
     //Crossings
     double crossings;
     double x1;
+    int sign;
     //Crossings of the moon's orbit
     double crossings_moon;
     double x1_moon;
@@ -352,7 +353,7 @@ struct OdeEvent
     int warnings;
 
     /**
-     *  \brief Constructor for OdeEvent
+     *  \brief Default Constructor for OdeEvent
      **/
      OdeEvent()
      {
@@ -362,13 +363,35 @@ struct OdeEvent
          crossings_moon = 0.0; //at initialisation, no crossing
          x1_moon   = -1;
          detection = 0;
-         mr_moon   = 2.518747349676265e-01; //Mean radius of the lunar orbit, in EML2 NCSEM coordinates
+         mr_moon   = 2.518747349676265e-01; //Mean radius of the lunar orbit, in NCSEM coordinates
+
+         //Sign depends on the SEMLi. Default: SEML2
+         sign = -1.0;
+     }
+
+
+    /**
+     *  \brief Constructor for OdeEvent
+     **/
+     OdeEvent(QBCP_L *qbcp_l_)
+     {
+         coll  = FTC_SUCCESS;  //at initialisation, no collision so == FTC_SUCCESS
+         crossings = 0.0;      //at initialisation, no crossing
+         x1        = -1;
+         crossings_moon = 0.0; //at initialisation, no crossing
+         x1_moon   = -1;
+         detection = 0;
+         mr_moon   = 2.518747349676265e-01; //Mean radius of the lunar orbit, in NCSEM coordinates
+
+         //Sign depends on the SEMLi. Default: SEML2
+         if(qbcp_l_->cs_sem.li == 1) sign = 1.0;
+         else sign = -1.0;
      }
 
      /**
      *  \brief Constructor for OdeEvent
      **/
-     OdeEvent(int detection_, int warnings_)
+     OdeEvent(QBCP_L *qbcp_l_, int detection_, int warnings_)
      {
          coll  = FTC_SUCCESS;  //at initialisation, no collision so == FTC_SUCCESS
          crossings = 0.0;      //at initialisation, no crossing
@@ -378,6 +401,10 @@ struct OdeEvent
          detection = detection_;
          warnings  = warnings_;
          mr_moon   = 2.518747349676265e-01; //Mean radius of the lunar orbit, in EML2 NCSEM coordinates
+
+         //Sign depends on the SEMLi. Default: SEML2
+         if(qbcp_l_->cs_sem.li == 1) sign = 1.0;
+         else sign = -1.0;
      }
 };
 
@@ -401,7 +428,7 @@ struct OdeParams
      **/
      OdeParams(QBCP_L *qbcp_l_, int dcs_)
      {
-         event     = OdeEvent();
+         event     = OdeEvent(qbcp_l_);
          qbcp_l    = qbcp_l_;
          dcs       = dcs_;
      }
@@ -411,7 +438,7 @@ struct OdeParams
      **/
      OdeParams(QBCP_L *qbcp_l_, int dcs_, int detection_, int warnings_)
      {
-         event     = OdeEvent(detection_, warnings_);
+         event     = OdeEvent(qbcp_l_, detection_, warnings_);
          qbcp_l    = qbcp_l_;
          dcs       = dcs_;
      }

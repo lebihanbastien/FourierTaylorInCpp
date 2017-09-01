@@ -1158,8 +1158,9 @@ int proj_subroutine(ProjResSt& projResSt, Invman& invman_target, ProjSt& projSt)
     // Integration on projSt.MSIZE+1 fixed grid, from IC_COORD to PR_COORD coordinates
     // Note that the integration framework is always I_NCEM, hence collision_NCEM always
     // makes sense
-    OdeEvent odeEvent(false, false);
-    int status = ode78(y_man_PR, t_man_PR, &odeEvent, tv_IC, tv_IC+projSt.TM, yv_IC, 6, projSt.MSIZE, I_NCEM, projResSt.IC_COORD, projResSt.PR_COORD);
+    OdeEvent odeEvent(&SEML, false, false);
+    int status = ode78(y_man_PR, t_man_PR, &odeEvent, tv_IC, tv_IC+projSt.TM, yv_IC, 6,
+                       projSt.MSIZE, I_NCEM, projResSt.IC_COORD, projResSt.PR_COORD);
 
     //====================================================================================
     // 3. Projection on the center manifold of EMLi.
@@ -1210,7 +1211,8 @@ int proj_subroutine(ProjResSt& projResSt, Invman& invman_target, ProjSt& projSt)
                 if(ENorm(sproj, 4)< projSt.SNMAX)
                 {
                     //yvproj_PR = W(sproj, tv)
-                    invman_target.evalRCMtoNC(sproj, tv_PR, yvproj_PR, OFTS_ORDER, OFS_ORDER);
+                    invman_target.evalRCMtoNC(sproj, tv_PR, yvproj_PR, OFTS_ORDER,
+                                              OFS_ORDER);
 
                     //Distance of projection in DP_COORD coordinates
                     qbcp_coc(tv_PR, yv_PR,     yv_DP,     projResSt.PR_COORD, projResSt.DP_COORD);
@@ -1246,9 +1248,9 @@ int proj_subroutine(ProjResSt& projResSt, Invman& invman_target, ProjSt& projSt)
                 qbcp_coc(tv_PR, yvproj_PR, yvproj_FV, projResSt.PR_COORD, projResSt.FV_COORD);
 
                 // Saving states
-                for(int i = 0; i < 6; i++) projResSt.final_state_CMU_FC_o[i]     = yv_FC[i];
-                for(int i = 0; i < 6; i++) projResSt.projected_state_CMU_FC_o[i] = yvproj_FC[i];
-                for(int i = 0; i < 4; i++) projResSt.projected_state_CMU_RCM_o[i]  = sproj[i];
+                for(int i = 0; i < 6; i++) projResSt.final_state_CMU_FC_o[i]      = yv_FC[i];
+                for(int i = 0; i < 6; i++) projResSt.projected_state_CMU_FC_o[i]  = yvproj_FC[i];
+                for(int i = 0; i < 4; i++) projResSt.projected_state_CMU_RCM_o[i] = sproj[i];
 
                 //Associated DV
                 dv_at_projection_FV = 0.0;
@@ -1269,7 +1271,7 @@ int proj_subroutine(ProjResSt& projResSt, Invman& invman_target, ProjSt& projSt)
         //--------------------------------------------------------------------------------
         // We check if we have the primary family, if necessary
         // To do so, we check that we have made two clockwise/counterclockwise
-        //  crossings of x = -1.
+        //  crossings of x = +-1.
         //
         // To do a clockwise turn:
         //  1. x1 > 0 -> x2 < 0 && y1 > 0
@@ -1282,7 +1284,7 @@ int proj_subroutine(ProjResSt& projResSt, Invman& invman_target, ProjSt& projSt)
         if(min_proj_dist_DP < ePdef)
         {
             // Init temporary objects
-            OdeEvent odeEvent_purge(true, false);
+            OdeEvent odeEvent_purge(&SEML, true, false);
             double** y_purge = dmatrix(0, 5, 0, 2);
             double* t_purge  = dvector(0, 2);
 
@@ -2381,7 +2383,6 @@ int int_proj_SINGLE_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
     //------------------------------------------------------------------------------------
     Orbit orbit(&invman, &SEML, &odestruct, OFTS_ORDER, OFS_ORDER, projSt.TLIM[0], projSt.TLIM[0]+10);
 
-
     //====================================================================================
     // Building the initial conditions on the orbit
     //====================================================================================
@@ -2520,7 +2521,8 @@ int int_proj_SINGLE_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
         orbit.NCprojCCMtoCM(z0, t0, stp);
         stp[4] =  0.0;
 
-        cmu_grid_orbit_on_one_period(orbit, tNCE, yNCE, sRCM, stp, t0, Tp, N, isPar, projSt.hyp_epsilon_eml2);
+        cmu_grid_orbit_on_one_period(orbit, tNCE, yNCE, sRCM, stp, t0, Tp, N, isPar,
+                                     projSt.hyp_epsilon_eml2);
 
         //--------------------------------------------------------------------------------
         //Once the unstable directions are obtained, we propagate & project
@@ -2555,7 +2557,7 @@ int int_proj_SINGLE_ORBIT_EM_on_CM_SEM(ProjSt& projSt, int Nperiods)
             projResSt.label      = label+ks;
 
             //----------------------------------------------------------------------------
-            //Projection on center manifold at SEML2
+            //Projection on center manifold at SEMLj
             //----------------------------------------------------------------------------
             proj_subroutine(projResSt, invman_SEM, projSt);
 
@@ -2865,6 +2867,7 @@ int cmu_orbit_estimate_period(const double st0[], double t0, double* T, int* N, 
     //====================================================================================
     //Hard precision
     Config::configManager().C_PREC_HARD();
+
     //------------------------------------------------------------------------------------
     //Event structure
     //------------------------------------------------------------------------------------
@@ -2878,8 +2881,8 @@ int cmu_orbit_estimate_period(const double st0[], double t0, double* T, int* N, 
     val_par.center     = center;
     val_par.type       = 'A';
 
-    double** ye_NCSEM = dmatrix(0, 5, 0, val_par.max_events);
-    double* te_NCSEM  = dvector(0, val_par.max_events);
+    double** ye_NC = dmatrix(0, 5, 0, val_par.max_events);
+    double* te_NC  = dvector(0, val_par.max_events);
 
     //------------------------------------------------------------------------------------
     // Event detection
@@ -2887,17 +2890,37 @@ int cmu_orbit_estimate_period(const double st0[], double t0, double* T, int* N, 
     int ode78coll;
     double yv[6];
     for(int i = 0; i < 6; i++) yv[i] = orbit.getZ0()[i];
-    ode78_qbcp_event(ye_NCSEM, te_NCSEM, &ode78coll, t0, t0+10, yv, 6, dcs, ncs, ncs, &val_par);
+    ode78_qbcp_event(ye_NC, te_NC, &ode78coll, t0, t0+10, yv, 6, dcs, ncs, ncs, &val_par);
 
     //------------------------------------------------------------------------------------
     //Then, we can redefine tf and N
     //------------------------------------------------------------------------------------
+    //We check that the first point was not detected as an event
+    int n0 = 0;
+    if(fabs(t0 - te_NC[0]) < 1e-6) {n0 = 1;} //the first point is an event
+
     //Find the closest point to the initial one
-    int kargmin = 1;
-    double dmin = fabs(orbit.getZ0()[0] - ye_NCSEM[0][1]), dm = 0.0;
-    for(int k = min(val_par.max_events, 2); k <  val_par.max_events; k++)
+    int kargmin = n0;
+    double dmin = 0.0, dm = 0.0;
+
+    //First event
+    dmin = 0.0;
+    for(int i = 0; i < 6; i++)
     {
-        dm = fabs(orbit.getZ0()[0] - ye_NCSEM[0][k]);
+        dmin += (orbit.getZ0()[i] - ye_NC[i][n0])*(orbit.getZ0()[i] - ye_NC[i][n0]);
+    }
+    dmin = sqrt(dmin);
+
+    //Loop on other events
+    for(int k = min(val_par.max_events-1, n0); k < val_par.max_events; k++)
+    {
+        dm = 0.0;
+        for(int i = 0; i < 6; i++)
+        {
+            dm += (orbit.getZ0()[i] - ye_NC[i][k])*(orbit.getZ0()[i] - ye_NC[i][k]);
+        }
+        dm = sqrt(dm);
+
         if(dm < dmin)
         {
             dmin = dm;
@@ -2905,8 +2928,20 @@ int cmu_orbit_estimate_period(const double st0[], double t0, double* T, int* N, 
         }
     }
 
+
+    ///////////////////// IF EML1, we overule and set period to 0.5T /////////////////////
+    if(SEML.li_EM == 1)
+    {
+        cout << "The initial orbit is about EML1. " << endl;
+        cout << "The current approximation about EML1 is too unstable " << endl;
+        cout << "to allow for a good estimate of the period." << endl;
+        cout << "Hence we force period = 0.5T  for now." << endl;
+
+        te_NC[kargmin] = t0 + 0.5*SEML.us_em.T;
+    }
+
     // Estimated period, as a ratio
-    double r0 = (te_NCSEM[kargmin] - t0)/SEML.us_em.T;
+    double r0 = (te_NC[kargmin] - t0)/SEML.us_em.T;
     cout << "Estimated period is : " << r0 << " xT " << endl;
 
     // Approximation as a multiple of dt
@@ -3360,25 +3395,25 @@ int ref_eml_to_seml_maps(RefSt& refSt)
         // We can then advance to REF_COMP for the rest of the computation
         //--------------------------------------------------------------------------------
         refSt.type = REF_COMP;
-        int sf_eml2, sf_man, sf_seml2;
+        int sf_emli, sf_man, sf_semli;
         cout << "===============================================================" << endl;
         cout << "ref_eml_to_seml_maps. Second part: "                                    << endl;
         cout << "Refinement of the entire trajectory."                            << endl;
         cout << "This is a 3-legged trajectory: "                                 << endl;
         cout << "EML2 orbit + manifold leg + SEMLi orbit."                        << endl;
-        cout << "Enter a value for sf_eml2, "                                     << endl;
+        cout << "Enter a value for sf_emli, "                                     << endl;
         cout << "the sampling frequeny (in days) during the EML2 leg: "           << endl;
-        cin >> sf_eml2;
+        cin >> sf_emli;
         cout << "Enter a value for sf_man, "                                      << endl;
         cout << "the sampling frequeny (in days) during the man leg: "            << endl;
         cin >> sf_man;
-        cout << "Enter a value for sf_seml2, "                                    << endl;
+        cout << "Enter a value for sf_semli, "                                    << endl;
         cout << "the sampling frequeny (in days) during the SEMLi leg: "          << endl;
-        cin >> sf_seml2;
+        cin >> sf_semli;
         char ch;
         scanf("%c",&ch);
 
-        int sampfreq[3] = {sf_eml2, sf_man, sf_seml2};
+        int sampfreq[3] = {sf_emli, sf_man, sf_semli};
         int mPlot = floor(sampfreq[1]*24/refSt.fHours);
 
         status = comprefemlisemli3d(sampfreq, coord_type, orbit_EM, orbit_SEM, refSt, 0, 1, mPlot);
@@ -3525,11 +3560,6 @@ int ref_eml_to_seml_orbits(RefSt& refSt)
 
     }
     pressEnter(refSt.isFlagOn);
-
-
-
-
-
 
 
     //====================================================================================
@@ -3751,11 +3781,10 @@ int ref_eml_to_seml_orbits(RefSt& refSt)
             cerr << fname << ". Error during the continuation procedure with variable time." << endl;
         }
 
-        //step = 0;
         //--------------------------------------------------------------------------------
         //Second step: Complete trajectory
         //--------------------------------------------------------------------------------
-        int sampfreq[3] = {refSt.sf_eml2, refSt.sf_man, refSt.sf_seml2};
+        int sampfreq[3] = {refSt.sf_emli, refSt.sf_man, refSt.sf_semli};
         int mPlot = floor(sampfreq[1]*24/refSt.fHours);
 
         if(step == 1)
@@ -6507,7 +6536,7 @@ int reffromcontemlisemli(RefSt& refSt)
         // We can advance to REF_COMP for the rest of the computation
         //--------------------------------------------------------------------------------
         refSt.type = REF_COMP;
-        int sampfreq[3] = {refSt.sf_eml2, refSt.sf_man, refSt.sf_seml2};
+        int sampfreq[3] = {refSt.sf_emli, refSt.sf_man, refSt.sf_semli};
         int mPlot = floor(sampfreq[1]*24/refSt.fHours);
 
         status = comprefemlisemli3d(sampfreq, coord_type, orbit_EM, orbit_SEM, refSt, k, isFirst, mPlot);
@@ -10631,7 +10660,7 @@ int proj_subroutine_old_from_EML(ProjResSt& projResSt, Invman& invman_SEM, ProjS
     for(int i = 0; i < 6; i++) yv[i] = projResSt.init_state_CMU_NC[i];
 
     //Integration on projSt.MSIZE+1 fixed grid
-    OdeEvent odeEvent(false, false);
+    OdeEvent odeEvent(&SEML, false, false);
     int status = ode78(y_man_NCSEM, t_man_SEM, &odeEvent, tv, tv+projSt.TM, yv, 6, projSt.MSIZE, I_NCEM, NCEM, NCSEM);
 
     //====================================================================================
@@ -10733,7 +10762,7 @@ int proj_subroutine_old_from_EML(ProjResSt& projResSt, Invman& invman_SEM, ProjS
         //--------------------------------------------------------------------------------
         // We check if we have the primary family, if necessary
         // To do so, we check that we have made two clockwise/counterclockwise
-        //  crossings of x = -1.
+        //  crossings of x = +-1.
         //
         // To do a clockwise turn:
         //  1. x1 > 0 -> x2 < 0 && y1 > 0
@@ -10746,7 +10775,7 @@ int proj_subroutine_old_from_EML(ProjResSt& projResSt, Invman& invman_SEM, ProjS
         if(min_proj_dist_SEM < ePdef)
         {
             // Init temporary objects
-            OdeEvent odeEvent_purge(true, false);
+            OdeEvent odeEvent_purge(&SEML, true, false);
             double** y_purge = dmatrix(0, 5, 0, 2);
             double* t_purge  = dvector(0, 2);
 

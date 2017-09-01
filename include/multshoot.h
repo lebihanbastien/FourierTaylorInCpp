@@ -1,7 +1,7 @@
 #include "single_orbit.h"
 
 //Precision
-#define PREC_GSM    5e-12
+#define PREC_GSM    1e-11
 
 using namespace std;
 

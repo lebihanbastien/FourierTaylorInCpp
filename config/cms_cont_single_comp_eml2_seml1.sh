@@ -23,8 +23,8 @@ MODEL=$M_QBCP
 #-----------------------------------------------------
 # DEFAULT LIBRATION POINT FOR EM & SEM SYSTEM
 #-----------------------------------------------------
-LI_EM=1
-LI_SEM=2
+LI_EM=2
+LI_SEM=1
 
 #-----------------------------------------------------
 # Orders for the semi-numerical expansions
@@ -37,7 +37,7 @@ OFS_ORDER=30
 if [ $SERVER == 1 ]; then
 	OFTS_ORDER=20
 else
-	OFTS_ORDER=20
+	OFTS_ORDER=16
 fi
 
 
@@ -52,7 +52,7 @@ else
 fi
 
 # Parallel computation is on by default
-ISPAR=1		
+ISPAR=0		
 
 #-----------------------------------------------------
 # NOHUP condition
@@ -71,12 +71,12 @@ IO_HANDLING=$IO_BASH
 #-----------------------------------------------------
 # Parameters that change often
 #-----------------------------------------------------
-REFST_TYPE=$REF_CONT           # Type of refinement - rk: set REF_CONT_D_HARD_CASE for difficult cases with REF_CONT_D (ex: EML2-SEMLi via SEML1...)
-REFST_DIM=$REF_PLANAR          # Type of dimensions planar or 3d?
-REFST_T0_DES=0.00              # Initial time - given as %T, with T the SEM period   
+REFST_TYPE=$REF_CONT       # Type of refinement - rk: set REF_CONT_D_HARD_CASE for difficult cases with REF_CONT_D (ex: EML2-SEMLi via SEML1...)
+REFST_DIM=$REF_PLANAR      # Type of dimensions planar or 3d?
+REFST_T0_DES=0.5           # Initial time - given as %T, with T the SEM period   
 
 # Domain of search (min s1, max s1, min s2, max s2, min s3, max s3, min s4, max s4) for the first guess
-REFST_SI_CMU_EM_LIM=(-2.0 -1.75 0 0 0.5 1.0 0 0)
+REFST_SI_CMU_EM_LIM=(-19 -18 0 0 24 35 0 0)
 # Or, if we want the user to define such domain:
 REFST_ISLIMUD=0
 
@@ -92,6 +92,9 @@ REFST_TOF_LIM=(-1 -1)
 # Values for crossings
 REFST_CROSSINGS=-1
 
+# Maximum projection distance allowed during subselection
+REFST_PMAX_DIST_SEM=1.0
+
 # Number of steps in the continuation procedure
 REFST_CONT_STEP_MAX=+450;        # with fixed times
 REFST_CONT_STEP_MAX_VT=+150;     # with variable times
@@ -102,11 +105,11 @@ if [ $LI_EM == 1 ]; then
 else
 	REFST_FIXED_TIME_DS0=5e-1 # for fixed times
 fi
-REFST_VAR_TIME_DS0=1e-2	          # for variable times
+REFST_VAR_TIME_DS0=8e-2	          # for variable times
 
 
 # Desired number of iterations in Newton's method in the continuation procedure
-REFST_FIXED_TIME_NU0=3           # for fixed times
+REFST_FIXED_TIME_NU0=2           # for fixed times
 REFST_VAR_TIME_NU0=4 	         # for variable times
 
 # Direction of the continuation procedure
@@ -117,23 +120,23 @@ REFST_DIR=-1    		 # if not, +1 or -1
 REFST_ISFLAGON=1   	         # do we have steps in the procedure - asking the user to press enter to go on?
 REFST_ISPLOTTED=1   		 # do we plot the results during the computation?
 REFST_ISSAVED=0     		 # do we save the results in data files?
-REFST_ISFROMSERVER=1		 # does the raw data comes from server files?
+REFST_ISFROMSERVER=0		 # does the raw data comes from server files?
 
 # Maximum angle around SEMLi if REF_COND_T is used (in degrees)
-REFST_THETAMAX=180           # should be a multiple of 90°
+REFST_THETAMAX=90                # should be a multiple of 90°
 
 # Filenames (used only if IO_HANDLING==$IO_BASH)
-FILE_PCU="Serv/projcu_order_20_dest_L2_t0_0.bin"
-FILE_CONT="Serv/phd_cont_atf_order_20_dest_L2_t0_0_single.txt"
-FILE_CONT_RES="Serv/phd_cont_atf_traj_order_20_dest_L2_t0_0_single.bin"
+FILE_PCU="Serv/projcu_order_20_dest_L1_tspan_05T_075T_FINAL.bin"
+FILE_CONT="Serv/phd_cont_atf_order_20_dest_L1_t0_0.5_single.txt"
+FILE_CONT_RES="Serv/phd_cont_atf_traj_order_20_dest_L1_t0_0.5_single.bin"
 FILE_JPL="cont_jpl.bin"
 
 #-----------------------------------------------------
 # Parameters that are stable
 #-----------------------------------------------------
 REFST_ISDEBUG=0			 # if yes, additionnal tests are performed
-REFST_GRIDSIZE=20        	 # number of points on the refinement grid
-REFST_MPLOT=200        	         # number of points per plot between to pach points (e.g. total plot points is REFST_MPLOT*REFST_GRIDSIZE)
+REFST_GRIDSIZE=20        # number of points on the refinement grid
+REFST_MPLOT=200        	 # number of points per plot between to pach points (e.g. total plot points is REFST_MPLOT*REFST_GRIDSIZE)
 
 REFST_TIME=$REF_VAR_TN		 # type of constraints on the times in REF_CONT
 REFST_GRID=$REF_FIXED_GRID	 # type of grid
@@ -158,3 +161,5 @@ REFST_TSPAN_SEM=10 		 # given as %T, where T is the SEM period, in SEM units
 REFST_ISSAVED_EM=0               # 0: don't save, 1: save using projection method
 REFST_ISSAVED_SEM=0              # 0: don't save, 1: save using projection method, 2: save using integration in reduced coordinates
 
+# Type of time selection
+REFST_TYPE_OF_T_SEL=$TIME_SELECTION_RATIO

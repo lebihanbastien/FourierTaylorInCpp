@@ -219,9 +219,9 @@ struct RefSt
     int sidim;            //0 or 2 - component of s0 that stays constant when t0 is free.
 
     //Sampling frequencies in REF_COMP (complete trajectory) in days
-    int sf_eml2;          // orbit at EML2
+    int sf_emli;          // orbit at EML2
     int sf_man;           // transfer leg
-    int sf_seml2;         // orbit at SEML2
+    int sf_semli;         // orbit at SEML2
 
     // Integration window for each orbit
     double tspan_EM;

@@ -23,7 +23,7 @@ MODEL=$M_QBCP
 #-----------------------------------------------------
 # DEFAULT LIBRATION POINT FOR EM & SEM SYSTEM
 #-----------------------------------------------------
-LI_EM=2
+LI_EM=1
 LI_SEM=2
 
 #-----------------------------------------------------
@@ -37,7 +37,7 @@ OFS_ORDER=30
 if [ $SERVER == 1 ]; then
 	OFTS_ORDER=20
 else
-	OFTS_ORDER=20
+	OFTS_ORDER=16
 fi
 
 
@@ -62,7 +62,7 @@ if [ $SERVER == 1 ]; then
 else
 	ISNOHUP=0
 fi
-OUT="cms_orbit_40.out"
+
 
 #-----------------------------------------------------
 # Position of the poincaré section in NCEM coordinates
@@ -93,16 +93,16 @@ REFST_SI_CMU_EM_LIM=(-1e5 1e5 -1e5 +1e5 -1e5 +1e5 -1e5 +1e5)
 REFST_ISLIMUD=0
 
 # Domain of search (min s1, max s1, min s3, max s3) for the seed of first guess
-REFST_SI_SEED_EM_LIM=(-100 +100 -100 +100 -100 +100 -100 +100)
+REFST_SI_SEED_EM_LIM=(-80 +80 -80 +80 -80 +80 -80 +80)
 
 # Maximum projection distance allowed during subselection
-REFST_PMAX_DIST_SEM=5e-4
+REFST_PMAX_DIST_SEM=1e-3
 
 # Limits for the time of flight during transfers - not used if -1
 REFST_TOF_LIM=(-1 -1)
 
 # Values for crossings
-REFST_CROSSINGS=-1
+REFST_CROSSINGS=2
 
 # Number of steps in the continuation procedure
 REFST_CONT_STEP_MAX=+450;       # with fixed times
@@ -126,8 +126,8 @@ REFST_ISDIRUD=0			 # is it user defined?
 REFST_DIR=-1    		 # if not, +1 or -1
  
 # User parameters
-REFST_ISFLAGON=0   	         # do we have steps in the procedure - asking the user to press enter to go on?
-REFST_ISPLOTTED=1    		 # do we plot the results during the computation?
+REFST_ISFLAGON=0  	         # do we have steps in the procedure - asking the user to press enter to go on?
+REFST_ISPLOTTED=0    		 # do we plot the results during the computation?
 REFST_ISSAVED=1     		 # do we save the results in data files?
 REFST_ISFROMSERVER=0		 # does the raw data comes from server files?
 
@@ -137,20 +137,28 @@ REFST_THETAMAX=180           # should be a multiple of 90°
 # Filenames (used only if IO_HANDLING==$IO_BASH)
 if [ $SERVER == 1 ]; then
 	FILE_PCU="projcu_order_20_dest_L2_Orbit_Liss_s1_20_s2_5.bin" #"Serv/projcu_order_20_dest_L2_orbit.bin" #"Serv/projcu_order_20_dest_L2_QHalo.bin" 
-	FILE_CONT="cont_atf_order_20_dest_L2_Liss_s1_10_s2_5_DIST_SEM_5e-4_TSPAN_SEM_20.txt"
+	FILE_CONT="cont_atf_order_20_dest_L2_Liss_s1_10_s2_5_DIST_SEM_5e-4_TSPAN_SEM_40.txt"
 	FILE_CONT_RES="cont_atf_traj_order_20_dest_L2_Liss_s1_10_s2_5_DIST_SEM_5e-4_TSPAN_SEM_20.bin"
 	FILE_TRAJ_FROM_W="traj_from_w_order_20_dest_L2_Liss_s1_10_s2_5_DIST_SEM_5e-4_TSPAN_SEM_20.bin"
 	FILE_TRAJ_FROM_C="traj_from_c_order_20_dest_L2_Liss_s1_10_s2_5_DIST_SEM_5e-4_TSPAN_SEM_20.bin" 
 	FILE_JPL="cont_jpl_order_20_dest_L2_Liss_s1_10_s2_5_DIST_SEM_5e-4_TSPAN_SEM_20.bin"
 	FILE_JPL_TEMP="cont_jpl_temp_s1_20_s2_10.txt"
 else
-	FILE_PCU="Serv/projcu_order_20_dest_L2_Orbit_Liss_s1_20_s2_5.bin"
-	FILE_CONT="Serv/cont_atf_order_20_dest_L2_Liss_s1_20_s2_5_DIST_SEM_5e-4_TSPAN_SEM_20.txt"
-	FILE_CONT_RES="Serv/cont_atf_traj_order_20_dest_L2_Liss_s1_20_s2_5_DIST_SEM_5e-4_TSPAN_SEM_20.bin"
-	FILE_TRAJ_FROM_W="Serv/traj_from_w_order_20_dest_L2_Liss_s1_20_s2_5_DIST_SEM_5e-4_TSPAN_SEM_20.bin"
-	FILE_TRAJ_FROM_C="Serv/traj_from_c_order_20_dest_L2_Liss_s1_20_s2_5_DIST_SEM_5e-4_TSPAN_SEM_20.bin" 
-	FILE_JPL="Serv/cont_jpl_order_20_dest_L2_Liss_s1_20_s2_5_DIST_SEM_5e-4_TSPAN_SEM_20.bin"
-	FILE_JPL_TEMP="cont_jpl_temp_20.txt"
+	# FILE_PCU="projcu_order_16_dest_L2_Orbit_s1_15_All_TM_5.bin"
+	# FILE_CONT="cont_atf_order_16_dest_L2_Planar_s1_15_DIST_SEM_1e-3_TSPAN_SEM_20.txt"
+	# FILE_CONT_RES="cont_atf_traj_order_16_dest_L2_Planar_s1_15_DIST_SEM_1e-3_TSPAN_SEM_20.bin"
+	# FILE_TRAJ_FROM_W="traj_from_w_order_16_dest_L2_Planar_s1_15_DIST_SEM_1e-3_TSPAN_SEM_20.bin"
+	# FILE_TRAJ_FROM_C="traj_from_c_order_16_dest_L2_Planar_s1_15_DIST_SEM_1e-3_TSPAN_SEM_20.bin" 
+	# FILE_JPL="cont_jpl_order_16_dest_L2_Planar_s1_15_DIST_SEM_1e-3_TSPAN_SEM_20.bin"
+	# FILE_JPL_TEMP="cont_jpl_temp_Planar_s1_15.txt"
+	
+	FILE_PCU="projcu_order_16_dest_L2_Orbit_s1_15_s2_6_All_TM_5.bin"
+	FILE_CONT="cont_atf_order_16_dest_L2_Liss_s1_15_s2_6_DIST_SEM_1e-3_TSPAN_SEM_20_more.txt"
+	FILE_CONT_RES="cont_atf_traj_order_16_dest_L2_Liss_s1_15_s2_6_DIST_SEM_1e-3_TSPAN_SEM_20_more.bin"
+	FILE_TRAJ_FROM_W="traj_from_w_order_16_dest_L2_Liss_s1_15_s2_6_DIST_SEM_1e-3_TSPAN_SEM_20_more.bin"
+	FILE_TRAJ_FROM_C="traj_from_c_order_16_dest_L2_Liss_s1_15_s2_6_DIST_SEM_1e-3_TSPAN_SEM_20_more.bin" 
+	FILE_JPL="cont_jpl_order_16_dest_L2_Liss_s1_15_s2_6_DIST_SEM_1e-3_TSPAN_SEM_20_more.bin"
+	FILE_JPL_TEMP="cont_jpl_temp_Liss_s1_15_s2_6.txt"
 fi
 
 # Desired number of solutions. if -1, all found solutions are refined
@@ -161,12 +169,13 @@ REFST_NREF=20
 #-----------------------------------------------------
 REFST_ISDEBUG=0			         # if yes, additionnal tests are performed
 REFST_GRIDSIZE=20        	     # number of points on the refinement grid
-REFST_MPLOT=200        	         # number of points per plot between to pach points (e.g. total plot points is REFST_MPLOT*REFST_GRIDSIZE)
+REFST_MPLOT=200        	         # number of points per plot between to pach points (e.g. total plot points is REFST_MPLOT*REFST_GRIDSIZE) - DEPRECATED
+REFST_FPLOT=1                    # plotting frequency (in hours)
 
-REFST_TIME=$REF_VAR_TN		 # type of constraints on the times in REF_CONT
-REFST_GRID=$REF_FIXED_GRID	 # type of grid
+REFST_TIME=$REF_VAR_TN		    # type of constraints on the times in REF_CONT
+REFST_GRID=$REF_FIXED_GRID	    # type of grid
 REFST_TERMINATION=$REF_COND_T   # Termination condition in the continuation with variable final time (either REF_VAR_TN/REF_VAR_TIME)
-REFST_COORD_TYPE=$NCSEM		 # coordinates system in the refinement procedure
+REFST_COORD_TYPE=$NCSEM		    # coordinates system in the refinement procedure
 
 REFST_XPS=0.65			  # position of the poincaré section in NCSEM coordinates
 REFST_XPS_NCEM=-1         # position of the poincaré section in NCEM coordinates 3BSOI: about 159198km of radius around the Moon, hence 2.46761593 in NCEM coordinates about EML2
@@ -185,7 +194,7 @@ REFST_TSPAN_SEM=20		 # given as %T, where T is the SEM period, in SEM units
 
 # Type of computation for each orbit
 REFST_COMP_ORB_EM=$INT_TRY_BOTH  #may use INT_RED_COORD directly for bigger orbits (QHalo?)
-REFST_COMP_ORB_SEM=$INT_TRY_BOTH
+REFST_COMP_ORB_SEM=$INT_PROJ_CHECK
 	
 # Storing the orbits at each step?
 REFST_ISSAVED_EM=0               # 0: don't save, 1: save using projection method

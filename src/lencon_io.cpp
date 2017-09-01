@@ -1022,7 +1022,7 @@ void writeIntProjCU_bin(string filename,
         double yv_emli_NCEM[6], yv_semli_NCSEM[6];
         double yv_IC[6], yv_FC[6];
         double tv_IC, tv_FC;
-        double tv_EM, tv_SEM;
+        double tv_EM_0, tv_SEM_f;
 
 
         //Origins at both ends
@@ -1097,7 +1097,7 @@ void writeIntProjCU_bin(string filename,
             filestream.write((char*) &res, sizeof(double));
         }
 
-        //39. Number of crossings of the x = -1 line (clock/counterclockwise), in NCSEM
+        //39. Number of crossings of the x = +-1 line (clock/counterclockwise), in NCSEM
         res = projResSt.crossings_NCSEM_o;
         filestream.write((char*) &res, sizeof(double));
 
@@ -1115,8 +1115,8 @@ void writeIntProjCU_bin(string filename,
         tv_FC = projResSt.final_time_FC_o;
         state_memcpy(yv_FC, projResSt.final_state_CMU_FC_o);
         //Time, in EM and SEM units
-        tv_EM  = qbcp_coc_time(tv_IC, projResSt.IC_COORD, NCEM);
-        tv_SEM = qbcp_coc_time(tv_IC, projResSt.IC_COORD, NCSEM);
+        tv_EM_0  = qbcp_coc_time(tv_IC, projResSt.IC_COORD, NCEM);
+        tv_SEM_f = qbcp_coc_time(tv_FC, projResSt.FC_COORD, NCSEM);
 
         // H0 at IC - careful, the state is given in IC_COORD
         H0_NCEM  = qbcp_H_complete(tv_IC, yv_IC, projResSt.IC_COORD, NCEM);
@@ -1125,10 +1125,10 @@ void writeIntProjCU_bin(string filename,
         H0_SEM   = qbcp_H_complete(tv_IC, yv_IC, projResSt.IC_COORD, PSEM);
 
         // H0 at emli
-        H0_emli_NCEM  = qbcp_H_complete(tv_EM, yv_emli_NCEM, NCEM, NCEM);
-        H0_emli_NCSEM = qbcp_H_complete(tv_EM, yv_emli_NCEM, NCEM, NCSEM);
-        H0_emli_EM    = qbcp_H_complete(tv_EM, yv_emli_NCEM, NCEM, PEM);
-        H0_emli_SEM   = qbcp_H_complete(tv_EM, yv_emli_NCEM, NCEM, PSEM);
+        H0_emli_NCEM  = qbcp_H_complete(tv_EM_0, yv_emli_NCEM, NCEM, NCEM);
+        H0_emli_NCSEM = qbcp_H_complete(tv_EM_0, yv_emli_NCEM, NCEM, NCSEM);
+        H0_emli_EM    = qbcp_H_complete(tv_EM_0, yv_emli_NCEM, NCEM, PEM);
+        H0_emli_SEM   = qbcp_H_complete(tv_EM_0, yv_emli_NCEM, NCEM, PSEM);
 
         // Hf - careful, the state is given in FC_COORD
         Hf_NCEM  = qbcp_H_complete(tv_FC, yv_FC, projResSt.FC_COORD, NCEM);
@@ -1136,12 +1136,16 @@ void writeIntProjCU_bin(string filename,
         Hf_EM    = qbcp_H_complete(tv_FC, yv_FC, projResSt.FC_COORD, PEM);
         Hf_SEM   = qbcp_H_complete(tv_FC, yv_FC, projResSt.FC_COORD, PSEM);
 
-        // Hf at semli - careful, the state is given in NCSEM
-        Hf_semli_NCEM  = qbcp_H_complete(tv_SEM, yv_semli_NCSEM, NCSEM, NCEM);
-        Hf_semli_NCSEM = qbcp_H_complete(tv_SEM, yv_semli_NCSEM, NCSEM, NCSEM);
-        Hf_semli_EM    = qbcp_H_complete(tv_SEM, yv_semli_NCSEM, NCSEM, PEM);
-        Hf_semli_SEM   = qbcp_H_complete(tv_SEM, yv_semli_NCSEM, NCSEM, PSEM);
 
+        // Hf at semli - careful, the state is given in NCSEM
+        Hf_semli_NCEM  = qbcp_H_complete(tv_SEM_f, yv_semli_NCSEM, NCSEM, NCEM);
+        Hf_semli_NCSEM = qbcp_H_complete(tv_SEM_f, yv_semli_NCSEM, NCSEM, NCSEM);
+        Hf_semli_EM    = qbcp_H_complete(tv_SEM_f, yv_semli_NCSEM, NCSEM, PEM);
+        Hf_semli_SEM   = qbcp_H_complete(tv_SEM_f, yv_semli_NCSEM, NCSEM, PSEM);
+
+        //        cout << "Hf_EM = " << Hf_SEM << endl;
+        //        cout << "Hf_semli_SEM = " << Hf_semli_SEM << endl;
+        //        cout << "dHf_EM = " << Hf_SEM - Hf_semli_SEM << endl;
 
         //--------------------------------------------------------------------------------
         // Then store
@@ -1286,7 +1290,7 @@ void writeIntProjCUSeed_bin(string filename,
             filestream.write((char*) &res, sizeof(double));
         }
 
-        //39. Number of crossings of the x = -1 line (clock/counterclockwise)
+        //39. Number of crossings of the x = +-1 line (clock/counterclockwise)
         res = projResSt.crossings_NCSEM_o;
         filestream.write((char*) &res, sizeof(double));
 
@@ -1389,7 +1393,7 @@ void writeIntProjCUSeed_bin(string filename,
 
 
         //--------------------------------------------------------------------------------
-        // States @ the EML2 pk section
+        // States @ the pk section
         //--------------------------------------------------------------------------------
         //62. NCEM time at the Pk section
         res  = projResSt.te_NCEM;
@@ -2138,6 +2142,33 @@ int writeCONT_bin(RefSt& refSt, string filename_res, int dcs, int coord_type,
         //--------------------------------------------------------------------------------
         nPlot = orbit_EM.traj_int_main(orbit_EM.getTf(), yorb_NCEM, torb_EM, oPlot, INT_PROJ_CHECK);
 
+        //If nPlot < oPlot, we retry with looser constraint
+        if(nPlot < oPlot)
+        {
+            int ans = 0;
+            cout << "Do you wish to retry with looser constraint on the projection distance? (1/0)" << endl;
+            cin >> ans;
+
+            if(ans == 1)
+            {
+                //------------------------------------------------------------------------
+                // Set loose projection distance @ EML2
+                //------------------------------------------------------------------------
+                double epMax = orbit_EM.getEPmaxx();
+                orbit_EM.setEPmaxx(9e-4);
+
+                //------------------------------------------------------------------------
+                //Integration on oPlot+1 fixed grid
+                //------------------------------------------------------------------------
+                nPlot = orbit_EM.traj_int_main(orbit_EM.getTf(), yorb_NCEM, torb_EM, oPlot, INT_PROJ_CHECK);
+
+                //------------------------------------------------------------------------
+                // Bacl to original value
+                //------------------------------------------------------------------------
+                orbit_EM.setEPmaxx(epMax);
+
+            }
+        }
         //--------------------------------------------------------------------------------
         // old implemenation, for refererence (equivalent to last line)
         //--------------------------------------------------------------------------------
@@ -3915,14 +3946,8 @@ bool ProjResClass::push_back_subselection(ProjResClass& projSt, RefSt& refSt)
         //--------------------------------------------------------------------------------
         int nearest = 0;
         double diff = 0; //abs(projSt.dHf_SEM[0] - dHf_vec[k]);
-
-
-        cout << "dHf_vec_closest = " << endl;
         for(int k = 0; k < nref; k++)
         {
-            cout << dHf_vec[k] << endl;
-
-
             //Find index of the value of projSt.dHf_SEM closest to dHf_vec[k]
             nearest = 0;
             diff    = fabs(projSt.dHf_SEM[0] - dHf_vec[k]);
@@ -3935,10 +3960,6 @@ bool ProjResClass::push_back_subselection(ProjResClass& projSt, RefSt& refSt)
                     diff    = fabs(projSt.dHf_SEM[p] - dHf_vec[k]);
                 }
             }
-
-            cout << "nearest = " << nearest << endl;
-            cout << projSt.dHf_SEM[nearest] << endl;
-
             //Push back in results
             this->push_back(projSt, nearest);
         }
@@ -4045,7 +4066,12 @@ int ProjResClass::readProjRes(string filename)
     int ncol[7] = {61, 82, 81, 56, 55, 39, 37};
     int ncol0   = numberOfColumns(filename, ncol, 7);
 
-    //cout << "Number of columns in " << filename << " is: " << ncol0 << endl;
+    int ncol0c = ncol0;
+    cout << "Number of columns in " << filename << " is: " << ncol0 << endl;
+    cout << "If you believe that the number of column is different from this value," << endl;
+    cout << "please enter a new value (-1 to keep the current value)" << endl;
+    cin >> ncol0c;
+    if(ncol0c > 0) ncol0 = ncol0c;
     //pressEnter(true);
 
     //====================================================================================
@@ -4150,7 +4176,7 @@ int ProjResClass::readProjRes(string filename)
             case 37:
             {
                 res = -1.0;
-                //38. Number of crossings of the x = -1 line (clock/counterclockwise)
+                //38. Number of crossings of the x = +-1 line (clock/counterclockwise)
                 this->crossings_NCSEM.push_back(res);
 
                 res = 0.0;
@@ -4170,7 +4196,7 @@ int ProjResClass::readProjRes(string filename)
             }
             case 39:
             {
-                //38. Number of crossings of the x = -1 line (clock/counterclockwise)
+                //38. Number of crossings of the x = +-1 line (clock/counterclockwise)
                 filestream.read((char*) &res, sizeof(double));
                 this->crossings_NCSEM.push_back(res);
 
@@ -4192,7 +4218,7 @@ int ProjResClass::readProjRes(string filename)
             case 55:
             case 56:
             {
-                //38. Number of crossings of the x = -1 line (clock/counterclockwise)
+                //38. Number of crossings of the x = +-1 line (clock/counterclockwise)
                 filestream.read((char*) &res, sizeof(double));
                 this->crossings_NCSEM.push_back(res);
 
@@ -4238,7 +4264,7 @@ int ProjResClass::readProjRes(string filename)
             }
             case 61:
             {
-                //38. Number of crossings of the x = -1 line (clock/counterclockwise)
+                //38. Number of crossings of the x = +-1 line (clock/counterclockwise)
                 filestream.read((char*) &res, sizeof(double));
                 this->crossings_NCSEM.push_back(res);
 
@@ -4293,7 +4319,7 @@ int ProjResClass::readProjRes(string filename)
 
             case 81:
             {
-                //38. Number of crossings of the x = -1 line (clock/counterclockwise)
+                //38. Number of crossings of the x = +-1 line (clock/counterclockwise)
                 filestream.read((char*) &res, sizeof(double));
                 this->crossings_NCSEM.push_back(res);
 
@@ -4371,7 +4397,7 @@ int ProjResClass::readProjRes(string filename)
 
             case 82:
             {
-                //38. Number of crossings of the x = -1 line (clock/counterclockwise)
+                //38. Number of crossings of the x = +-1 line (clock/counterclockwise)
                 filestream.read((char*) &res, sizeof(double));
                 this->crossings_NCSEM.push_back(res);
 

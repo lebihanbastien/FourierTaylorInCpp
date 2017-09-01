@@ -76,7 +76,17 @@ REFST_DIM=$REF_PLANAR          # Type of dimensions planar or 3d?
 REFST_T0_DES=0.00              # Initial time - given as %T, with T the SEM period   
 
 # Domain of search (min s1, max s1, min s2, max s2, min s3, max s3, min s4, max s4) for the first guess
-REFST_SI_CMU_EM_LIM=(-2.0 -1.75 0 0 0.5 1.0 0 0)
+
+# phd_fam1 (simple one)
+#REFST_SI_CMU_EM_LIM=(-0.2 0.2 0 0 2 2.3 0 0)
+# phd_fam2
+#REFST_SI_CMU_EM_LIM=(0.5 0.7 0 0 0.75 1.0 0 0)
+# phd_fam3
+#REFST_SI_CMU_EM_LIM=(-2.0 -1.75 0 0 0.5 1.0 0 0)
+# phd_fam4
+REFST_SI_CMU_EM_LIM=(-2.7 -2.4 0 0 0.9 1.5 0 0)
+
+
 # Or, if we want the user to define such domain:
 REFST_ISLIMUD=0
 
@@ -87,7 +97,7 @@ REFST_SI_SEED_EM_LIM=(-40 +40 0 0 -40 +40 0 0)
 REFST_PMAX_DIST_SEM=5e-3
 
 # Limits for the time of flight during transfers - not used if -1
-REFST_TOF_LIM=(-1 -1)
+REFST_TOF_LIM=(-1 4)
 
 # Values for crossings
 REFST_CROSSINGS=-1
@@ -120,12 +130,12 @@ REFST_ISSAVED=0     		 # do we save the results in data files?
 REFST_ISFROMSERVER=1		 # does the raw data comes from server files?
 
 # Maximum angle around SEMLi if REF_COND_T is used (in degrees)
-REFST_THETAMAX=180           # should be a multiple of 90°
+REFST_THETAMAX=90          # should be a multiple of 90°
 
 # Filenames (used only if IO_HANDLING==$IO_BASH)
 FILE_PCU="Serv/projcu_order_20_dest_L2_t0_0.bin"
-FILE_CONT="Serv/phd_cont_atf_order_20_dest_L2_t0_0_single.txt"
-FILE_CONT_RES="Serv/phd_cont_atf_traj_order_20_dest_L2_t0_0_single.bin"
+FILE_CONT="Serv/phd_cont_atf_order_20_dest_L2_t0_0_fam4_single.txt"
+FILE_CONT_RES="Serv/phd_cont_atf_traj_order_20_dest_L2_t0_0_fam4_single.bin"
 FILE_JPL="cont_jpl.bin"
 
 #-----------------------------------------------------

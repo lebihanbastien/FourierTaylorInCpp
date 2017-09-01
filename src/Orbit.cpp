@@ -34,7 +34,7 @@ Orbit::Orbit(Invman const *invman_, QBCP_L const *qbcp_l_, OdeStruct *odestruct_
     // during orbit integration) can be seen as a helper, in order to fasten the
     // numerical integration of the orbits with a minimum of numerical stability.
     //------------------------------------------------------------------------------------
-    ePmaxx = (fwrk == F_SEM)? 5e-3:1e-4;
+    ePmaxx = (fwrk == F_SEM)? 5e-3:2e-4;
 
     //------------------------------------------------------------------------------------
     // Initial, final and current state
@@ -185,6 +185,12 @@ const Invman* Orbit::getInvman() const
 {
     return invman;
 }
+
+const double Orbit::getEPmaxx() const
+{
+    return ePmaxx;
+}
+
 
 //========================================================================================
 // Setters

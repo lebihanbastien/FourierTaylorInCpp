@@ -71,12 +71,12 @@ IO_HANDLING=$IO_BASH
 #-----------------------------------------------------
 # Parameters that change often
 #-----------------------------------------------------
-REFST_TYPE=$REF_CONT             # Type of refinement - rk: set REF_CONT_D_HARD_CASE for difficult cases with REF_CONT_D (ex: EML2-SEMLi via SEML1...)
-REFST_DIM=$REF_PLANAR            # Type of dimensions planar or 3d?
-REFST_T0_DES=0.995               # Initial time - given as %T, with T the SEM period   
+REFST_TYPE=$REF_CONT       # Type of refinement - rk: set REF_CONT_D_HARD_CASE for difficult cases with REF_CONT_D (ex: EML2-SEMLi via SEML1...)
+REFST_DIM=$REF_PLANAR      # Type of dimensions planar or 3d?
+REFST_T0_DES=0.0           # Initial time - given as %T, with T the SEM period   
 
 # Domain of search (min s1, max s1, min s2, max s2, min s3, max s3, min s4, max s4) for the first guess
-REFST_SI_CMU_EM_LIM=(-35 35 0 0 -35 +35 0 0)
+REFST_SI_CMU_EM_LIM=(0 3 0 0 24 28 0 0)
 # Or, if we want the user to define such domain:
 REFST_ISLIMUD=0
 
@@ -126,7 +126,7 @@ REFST_ISFROMSERVER=0		 # does the raw data comes from server files?
 REFST_THETAMAX=90                # should be a multiple of 90°
 
 # Filenames (used only if IO_HANDLING==$IO_BASH)
-FILE_PCU="projcu_order_16_dest_L2_t0_0.995.bin"
+FILE_PCU="Serv/projcu_order_20_dest_L2_tspan_0T_025T_FINAL.bin"
 FILE_CONT="cont_atf.txt"
 FILE_CONT_RES="cont_atf_traj.bin"
 FILE_JPL="cont_jpl.bin"
@@ -135,8 +135,8 @@ FILE_JPL="cont_jpl.bin"
 # Parameters that are stable
 #-----------------------------------------------------
 REFST_ISDEBUG=0			 # if yes, additionnal tests are performed
-REFST_GRIDSIZE=20        	 # number of points on the refinement grid
-REFST_MPLOT=200        	         # number of points per plot between to pach points (e.g. total plot points is REFST_MPLOT*REFST_GRIDSIZE)
+REFST_GRIDSIZE=20        # number of points on the refinement grid
+REFST_MPLOT=200        	 # number of points per plot between to pach points (e.g. total plot points is REFST_MPLOT*REFST_GRIDSIZE)
 
 REFST_TIME=$REF_VAR_TN		 # type of constraints on the times in REF_CONT
 REFST_GRID=$REF_FIXED_GRID	 # type of grid

@@ -35,21 +35,20 @@ using namespace std;
 // Constants
 //========================================================================================
 // TYPE OF COMPUTATIONS
-#define COMP_CM_EML2_TO_CM_SEML           0    //EMLi Center Manifold to SEMLi Center Manifold
-#define COMP_CM_EML2_TO_CMS_SEML          1    //EMLi Center Manifold to SEMLi Center-Stable Manifold
+#define COMP_CM_EML_TO_CM_SEML            0    //EMLi Center Manifold to SEMLi Center Manifold
+#define COMP_CM_EML_TO_CMS_SEML           1    //EMLi Center Manifold to SEMLi Center-Stable Manifold
 #define COMP_SINGLE_ORBIT                 2    //just some example of solutions
-#define COMP_CM_EML2_TO_CMS_SEML_READ     3    //Read
+#define COMP_CM_EML_TO_CMS_SEML_READ      3    //Read
 #define COMP_VF_TEST                      4    //Test of the QBCP vector field. Should probably be put in OOFTDA
-#define COMP_CM_EML2_TO_CM_SEML_REFINE    5    //EML2 Center Manifold to SEMLi Center Manifold
+#define COMP_CM_EML_TO_CM_SEML_REFINE     5    //EML2 Center Manifold to SEMLi Center Manifold
 #define COMP_EPHEMERIDES_TEST             6    //Ephemerides test
-#define COMP_CM_EML2_TO_CM_SEML_3D        7    //EML2 Center Manifold to SEMLi Center Manifold in 3D
+#define COMP_CM_EML_TO_CM_SEML_3D         7    //EML2 Center Manifold to SEMLi Center Manifold in 3D
 #define COMP_VOFTS_TO_VOFTS               8    //Store CS/CU into one-dimensionnal series to gain memory
 #define COMP_test_INVMAN                  9    //Test of the new invariant manifold implementation
 #define COMP_REF_JPL                      10   //Refine to JPL ephemerides
-#define COMP_CM_EML2_TO_CM_SEML_H         11   //Planar EMLi Center Manifold to SEMLi Center Manifold, at a given energy
-#define COMP_ORBIT_EML2_TO_CM_SEML        12   //EMLi Center Manifold to SEMLi Center Manifold, on a given set of orbits
-#define COMP_SINGLE_ORBIT_EML2_TO_CM_SEML 13   //EMLi Center Manifold to SEMLi Center Manifold, on a single orbit
-
+#define COMP_CM_EML_TO_CM_SEML_H          11   //Planar EMLi Center Manifold to SEMLi Center Manifold, at a given energy
+#define COMP_ORBIT_EML_TO_CM_SEML         12   //EMLi Center Manifold to SEMLi Center Manifold, on a given set of orbits
+#define COMP_SINGLE_ORBIT_EML_TO_CM_SEML  13   //EMLi Center Manifold to SEMLi Center Manifold, on a single orbit
 #define COMP_CMU_SEML_TO_CM_EML           14   //SEMLi Center-Unstable Manifold to EMLj Center Manifold
 #define COMP_CMU_SEML_TO_CMS_EML          15   //SEMLi Center-Unstable Manifold to EMLj Center-Stable Manifold
 
@@ -225,12 +224,12 @@ int main(int argc, char** argv)
         //================================================================================
         // Projection CMU EML2 to CM SEMLi
         //================================================================================
-    case COMP_CM_EML2_TO_CM_SEML:
-    case COMP_CM_EML2_TO_CM_SEML_3D:
-    case COMP_CM_EML2_TO_CM_SEML_REFINE:
-    case COMP_CM_EML2_TO_CM_SEML_H:
-    case COMP_ORBIT_EML2_TO_CM_SEML:
-    case COMP_SINGLE_ORBIT_EML2_TO_CM_SEML:
+    case COMP_CM_EML_TO_CM_SEML:
+    case COMP_CM_EML_TO_CM_SEML_3D:
+    case COMP_CM_EML_TO_CM_SEML_REFINE:
+    case COMP_CM_EML_TO_CM_SEML_H:
+    case COMP_ORBIT_EML_TO_CM_SEML:
+    case COMP_SINGLE_ORBIT_EML_TO_CM_SEML:
         model     = MODEL_TYPE;
         fwrk      = F_EM;
         isNorm    = 1;
@@ -259,8 +258,8 @@ int main(int argc, char** argv)
         //================================================================================
         // Refinement CMU EML2 to CMS SEMLi
         //================================================================================
-    case COMP_CM_EML2_TO_CMS_SEML:
-    case COMP_CM_EML2_TO_CMS_SEML_READ:
+    case COMP_CM_EML_TO_CMS_SEML:
+    case COMP_CM_EML_TO_CMS_SEML_READ:
     case COMP_REF_JPL:
         model     = MODEL_TYPE;
         fwrk      = F_EM;
@@ -519,9 +518,9 @@ int main(int argc, char** argv)
         refSt.sidim         = 0;                        // 0 or 2 - component of s0 that stays constant when t0 is free
 
         // Sampling frequencies in REF_COMP (complete trajectory) in days
-        refSt.sf_eml2  = 2;                             // orbit at EML2
+        refSt.sf_emli  = 2;                             // orbit at EMLi
         refSt.sf_man   = 5;                             // transfer leg
-        refSt.sf_seml2 = 10;                            // orbit at SEML2
+        refSt.sf_semli = 10;                            // orbit at SEMLi
 
         // Integration window for each orbit
         refSt.tspan_EM      = +10*SEML.us_em.T;
@@ -567,12 +566,12 @@ int main(int argc, char** argv)
             //============================================================================
             // 3D Projection CMU EML2 to CM SEMLi
             //============================================================================
-        case COMP_CM_EML2_TO_CM_SEML_3D:
-        case COMP_CM_EML2_TO_CM_SEML:
+        case COMP_CM_EML_TO_CM_SEML_3D:
+        case COMP_CM_EML_TO_CM_SEML:
         case COMP_CMU_SEML_TO_CM_EML:
-        case COMP_CM_EML2_TO_CM_SEML_H:
-        case COMP_ORBIT_EML2_TO_CM_SEML:
-        case COMP_SINGLE_ORBIT_EML2_TO_CM_SEML:
+        case COMP_CM_EML_TO_CM_SEML_H:
+        case COMP_ORBIT_EML_TO_CM_SEML:
+        case COMP_SINGLE_ORBIT_EML_TO_CM_SEML:
         {
             //----------------------------------------------------------------------------
             //Time grid: min, max and number of points on the grid
@@ -644,7 +643,7 @@ int main(int argc, char** argv)
         //================================================================================
         // Refinement CMU EML2 to CMS SEMLi
         //================================================================================
-        case COMP_CM_EML2_TO_CMS_SEML:
+        case COMP_CM_EML_TO_CMS_SEML:
         case COMP_CMU_SEML_TO_CMS_EML:
         case COMP_REF_JPL:
         {
@@ -728,7 +727,7 @@ int main(int argc, char** argv)
             //----------------------------------------------------------------------------
             refSt.isDebug       = atoi(argv[index++]);  // if yes, additionnal tests are performed
             refSt.gridSize      = atoi(argv[index++]);  // number of points on the refinement grid. 20 is taken by heuristics.
-            refSt.mPlot         = atoi(argv[index++]);  // number of points per plot between to pach points (e.g. total plot points is gridSize*mplot)
+            refSt.mPlot         = atoi(argv[index++]);  // number of points per plot between to pach points (e.g. total plot points is gridSize*mplot) - DEPRECATED
             refSt.fHours        = atoi(argv[index++]);  // plotting frequency (in hours)
 
             refSt.time          = atoi(argv[index++]);  // type of constraints on the times in REF_CONT
@@ -751,9 +750,9 @@ int main(int argc, char** argv)
             refSt.sidim         = atoi(argv[index++]);  // 0 or 2 - component of s0 that stays constant when t0 is free
 
             // Sampling frequencies in REF_COMP (complete trajectory) in days
-            refSt.sf_eml2  = atof(argv[index++]);       // orbit at EML2
+            refSt.sf_emli  = atof(argv[index++]);       // orbit at EML2
             refSt.sf_man   = atof(argv[index++]);       // transfer leg
-            refSt.sf_seml2 = atof(argv[index++]);       // orbit at SEML2
+            refSt.sf_semli = atof(argv[index++]);       // orbit at SEML2
 
             // Integration window for each orbit
             refSt.tspan_EM      = atof(argv[index++])*SEML.us_em.T;
@@ -782,7 +781,7 @@ int main(int argc, char** argv)
             refSt.FILE_TRAJ_FROM_W  = argv[index++];
             refSt.FILE_TRAJ_FROM_C  = argv[index++];
             refSt.FILE_JPL_BIN      = argv[index++];
-            refSt.FILE_JPL_TXT      = "cont_jpl_temp.txt";
+            refSt.FILE_JPL_TXT      = argv[index++]; //"cont_jpl_temp.txt";
             refSt.FILE_FOR_CELESTIA = "traj_for_celestia";
             break;
         }
@@ -791,9 +790,9 @@ int main(int argc, char** argv)
         //================================================================================
         // Refinement of the whole trajectory CMU EML2 to CM SEMLi
         //================================================================================
-        case COMP_CM_EML2_TO_CM_SEML_REFINE:
+        case COMP_CM_EML_TO_CM_SEML_REFINE:
         case COMP_EPHEMERIDES_TEST:
-        case COMP_CM_EML2_TO_CMS_SEML_READ:
+        case COMP_CM_EML_TO_CMS_SEML_READ:
         case COMP_SINGLE_ORBIT:
         case COMP_VF_TEST:
         case COMP_test_INVMAN:
@@ -813,9 +812,9 @@ int main(int argc, char** argv)
     switch(COMP_TYPE)
     {
         //================================================================================
-        // 3D Projection CMU EML2 to CM SEMLi
+        // 3D Projection CMU EMLi to CM SEMLj
         //================================================================================
-    case COMP_CM_EML2_TO_CM_SEML_3D:
+    case COMP_CM_EML_TO_CM_SEML_3D:
     {
         //--------------------------------------------------------------------------------
         // Compute initial conditions in CMU EML2 on a given grid
@@ -857,9 +856,9 @@ int main(int argc, char** argv)
     }
 
         //================================================================================
-        // Projection CMU EML2 to CM SEMLi
+        // Projection CMU EMLi to CM SEMLj
         //================================================================================
-    case COMP_CM_EML2_TO_CM_SEML:
+    case COMP_CM_EML_TO_CM_SEML:
     {
         //--------------------------------------------------------------------------------
         // Compute initial conditions in CMU EML2 on a given grid
@@ -879,9 +878,9 @@ int main(int argc, char** argv)
     }
 
         //================================================================================
-        // Projection CMU EML2 to CM SEMLi, on a given set of orbits
+        // Projection CMU EMLi to CM SEMLj, on a given set of orbits
         //================================================================================
-    case COMP_ORBIT_EML2_TO_CM_SEML:
+    case COMP_ORBIT_EML_TO_CM_SEML:
     {
         tic();
         int_proj_ORBIT_EM_on_CM_SEM(projSt, 1);
@@ -890,9 +889,9 @@ int main(int argc, char** argv)
     }
 
         //================================================================================
-        // Projection CMU EML2 to CM SEMLi, on a given orbit
+        // Projection CMU EMLi to CM SEMLj, on a given orbit
         //================================================================================
-    case COMP_SINGLE_ORBIT_EML2_TO_CM_SEML:
+    case COMP_SINGLE_ORBIT_EML_TO_CM_SEML:
     {
         tic();
         int_proj_SINGLE_ORBIT_EM_on_CM_SEM(projSt, 1);
@@ -901,9 +900,9 @@ int main(int argc, char** argv)
     }
 
         //================================================================================
-        // Projection CMU EML2 to CM SEMLi, at a fixed energy
+        // Projection CMU EMLi to CM SEMLj, at a fixed energy
         //================================================================================
-    case COMP_CM_EML2_TO_CM_SEML_H:
+    case COMP_CM_EML_TO_CM_SEML_H:
     {
         //--------------------------------------------------------------------------------
         // Compute initial conditions in CMU EML2 on a given grid
@@ -922,9 +921,9 @@ int main(int argc, char** argv)
         break;
     }
         //================================================================================
-        // Refinement CMU EML2 to CMS SEMLi
+        // Refinement CMU EMLo to CMS SEMLj
         //================================================================================
-    case COMP_CM_EML2_TO_CMS_SEML:
+    case COMP_CM_EML_TO_CMS_SEML:
     {
         //--------------------------------------------------------------------------------
         // Complete routine: new version
@@ -1020,7 +1019,7 @@ int main(int argc, char** argv)
         //================================================================================
         // READ CMU EML2 to CMS SEMLi
         //================================================================================
-    case COMP_CM_EML2_TO_CMS_SEML_READ:
+    case COMP_CM_EML_TO_CMS_SEML_READ:
     {
         //Filename;
         string filename = get_filenameCUM(IO_DEFAULT, SEML.cs->F_PLOT, "", OFTS_ORDER, TYPE_MAN_PROJ, SEML.li_SEM, -1, -1, ios::in);
@@ -1067,10 +1066,10 @@ int main(int argc, char** argv)
                 switch(LI_EM)
                 {
                 case 1:
-                    st0[0] = 0.0;//-0.145454545454546;
-                    st0[1] = 0.5;//0.194601266014795;
-                    st0[2] = 0.0;//-1.309090909090909;
-                    st0[3] = 0.0;//0.194601266014795;
+                    st0[0] = 1.5;//-0.145454545454546;
+                    st0[1] = 0.6;//0.194601266014795;
+                    st0[2] = -1.5;//-1.309090909090909;
+                    st0[3] = 0.6;//0.194601266014795;
                     if(reduced_nv == 5) st0[4] = 0.0;
                     break;
                 case 2:
@@ -1110,11 +1109,11 @@ int main(int argc, char** argv)
                     //                    st0[2] = 32.4545454545455;
                     //                    st0[3] = 3.48331278366297;
 
-                    double ss = 7;
-                    st0[0] = ss*4.47049575300673;
-                    st0[1] = ss;
-                    st0[2] = ss*4.47049575300673;
-                    st0[3] = ss;
+                    //double ss = 5;
+                    st0[0] = 0;
+                    st0[1] = 12;
+                    st0[2] = -0;
+                    st0[3] = 12;
 
 
                     //--------------------------------------------------------------------
@@ -1135,7 +1134,7 @@ int main(int argc, char** argv)
 
 
                     //--------------------------------------------------------------------
-                    // Lissajous:
+                    // Lyapunov:
                     //
                     // OFTS_ORDER = 20
                     // Computed with:
@@ -1212,7 +1211,7 @@ int main(int argc, char** argv)
         int isFlagOn = 1;
         int isPlot   = 1;
         double t0    = 0;//0.96*SEML.us->T;
-        double  N    = 20;
+        double  N    = 10;
         double tfreq = 5e-3*SEML.us->T;//1e-2*SEML.us->T;
 
 

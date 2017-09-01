@@ -59,6 +59,7 @@ ISPAR=1
 # NOHUP condition
 #-----------------------------------------------------
 ISNOHUP=1
+OUT="cm_orbit.out"
 
 #-----------------------------------------------------
 # Position of the poincaré section in NCEM coordinates
