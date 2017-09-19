@@ -112,7 +112,7 @@ fi
 #-----------------------------------------------------
 # Parameters that are stable
 #-----------------------------------------------------
-TM=12 	      # Maximum integration time (given as %T, with T the SEM period)
+TM=8 	      # Maximum integration time (given as %T, with T the SEM period)
 MSIZE=500     # Number of points on each trajectory
 NSMIN=20      # Number of sorted solutions
 YNMAX=0.6     # The maximum norm (in SEM normalized units) for a projection to occur on the CM_NC of SEMLi

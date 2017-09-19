@@ -105,6 +105,64 @@ string get_filename_dialog(string filename_default);
 string get_filenameCUM(int IO_HANDLING, string plot_folder, string filename_bash,
                        int ofts_order, int type, int target, double t0, double dH, int mode);
 
+/**
+ * \brief Structure to store average amplitude results.
+ **/
+typedef struct AvgSt AvgSt;
+struct AvgSt
+{
+    //Indices
+    int eml_index;
+    int seml_index;
+    int eml_fperiod_index;
+    int seml_lperiod_index;
+    int eml_nindices;
+    int seml_nindices;
+
+    //Constants
+    double eml_kappa;
+    double eml_omegav;
+    double eml_gamma;
+    double seml_kappa;
+    double seml_omegav;
+    double seml_gamma;
+
+    //For the EML orbit
+    double Ax_EM_mean;   //mean of Ax = mean(sqrt(x_NCEM^2 + y_NCEM^2/kappa))*gamma
+    double Az_EM_mean;   //mean of Az = mean(sqrt(z_NCEM^2 + zdot_NCEM^2/omegav_CRTBP))*gamma
+    double Az_EM_lsf;    //Least Square Fitting to find (Az, omega) that matches of z_NCEM^2 + zdot_NCEM^2/omega = Az^2/gamma^2
+    double Omega_EM_lsf; //The corresponding frequency
+
+    //For the SEML orbit
+    double Ax_SEM_mean;   //mean of Ax = mean(sqrt(x_NCSEM^2 + y_NCSEM^2/kappa))*gamma
+    double Az_SEM_mean;   //mean of Az = mean(sqrt(z_NCSEM^2 + zdot_NCSEM^2/omegav_CRTBP))*gamma
+    double Az_SEM_lsf;    //Least Square Fitting to find (Az, omega) that matches of z_NCSEM^2 + zdot_NCSEM^2/omega = Az^2/gamma^2
+    double Omega_SEM_lsf; //The corresponding frequency
+
+    AvgSt():eml_index(0), seml_index(0), eml_fperiod_index(0),
+    seml_lperiod_index(0), eml_nindices(0), seml_nindices(0){};
+
+
+    void copy(AvgSt &avgSt_dest)
+    {
+        avgSt_dest.eml_index = eml_index;
+        avgSt_dest.seml_index = seml_index;
+
+        avgSt_dest.eml_fperiod_index = eml_fperiod_index;
+        avgSt_dest.seml_lperiod_index = seml_lperiod_index;
+
+        avgSt_dest.eml_nindices = eml_nindices;
+        avgSt_dest.seml_nindices = seml_nindices;
+
+        avgSt_dest.eml_kappa  = eml_kappa;
+        avgSt_dest.eml_omegav = eml_omegav;
+        avgSt_dest.eml_gamma  = eml_gamma;
+
+        avgSt_dest.seml_kappa  = seml_kappa;
+        avgSt_dest.seml_omegav = seml_omegav;
+        avgSt_dest.seml_gamma  = seml_gamma;
+    }
+};
 
 //========================================================================================
 // RefSt structure
@@ -135,7 +193,7 @@ struct RefSt
     int    OFTS_ORDER, LI_EM, LI_SEM, LI_START, LI_TARGET;
     int    IO_HANDLING;
     string plot_folder;
-    string FILE_PCU, FILE_CONT, FILE_CONT_RES, FILE_TRAJ_FROM_W, FILE_TRAJ_FROM_C, FILE_JPL_TXT, FILE_JPL_BIN, FILE_FOR_CELESTIA;
+    string FILE_PCU, FILE_CONT, FILE_CONT_RES, FILE_TRAJ_FROM_W, FILE_TRAJ_FROM_C, FILE_JPL_TXT, FILE_JPL_BIN, FILE_MEAN_AMP, FILE_FOR_CELESTIA;
 
     //------------------------------------------------------------------------------------
     // Parameters that change often
@@ -198,8 +256,8 @@ struct RefSt
     //------------------------------------------------------------------------------------
     int isDebug;          //if yes, additionnal tests are performed
     int gridSize;         //number of points on the refinement grid
-    int mPlot;          //number of points per plot between to pach points (e.g. total plot points is gridSize*mplot)
-    int fHours;         // desired frequency of plotting (in hours)
+    int mPlot;            //number of points per plot between to pach points (e.g. total plot points is gridSize*mplot)
+    float fHours;         // desired frequency of plotting (in hours)
 
     int time;             //type of constraints on the times in REF_CONT
     int grid;             //type of grid
@@ -270,6 +328,8 @@ struct RefSt
     double dH;               //energy value at the origin
     int pkpos;               //index of the patch point that bear the poincaré section
 
+    double dHf_SEM_MAX;
+
     //------------------------------------------------------------------------------------
     //Constructor
     //------------------------------------------------------------------------------------
@@ -280,7 +340,7 @@ struct RefSt
           LI_START(LI_START_), LI_TARGET(LI_TARGET_), IO_HANDLING(IO_HANDLING_),
           plot_folder(cs->F_PLOT),
           isCollisionOn(1), pmax_dist_SEM(1e5), last_error(0.0),
-          inner_prec(5e-8), inner_prec_vt(5e-8), inner_prec_ft(5e-8), nref(-1)
+          inner_prec(5e-8), inner_prec_vt(5e-8), inner_prec_ft(5e-8), nref(-1), dHf_SEM_MAX(1.4e-4)
     {
         for(int i = 0; i <4; i++) si_SEED_EM_MIN[i] = -50;
         for(int i = 0; i <4; i++) si_SEED_EM_MAX[i] = +50;
@@ -899,6 +959,16 @@ int write_wref_res_bin(RefSt& refSt, string filename_res, double** y_traj_n,
                        int comp_orb_seml,
                        ProjResClass& projRes, int k);
 
+
+/**
+ *   \brief Storing the results of the W + QBCP + JPL with average amplitudes, in txt file
+ **/
+void write_jplref_conn_txt(string filename,
+                           Orbit& orbit_EM, Orbit& orbit_SEM,
+                           AvgSt &avgSt_QBCP, AvgSt &avgSt_JPL,
+                           double te_NCEM,
+                           ProjResClass& projRes,
+                           int isFirst,  int index);
 
 
 #endif // SINGLE_ORBIT_IO_H_INCLUDED

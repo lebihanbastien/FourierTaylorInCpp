@@ -39,7 +39,7 @@ OFS_ORDER=30
 if [ $SERVER == 1 ]; then
 	OFTS_ORDER=20
 else
-	OFTS_ORDER=16
+	OFTS_ORDER=20
 fi
 
 #-----------------------------------------------------
@@ -83,14 +83,14 @@ IO_HANDLING=$IO_BASH
 # Time grid: min, max and number of points on the grid
 TMIN=0.0    # (given as %T, with T the SEM period)
 TMAX=1.0    # (given as %T, with T the SEM period)
-TSIZE=200	  
+TSIZE=50	  
 
 # Configuration (s1, s2, s3, s4) grid
-GLIM_S1=(+30 +10)
-GLIM_S2=(+5 +0)
-GLIM_S3=(-30 -10)
-GLIM_S4=(+5 +0)
-GSIZE_SI=(+0 +0 +10 +0)
+GLIM_S1=(+10 +10)
+GLIM_S2=(+0 +0)
+GLIM_S3=(-10 -10)
+GLIM_S4=(+0 +0)
+GSIZE_SI=(+0 +0 +0 +0)
 
 # Values for QHalo orbit (small one)
 # GLIM_S1=(+28 +30)
@@ -133,13 +133,13 @@ if [ $SERVER == 1 ]; then
 	FILE_PCU="projcu_order_20_dest_L2_Orbit_Liss_s1_30_s2_5.bin"
 else
 	FILE_CU="cu_orbit.bin"
-	FILE_PCU="Serv/projcu_order_20_dest_L2_Orbit_10_All.bin"
+	FILE_PCU="Serv/projcu_order_20_dest_L2_Orbit_10_5T.bin"
 fi
 
 #-----------------------------------------------------
 # Parameters that are stable
 #-----------------------------------------------------
-TM=12 	      # Maximum integration time (given as %T, with T the SEM period)
+TM=8 	      # Maximum integration time (given as %T, with T the SEM period)
 MSIZE=500     # Number of points on each trajectory
 NSMIN=20      # Number of sorted solutions
 YNMAX=0.6     # The maximum norm (in SEM normalized units) for a projection to occur on the CM_NC of SEMLi

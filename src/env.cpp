@@ -1098,10 +1098,25 @@ void init_CSYS(CSYS* csys, QBCP_L* qbcp_l, QBCP* qbcp, int fwrk, int li, int coe
     }
     }
 
-    //------------------------------
+    //------------------------------------------------------------------------------------
     //c2 coefficient
-    //------------------------------
+    //------------------------------------------------------------------------------------
     csys->c2 = cn(csys->li, csys->gamma, csys->mu, 2);
+
+    //------------------------------------------------------------------------------------
+    //omegap, omegav, kappa coefficients
+    //------------------------------------------------------------------------------------
+    csys->omegap = sqrt(0.5*(2 -csys->c2 + sqrt(9*csys->c2*csys->c2 - 8*csys->c2)));
+    csys->omegav = sqrt(csys->c2);
+    csys->kappa  = (csys->omegap*csys->omegap + 1 + 2*csys->c2)/(2*csys->omegap);
+
+    //    cout << "csys->cr3bp.m1.name = " << csys->cr3bp.m1.name << endl;
+    //    cout << "csys->cr3bp.m2.name = " << csys->cr3bp.m2.name << endl;
+    //    cout << "csys->li = " << csys->li << endl;
+    //    cout << "omegap   = " << csys->omegap << endl;
+    //    cout << "omegav   = " << csys->omegav << endl;
+    //    cout << "==================" << endl;
+
 
     //------------------------------
     //3BSOI: equal to 159198 km (cf Parker 2007 & 2013)

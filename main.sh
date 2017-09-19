@@ -259,7 +259,7 @@ if [ -z ${TMIN+x} ]; then
 	#-----------------------------------------------------
 	# Parameters that are stable
 	#-----------------------------------------------------
-	TM=12 	      # Maximum integration time (given as %T, with T the SEM period)
+	TM=8 	      # Maximum integration time (given as %T, with T the SEM period)
 	MSIZE=500     # Number of points on each trajectory
 	NSMIN=20      # Number of sorted solutions
 	YNMAX=0.6     # The maximum norm (in SEM normalized units) for a projection to occur on the CM_NC of SEMLi
@@ -417,9 +417,9 @@ if [ -z ${REFST_TYPE+x} ]; then
 	# Parameters that are stable
 	#-----------------------------------------------------
 	REFST_ISDEBUG=0			 # if yes, additionnal tests are performed
-	REFST_GRIDSIZE=20        	 # number of points on the refinement grid
-	REFST_MPLOT=200        	         # number of points per plot between to pach points (e.g. total plot points is REFST_MPLOT*REFST_GRIDSIZE)
-	REFST_FPLOT=5                    # frequency of plotting in hours
+	REFST_GRIDSIZE=20        # number of points on the refinement grid
+	REFST_MPLOT=200        	 # number of points per plot between to pach points (e.g. total plot points is REFST_MPLOT*REFST_GRIDSIZE)
+	REFST_FPLOT=5            # frequency of plotting in hours
 	
 	REFST_TIME=$REF_VAR_TN		 # type of constraints on the times in REF_CONT
 	REFST_GRID=$REF_FIXED_GRID	 # type of grid
@@ -463,8 +463,8 @@ if [ -z ${REFST_TYPE+x} ]; then
 	FILE_TRAJ_FROM_W="traj_from_w.bin"
 	FILE_TRAJ_FROM_C="traj_from_c.bin"
 	FILE_JPL="cont_jpl.bin"
+	FILE_MEAN_AMP="mean_amp.txt"
 	FILE_JPL_TEMP="cont_jpl_temp.txt"
-	
 else
 	#-----------------------------------------------------
 	# Display current set of parameters
@@ -722,6 +722,10 @@ else
 		set_param "FILE_JPL" "cont_jpl.bin"
 	fi
 	
+	if [ -z ${FILE_MEAN_AMP+x} ]; then
+		set_param "FILE_MEAN_AMP" "mean_amp.txt"
+	fi
+	
 	if [ -z ${FILE_JPL_TEMP+x} ]; then
 		set_param "FILE_JPL_TEMP" "cont_jpl_temp.txt"
 	fi
@@ -732,6 +736,7 @@ else
 	echo "FILE_TRAJ_FROM_W      =" $FILE_TRAJ_FROM_W
 	echo "FILE_TRAJ_FROM_C      =" $FILE_TRAJ_FROM_C
 	echo "FILE_JPL              =" $FILE_JPL
+	echo "FILE_MEAN_AMP         =" $FILE_MEAN_AMP
 	echo "FILE_JPL_TEMP         =" $FILE_JPL_TEMP
 	echo ''
 fi
@@ -782,7 +787,7 @@ if [ "$ans" == "y" ]; then
 			COEFFS=(${COEFFS[*]}  $REFST_COMP_ORB_EM $REFST_COMP_ORB_SEM)
 			COEFFS=(${COEFFS[*]}  $REFST_TYPE_OF_T_SEL $REFST_NREF)
 			
-			COEFFS=(${COEFFS[*]}   $FILE_PCU $FILE_CONT $FILE_CONT_RES $FILE_TRAJ_FROM_W $FILE_TRAJ_FROM_C $FILE_JPL $FILE_JPL_TEMP)
+			COEFFS=(${COEFFS[*]}   $FILE_PCU $FILE_CONT $FILE_CONT_RES $FILE_TRAJ_FROM_W $FILE_TRAJ_FROM_C $FILE_JPL $FILE_MEAN_AMP $FILE_JPL_TEMP)
 		;;
 		$COMP_SINGLE_ORBIT)              
 

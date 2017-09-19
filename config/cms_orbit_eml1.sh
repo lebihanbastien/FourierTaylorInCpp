@@ -37,7 +37,7 @@ OFS_ORDER=30
 if [ $SERVER == 1 ]; then
 	OFTS_ORDER=20
 else
-	OFTS_ORDER=16
+	OFTS_ORDER=20
 fi
 
 
@@ -60,7 +60,7 @@ ISPAR=0
 if [ $SERVER == 1 ]; then
 	ISNOHUP=0
 else
-	ISNOHUP=0
+	ISNOHUP=1
 fi
 
 
@@ -96,7 +96,7 @@ REFST_ISLIMUD=0
 REFST_SI_SEED_EM_LIM=(-80 +80 -80 +80 -80 +80 -80 +80)
 
 # Maximum projection distance allowed during subselection
-REFST_PMAX_DIST_SEM=1e-3
+REFST_PMAX_DIST_SEM=2e-3
 
 # Limits for the time of flight during transfers - not used if -1
 REFST_TOF_LIM=(-1 -1)
@@ -143,22 +143,14 @@ if [ $SERVER == 1 ]; then
 	FILE_TRAJ_FROM_C="traj_from_c_order_20_dest_L2_Liss_s1_10_s2_5_DIST_SEM_5e-4_TSPAN_SEM_20.bin" 
 	FILE_JPL="cont_jpl_order_20_dest_L2_Liss_s1_10_s2_5_DIST_SEM_5e-4_TSPAN_SEM_20.bin"
 	FILE_JPL_TEMP="cont_jpl_temp_s1_20_s2_10.txt"
-else
-	# FILE_PCU="projcu_order_16_dest_L2_Orbit_s1_15_All_TM_5.bin"
-	# FILE_CONT="cont_atf_order_16_dest_L2_Planar_s1_15_DIST_SEM_1e-3_TSPAN_SEM_20.txt"
-	# FILE_CONT_RES="cont_atf_traj_order_16_dest_L2_Planar_s1_15_DIST_SEM_1e-3_TSPAN_SEM_20.bin"
-	# FILE_TRAJ_FROM_W="traj_from_w_order_16_dest_L2_Planar_s1_15_DIST_SEM_1e-3_TSPAN_SEM_20.bin"
-	# FILE_TRAJ_FROM_C="traj_from_c_order_16_dest_L2_Planar_s1_15_DIST_SEM_1e-3_TSPAN_SEM_20.bin" 
-	# FILE_JPL="cont_jpl_order_16_dest_L2_Planar_s1_15_DIST_SEM_1e-3_TSPAN_SEM_20.bin"
-	# FILE_JPL_TEMP="cont_jpl_temp_Planar_s1_15.txt"
-	
-	FILE_PCU="projcu_order_16_dest_L2_Orbit_s1_15_s2_6_All_TM_5.bin"
-	FILE_CONT="cont_atf_order_16_dest_L2_Liss_s1_15_s2_6_DIST_SEM_1e-3_TSPAN_SEM_20_more.txt"
-	FILE_CONT_RES="cont_atf_traj_order_16_dest_L2_Liss_s1_15_s2_6_DIST_SEM_1e-3_TSPAN_SEM_20_more.bin"
-	FILE_TRAJ_FROM_W="traj_from_w_order_16_dest_L2_Liss_s1_15_s2_6_DIST_SEM_1e-3_TSPAN_SEM_20_more.bin"
-	FILE_TRAJ_FROM_C="traj_from_c_order_16_dest_L2_Liss_s1_15_s2_6_DIST_SEM_1e-3_TSPAN_SEM_20_more.bin" 
-	FILE_JPL="cont_jpl_order_16_dest_L2_Liss_s1_15_s2_6_DIST_SEM_1e-3_TSPAN_SEM_20_more.bin"
-	FILE_JPL_TEMP="cont_jpl_temp_Liss_s1_15_s2_6.txt"
+else	
+	FILE_PCU="Serv/projcu_order_20_dest_L2_Orbit_s1_15_s2_6_All_TM_8.bin"
+	FILE_CONT="Serv/cont_atf_order_20_dest_L2_Liss_s1_15_s2_6_DIST_SEM_2e-3_TSPAN_SEM_20.txt"
+	FILE_CONT_RES="Serv/cont_atf_traj_order_20_dest_L2_Liss_s1_15_s2_6_DIST_SEM_2e-3_TSPAN_SEM_20.bin"
+	FILE_TRAJ_FROM_W="Serv/traj_from_w_order_20_dest_L2_Liss_s1_15_s2_6_DIST_SEM_2e-3_TSPAN_SEM_20.bin"
+	FILE_TRAJ_FROM_C="Serv/traj_from_c_order_20_dest_L2_Liss_s1_15_s2_6_DIST_SEM_2e-3_TSPAN_SEM_20.bin" 
+	FILE_JPL="Serv/cont_jpl_order_20_dest_L2_Liss_s1_15_s2_6_DIST_SEM_2e-3_TSPAN_SEM_20.bin"
+	FILE_JPL_TEMP="Serv/cont_jpl_temp_Liss_s1_15_s2_6.txt"
 fi
 
 # Desired number of solutions. if -1, all found solutions are refined

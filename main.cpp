@@ -288,7 +288,7 @@ int main(int argc, char** argv)
         //================================================================================
     case COMP_SINGLE_ORBIT:
         model     = MODEL_TYPE;
-        fwrk      = F_EM;
+        fwrk      = F_SEM;
         isNorm    = 1;
         pms_EM    = PMS_GRAPH;
         pms_SEM   = PMS_GRAPH;
@@ -426,41 +426,41 @@ int main(int argc, char** argv)
         //with REF_CONT_D (ex: EML2-SEMLi via SEML1...)
         refSt.type          = REF_ORBIT;                       // Type of refinement
         refSt.dim           = REF_PLANAR;                      // Type of dimensions planar or 3d?
-        refSt.t0xT_des      = 0.0;                            // Initial time (xT)
-        refSt.t0_des        = refSt.t0xT_des*SEML.us->T;     // Initial time
+        refSt.t0xT_des      = 0.0;                             // Initial time (xT)
+        refSt.t0_des        = refSt.t0xT_des*SEML.us->T;       // Initial time
 
         // Direction of the continuation procedure
         refSt.isDirUD       = 0;                  // is it user defined?
         refSt.Dir           = +1;                 // if not, +1 or -1
 
         // Domain of search for the first guess
-        refSt.si_CMU_EM_MIN[0] = -40;
-        refSt.si_CMU_EM_MAX[0] = +40;
+        refSt.si_CMU_EM_MIN[0] = -100;
+        refSt.si_CMU_EM_MAX[0] = +100;
 
-        refSt.si_CMU_EM_MIN[1] = +0;
-        refSt.si_CMU_EM_MAX[1] = +0;
+        refSt.si_CMU_EM_MIN[1] = -100;
+        refSt.si_CMU_EM_MAX[1] = +100;
 
-        refSt.si_CMU_EM_MIN[2] = -40;
-        refSt.si_CMU_EM_MAX[2] = +40;
+        refSt.si_CMU_EM_MIN[2] = -100;
+        refSt.si_CMU_EM_MAX[2] = +100;
 
-        refSt.si_CMU_EM_MIN[3] = +4;
-        refSt.si_CMU_EM_MAX[3] = +4;
+        refSt.si_CMU_EM_MIN[3] = -100;
+        refSt.si_CMU_EM_MAX[3] = +100;
 
         // Or, if we want the user to define such domain:
         refSt.isLimUD       =  0;
 
         // Domain of search for the seed of the first guess
-        refSt.si_SEED_EM_MIN[0] = 10;
-        refSt.si_SEED_EM_MAX[0] = 10;
+        refSt.si_SEED_EM_MIN[0] = -1e5;
+        refSt.si_SEED_EM_MAX[0] = +1e5;
 
-        refSt.si_SEED_EM_MIN[1] = +0;
-        refSt.si_SEED_EM_MAX[1] = +0;
+        refSt.si_SEED_EM_MIN[1] = -1e5;
+        refSt.si_SEED_EM_MAX[1] = +1e5;
 
-        refSt.si_SEED_EM_MIN[2] = -40;
-        refSt.si_SEED_EM_MAX[2] = +40;
+        refSt.si_SEED_EM_MIN[2] = -1e5;
+        refSt.si_SEED_EM_MAX[2] = +1e5;
 
-        refSt.si_SEED_EM_MIN[3] = 0;
-        refSt.si_SEED_EM_MAX[3] = 0;
+        refSt.si_SEED_EM_MIN[3] = -1e5;
+        refSt.si_SEED_EM_MAX[3] = +1e5;
 
         //Limits for the time of flight during transfers - not used if -1
         refSt.tof_MIN       = -1;
@@ -470,7 +470,7 @@ int main(int argc, char** argv)
         refSt.crossings     = -1;
 
         // Maximum projection distance allowed during subselection
-        refSt.pmax_dist_SEM = 6e-4;
+        refSt.pmax_dist_SEM = 5e-4;
 
         // Number of steps in the continuation procedure
         refSt.cont_step_max    = +450;            // with fixed times
@@ -523,8 +523,8 @@ int main(int argc, char** argv)
         refSt.sf_semli = 10;                            // orbit at SEMLi
 
         // Integration window for each orbit
-        refSt.tspan_EM      = +10*SEML.us_em.T;
-        refSt.tspan_SEM     = +1*SEML.us_sem.T;
+        refSt.tspan_EM      = +2*SEML.us_em.T;
+        refSt.tspan_SEM     = +2*SEML.us_sem.T;
 
         // Storing the orbits at each step? DEPRECATED, kept for consistency, use comp_orb_em/comp_orb_sem instead
         refSt.isSaved_EM    = 0;      //0: don't save, 1: save using projection method
@@ -545,12 +545,13 @@ int main(int argc, char** argv)
         //--------------------------------------------------------------------------------
         // Filenames (used only if IO_HANDLING==$IO_BASH)
         //--------------------------------------------------------------------------------
-        refSt.FILE_PCU          ="Serv/projcu_order_20_dest_L2_Orbit_10_40_eps_1e-5.bin";
+        refSt.FILE_PCU          ="Serv/projcu_order_20_dest_L2_Orbit_Liss_s1_10_s2_5.bin";
         refSt.FILE_CONT         ="Serv/cont_atf_order_20_dest_L2_TEST.txt";
         refSt.FILE_CONT_RES     ="Serv/cont_atf_traj_order_20_dest_L2_TEST.bin";
         refSt.FILE_TRAJ_FROM_W  ="Serv/traj_from_w_order_20_dest_L2_TEST.bin";
         refSt.FILE_TRAJ_FROM_C  ="Serv/traj_from_c_order_20_dest_L2_TEST.bin" ;
         refSt.FILE_JPL_BIN      ="Serv/cont_jpl_order_20_dest_L2_TEST.bin";
+        refSt.FILE_MEAN_AMP     ="Serv/mean_amp_order_20_dest_L2_TEST.txt";
         refSt.FILE_JPL_TXT      ="cont_jpl.txt";
         refSt.FILE_FOR_CELESTIA ="traj_for_celestia";
 
@@ -728,7 +729,7 @@ int main(int argc, char** argv)
             refSt.isDebug       = atoi(argv[index++]);  // if yes, additionnal tests are performed
             refSt.gridSize      = atoi(argv[index++]);  // number of points on the refinement grid. 20 is taken by heuristics.
             refSt.mPlot         = atoi(argv[index++]);  // number of points per plot between to pach points (e.g. total plot points is gridSize*mplot) - DEPRECATED
-            refSt.fHours        = atoi(argv[index++]);  // plotting frequency (in hours)
+            refSt.fHours        = atof(argv[index++]);  // plotting frequency (in hours)
 
             refSt.time          = atoi(argv[index++]);  // type of constraints on the times in REF_CONT
             refSt.grid          = atoi(argv[index++]);  // type of grid
@@ -781,8 +782,11 @@ int main(int argc, char** argv)
             refSt.FILE_TRAJ_FROM_W  = argv[index++];
             refSt.FILE_TRAJ_FROM_C  = argv[index++];
             refSt.FILE_JPL_BIN      = argv[index++];
-            refSt.FILE_JPL_TXT      = argv[index++]; //"cont_jpl_temp.txt";
+            refSt.FILE_MEAN_AMP     = argv[index++];
+            refSt.FILE_JPL_TXT      = argv[index++];
             refSt.FILE_FOR_CELESTIA = "traj_for_celestia";
+
+            cout << "refSt.FILE_MEAN_AMP = " << refSt.FILE_MEAN_AMP << endl;
             break;
         }
 
@@ -894,7 +898,7 @@ int main(int argc, char** argv)
     case COMP_SINGLE_ORBIT_EML_TO_CM_SEML:
     {
         tic();
-        int_proj_SINGLE_ORBIT_EM_on_CM_SEM(projSt, 1);
+        int_proj_SINGLE_ORBIT_EM_on_CM_SEM(projSt, 5);
         cout << "End of in int_proj_ORBIT_EM_on_CM_SEM in " << toc() << endl;
         break;
     }
@@ -946,18 +950,6 @@ int main(int argc, char** argv)
         // Celestia format (for movies)
         //--------------------------------------------------------------------------------
         //toCelestiaFormat("jpltraj.xyz");
-        break;
-    }
-
-        //================================================================================
-        // Refinement CMU SEMLi to CMS EMLj
-        //================================================================================
-    case COMP_CMU_SEML_TO_CMS_EML:
-    {
-        //--------------------------------------------------------------------------------
-        // Complete routine: new version
-        //--------------------------------------------------------------------------------
-
         break;
     }
 
@@ -1066,10 +1058,10 @@ int main(int argc, char** argv)
                 switch(LI_EM)
                 {
                 case 1:
-                    st0[0] = 1.5;//-0.145454545454546;
-                    st0[1] = 0.6;//0.194601266014795;
+                    st0[0] =  1.5;//-0.145454545454546;
+                    st0[1] =  0.6;//0.194601266014795;
                     st0[2] = -1.5;//-1.309090909090909;
-                    st0[3] = 0.6;//0.194601266014795;
+                    st0[3] =  0.6;//0.194601266014795;
                     if(reduced_nv == 5) st0[4] = 0.0;
                     break;
                 case 2:
@@ -1110,10 +1102,10 @@ int main(int argc, char** argv)
                     //                    st0[3] = 3.48331278366297;
 
                     //double ss = 5;
-                    st0[0] = 0;
-                    st0[1] = 12;
-                    st0[2] = -0;
-                    st0[3] = 12;
+                    st0[0] = 10;
+                    st0[1] = 2;
+                    st0[2] = 10;
+                    st0[3] = 0;
 
 
                     //--------------------------------------------------------------------
@@ -1177,10 +1169,23 @@ int main(int argc, char** argv)
                     // double  N    = 50;
                     // double tfreq = 5e-3*SEML.us->T;
                     //--------------------------------------------------------------------
-                    st0[0] = 0.25;
-                    st0[1] = 0.31;
-                    st0[2] = 0.0;
-                    st0[3] = 0.29;
+                    // Examples from connections; low s2
+                    st0[0] = 0.1023385377296025 ;
+                    st0[1] = -0.0326875352965581;
+                    st0[2] = 0.413792236268948;
+                    st0[3] = -0.003151428080540846;
+
+                    // Examples from connections; high s2
+                    //                                        st0[0] = -0.558425483525547 ;
+                    //                                        st0[1] =  0.0300308645314094;
+                    //                                        st0[2] = -0.00173617265697136;
+                    //                                        st0[3] = -0.0171913326942122;
+
+
+                    st0[0] = -0.5817525207718971;
+                    st0[1] = -0.02610390444945233;
+                    st0[2] = 0.0570650416915852;
+                    st0[3] = 0.02848448382517797;
 
                     ////Values for Earth capture via Moon slingshot
                     //st0[0] =  0.1;
@@ -1211,7 +1216,7 @@ int main(int argc, char** argv)
         int isFlagOn = 1;
         int isPlot   = 1;
         double t0    = 0;//0.96*SEML.us->T;
-        double  N    = 10;
+        double  N    = 20;
         double tfreq = 5e-3*SEML.us->T;//1e-2*SEML.us->T;
 
 

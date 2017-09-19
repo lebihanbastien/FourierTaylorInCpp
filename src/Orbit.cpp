@@ -1556,6 +1556,17 @@ int gridOrbit_si(double st0[], double t0, double tf, double dt, int isFlagOn, in
     double *dHNC  = dvector(0, N);
     double *HNC0  = dvector(0, N);
 
+    double *Ax    = dvector(0, N);
+    double *Az    = dvector(0, N);
+    double *Az2   = dvector(0, N);
+
+    double *Axme  = dvector(0, N);
+    double *Azme  = dvector(0, N);
+
+    double *z2     = dvector(0, N);
+    double *zdot2  = dvector(0, N);
+
+
     //====================================================================================
     //Integration
     //====================================================================================
@@ -1564,7 +1575,7 @@ int gridOrbit_si(double st0[], double t0, double tf, double dt, int isFlagOn, in
     //====================================================================================
     //Hamiltonians:
     //====================================================================================
-    double y[6];
+    double y[6], yv[6];
 
     //Loop on all positions
     for(int k= 0; k <= N; k++)
@@ -1579,6 +1590,72 @@ int gridOrbit_si(double st0[], double t0, double tf, double dt, int isFlagOn, in
         tNCET[k] = tNCE[k]/SEML.us->T;
     }
 
+    //====================================================================================
+    //Least Square Fitting (LSF)
+    //====================================================================================
+    double gamma = invman.getCS()->gamma;
+    int vType = (dcs == I_NCEM)? VNCEM:VNCSEM;
+
+    cout << "vType = " << vType << endl;
+    //Preprocess for LSF
+    for(int k = 0; k <= N; k++)
+    {
+        //Load current state
+        for(int i = 0; i <6; i++) y[i] = yNCE[i][k];
+
+        //From NC to VNC
+        qbcp_coc(tNCE[k], y, yv, ncs, vType);
+
+        //For LSF
+        z2[k]    = yv[2]*yv[2];
+        zdot2[k] = yv[5]*yv[5];
+    }
+
+    //LSF for Az
+    double c0, c1, cov00, cov01, cov11, sumsq;
+    gsl_fit_linear(zdot2, 1, z2, 1, N+1, &c0, &c1, &cov00, &cov01, &cov11, &sumsq);
+
+    printf ("# best fit: Y = %g + %g X\n", c0, c1);
+    printf ("# covariance matrix:\n");
+    printf ("# [ %g, %g\n# %g, %g]\n", cov00, cov01, cov01, cov11);
+
+    cout << "Hence, Az_EM  = " << sqrt(c0)*gamma   << endl;
+    cout << "       omega  = " << 1.0/sqrt(-c1)    << endl;
+
+
+    //====================================================================================
+    //Averages
+    //====================================================================================
+    double kappa    = invman.getCS()->kappa;
+    double omegav   = invman.getCS()->omegav;
+    double omegalsf = 1.0/sqrt(-c1);
+
+    //Loop on all positions
+    for(int k = 0; k <= N; k++)
+    {
+        //Load current state
+        for(int i = 0; i <6; i++) y[i] = yNCE[i][k];
+        //From NC to VNC
+        qbcp_coc(tNCE[k], y, yv, ncs, vType);
+        //Computing the estimates of Ax and Az:
+        // Ax =~ x^2 + y^2/kappa^2
+        Ax[k] = sqrt(yv[0]*yv[0] + yv[1]*yv[1]/(kappa*kappa));
+        // Az =~ z^2 + zdot^2/omegav^2
+        Az[k] = sqrt(yv[2]*yv[2] + yv[5]*yv[5]/(omegalsf*omegalsf));
+        Az2[k] = sqrt(yv[2]*yv[2] + yv[5]*yv[5]/(omegav*omegav));
+
+        //Averages
+        if(k == 0)
+        {
+            Axme[k] = Ax[k];
+            Azme[k] = Az[k];
+        }else
+        {
+            Axme[k] = 1.0/(k+1)*(Ax[k] + k*Axme[k-1]);
+            Azme[k] = 1.0/(k+1)*(Az[k] + k*Azme[k-1]);
+        }
+    }
+    cout << "And,   Ax_EM  = " << Axme[(int)N]*gamma  << endl;
 
 
     //====================================================================================
@@ -1618,6 +1695,7 @@ int gridOrbit_si(double st0[], double t0, double tf, double dt, int isFlagOn, in
     gnuplot_setstyle(isPlot, h1,   (char*)"lines");
     gnuplot_set_xlabel(isPlot, h1, (char*)"x [-]");
     gnuplot_set_ylabel(isPlot, h1, (char*)"y [-]");
+    //gnuplot_cmd(isPlot, h1, "set view equal xyz");
     gnuplot_plot_xyz(isPlot, h1, yNCE[0], yNCE[1], yNCE[2], N+1, (char*)"NC coordinates", "lines", "1", "1", 1);
 
     gnuplot_ctrl  *h2;
@@ -1636,11 +1714,33 @@ int gridOrbit_si(double st0[], double t0, double tf, double dt, int isFlagOn, in
     gnuplot_set_ylabel(isPlot, h3, (char*)"s3");
     gnuplot_plot_xy(isPlot, h3, sRCM[0], sRCM[2], N+1, (char*)"s1(t), s3(t)", "lines", "1", "1", 1);
 
+
+
+    gnuplot_ctrl  *h4;
+    h4 = gnuplot_init(isPlot);
+    gnuplot_setstyle(isPlot, h4,   (char*)"lines");
+    gnuplot_set_xlabel(isPlot, h4, (char*)"t [x T]");
+    gnuplot_set_ylabel(isPlot, h4, (char*)"Ax [-]");
+    gnuplot_plot_xy(isPlot, h4, tNCET, Ax,   N+1, (char*)"Ax", "lines", "1", "1", 1);
+    gnuplot_plot_xy(isPlot, h4, tNCET, Axme, N+1, (char*)"Axme", "lines", "1", "1", 2);
+
+
+    gnuplot_ctrl  *h5;
+    h5 = gnuplot_init(isPlot);
+    gnuplot_setstyle(isPlot, h5,   (char*)"lines");
+    gnuplot_set_xlabel(isPlot, h5, (char*)"t [x T]");
+    gnuplot_set_ylabel(isPlot, h5, (char*)"Az [-]");
+    gnuplot_plot_xy(isPlot, h5, tNCET, Az,   N+1, (char*)"Az_lsf", "lines", "1", "1", 1);
+    gnuplot_plot_xy(isPlot, h5, tNCET, Az2,   N+1, (char*)"Az_crtbp", "lines", "1", "1", 2);
+    gnuplot_plot_xy(isPlot, h5, tNCET, Azme, N+1, (char*)"Azme", "lines", "1", "1", 3);
+
     //User check
     pressEnter(isFlagOn);
     gnuplot_close(isPlot, h1);
     gnuplot_close(isPlot, h2);
     gnuplot_close(isPlot, h3);
+    gnuplot_close(isPlot, h4);
+    gnuplot_close(isPlot, h5);
 
 
     //====================================================================================

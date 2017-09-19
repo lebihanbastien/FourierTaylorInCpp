@@ -75,6 +75,8 @@ string fileprefix(int type)
         return "cont_atf_traj_order_";
     case TYPE_COMP_FOR_JPL:
         return "comp_for_jpl_order_";
+    case TYPE_CONT_MEAN_AMP:
+        return "comp_mean_amp_order_";
     case TYPE_CONT_JPL_TRAJ:
         return "cont_jpl_order_";
     case TYPE_CONT_ATF:
@@ -111,6 +113,7 @@ string fileext(int type)
         return ".bin";
     case TYPE_COMP_FOR_JPL:
     case TYPE_CONT_ATF:
+    case TYPE_CONT_MEAN_AMP:
         return ".txt";
     case TYPE_TRAJ_CELESTIA: //no ext because it is just a prefix
         return "";
@@ -152,6 +155,7 @@ string get_filenameCUM_default(string plot_folder, int ofts_order, int type, int
     case TYPE_MAN_PROJ_3D:
     case TYPE_CONT_ATF_TRAJ:
     case TYPE_COMP_FOR_JPL:
+    case TYPE_CONT_MEAN_AMP:
     case TYPE_CONT_JPL_TRAJ:
     case TYPE_CONT_ATF:
     case TYPE_TRAJ_FROM_W:
@@ -2146,27 +2150,15 @@ int writeCONT_bin(RefSt& refSt, string filename_res, int dcs, int coord_type,
         if(nPlot < oPlot)
         {
             int ans = 0;
-            cout << "Do you wish to retry with looser constraint on the projection distance? (1/0)" << endl;
+            cout << "Do you wish to retry with looser constraints on the projection distance? (1/0)" << endl;
             cin >> ans;
 
             if(ans == 1)
             {
                 //------------------------------------------------------------------------
-                // Set loose projection distance @ EML2
-                //------------------------------------------------------------------------
-                double epMax = orbit_EM.getEPmaxx();
-                orbit_EM.setEPmaxx(9e-4);
-
-                //------------------------------------------------------------------------
                 //Integration on oPlot+1 fixed grid
                 //------------------------------------------------------------------------
-                nPlot = orbit_EM.traj_int_main(orbit_EM.getTf(), yorb_NCEM, torb_EM, oPlot, INT_PROJ_CHECK);
-
-                //------------------------------------------------------------------------
-                // Bacl to original value
-                //------------------------------------------------------------------------
-                orbit_EM.setEPmaxx(epMax);
-
+                nPlot = orbit_EM.traj_int_main(orbit_EM.getTf(), yorb_NCEM, torb_EM, oPlot, INT_TRY_BOTH);
             }
         }
         //--------------------------------------------------------------------------------
@@ -3644,6 +3636,180 @@ int write_wref_res_bin(RefSt& refSt, string filename_res,
     return FTC_SUCCESS;
 }
 
+
+/**
+ *   \brief Storing the results of the W + QBCP + JPL with average amplitudes, in txt file
+ **/
+void write_jplref_conn_txt(string filename,
+                           Orbit& orbit_EM, Orbit& orbit_SEM,
+                           AvgSt &avgSt_QBCP, AvgSt &avgSt_JPL,
+                           double te_NCEM,
+                           ProjResClass& projRes,
+                           int isFirst,  int index)
+{
+    //====================================================================================
+    // Initialize the I/O objects
+    //====================================================================================
+    fstream filestream;
+
+    if(isFirst)
+    {
+        //================================================================================
+        // If it is the first entry, the title of the columns are written
+        //================================================================================
+        filestream.open (filename.c_str(), ios::out);
+        //Title
+        filestream << "label ";
+        filestream << "t0_CMU_EM tf_CMU_EM te_NCEM t0_CMU_EM_seed ";
+        filestream << "Ax_EM_mean_QBCP Az_EM_mean_QBCP Az_EM_lsf_QBCP ";
+        filestream << "Ax_SEM_mean_QBCP Az_SEM_mean_QBCP Az_SEM_lsf_QBCP ";
+        filestream << "Ax_EM_mean_JPL Az_EM_mean_JPL Az_EM_lsf_JPL ";
+        filestream << "Ax_SEM_mean_JPL Az_SEM_mean_JPL Az_SEM_lsf_JPL ";
+        filestream << "Omega_EM_lsf_QBCP Omega_SEM_lsf_QBCP Omega_EM_lsf_JPL Omega_SEM_lsf_JPL ";
+        filestream << "s1_CMU_EM  s2_CMU_EM  s3_CMU_EM  s4_CMU_EM s5_CMU_EM ";
+        filestream << "s1_CMS_SEM s2_CMS_SEM s3_CMS_SEM s4_CMS_SEM s5_CMS_SEM ";
+        filestream << "s1_CMU_EM_seed  s2_CMU_EM_seed  s3_CMU_EM_seed  s4_CMU_EM_seed ";
+        filestream << "dH0_EM dHf_SEM ";
+
+        filestream << endl;
+    }
+    else
+    {
+        //================================================================================
+        // Else, we append
+        //================================================================================
+        filestream.open (filename.c_str(), ios::out | ios::app);
+    }
+
+    //====================================================================================
+    //Update the seed via projRes
+    //====================================================================================
+    double st_EM[5], st_SEM[5], t_EM[2], t0_SEM = 0.0, pmin_dist_SEM_out = 0.0;
+    double st_EM_seed[4], t_EM_seed = 0.0; int label = 0;
+    projRes.update_ic(st_EM, st_SEM, t_EM, st_EM_seed, &t_EM_seed, &t0_SEM, &pmin_dist_SEM_out, &label, index);
+
+    //====================================================================================
+    //Data storage
+    //====================================================================================
+    filestream << setprecision(15) <<  setiosflags(ios::scientific) << std::showpos;
+
+    //------------------------------------------------------------------------------------
+    // Store from 1 to 5: label and times
+    //------------------------------------------------------------------------------------
+
+    cout << "orbit_EM.getTf() = " << orbit_EM.getTf() << endl;
+    cout << "t_EM[0]          = " << t_EM[0] << endl;
+
+    //1. label
+    filestream << label << "  ";
+    //2. t0_CMU_EM
+    filestream << t_EM[0]  << "  ";
+    //3. tf_CMU_EM
+    filestream << t_EM[1] << "  ";
+    //4. te_NCEM
+    filestream << te_NCEM << "  ";
+    //5. t0_CMU_EM_seed
+    filestream << t_EM_seed << "  ";
+
+    //------------------------------------------------------------------------------------
+    // Store from 6 to -: amplitudes & frequencies
+    //------------------------------------------------------------------------------------
+    //6. Ax_EM_mean_QBCP
+    filestream << avgSt_QBCP.Ax_EM_mean << "  ";
+    //7. Az_EM_mean_QBCP
+    filestream << avgSt_QBCP.Az_EM_mean << "  ";
+    //8. Az_EM_lsf_QBCP
+    filestream << avgSt_QBCP.Az_EM_lsf  << "  ";
+
+    //9. Ax_SEM_mean_QBCP
+    filestream << avgSt_QBCP.Ax_SEM_mean << "  ";
+    //10. Az_SEM_mean_QBCP
+    filestream << avgSt_QBCP.Az_SEM_mean << "  ";
+    //11. Az_SEM_lsf_QBCP
+    filestream << avgSt_QBCP.Az_SEM_lsf  << "  ";
+
+
+    //12. Ax_EM_mean_JPL
+    filestream << avgSt_JPL.Ax_EM_mean << "  ";
+    //13. Az_EM_mean_JPL
+    filestream << avgSt_JPL.Az_EM_mean << "  ";
+    //14. Az_EM_lsf_JPL
+    filestream << avgSt_JPL.Az_EM_lsf  << "  ";
+
+    //15. Ax_SEM_mean_JPL
+    filestream << avgSt_JPL.Ax_SEM_mean << "  ";
+    //16. Az_SEM_mean_JPL
+    filestream << avgSt_JPL.Az_SEM_mean << "  ";
+    //17. Az_SEM_lsf_JPL
+    filestream << avgSt_JPL.Az_SEM_lsf  << "  ";
+
+
+    //18. Omega_EM_lsf_QBCP
+    filestream << avgSt_QBCP.Omega_EM_lsf << "  ";
+    //19. Omega_SEM_lsf_QBCP
+    filestream << avgSt_QBCP.Omega_SEM_lsf << "  ";
+    //20. Omega_EM_lsf_JPL
+    filestream << avgSt_JPL.Omega_EM_lsf << "  ";
+    //21. Omega_SEM_lsf_JPL
+    filestream << avgSt_JPL.Omega_SEM_lsf << "  ";
+
+    //22-26. s0 in RCM coordinates
+    for(int i = 0; i <5; i++) filestream << orbit_EM.getSi()[i]  << "  ";
+    //27-31. sf in RCM coordinates
+    for(int i = 0; i <5; i++) filestream << orbit_SEM.getSi()[i] << "  ";
+    //32-35. s0_seed in RCM coordinates
+    for(int i = 0; i < 4; i++) filestream << st_EM_seed[i]  << "  ";
+
+    //------------------------------------------------------------------------------------
+    // Computing Energies at t = t0 & t = tf
+    //------------------------------------------------------------------------------------
+    double H0_EM, H0_emli_EM;
+    double Hf_SEM, Hf_semli_SEM;
+
+    double yv_NCEM[6], yv_NCSEM[6];
+    double yv_emli_NCEM[6], yv_semli_NCSEM[6];
+    double tv_EM, tv_SEM;
+
+    //Origins at both ends
+    for(int i = 0; i <6; i++)
+    {
+        yv_emli_NCEM[i]   = 0.0;
+        yv_semli_NCSEM[i] = 0.0;
+    }
+
+    //t0, z0 in NCEM coordinates
+    tv_EM = t_EM[0];
+    for(int i = 0; i <6; i++) yv_NCEM[i] = orbit_EM.getZ0()[i];
+
+    // H0 at IC
+    H0_EM    = qbcp_H_complete(tv_EM, yv_NCEM, NCEM, PEM);
+    // H0 at emli
+    H0_emli_EM    = qbcp_H_complete(tv_EM, yv_emli_NCEM, NCEM, PEM);
+
+
+    //tf, yf in NCSEM coordinates
+    tv_SEM = t_EM[1]*SEML.us_em.ns;
+    for(int i = 0; i <6; i++) yv_NCSEM[i] = orbit_SEM.getZ0()[i];
+
+    // Hf
+    Hf_SEM   = qbcp_H_complete(tv_SEM, yv_NCSEM, NCSEM, PSEM);
+
+    // Hf at semli
+    Hf_semli_SEM   = qbcp_H_complete(tv_SEM, yv_semli_NCSEM, NCSEM, PSEM);
+
+
+    //------------------------------------------------------------------------------------
+    // Storing Energies
+    //------------------------------------------------------------------------------------
+    filestream << H0_EM  - H0_emli_EM   << "  "; //36
+    filestream << Hf_SEM - Hf_semli_SEM << "  "; //37
+    filestream << endl;
+
+    filestream.close();
+}
+
+
+
 //========================================================================================
 //
 //          Display completion
@@ -3773,7 +3939,8 @@ bool ProjResClass::push_back_conditional(ProjResClass& inSt, RefSt& refSt)
     double s3_CMU_EM_MIN, s3_CMU_EM_MAX;
     double s2_CMU_EM_MIN, s2_CMU_EM_MAX;
     double s4_CMU_EM_MIN, s4_CMU_EM_MAX;
-    double tof_MIN, tof_MAX;
+    double tof_MIN = -1, tof_MAX = -1;
+    double dHf_SEM_MAX = -1;
 
     if(refSt.isLimUD)
     {
@@ -3795,6 +3962,9 @@ bool ProjResClass::push_back_conditional(ProjResClass& inSt, RefSt& refSt)
         cout << "Enter a value for tof_MAX (% of T, -1 if no use): ";
         cin >> tof_MAX;
         tof_MAX *= SEML.us->T;
+
+        cout << "Enter a value for dHf_SEM_MAX (-1 if no use): ";
+        cin >> dHf_SEM_MAX;
     }
     else
     {
@@ -3804,6 +3974,7 @@ bool ProjResClass::push_back_conditional(ProjResClass& inSt, RefSt& refSt)
         s3_CMU_EM_MAX = refSt.si_CMU_EM_MAX[2];
         tof_MIN = refSt.tof_MIN;
         tof_MAX = refSt.tof_MAX;
+        dHf_SEM_MAX = refSt.dHf_SEM_MAX;
     }
 
     s2_CMU_EM_MIN = refSt.si_CMU_EM_MIN[1];
@@ -3855,6 +4026,12 @@ bool ProjResClass::push_back_conditional(ProjResClass& inSt, RefSt& refSt)
         //--------------------------------------------------------------------------------
         if(tof_MIN > 0) cst = cst & ( (inSt.tf_CMU_EM[kpor] - inSt.t0_CMU_EM[kpor]) > tof_MIN );
         if(tof_MAX > 0) cst = cst & ( (inSt.tf_CMU_EM[kpor] - inSt.t0_CMU_EM[kpor]) < tof_MAX );
+
+
+        //--------------------------------------------------------------------------------
+        // Limit in the final energy
+        //--------------------------------------------------------------------------------
+        if(dHf_SEM_MAX > 0) cst = cst & ( inSt.dHf_SEM[kpor] < dHf_SEM_MAX );
 
         //--------------------------------------------------------------------------------
         // Limits in the crossings if necessary
@@ -3980,7 +4157,7 @@ bool ProjResClass::push_back_subselection(ProjResClass& projSt, RefSt& refSt)
     //------------------------------------------------------------------------------------
     // Sort
     //------------------------------------------------------------------------------------
-    this->sort_pmin_dist_SEM();
+    this->sort_dHf_SEM();//sort_pmin_dist_SEM();
 
 
     return 1;
@@ -4018,6 +4195,7 @@ void ProjResClass::displayEntry(int k)
     cout << "t0_EM    = "  << t0_CMU_EM[ind]  << endl;
     cout << "tf_EM    = "  << tf_CMU_EM[ind] << endl;
     cout << "pmin_SEM = "  << pmin_dist_SEM[ind] << endl;
+    cout << "dHf_SEM  = "  << dHf_SEM[ind] << endl;
     cout << "s_CM_EM  = (" << s1_CMU_EM[ind] << ", " << s2_CMU_EM[ind];
     cout << ", " << s3_CMU_EM[ind] << ", " << s4_CMU_EM[ind] << ", " << s5_CMU_EM[ind] << ")" << endl;
     cout << "s_CM_SEM = (" << s1_CM_SEM[ind] << ", " << s2_CM_SEM[ind];

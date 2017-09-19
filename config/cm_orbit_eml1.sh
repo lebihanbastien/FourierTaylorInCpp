@@ -39,7 +39,7 @@ OFS_ORDER=30
 if [ $SERVER == 1 ]; then
 	OFTS_ORDER=20
 else
-	OFTS_ORDER=16
+	OFTS_ORDER=20
 fi
 
 #-----------------------------------------------------
@@ -82,7 +82,7 @@ IO_HANDLING=$IO_BASH
 # Time grid: min, max and number of points on the grid
 TMIN=0.0    # (given as %T, with T the SEM period)
 TMAX=1.0    # (given as %T, with T the SEM period)
-TSIZE=50  
+TSIZE=100  
 
 # Configuration (s1, s2, s3, s4) grid
 GLIM_S1=(+1.5 +10)
@@ -132,13 +132,13 @@ if [ $SERVER == 1 ]; then
 	FILE_PCU="projcu_order_20_dest_L2_Orbit_Liss_s1_30_s2_5.bin"
 else
 	FILE_CU="cu_orbit.bin"
-	FILE_PCU="projcu_order_16_dest_L2_Orbit_s1_15_s2_6_All_TM_5.bin"
+	FILE_PCU="Serv/projcu_order_20_dest_L2_Orbit_s1_15_s2_6_All_TM_8.bin"
 fi
 
 #-----------------------------------------------------
 # Parameters that are stable
 #-----------------------------------------------------
-TM=5 	      # Maximum integration time (given as %T, with T the SEM period)
+TM=8 	      # Maximum integration time (given as %T, with T the SEM period)
 MSIZE=500     # Number of points on each trajectory
 NSMIN=20      # Number of sorted solutions
 YNMAX=0.6     # The maximum norm (in SEM normalized units) for a projection to occur on the CM_NC of SEMLi

@@ -58,11 +58,11 @@ ISPAR=0
 # NOHUP condition
 #-----------------------------------------------------
 if [ $SERVER == 1 ]; then
-	ISNOHUP=0
+	ISNOHUP=1
 else
 	ISNOHUP=0
 fi
-OUT="cms_orbit_40.out"
+OUT="cms_orbit_mean_amplitudes.out"
 
 #-----------------------------------------------------
 # Position of the poincaré section in NCEM coordinates
@@ -126,7 +126,7 @@ REFST_ISDIRUD=0			 # is it user defined?
 REFST_DIR=-1    		 # if not, +1 or -1
  
 # User parameters
-REFST_ISFLAGON=0   	         # do we have steps in the procedure - asking the user to press enter to go on?
+REFST_ISFLAGON=0  	         # do we have steps in the procedure - asking the user to press enter to go on?
 REFST_ISPLOTTED=1    		 # do we plot the results during the computation?
 REFST_ISSAVED=1     		 # do we save the results in data files?
 REFST_ISFROMSERVER=0		 # does the raw data comes from server files?
@@ -136,25 +136,36 @@ REFST_THETAMAX=180           # should be a multiple of 90°
 
 # Filenames (used only if IO_HANDLING==$IO_BASH)
 if [ $SERVER == 1 ]; then
-	FILE_PCU="projcu_order_20_dest_L2_Orbit_Liss_s1_20_s2_5.bin" #"Serv/projcu_order_20_dest_L2_orbit.bin" #"Serv/projcu_order_20_dest_L2_QHalo.bin" 
-	FILE_CONT="cont_atf_order_20_dest_L2_Liss_s1_10_s2_5_DIST_SEM_5e-4_TSPAN_SEM_20.txt"
-	FILE_CONT_RES="cont_atf_traj_order_20_dest_L2_Liss_s1_10_s2_5_DIST_SEM_5e-4_TSPAN_SEM_20.bin"
-	FILE_TRAJ_FROM_W="traj_from_w_order_20_dest_L2_Liss_s1_10_s2_5_DIST_SEM_5e-4_TSPAN_SEM_20.bin"
-	FILE_TRAJ_FROM_C="traj_from_c_order_20_dest_L2_Liss_s1_10_s2_5_DIST_SEM_5e-4_TSPAN_SEM_20.bin" 
-	FILE_JPL="cont_jpl_order_20_dest_L2_Liss_s1_10_s2_5_DIST_SEM_5e-4_TSPAN_SEM_20.bin"
-	FILE_JPL_TEMP="cont_jpl_temp_s1_20_s2_10.txt"
+	FILE_PCU="projcu_order_20_dest_L2_Orbit_Liss_s1_10_s2_2.bin" #"Serv/projcu_order_20_dest_L2_orbit.bin" #"Serv/projcu_order_20_dest_L2_QHalo.bin" 
+	FILE_CONT="cont_atf_order_20_dest_L2_Liss_s1_10_s2_2_DIST_SEM_5e-4_TSPAN_SEM_40.txt"
+	FILE_CONT_RES="cont_atf_traj_order_20_dest_L2_Liss_s1_10_s2_2_DIST_SEM_5e-4_TSPAN_SEM_40.bin"
+	FILE_TRAJ_FROM_W="traj_from_w_order_20_dest_L2_Liss_s1_10_s2_2_DIST_SEM_5e-4_TSPAN_SEM_40.bin"
+	FILE_TRAJ_FROM_C="traj_from_c_order_20_dest_L2_Liss_s1_10_s2_2_DIST_SEM_5e-4_TSPAN_SEM_40.bin" 
+	FILE_JPL="cont_jpl_order_20_dest_L2_Liss_s1_10_s2_2_DIST_SEM_5e-4_TSPAN_SEM_40.bin"
+	FILE_MEAN_AMP="Serv/mean_amp_order_20_dest_L2_Liss_s1_10_s2_2_DIST_SEM_5e-4_TSPAN_SEM_40.txt"
+	FILE_JPL_TEMP="cont_jpl_temp_s1_10_s2_2.txt"
 else
-	FILE_PCU="Serv/projcu_order_20_dest_L2_Orbit_Liss_s1_20_s2_5.bin"
-	FILE_CONT="Serv/cont_atf_order_20_dest_L2_Liss_s1_20_s2_5_DIST_SEM_5e-4_TSPAN_SEM_20.txt"
-	FILE_CONT_RES="Serv/cont_atf_traj_order_20_dest_L2_Liss_s1_20_s2_5_DIST_SEM_5e-4_TSPAN_SEM_20.bin"
-	FILE_TRAJ_FROM_W="Serv/traj_from_w_order_20_dest_L2_Liss_s1_20_s2_5_DIST_SEM_5e-4_TSPAN_SEM_20.bin"
-	FILE_TRAJ_FROM_C="Serv/traj_from_c_order_20_dest_L2_Liss_s1_20_s2_5_DIST_SEM_5e-4_TSPAN_SEM_20.bin" 
-	FILE_JPL="Serv/cont_jpl_order_20_dest_L2_Liss_s1_20_s2_5_DIST_SEM_5e-4_TSPAN_SEM_20.bin"
-	FILE_JPL_TEMP="cont_jpl_temp_20.txt"
+	# Crossings: 22 
+	# FILE_PCU="Serv/projcu_order_20_dest_L2_Orbit_Liss_s1_20_s2_10_All_TM_8.bin"
+	# FILE_CONT="Serv/cont_atf_order_20_dest_L2_Liss_s1_20_s2_10_DIST_SEM_2e-3_TSPAN_SEM_20_CROSSINGS_22.txt"
+	# FILE_CONT_RES="Serv/cont_atf_traj_order_20_dest_L2_Liss_s1_20_s2_10_DIST_SEM_2e-3_TSPAN_SEM_20_CROSSINGS_22.bin"
+	# FILE_TRAJ_FROM_W="Serv/traj_from_w_order_20_dest_L2_Liss_s1_20_s2_10_DIST_SEM_2e-3_TSPAN_SEM_20_CROSSINGS_22.bin"
+	# FILE_TRAJ_FROM_C="Serv/traj_from_c_order_20_dest_L2_Liss_s1_20_s2_10_DIST_SEM_2e-3_TSPAN_SEM_20_CROSSINGS_22.bin" 
+	# FILE_JPL="Serv/cont_jpl_order_20_dest_L2_Liss_s1_20_s2_10_DIST_SEM_2e-3_TSPAN_SEM_20_CROSSINGS_22.bin"
+	# FILE_JPL_TEMP="cont_jpl_temp_s1_20_s2_10.txt"
+	
+	FILE_PCU="Serv/projcu_order_20_dest_L2_Orbit_Liss_s1_10_s2_2.bin"
+	FILE_CONT="Serv/cont_atf_order_20_dest_L2_Liss_s1_10_s2_2_DIST_SEM_5e-4_TSPAN_SEM_20_TEST.txt"
+	FILE_CONT_RES="Serv/cont_atf_traj_order_20_dest_L2_Liss_s1_10_s2_2_DIST_SEM_5e-4_TSPAN_SEM_20_TEST.bin"
+	FILE_TRAJ_FROM_W="Serv/traj_from_w_order_20_dest_L2_Liss_s1_10_s2_2_DIST_SEM_5e-4_TSPAN_SEM_20_TEST.bin"
+	FILE_TRAJ_FROM_C="Serv/traj_from_c_order_20_dest_L2_Liss_s1_10_s2_2_DIST_SEM_5e-4_TSPAN_SEM_20_TEST.bin" 
+	FILE_JPL="Serv/cont_jpl_order_20_dest_L2_Liss_s1_10_s2_2_DIST_SEM_5e-4_TSPAN_SEM_20_TEST.bin"
+	FILE_MEAN_AMP="Serv/mean_amp_order_20_dest_L2_Liss_s1_10_s2_2_DIST_SEM_5e-4_TSPAN_SEM_20_TEST.txt"
+	FILE_JPL_TEMP="cont_jpl_temp_s1_10_s2_2.txt"
 fi
 
 # Desired number of solutions. if -1, all found solutions are refined
-REFST_NREF=20
+REFST_NREF=-1
 
 #-----------------------------------------------------
 # Parameters that are stable
@@ -180,8 +191,8 @@ REFST_SF_MAN=5			 # transfer leg
 REFST_SF_SEML2=10		 # orbit at SEML2
 
 # Integration window for each orbit
-REFST_TSPAN_EM=20    	 # given as %T, where T is the SEM period, in EM units
-REFST_TSPAN_SEM=20		 # given as %T, where T is the SEM period, in SEM units
+REFST_TSPAN_EM=20   	 # given as %T, where T is the SEM period, in EM units
+REFST_TSPAN_SEM=40   	 # given as %T, where T is the SEM period, in SEM units
 
 # Type of computation for each orbit
 REFST_COMP_ORB_EM=$INT_TRY_BOTH  #may use INT_RED_COORD directly for bigger orbits (QHalo?)

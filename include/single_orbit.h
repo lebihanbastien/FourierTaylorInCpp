@@ -46,6 +46,8 @@
 //To celestia
 #define TYPE_TRAJ_CELESTIA  16
 
+//Mean amplitudes
+#define TYPE_CONT_MEAN_AMP  17
 
 #define GSIZE 50;
 #define ORBIT_SEM_UNSTABLE_MIN 1e-5

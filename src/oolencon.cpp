@@ -1257,7 +1257,8 @@ int proj_subroutine(ProjResSt& projResSt, Invman& invman_target, ProjSt& projSt)
                 for(int i = 3; i < 6; i++) dv_at_projection_FV += (yv_FV[i] - yvproj_FV[i])*(yv_FV[i] - yvproj_FV[i]);
                 dv_at_projection_FV = sqrt(dv_at_projection_FV);
 
-            }else if(proj_dist_DP > min_proj_dist_DP && projSt.PRIMARY)
+            }
+            else if(proj_dist_DP > min_proj_dist_DP && projSt.PRIMARY)
             {
                 // If we only look for the primary family, we can stop at the first
                 // minimum without any risk of losing good solutions. If
@@ -2897,7 +2898,10 @@ int cmu_orbit_estimate_period(const double st0[], double t0, double* T, int* N, 
     //------------------------------------------------------------------------------------
     //We check that the first point was not detected as an event
     int n0 = 0;
-    if(fabs(t0 - te_NC[0]) < 1e-6) {n0 = 1;} //the first point is an event
+    if(fabs(t0 - te_NC[0]) < 1e-6)
+    {
+        n0 = 1;   //the first point is an event
+    }
 
     //Find the closest point to the initial one
     int kargmin = n0;
@@ -3490,7 +3494,6 @@ int ref_eml_to_seml_orbits(RefSt& refSt)
     Invman invman_EM( OFTS_ORDER, OFS_ORDER, SEML.cs_em);
     Invman invman_SEM(OFTS_ORDER, OFS_ORDER, SEML.cs_sem);
 
-
     //====================================================================================
     // 3. Select the good IC for EML2-to-SEMLi connections in data files
     //====================================================================================
@@ -3691,9 +3694,13 @@ int ref_eml_to_seml_orbits(RefSt& refSt)
         //--------------------------------------------------------------------------------
         refSt.isSaved = isSaved;
 
+
         //--------------------------------------------------------------------------------
         //Saving
         //--------------------------------------------------------------------------------
+        double ye_NCSEM[6], te_NCSEM = 0.0;
+        double ye_NCEM[6],  te_NCEM  = 0.0;
+        double ve_NCEM[3],  ve_NCSEM[3];
         if(refSt.isSaved && status == FTC_SUCCESS && refSt.last_error < refSt.inner_prec)
         {
             //----------------------------------------------------------------------------
@@ -3704,10 +3711,6 @@ int ref_eml_to_seml_orbits(RefSt& refSt)
             //----------------------------------------------------------------------------
             // Find the intersection with a certain Poincaré Section (PS)
             //----------------------------------------------------------------------------
-            double ye_NCSEM[6], te_NCSEM = 0.0;
-            double ye_NCEM[6],  te_NCEM = 0.0;
-            double ve_NCEM[3],  ve_NCSEM[3];
-
             pk_ref_conn(ye_NCEM, &te_NCEM, ye_NCSEM, &te_NCSEM,
                         ve_NCEM, ve_NCSEM, t_traj, y_traj, man_grid_size,
                         refSt.center, refSt.xps_NCEM);
@@ -3717,7 +3720,7 @@ int ref_eml_to_seml_orbits(RefSt& refSt)
             //----------------------------------------------------------------------------
             // Only the txt results
             write_wref_conn_txt(filename, orbit_EM, orbit_SEM, te_NCSEM, ye_NCSEM,
-                                           te_NCEM, ye_NCEM, ve_NCEM, ve_NCSEM, projRes, isFirst,  k);
+                                te_NCEM, ye_NCEM, ve_NCEM, ve_NCSEM, projRes, isFirst,  k);
 
             // Entire trajectory, including the patch points
             write_wref_traj_bin(filename_traj, orbit_EM, orbit_SEM,
@@ -3731,50 +3734,6 @@ int ref_eml_to_seml_orbits(RefSt& refSt)
                                orbit_EM, orbit_SEM, te_NCSEM, ye_NCSEM,
                                te_NCEM, ye_NCEM, ve_NCEM, ve_NCSEM, isFirst,
                                0, 0, projRes, k);
-
-            //----------------------------------------------------------------------------
-            // Testing
-            //----------------------------------------------------------------------------
-            /*
-            //            int last_index = 0, man_grid_size_0 = 0;
-            //
-            //            getl_wref_traj_bin(filename_res, &last_index, &man_grid_size_0);
-            //
-            //            //init
-            //            int *labels = ivector(0, last_index);
-            //            double* t0_CMU_EM = dvector(0, last_index);
-            //            double* tf_CMU_EM = dvector(0, last_index);
-            //            double** si_CMU_EM  = dmatrix(0, 4, 0, last_index);
-            //            double** si_CMS_SEM = dmatrix(0, 4, 0, last_index);
-            //            double** t_traj_NCSEM = dmatrix(0, last_index, 0, man_grid_size_0);
-            //            double*** y_traj_NCSEM = d3tensor(0, 5, 0, last_index, 0, man_grid_size_0);
-            //
-            //            cout << "last_index = " << last_index << endl;
-            //            cout << "man_grid_size_0 = " << man_grid_size_0 << endl;
-            //
-            //
-            //            read_wref_traj_bin(filename_traj, labels, t0_CMU_EM, tf_CMU_EM, si_CMU_EM, si_CMS_SEM, t_traj_NCSEM, y_traj_NCSEM, man_grid_size_0, last_index);
-            //
-            //            cout << "si_CMU_EM = " << endl;
-            //            for(int m = 0; m <= last_index; m++)
-            //            {
-            //                for(int i = 0; i < 5; i++) cout << si_CMU_EM[i][m] << " ";
-            //
-            //                cout << endl;
-            //            }
-            //
-            //            pressEnter(true);
-            //
-            //            free_ivector(labels, 0, last_index);
-            //            free_dvector(t0_CMU_EM, 0, last_index);
-            //            free_dvector(tf_CMU_EM, 0, last_index);
-            //            free_dmatrix(si_CMU_EM, 0, 4, 0, last_index);
-            //            free_dmatrix(si_CMS_SEM, 0, 4, 0, last_index);
-            //            free_dmatrix(t_traj_NCSEM, 0, last_index, 0, man_grid_size);
-            //            free_d3tensor(y_traj_NCSEM, 0, 5, 0, last_index, 0, man_grid_size);
-            */
-
-
         }
         else
         {
@@ -3786,22 +3745,35 @@ int ref_eml_to_seml_orbits(RefSt& refSt)
         //--------------------------------------------------------------------------------
         int sampfreq[3] = {refSt.sf_emli, refSt.sf_man, refSt.sf_semli};
         int mPlot = floor(sampfreq[1]*24/refSt.fHours);
+        AvgSt avgSt_QBCP;
 
         if(step == 1)
         {
             refSt.type = REF_COMP;
             status = cref_eml_to_seml(sampfreq, coord_type, y_traj, t_traj, man_grid_size,
-                                      orbit_EM, orbit_SEM, refSt, label, isFirst, mPlot);
+                                      orbit_EM, orbit_SEM, refSt, avgSt_QBCP,
+                                      label, isFirst, mPlot);
             if(status == FTC_SUCCESS) step = 2;
         }
 
         //--------------------------------------------------------------------------------
-        //Third step: JPL trajectory
+        //Third step: Update AvgSt for JPL with QBCP info
+        //--------------------------------------------------------------------------------
+        AvgSt avgSt_JPL;
+        avgSt_QBCP.copy(avgSt_JPL);
+
+        //--------------------------------------------------------------------------------
+        //Fourth step: JPL trajectory
         //--------------------------------------------------------------------------------
         if(step == 2 && refSt.isJPL)
         {
             string filename = refSt.get_and_update_filename(refSt.FILE_JPL_TXT, TYPE_COMP_FOR_JPL, ios::in);
-            status = jplref_eml_to_seml(coord_type, refSt, label, isFirst, filename, mPlot);
+            status = jplref_eml_to_seml(coord_type, refSt, avgSt_JPL, label, isFirst, filename, mPlot);
+
+            //Store average amplitudes
+            filename = refSt.get_and_update_filename(refSt.FILE_MEAN_AMP, TYPE_CONT_MEAN_AMP, ios::in);
+            write_jplref_conn_txt(filename, orbit_EM, orbit_SEM, avgSt_QBCP, avgSt_JPL,
+                                  te_NCEM, projRes, isFirst, k);
         }
 
         //--------------------------------------------------------------------------------
@@ -3813,6 +3785,7 @@ int ref_eml_to_seml_orbits(RefSt& refSt)
         // press Enter
         //--------------------------------------------------------------------------------
         pressEnter(refSt.isFlagOn);
+
 
         //--------------------------------------------------------------------------------
         // Display
@@ -3839,10 +3812,12 @@ int ref_eml_to_seml_orbits(RefSt& refSt)
  *         and the orbit orbit_SEM. The complete trajectory (EML2 + man leg + SEMLi)
  *         is computed. The grid size is returned.
  **/
-int cref_eml_to_seml_ic(double** y_traj, double* t_traj,
-                        double** y_traj_comp, double* t_traj_comp,
+int cref_eml_to_seml_ic(double** y_traj,       double* t_traj,
+                        double** y_traj_comp,  double* t_traj_comp,
                         double** y_seed_NCSEM, double* t_seed_NCSEM,
                         int man_grid_size,
+                        int* orbit_eml_index,
+                        int* orbit_seml_index,
                         Orbit& orbit_EM, Orbit& orbit_SEM,
                         int dcs, int coord_type, int grid_points_des[3],
                         int grid_points_eff[3], int max_grid,
@@ -3917,6 +3892,12 @@ int cref_eml_to_seml_ic(double** y_traj, double* t_traj,
     }
 
     //------------------------------------------------------------------------------------
+    //Index of the EML orbit
+    //------------------------------------------------------------------------------------
+    *orbit_eml_index = em_index-1;
+
+
+    //------------------------------------------------------------------------------------
     //Plot
     //------------------------------------------------------------------------------------
     gnuplot_plot_X(refSt.isPlotted, h2, y_man_coord, em_index+1, (char*)"", "points", "5", "3", 5);
@@ -3969,6 +3950,12 @@ int cref_eml_to_seml_ic(double** y_traj, double* t_traj,
         for(int i = 0; i < 6; i++) y_traj[i][em_index + kman] = y_man_coord[i][kman];
         t_traj[em_index + kman] = t_man_coord[kman];
     }
+
+    //------------------------------------------------------------------------------------
+    //Index of the SEML orbit
+    //------------------------------------------------------------------------------------
+    *orbit_seml_index = em_index + man_index-1;
+
 
     //------------------------------------------------------------------------------------
     //Plot
@@ -4028,7 +4015,7 @@ int cref_eml_to_seml_ic(double** y_traj, double* t_traj,
         cout << "During coast arc: " << man_index   << endl;
         cout << "At SEML:          " << sem_index   << endl;
         cout << "Total:            " << final_index << endl;
-        cout << "Selecting 1/" << freq << " points" << endl;
+        cout << "Selecting 1/"       << freq << " points" << endl;
         cout << "Subtotal:         " << (int) floor(final_index/freq) << endl;
         cout << "----------------------------------"<< endl;
 
@@ -4374,6 +4361,139 @@ int write_cref_traj_bin(double** y_traj, double* t_traj,
 }
 
 
+int compute_mean_amp(double **y_traj_VNCSEM,
+                     double **y_traj_VNCEM,
+                     AvgSt   &avgSt)
+{
+    //------------------------------------------------------------------------------------
+    // For the EML orbit
+    //------------------------------------------------------------------------------------
+    double* Ax_NCEM    = dvector(0, avgSt.eml_nindices);
+    double* Az_NCEM    = dvector(0, avgSt.eml_nindices);
+    double* z2_NCEM    = dvector(0, avgSt.eml_nindices);
+    double* zdot2_NCEM = dvector(0, avgSt.eml_nindices);
+    double Axem_NCEM   = 0.0;
+    double Azem_NCEM   = 0.0;
+
+    //Loop on the EML2 orbit minus the first period T
+    double yvc[6];
+    for(int k = 0; k <= avgSt.eml_nindices; k++)
+    {
+        //Current state
+        for(int i = 0; i < 6; i++) yvc[i] = y_traj_VNCEM[i][k + avgSt.eml_fperiod_index];
+
+        //Current estimate for Ax_NCEM
+        Ax_NCEM[k] = sqrt(yvc[0]*yvc[0] + yvc[1]*yvc[1]/(avgSt.eml_kappa*avgSt.eml_kappa));
+
+        //Current estimate for Az_NCEM
+        Az_NCEM[k] = sqrt(yvc[2]*yvc[2] + yvc[5]*yvc[5]/(avgSt.eml_omegav*avgSt.eml_omegav));
+
+        //Current values for z2 and zdot2 for the LS Fitting
+        z2_NCEM[k]    = yvc[2]*yvc[2];
+        zdot2_NCEM[k] = yvc[5]*yvc[5];
+
+        //Mean values
+        Axem_NCEM += Ax_NCEM[k];
+        Azem_NCEM += Az_NCEM[k];
+    }
+
+    //Mean
+    Axem_NCEM /= avgSt.eml_nindices+1;
+    Azem_NCEM /= avgSt.eml_nindices+1;
+
+    //Least Square Fitting for Az
+    double c0, c1, cov00, cov01, cov11, sumsq;
+    gsl_fit_linear(zdot2_NCEM, 1, z2_NCEM, 1, avgSt.eml_nindices+1,
+                   &c0, &c1, &cov00, &cov01, &cov11, &sumsq);
+
+    //------------------------------------------------------------------------------------
+    //Update avgSt
+    //------------------------------------------------------------------------------------
+    avgSt.Ax_EM_mean    = Axem_NCEM*avgSt.eml_gamma;
+    avgSt.Az_EM_mean    = Azem_NCEM*avgSt.eml_gamma;
+    avgSt.Az_EM_lsf     = sqrt(c0)*avgSt.eml_gamma;
+    avgSt.Omega_EM_lsf  = 1.0/sqrt(-c1);
+
+    cout << "===================================="  << endl;
+    cout << "EMLi, Ax     = " << avgSt.Ax_EM_mean   << endl;
+    cout << "      Az     = " << avgSt.Az_EM_lsf    << endl;
+    cout << "      freq   = " << avgSt.Omega_EM_lsf << endl;
+    cout << "===================================="  << endl;
+
+    //------------------------------------------------------------------------------------
+    // For the SEML orbit
+    //------------------------------------------------------------------------------------
+    double* Ax_NCSEM    = dvector(0, avgSt.seml_nindices);
+    double* Az_NCSEM    = dvector(0, avgSt.seml_nindices);
+    double* z2_NCSEM    = dvector(0, avgSt.seml_nindices);
+    double* zdot2_NCSEM = dvector(0, avgSt.seml_nindices);
+    double  Axem_NCSEM  = 0.0;
+    double  Azem_NCSEM  = 0.0;
+
+    //Loop on the EML2 orbit minus the first period T
+    for(int k = 0; k <= avgSt.seml_nindices; k++)
+    {
+        //Current state in VSEM coordinates
+        for(int i = 0; i < 6; i++) yvc[i] = y_traj_VNCSEM[i][k + avgSt.seml_index];
+
+        //Current estimate for Ax_NCSEM
+        Ax_NCSEM[k] = sqrt(yvc[0]*yvc[0] + yvc[1]*yvc[1]/(avgSt.seml_kappa*avgSt.seml_kappa));
+
+        //Current estimate for Az_NCSEM
+        Az_NCSEM[k] = sqrt(yvc[2]*yvc[2] + yvc[5]*yvc[5]/(avgSt.seml_omegav*avgSt.seml_omegav));
+
+        //Current values for z2 and zdot2 for the LS Fitting
+        z2_NCSEM[k]    = yvc[2]*yvc[2];
+        zdot2_NCSEM[k] = yvc[5]*yvc[5];
+
+        //Mean values
+        Axem_NCSEM += Ax_NCSEM[k];
+        Azem_NCSEM += Az_NCSEM[k];
+    }
+
+    //Mean
+    Axem_NCSEM /= avgSt.seml_nindices+1;
+    Azem_NCSEM /= avgSt.seml_nindices+1;
+
+
+    //LSF for Az
+    gsl_fit_linear(zdot2_NCSEM, 1, z2_NCSEM, 1, avgSt.seml_nindices +1,
+                   &c0, &c1, &cov00, &cov01, &cov11, &sumsq);
+
+
+
+    //------------------------------------------------------------------------------------
+    //Update avgSt
+    //------------------------------------------------------------------------------------
+    avgSt.Ax_SEM_mean    = Axem_NCSEM*avgSt.seml_gamma;
+    avgSt.Az_SEM_mean    = Azem_NCSEM*avgSt.seml_gamma;
+    avgSt.Az_SEM_lsf     = sqrt(c0)*avgSt.seml_gamma;
+    avgSt.Omega_SEM_lsf  = 1.0/sqrt(-c1);
+
+    cout << "SEMLi, Ax     = " << avgSt.Ax_SEM_mean   << endl;
+    cout << "       Azm    = " << avgSt.Az_SEM_mean   << endl;
+    cout << "       Az     = " << avgSt.Az_SEM_lsf    << endl;
+    cout << "       freq   = " << avgSt.Omega_SEM_lsf << endl;
+    cout << "===================================="    << endl;
+
+
+    //====================================================================================
+    // Free the data containers
+    //====================================================================================
+    free_dvector(Ax_NCEM,    0, avgSt.eml_nindices);
+    free_dvector(Az_NCEM,    0, avgSt.eml_nindices);
+    free_dvector(z2_NCEM,    0, avgSt.eml_nindices);
+    free_dvector(zdot2_NCEM, 0, avgSt.eml_nindices);
+
+
+    free_dvector(Ax_NCSEM, 0, avgSt.seml_index);
+    free_dvector(Az_NCSEM, 0, avgSt.seml_index);
+    free_dvector(z2_NCSEM, 0, avgSt.seml_index);
+    free_dvector(zdot2_NCSEM, 0, avgSt.seml_index);
+
+    return GSL_SUCCESS;
+}
+
 
 /**
  *  \brief Computes the best trajectories from int_proj_CMU_EM_on_CM_SEM.
@@ -4385,7 +4505,8 @@ int cref_eml_to_seml(int grid_freq_days[3], int coord_type,
                      double** y_seed_NCSEM, double* t_seed_NCSEM,
                      int man_grid_size,
                      Orbit& orbit_EM, Orbit& orbit_SEM,
-                     RefSt& refSt, int label, int isFirst,
+                     RefSt& refSt, AvgSt &avgSt,
+                     int label, int isFirst,
                      int mPlot)
 
 {
@@ -4395,8 +4516,8 @@ int cref_eml_to_seml(int grid_freq_days[3], int coord_type,
     //====================================================================================
     if(refSt.grid != REF_FIXED_GRID)
     {
-         cout << fname << ". Wrong refSt.grid. Return." << endl;
-         return FTC_FAILURE;
+        cout << fname << ". Wrong refSt.grid. Return." << endl;
+        return FTC_FAILURE;
     }
 
     //====================================================================================
@@ -4493,8 +4614,10 @@ int cref_eml_to_seml(int grid_freq_days[3], int coord_type,
     //====================================================================================
     // 4. Build the trajectory
     //====================================================================================
+    int orbit_eml_index = 0, orbit_seml_index = 0;
     int final_index = cref_eml_to_seml_ic(y_traj, t_traj, y_traj_comp, t_traj_comp,
                                           y_seed_NCSEM, t_seed_NCSEM, man_grid_size,
+                                          &orbit_eml_index, &orbit_seml_index,
                                           orbit_EM, orbit_SEM, dcs, coord_type,
                                           grid_points_des, grid_points_eff, max_grid,
                                           refSt, h2, h3);
@@ -4575,24 +4698,51 @@ int cref_eml_to_seml(int grid_freq_days[3], int coord_type,
 
 
     //====================================================================================
-    // 7. JPL refinement
+    // 7. Average data
     //====================================================================================
-    //    if(refSt.isJPL)
-    //    {
-    //        status = jplref_eml_to_seml(coord_type, refSt, label, isFirst, filename);
-    //
-    //        //--------------------------------------------------------------------------------
-    //        // If something went bad, an error is returned
-    //        //--------------------------------------------------------------------------------
-    //        if(status)
-    //        {
-    //            cerr << fname << ". Error during the differential correction procedure.";
-    //            cerr << " ref_errno = " << ref_strerror(status) << endl;
-    //            return FTC_FAILURE;
-    //        }
-    //    }
-    //
+    //------------------------------------------------------------------------------------
+    // Update the indices
+    //------------------------------------------------------------------------------------
+    avgSt.eml_index  = orbit_eml_index;
+    avgSt.seml_index = orbit_seml_index;// + floor(SEML.us_em.T/(2*M_PI*86400*grid_freq_days[2]/SEML.cs_em.cr3bp.T));
 
+    //We get rid of the initial period T @EML
+    avgSt.eml_fperiod_index = floor(SEML.us_em.T/(2*M_PI*86400*grid_freq_days[0]/SEML.cs_em.cr3bp.T));
+    avgSt.eml_nindices      = max(avgSt.eml_index - avgSt.eml_fperiod_index, 0);
+
+    //We get rid of the final period T @SEML
+    avgSt.seml_lperiod_index = final_index - floor(SEML.us_em.T/(2*M_PI*86400*grid_freq_days[2]/SEML.cs_em.cr3bp.T));
+    avgSt.seml_nindices      = max(avgSt.seml_lperiod_index - avgSt.seml_index, 0);
+
+
+    //------------------------------------------------------------------------------------
+    // Update the constants
+    //------------------------------------------------------------------------------------
+    avgSt.eml_kappa   = orbit_EM.getInvman()->getCS()->kappa;
+    avgSt.eml_omegav  = orbit_EM.getInvman()->getCS()->omegav;
+    avgSt.eml_gamma   = orbit_EM.getInvman()->getCS()->gamma;
+    avgSt.seml_kappa  = orbit_SEM.getInvman()->getCS()->kappa;
+    avgSt.seml_omegav = orbit_SEM.getInvman()->getCS()->omegav;
+    avgSt.seml_gamma  = orbit_SEM.getInvman()->getCS()->gamma;
+
+    cout << "avgSt.seml_kappa  = " << avgSt.seml_kappa << endl;
+    cout << "avgSt.seml_omegav = " << avgSt.seml_omegav << endl;
+    cout << "avgSt.seml_gamma  = " << avgSt.seml_gamma << endl;
+
+
+    //------------------------------------------------------------------------------------
+    // Change of coordinates towards VNCEM & VNCSEM
+    //------------------------------------------------------------------------------------
+    double** y_traj_VNCEM  = dmatrix(0, 5, 0, final_index);
+    double** y_traj_VNCSEM = dmatrix(0, 5, 0, final_index);
+
+    qbcp_coc_vec(y_traj_n, t_traj_n, y_traj_VNCEM,  final_index, coord_type, VNCEM);
+    qbcp_coc_vec(y_traj_n, t_traj_n, y_traj_VNCSEM, final_index, coord_type, VNCSEM);
+
+    //------------------------------------------------------------------------------------
+    // Compute averages
+    //------------------------------------------------------------------------------------
+    compute_mean_amp(y_traj_VNCSEM, y_traj_VNCEM, avgSt);
 
     //------------------------------------------------------------------------------------
     //Gnuplot window
@@ -4611,6 +4761,9 @@ int cref_eml_to_seml(int grid_freq_days[3], int coord_type,
     free_dvector(t_traj_comp, 0, traj_grid_eff);
     free_dmatrix(y_traj_n, 0, 41, 0, traj_grid_eff);
     free_dvector(t_traj_n, 0, traj_grid_eff);
+
+    free_dmatrix(y_traj_VNCEM, 0, 5, 0,  final_index);
+    free_dmatrix(y_traj_VNCSEM, 0, 5, 0, final_index);
 
     return FTC_SUCCESS;
 }
@@ -4635,8 +4788,8 @@ int cref_eml_to_seml(int grid_freq_days[3], int coord_type,
  *         from NCSEM.
  **/
 int wref_eml_to_seml(Orbit& orbit_EM, Orbit& orbit_SEM, double** y_traj, double* t_traj,
-                    int dcs, int coord_type, int man_grid_size_t,
-                    RefSt& refSt, gnuplot_ctrl* h2, int* man_index)
+                     int dcs, int coord_type, int man_grid_size_t,
+                     RefSt& refSt, gnuplot_ctrl* h2, int* man_index)
 {
     //====================================================================================
     // 0. Check on  coord_type (for now)
@@ -6749,7 +6902,8 @@ int comprefemlisemli3d(int grid_freq_days[3], int coord_type,
     //====================================================================================
     if(refSt.isJPL)
     {
-        status = jplref_eml_to_seml(coord_type, refSt, label, isFirst, filename, mPlot);
+        AvgSt avgSt_JPL;
+        status = jplref_eml_to_seml(coord_type, refSt, avgSt_JPL, label, isFirst, filename, mPlot);
 
         //--------------------------------------------------------------------------------
         // If something went bad, an error is returned
@@ -6804,9 +6958,9 @@ int comprefemlisemli3d(int grid_freq_days[3], int coord_type,
  *  \brief Save a trajectory, segment by segment, in to complementary coordinate systems.
  **/
 int write_NJ2000_ref_to_celestia(double** y_traj, double* t_traj,
-                              int final_index, int mPlot,
-                              double et0, double tsys0,
-                              string fprefix, int label)
+                                 int final_index, int mPlot,
+                                 double et0, double tsys0,
+                                 string fprefix, int label)
 {
     string fname = "write_NJ2000_ref_to_celestia";
 
@@ -6942,9 +7096,96 @@ int write_NJ2000_ref_to_celestia(double** y_traj, double* t_traj,
 
 
 /**
+ *  \brief Compute average amplitude for a JPL trajectory
+ **/
+int averageamplitudesjpl(double** y_traj, double* t_traj,
+                         double et0,      double tsys0,
+                         int final_index,
+                         int coord_int,
+                         AvgSt &avgSt_JPL)
+{
+    //------------------------------------------------------------------------------------
+    //Initialize local variables
+    //------------------------------------------------------------------------------------
+    double** y_traj_VNCEM  = dmatrix(0, 5, 0, final_index);
+    double** y_traj_VNCSEM = dmatrix(0, 5, 0, final_index);
+
+    double*  t_traj_NCEM   = dvector(0, final_index);
+    double*  t_traj_NCSEM  = dvector(0, final_index);
+
+
+    //------------------------------------------------------------------------------------
+    // Change of coordinates towards VNCEM
+    //------------------------------------------------------------------------------------
+    switch(coord_int)
+    {
+        //--------------------------------------------------------------------------------
+        //If the computation was performed using JPL ephemerides, some specific COC
+        //is needed.
+        //--------------------------------------------------------------------------------
+    case VECLI:
+        ecl2coordstate_vec(y_traj, t_traj, y_traj_VNCEM, t_traj_NCEM, final_index, VNCEM, et0, tsys0, eph_coord(VNCEM));
+        break;
+
+    case J2000:
+        eci2coordstate_vec(y_traj, t_traj, y_traj_VNCEM, t_traj_NCEM, final_index, VNCEM, et0, tsys0, eph_coord(VNCEM));
+        break;
+
+    case NJ2000:
+        neci2coordstate_vec(y_traj, t_traj, y_traj_VNCEM, t_traj_NCEM, final_index, VNCEM, et0, tsys0, eph_coord(VNCEM), *SEML.ss);
+        break;
+
+    default:
+        //--------------------------------------------------------------------------------
+        //The default case is QBCP to QBCP, and we can use the usual COC
+        //--------------------------------------------------------------------------------
+        qbcp_coc_vec(y_traj, t_traj, y_traj_VNCEM, t_traj_NCEM, final_index, coord_int, VNCEM);
+    }
+
+    //------------------------------------------------------------------------------------
+    // Change of coordinates towards VNCSEM
+    //------------------------------------------------------------------------------------
+    switch(coord_int)
+    {
+        //--------------------------------------------------------------------------------
+        //If the computation was performed using JPL ephemerides, some specific COC
+        //is needed.
+        //--------------------------------------------------------------------------------
+    case VECLI:
+        ecl2coordstate_vec(y_traj, t_traj, y_traj_VNCSEM, t_traj_NCSEM, final_index, VNCSEM, et0, tsys0, eph_coord(VNCSEM));
+        break;
+
+    case J2000:
+        eci2coordstate_vec(y_traj, t_traj, y_traj_VNCSEM, t_traj_NCSEM, final_index, VNCSEM, et0, tsys0, eph_coord(VNCSEM));
+        break;
+
+    case NJ2000:
+        neci2coordstate_vec(y_traj, t_traj, y_traj_VNCSEM, t_traj_NCSEM, final_index, VNCSEM, et0, tsys0, eph_coord(VNCSEM), *SEML.ss);
+        break;
+
+    default:
+        //--------------------------------------------------------------------------------
+        //The default case is QBCP to QBCP, and we can use the usual COC
+        //--------------------------------------------------------------------------------
+        qbcp_coc_vec(y_traj, t_traj, y_traj_VNCSEM, t_traj_NCSEM, final_index, coord_int, VNCSEM);
+    }
+
+
+    //------------------------------------------------------------------------------------
+    // Compute averages
+    //------------------------------------------------------------------------------------
+    compute_mean_amp(y_traj_VNCSEM, y_traj_VNCEM, avgSt_JPL);
+
+
+    return GSL_SUCCESS;
+}
+
+
+/**
  *  \brief Refine a given output of comprefemlisemli3d into JPL ephemerides.
  **/
-int jplref_eml_to_seml(int coord_type, RefSt& refSt, int label, int isFirst, string filename_in, int mPlot)
+int jplref_eml_to_seml(int coord_type, RefSt& refSt,  AvgSt &avgSt,
+                       int label, int isFirst, string filename_in, int mPlot)
 {
     //====================================================================================
     // 1. Read the data, in sys units
@@ -7340,7 +7581,18 @@ int jplref_eml_to_seml(int coord_type, RefSt& refSt, int label, int isFirst, str
         //        write_NJ2000_ref_to_celestia(y_traj_jpl_n, t_traj_jpl_n, final_index, mPlot, et0, tsys0, fprefix, label);
     }
 
-    //pressEnter(true);
+
+    //====================================================================================
+    // Average amplitudes
+    //====================================================================================
+    if(avgSt.eml_index > 0) averageamplitudesjpl(y_traj_jpl_n, t_traj_jpl_n, et0, tsys0, final_index, coord_int, avgSt);
+
+
+    //====================================================================================
+    // Reset the focus in SEML, if necessary
+    //====================================================================================
+    if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
+
     //------------------------------------------------------------------------------------
     //Gnuplot window
     //------------------------------------------------------------------------------------
@@ -7348,11 +7600,6 @@ int jplref_eml_to_seml(int coord_type, RefSt& refSt, int label, int isFirst, str
     gnuplot_close(refSt.isPlotted, h2);
     gnuplot_close(refSt.isPlotted, h3);
     gnuplot_close(refSt.isPlotted, h4);
-
-    //====================================================================================
-    // Reset the focus in SEML, if necessary
-    //====================================================================================
-    if(fwrk0 != fwrk) changeDCS(SEML, fwrk0);
 
     //====================================================================================
     // Free the data containers
@@ -7997,9 +8244,9 @@ int jplfg3d_interpolation(double** y_traj_n, double* t_traj_n,
             for(int i = 0; i <6; i++) y_traj_jpl_x[i][p+pmin-nsh0+(nsh0+nn)*mRef] = epsilon*ymc[i][p] + (1-epsilon)*ymc_comp[i][p];
             t_traj_jpl_x[p+pmin-nsh0+(nsh0+nn)*mRef] = tmc[p];
 
-           // cout << "y_traj_jpl_x[0][p+pmin-nsh0+(nsh0+nn)*mRef] = " << y_traj_jpl_x[0][p+pmin-nsh0+(nsh0+nn)*mRef] << endl;
-           // cout << "ymc[0][p] = " << ymc[0][p] << endl;
-           // cout << "ymc_comp[0][p] = " << ymc_comp[0][p] << endl;
+            // cout << "y_traj_jpl_x[0][p+pmin-nsh0+(nsh0+nn)*mRef] = " << y_traj_jpl_x[0][p+pmin-nsh0+(nsh0+nn)*mRef] << endl;
+            // cout << "ymc[0][p] = " << ymc[0][p] << endl;
+            // cout << "ymc_comp[0][p] = " << ymc_comp[0][p] << endl;
 
         }
 
@@ -10748,7 +10995,8 @@ int proj_subroutine_old_from_EML(ProjResSt& projResSt, Invman& invman_SEM, ProjS
                 dv_at_projection_SEM = 0.0;
                 for(int i = 3; i < 6; i++) dv_at_projection_SEM += (yvproj_VSEM[i] - yv_VSEM[i])*(yvproj_VSEM[i] - yv_VSEM[i]);
                 dv_at_projection_SEM = sqrt(dv_at_projection_SEM);
-            }else if(proj_dist_SEM > min_proj_dist_SEM && projSt.PRIMARY)
+            }
+            else if(proj_dist_SEM > min_proj_dist_SEM && projSt.PRIMARY)
             {
                 // If we only look for the primary family, we can stop at the first
                 // minimum without any risk of losing good solutions. If
@@ -11003,9 +11251,9 @@ int refine_eml2seml2(RefSt& refSt, string filename_traj, double** y_traj_n, doub
     return FTC_SUCCESS;
 }
 
-void write_single_conn_txt(fstream &filestream, Orbit& orbit_EM, Orbit& orbit_SEM,
-                           double t_EM_seed, double *st_EM_seed,
-                           double **y_traj_NCSEM, double *t_traj_NCSEM,
+void write_single_conn_txt(fstream& filestream, Orbit& orbit_EM, Orbit& orbit_SEM,
+                           double t_EM_seed, double* st_EM_seed,
+                           double** y_traj_NCSEM, double* t_traj_NCSEM,
                            double te_NCSEM,   double* ye_NCSEM,
                            double te_NCEM,    double* ye_NCEM,
                            double ve_NCEM[3], double ve_NCSEM[3],
@@ -11145,7 +11393,7 @@ void write_single_conn_txt(fstream &filestream, Orbit& orbit_EM, Orbit& orbit_SE
  *   \brief Storing the results of the continuation procedure, in txt file.
  **/
 void write_comp_conn_txt(string filename, Orbit& orbit_EM, Orbit& orbit_SEM,
-                         double **y_traj_NCSEM, double *t_traj_NCSEM,
+                         double** y_traj_NCSEM, double* t_traj_NCSEM,
                          double te_NCSEM,   double* ye_NCSEM,
                          double te_NCEM,    double* ye_NCEM,
                          double ve_NCEM[3], double ve_NCSEM[3],
@@ -11198,7 +11446,8 @@ void write_comp_conn_txt(string filename, Orbit& orbit_EM, Orbit& orbit_SEM,
     //Update the seed via projRes
     //====================================================================================
     double st_EM[5], st_SEM[5], t_EM[2], t0_SEM = 0.0, pmin_dist_SEM_out = 0.0;
-    double st_EM_seed[4], t_EM_seed = 0.0; int label = 0;
+    double st_EM_seed[4], t_EM_seed = 0.0;
+    int label = 0;
     projRes.update_ic(st_EM, st_SEM, t_EM, st_EM_seed, &t_EM_seed, &t0_SEM, &pmin_dist_SEM_out, &label, index);
 
     //====================================================================================

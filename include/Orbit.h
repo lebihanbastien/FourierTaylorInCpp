@@ -7,6 +7,8 @@
 #include "multshoot.h"
 
 #include "gsl/gsl_statistics_double.h"
+#include "gsl/gsl_fit.h"
+
 
 #define INT_NO_COMP    0
 #define INT_PROJ_CHECK 1

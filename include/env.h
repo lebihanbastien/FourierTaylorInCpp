@@ -172,6 +172,9 @@ struct CSYS
     int model;      //associated model
     int fwrk;       //associated fwrk
     double r3BSOI;  //radius of the 3B sphere of influence
+    double omegap;  // CRTBP main horizontal frequency
+    double omegav;  // CRTBP main vertical frequency
+    double kappa;   // Ay = kappa*Ax in linear approximation about the libration point
 
     //Arrays
     double *coeffs; //Default set of vector field coefficients

@@ -84,8 +84,16 @@ REFST_T0_DES=0.00              # Initial time - given as %T, with T the SEM peri
 # phd_fam3
 #REFST_SI_CMU_EM_LIM=(-2.0 -1.75 0 0 0.5 1.0 0 0)
 # phd_fam4
-REFST_SI_CMU_EM_LIM=(-2.7 -2.4 0 0 0.9 1.5 0 0)
+# REFST_SI_CMU_EM_LIM=(1.1 1.35 0 0 1.6 1.9 0 0)
+# phd_fam5
+# REFST_SI_CMU_EM_LIM=(1.2 1.4 0 0 1.9 2.2 0 0)
+# phd_fam6 (REFST_FPLOT = 0.2)
+#REFST_SI_CMU_EM_LIM=(1.8 2.0 0 0 2.5 3 0 0)
+# phd_fam7 (REFST_FPLOT = 0.2)
+#REFST_SI_CMU_EM_LIM=(1.8 2.0 0 0 2.5 3 0 0)
 
+#phd_fam? (REFST_FPLOT = 0.2)
+REFST_SI_CMU_EM_LIM=(1.8 2.0 0 0 2.5 3 0 0)
 
 # Or, if we want the user to define such domain:
 REFST_ISLIMUD=0
@@ -94,10 +102,10 @@ REFST_ISLIMUD=0
 REFST_SI_SEED_EM_LIM=(-40 +40 0 0 -40 +40 0 0)
 
 # Maximum projection distance allowed during subselection
-REFST_PMAX_DIST_SEM=5e-3
+REFST_PMAX_DIST_SEM=2e-3
 
 # Limits for the time of flight during transfers - not used if -1
-REFST_TOF_LIM=(-1 4)
+REFST_TOF_LIM=(-1 -1)
 
 # Values for crossings
 REFST_CROSSINGS=-1
@@ -124,36 +132,38 @@ REFST_ISDIRUD=0			 # is it user defined?
 REFST_DIR=-1    		 # if not, +1 or -1
  
 # User parameters
-REFST_ISFLAGON=1   	         # do we have steps in the procedure - asking the user to press enter to go on?
+REFST_ISFLAGON=1  	         # do we have steps in the procedure - asking the user to press enter to go on?
 REFST_ISPLOTTED=1   		 # do we plot the results during the computation?
 REFST_ISSAVED=0     		 # do we save the results in data files?
-REFST_ISFROMSERVER=1		 # does the raw data comes from server files?
+REFST_ISFROMSERVER=0		 # does the raw data comes from server files?
 
 # Maximum angle around SEMLi if REF_COND_T is used (in degrees)
 REFST_THETAMAX=90          # should be a multiple of 90°
 
 # Filenames (used only if IO_HANDLING==$IO_BASH)
-FILE_PCU="Serv/projcu_order_20_dest_L2_t0_0.bin"
-FILE_CONT="Serv/phd_cont_atf_order_20_dest_L2_t0_0_fam4_single.txt"
-FILE_CONT_RES="Serv/phd_cont_atf_traj_order_20_dest_L2_t0_0_fam4_single.bin"
+FILE_PCU="Serv/projcu_order_20_dest_L2_t0_0_zoom.bin"
+FILE_CONT="Serv/phd_cont_atf_order_20_dest_L2_t0_0_fam8_single.txt"
+FILE_CONT_RES="Serv/phd_cont_atf_traj_order_20_dest_L2_t0_0_fam8_single.bin"
 FILE_JPL="cont_jpl.bin"
 
 #-----------------------------------------------------
 # Parameters that are stable
 #-----------------------------------------------------
 REFST_ISDEBUG=0			 # if yes, additionnal tests are performed
-REFST_GRIDSIZE=20        	 # number of points on the refinement grid
-REFST_MPLOT=200        	         # number of points per plot between to pach points (e.g. total plot points is REFST_MPLOT*REFST_GRIDSIZE)
+REFST_GRIDSIZE=20        # number of points on the refinement grid
+REFST_MPLOT=200        	 # number of points per plot between to pach points (e.g. total plot points is REFST_MPLOT*REFST_GRIDSIZE)
+REFST_FPLOT=1            # frequency of plotting in hours
 
-REFST_TIME=$REF_VAR_TN		 # type of constraints on the times in REF_CONT
-REFST_GRID=$REF_FIXED_GRID	 # type of grid
-REFST_TERMINATION=$REF_COND_T   # Termination condition in the continuation with variable final time (either REF_VAR_TN/REF_VAR_TIME)
-REFST_COORD_TYPE=$NCSEM		 # coordinates system in the refinement procedure
+
+REFST_TIME=$REF_VAR_TN		   # type of constraints on the times in REF_CONT
+REFST_GRID=$REF_FIXED_GRID	   # type of grid
+REFST_TERMINATION=$REF_COND_S5  # Termination condition in the continuation with variable final time (either REF_VAR_TN/REF_VAR_TIME)
+REFST_COORD_TYPE=$NCSEM		   # coordinates system in the refinement procedure
 
 REFST_XPS=0.6			 # position of the poincaré section in NCSEM coordinates
-REFST_ISJPL=1		         # is the JPL refinement performed when possible?
+REFST_ISJPL=1		     # is the JPL refinement performed when possible?
 REFST_DJPLCOORD=-1		 # coordinate system used during the JPL refinement (if -1, it is user defined) Best results obtained with $NJ2000
-REFST_SIDIM=0		         # 0 or 2 - component of s0 that stays constant when t0 is free
+REFST_SIDIM=0		     # 0 or 2 - component of s0 that stays constant when t0 is free
 
 # Sampling frequencies in REF_COMP (complete trajectory) in days
 REFST_SF_EML2=2			 # orbit at EML2	
@@ -165,6 +175,6 @@ REFST_TSPAN_EM=10  		 # given as %T, where T is the SEM period, in EM units
 REFST_TSPAN_SEM=10 		 # given as %T, where T is the SEM period, in SEM units
 
 # Storing the orbits at each step?
-REFST_ISSAVED_EM=0               # 0: don't save, 1: save using projection method
-REFST_ISSAVED_SEM=0              # 0: don't save, 1: save using projection method, 2: save using integration in reduced coordinates
+REFST_ISSAVED_EM=0       # 0: don't save, 1: save using projection method
+REFST_ISSAVED_SEM=0      # 0: don't save, 1: save using projection method, 2: save using integration in reduced coordinates
 
