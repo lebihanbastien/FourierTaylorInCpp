@@ -3643,7 +3643,7 @@ int write_wref_res_bin(RefSt& refSt, string filename_res,
 void write_jplref_conn_txt(string filename,
                            Orbit& orbit_EM, Orbit& orbit_SEM,
                            AvgSt &avgSt_QBCP, AvgSt &avgSt_JPL,
-                           double te_NCEM,
+                           double te_NCEM, double *ye_NCEM,
                            ProjResClass& projRes,
                            int isFirst,  int index)
 {
@@ -3670,7 +3670,8 @@ void write_jplref_conn_txt(string filename,
         filestream << "s1_CMS_SEM s2_CMS_SEM s3_CMS_SEM s4_CMS_SEM s5_CMS_SEM ";
         filestream << "s1_CMU_EM_seed  s2_CMU_EM_seed  s3_CMU_EM_seed  s4_CMU_EM_seed ";
         filestream << "dH0_EM dHf_SEM ";
-
+        filestream << "pmin_dist_SEM ";
+        filestream << "xe_EM ye_EM ze_EM pxe_EM pye_EM pze_EM vxe_EM vye_EM vze_EM ";
         filestream << endl;
     }
     else
@@ -3727,7 +3728,6 @@ void write_jplref_conn_txt(string filename,
     filestream << avgSt_QBCP.Az_SEM_mean << "  ";
     //11. Az_SEM_lsf_QBCP
     filestream << avgSt_QBCP.Az_SEM_lsf  << "  ";
-
 
     //12. Ax_EM_mean_JPL
     filestream << avgSt_JPL.Ax_EM_mean << "  ";
@@ -3803,6 +3803,24 @@ void write_jplref_conn_txt(string filename,
     //------------------------------------------------------------------------------------
     filestream << H0_EM  - H0_emli_EM   << "  "; //36
     filestream << Hf_SEM - Hf_semli_SEM << "  "; //37
+
+    //------------------------------------------------------------------------------------
+    // pmin_dist_SEM_out
+    //------------------------------------------------------------------------------------
+    filestream << pmin_dist_SEM_out << "  "; //38
+
+    //------------------------------------------------------------------------------------
+    // 39-47: Position, momenta and velocities at Pk section
+    //------------------------------------------------------------------------------------
+    // Position/momenta (39-44)
+    double ye_EM[6];
+    qbcp_coc(te_NCEM, ye_NCEM, ye_EM, NCEM, PEM);
+    for(int i = 0; i < 6; i++) filestream << ye_EM[i]  << "  ";
+
+    //Velocities (45 - 47)
+    qbcp_coc(te_NCEM, ye_NCEM, ye_EM, NCEM, VEM);
+    for(int i = 3; i < 6; i++) filestream << ye_EM[i]  << "  ";
+
     filestream << endl;
 
     filestream.close();

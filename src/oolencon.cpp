@@ -3773,7 +3773,7 @@ int ref_eml_to_seml_orbits(RefSt& refSt)
             //Store average amplitudes
             filename = refSt.get_and_update_filename(refSt.FILE_MEAN_AMP, TYPE_CONT_MEAN_AMP, ios::in);
             write_jplref_conn_txt(filename, orbit_EM, orbit_SEM, avgSt_QBCP, avgSt_JPL,
-                                  te_NCEM, projRes, isFirst, k);
+                                  te_NCEM, ye_NCEM, projRes, isFirst, k);
         }
 
         //--------------------------------------------------------------------------------

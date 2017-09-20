@@ -785,8 +785,6 @@ int main(int argc, char** argv)
             refSt.FILE_MEAN_AMP     = argv[index++];
             refSt.FILE_JPL_TXT      = argv[index++];
             refSt.FILE_FOR_CELESTIA = "traj_for_celestia";
-
-            cout << "refSt.FILE_MEAN_AMP = " << refSt.FILE_MEAN_AMP << endl;
             break;
         }
 

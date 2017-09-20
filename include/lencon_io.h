@@ -966,7 +966,7 @@ int write_wref_res_bin(RefSt& refSt, string filename_res, double** y_traj_n,
 void write_jplref_conn_txt(string filename,
                            Orbit& orbit_EM, Orbit& orbit_SEM,
                            AvgSt &avgSt_QBCP, AvgSt &avgSt_JPL,
-                           double te_NCEM,
+                           double te_NCEM, double *ye_NCEM,
                            ProjResClass& projRes,
                            int isFirst,  int index);
 

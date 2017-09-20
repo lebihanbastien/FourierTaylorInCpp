@@ -127,7 +127,7 @@ REFST_DIR=-1    		 # if not, +1 or -1
  
 # User parameters
 REFST_ISFLAGON=0  	         # do we have steps in the procedure - asking the user to press enter to go on?
-REFST_ISPLOTTED=1    		 # do we plot the results during the computation?
+REFST_ISPLOTTED=0    		 # do we plot the results during the computation?
 REFST_ISSAVED=1     		 # do we save the results in data files?
 REFST_ISFROMSERVER=0		 # does the raw data comes from server files?
 
@@ -142,7 +142,7 @@ if [ $SERVER == 1 ]; then
 	FILE_TRAJ_FROM_W="traj_from_w_order_20_dest_L2_Liss_s1_10_s2_2_DIST_SEM_5e-4_TSPAN_SEM_40.bin"
 	FILE_TRAJ_FROM_C="traj_from_c_order_20_dest_L2_Liss_s1_10_s2_2_DIST_SEM_5e-4_TSPAN_SEM_40.bin" 
 	FILE_JPL="cont_jpl_order_20_dest_L2_Liss_s1_10_s2_2_DIST_SEM_5e-4_TSPAN_SEM_40.bin"
-	FILE_MEAN_AMP="Serv/mean_amp_order_20_dest_L2_Liss_s1_10_s2_2_DIST_SEM_5e-4_TSPAN_SEM_40.txt"
+	FILE_MEAN_AMP="mean_amp_order_20_dest_L2_Liss_s1_10_s2_2_DIST_SEM_5e-4_TSPAN_SEM_40.txt"
 	FILE_JPL_TEMP="cont_jpl_temp_s1_10_s2_2.txt"
 else
 	# Crossings: 22 
